@@ -10,7 +10,7 @@ argument-hint: [the UI to build or change]
 
 ## Stack
 
-An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, and **Framer Motion** when transitions outgrow what CSS handles cleanly — CSS transitions are the right call for hovers, fades, and modals. Any deviation from this stack gets named in the review packet with its one-line reason.
+An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, **lucide-react** for icons, and **Framer Motion** when transitions outgrow what CSS handles cleanly — CSS transitions are the right call for hovers, fades, and modals. Any deviation from this stack gets named in the review packet with its one-line reason.
 
 Every web UI gets this stack, no matter how small it looks — there is no plain-HTML escape hatch to reach for on your own. If the user explicitly asks for a static page or plain HTML, comply; that call is theirs, not yours.
 
@@ -20,12 +20,23 @@ Every web UI gets this stack, no matter how small it looks — there is no plain
 - **Spacing grid**: consistent scale (4/8px steps), generous whitespace at decision points, higher density where data lives — tables and lists earn compactness, forms and actions earn air.
 - **Constrain line lengths**: max content width; multi-column only when content genuinely parallels.
 - **Typography**: 4–5 sizes total; hierarchy through size and weight, never color alone.
-- **Color**: neutral base plus one accent; semantic colors (success/warn/error) reserved for status, never decoration. Dark mode via CSS variables from day one — lab dashboards get read at night.
+- **Color**: all color through theme tokens, both themes from day one — the palette itself lives in Visual character below.
 
-## Motion — smooth, purposeful, cheap
+## Visual character — designed, not default
+
+Organized and uncluttered is the floor, not the ceiling. The bar: at home next to Linear or Vercel's dashboard with the color courage turned up — never mistakable for an unstyled admin template.
+
+- **Dark-first, layered surfaces.** Dark is the designed-for theme (light stays supported via tokens): a deep page background, cards a distinct step lighter, raised elements a step lighter again. Depth comes from this layering plus low-alpha borders and soft shadows — not heavy lines.
+- **Color with courage.** One vivid accent used confidently: gradient touches on primary actions and active states, and one hero moment per view — a gradient heading, a glowing stat. Status colors saturated enough to glow against dark surfaces; status pills get a colored dot *plus* text, never color alone.
+- **Typography with character.** A quality UI font (Inter or similar, self-hosted — no CDN dependency), tight letter-spacing on large headings, `tabular-nums` for data, big confident numbers on stat tiles.
+- **Depth cues, spent sparingly.** Rounded-xl cards, soft elevation shadows, hover lift (small translate + shadow), accent-colored focus rings. If every surface is elevated, nothing is.
+- **Designed states.** Skeleton shimmer instead of spinners for content areas; empty states get an icon and a call to action; icons anchor navigation, actions, and stats.
+
+## Motion — smooth, purposeful, alive
 
 - Transitions 150–250 ms, ease-out; animate `opacity` and `transform` only (compositor-friendly — no layout thrash).
-- Motion communicates state change (enter/exit, expand, reorder), never decoration. If removing an animation loses no information, remove it.
+- Micro-interactions are part of the design, not decoration on top of it: hover lifts, pressed states, animated number changes on live stats, staggered list entrances (30–50 ms steps), smooth expand/collapse.
+- Motion serves state change and perceived quality — but stays fast and interruptible; if an animation makes the user wait, cut it.
 - Respect `prefers-reduced-motion`.
 
 ## State and data
