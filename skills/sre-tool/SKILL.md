@@ -32,7 +32,7 @@ Agents do not inherit this conversation. Pass each one full context: the Phase 0
 
 Spawn `sde-fullstack` with the requirements, the design, exact repo paths and conventions, and the success criterion. For trivial scope, implement directly while holding to the same SRE-lens standards (observability, timeouts, idempotency, dry-run for destructive actions).
 
-For multi-component projects, sequence the build: **walking skeleton first** (the thinnest end-to-end slice running against the real contract), then feature slices — each slice built, reviewed, and integration-verified before the next, rather than saving all review for the end.
+For multi-component projects, sequence the build: **walking skeleton first** (the thinnest end-to-end slice running against the real contract), then feature slices — each slice built, reviewed, and integration-verified before the next, rather than saving all review for the end. Point the builder at `frontend-craft` and `backend-craft` for the respective halves. Once the skeleton proves the contract, the halves may be built in parallel by two `sde-fullstack` instances — one mandated per component, both given the same contract.
 
 ## Phase 3 — Review
 

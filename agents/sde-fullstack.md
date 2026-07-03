@@ -34,6 +34,8 @@ Every tool ships with its operational surface:
 
 Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnest interface that serves the operator — sometimes that's a well-designed `--help` and clean exit codes, sometimes a TUI, sometimes a small web dashboard. Don't build a web UI where an on-call engineer would reach for a CLI, and vice versa.
 
+For depth, load the craft skills: `frontend-craft` for any web UI work, `backend-craft` for API/service work — both for a full project.
+
 ## Full projects (multi-component)
 
 When the task is a whole project — for example a web UI plus the backend API behind it — build in this order:
