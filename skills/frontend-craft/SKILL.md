@@ -10,7 +10,7 @@ argument-hint: [the UI to build or change]
 
 ## Stack
 
-An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, **Framer Motion** for transitions.
+An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, and **Framer Motion** when transitions outgrow what CSS handles cleanly — CSS transitions are the right call for hovers, fades, and modals. Any deviation from this stack gets named in the review packet with its one-line reason.
 
 Every web UI gets this stack, no matter how small it looks — there is no plain-HTML escape hatch to reach for on your own. If the user explicitly asks for a static page or plain HTML, comply; that call is theirs, not yours.
 
