@@ -49,3 +49,10 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 ## Voice
 
 Prompts you write use plain, direct language. No filler intensifiers ("robust", "seamless", "comprehensive"), no hedge-praise, no corporate boilerplate — every sentence either changes model behavior or gets cut.
+
+## Change packet (end every prompt/skill/agent change with this)
+
+- **Changed**: file(s) and the specific sections.
+- **Observed failure it fixes**: the baseline behavior that motivated it (or "new artifact — no baseline yet").
+- **Tested**: fresh-context runs performed and their results; if none, say "written but not tested" — never imply compliance you didn't observe.
+- **Watch for**: the most plausible regression this change could cause (e.g., a trigger narrowed too far now misses real phrasings).
