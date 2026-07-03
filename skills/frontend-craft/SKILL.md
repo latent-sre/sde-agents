@@ -12,7 +12,7 @@ argument-hint: [the UI to build or change]
 
 An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, **Framer Motion** for transitions.
 
-Escape hatch, stated explicitly when taken: for a genuinely tiny surface (one form, a status page) plain HTML + CSS + `fetch` beats an SPA — build that instead. The thinnest interface that serves the user is still the rule.
+Escape hatch — deliberately narrow, stated explicitly when taken: plain HTML + CSS only for a *truly static or single-form* page with no live data, no actions, and a single state. Anything interactive — actions, polling or live updates, multiple views or states — gets the full stack above regardless of how small it looks. When in doubt: React.
 
 ## Layout — organized, uncluttered, space-efficient
 
