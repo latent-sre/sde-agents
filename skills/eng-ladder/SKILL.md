@@ -18,6 +18,8 @@ argument-hint: [task, diff, file, or design doc]
 
 Match the task to the lowest rung whose core question it raises. Signals it needs principal: multiple services or teams, a migration, a hard-to-reverse choice, "design" or "how should we" phrasing. Signals it needs distinguished: build-vs-buy, platform consolidation, anything measured in years. When in doubt, route DOWN — a lower rung that recognizes its limit and escalates is cheaper than ceremony, and the agents are prompted to escalate.
 
+The `sre-tool` skill applies this routing inside its build pipeline; this table is the source of truth — change routing here, not there.
+
 ## Mode 2 — Assess work at a bar
 
 Read the artifact. Score it against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."

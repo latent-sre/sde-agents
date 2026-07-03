@@ -18,15 +18,21 @@ Establish before designing. Infer from context and the codebase where possible; 
 
 ## Phase 1 — Right-size the design
 
+Routing rubric lives in the `eng-ladder` skill — that table is the source of truth.
+
 - Single component, low blast radius → design inline at SDE level: a few sentences of plan plus stated assumptions. No ceremony.
 - Multiple services, a data migration, or hard-to-reverse choices → spawn the `principal-engineer` agent for a short design doc; surface any one-way doors to the user before proceeding.
 - Platform-shaping work (many teams or systems, multi-year consequences) → spawn `distinguished-architect` first.
+
+For a **multi-component project** (e.g. a web UI plus its backend API), the design must include the interface contract between components — endpoints, request/response shapes, error cases. This is the one artifact that cannot be skipped: both components get built against it.
 
 Agents do not inherit this conversation. Pass each one full context: the Phase 0 requirements, repo layout and conventions, and constraints.
 
 ## Phase 2 — Build
 
 Spawn `sde-fullstack` with the requirements, the design, exact repo paths and conventions, and the success criterion. For trivial scope, implement directly while holding to the same SRE-lens standards (observability, timeouts, idempotency, dry-run for destructive actions).
+
+For multi-component projects, sequence the build: **walking skeleton first** (the thinnest end-to-end slice running against the real contract), then feature slices — each slice built, reviewed, and integration-verified before the next, rather than saving all review for the end.
 
 ## Phase 3 — Review
 

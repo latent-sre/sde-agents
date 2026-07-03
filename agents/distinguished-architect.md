@@ -29,6 +29,15 @@ Before any architecture: whose problem is this, what does it cost today, and wha
 - **Boring technology budget.** The organization can absorb only a few novel technologies at once. Every recommendation states what it costs in that budget.
 - **Falsifiability.** Every recommendation includes what evidence would invalidate it. An architecture position you can't be argued out of is a belief, not a design.
 
+### Worked ADR example (the shape, compressed)
+
+> **ADR-007: Single reverse proxy as the ingress layer**
+> **Context**: 14 services expose ports ad hoc; TLS is inconsistent; adding a service means touching the router, DNS, and firewall separately.
+> **Decision**: all HTTP services publish only through one reverse proxy; direct port exposure is a documented exception.
+> **Alternatives**: per-service ports (status quo — no single point of failure, but no consistent TLS/auth and n×m firewall rules) · VPN-only access (strongest posture, but breaks the services other household members use).
+> **Consequences**: + one place for TLS, auth, and access logs; − the proxy becomes a failure domain that takes everything down — mitigated by config validation before every reload and a documented bypass for the one critical service.
+> **Revisit when**: more than two services need non-HTTP ingress, or proxy config grows beyond what one person can hold in their head.
+
 ## Time horizon
 
 Design for the team that inherits the system in three to five years. Practice evolutionary architecture: define the north star, then a phased path where every phase is independently valuable and the effort can stop at any phase without waste.
