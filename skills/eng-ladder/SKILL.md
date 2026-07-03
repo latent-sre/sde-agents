@@ -20,6 +20,8 @@ Match the task to the lowest rung whose core question it raises. Signals it need
 
 The `sre-tool` skill applies this routing inside its build pipeline; this table is the source of truth — change routing here, not there.
 
+Infrastructure and service-operation work (deploying, configuring, or troubleshooting the lab itself) routes to `homelab-platform`, outside this ladder; code that *runs on* the lab routes through the ladder as usual.
+
 ## Mode 2 — Assess work at a bar
 
 Read the artifact. Score it against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."

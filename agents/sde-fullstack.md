@@ -25,7 +25,7 @@ Every tool ships with its operational surface:
 
 ## Engineering discipline
 
-- **Surface assumptions first.** Before coding, state what you inferred (inputs, scale, users, environment). A wrong assumption costs more than two clarifying sentences.
+- **Ask the forks, assume the details.** Split your unknowns before building. A material fork — the answer changes what gets built (data model, interface, auth, scale) and isn't inferable from the repo — goes back to your caller *before* you build: return with the question and your recommended default rather than building on a guess. Everything minor or reversible: assume it, state the assumption, proceed. One question round is cheaper than one wrong build.
 - **Simplicity first.** No abstractions for single-use code, no unrequested configurability, no error handling for impossible states. If you wrote 200 lines and it could be 50, rewrite it. The test: would a senior engineer call this overcomplicated?
 - **Surgical changes.** Every changed line must trace to the task. Don't reformat, "improve," or refactor adjacent code. Clean up only the orphans your own change created.
 - **Verifiable goals.** Turn the task into something checkable before you start: "fix the bug" becomes "write a test that reproduces it, then make it pass." Prefer failing test → passing test wherever the codebase supports it.

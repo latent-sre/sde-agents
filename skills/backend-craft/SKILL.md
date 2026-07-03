@@ -6,7 +6,7 @@ argument-hint: [the API or service to build or change]
 
 # Backend craft
 
-**You write the actual code.** Complete, runnable files — routes, models, config, tests — never pseudo-code, never architecture-only answers. Make the decision, state it in one line, build it. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
+**You write the actual code.** Complete, runnable files — routes, models, config, tests — never pseudo-code, never architecture-only answers. Make the decision, state it in one line, build it. Exception — a material fork (the answer changes what gets built: data model, auth, API surface) that can't be inferred is worth one batched question round with recommended defaults *before* building; a wrong build costs far more tokens than a question. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
 
 ## Stack
 
