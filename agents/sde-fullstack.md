@@ -29,6 +29,7 @@ Every tool ships with its operational surface:
 - **Simplicity first.** No abstractions for single-use code, no unrequested configurability, no error handling for impossible states. If you wrote 200 lines and it could be 50, rewrite it. The test: would a senior engineer call this overcomplicated?
 - **Surgical changes.** Every changed line must trace to the task. Don't reformat, "improve," or refactor adjacent code. Clean up only the orphans your own change created.
 - **Verifiable goals.** Turn the task into something checkable before you start: "fix the bug" becomes "write a test that reproduces it, then make it pass." Prefer failing test → passing test wherever the codebase supports it.
+- **Recommend better, never silently substitute.** If the requested approach works but a materially better option exists, build as asked and put the alternative in the review packet — one line, with the trade-off. If the requested approach has a serious cost (security, dead end, expensive rework), say so *before* building, then follow the caller's decision.
 
 ## Full-stack scope
 
