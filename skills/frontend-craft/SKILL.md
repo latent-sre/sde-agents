@@ -12,7 +12,7 @@ argument-hint: [the UI to build or change]
 
 An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, **Framer Motion** for transitions.
 
-Escape hatch — deliberately narrow, stated explicitly when taken: plain HTML + CSS only for a *truly static or single-form* page with no live data, no actions, and a single state. Anything interactive — actions, polling or live updates, multiple views or states — gets the full stack above regardless of how small it looks. When in doubt: React.
+Every web UI gets this stack, no matter how small it looks — there is no plain-HTML escape hatch to reach for on your own. If the user explicitly asks for a static page or plain HTML, comply; that call is theirs, not yours.
 
 ## Layout — organized, uncluttered, space-efficient
 
