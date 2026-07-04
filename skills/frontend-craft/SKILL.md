@@ -36,7 +36,7 @@ Every web UI gets this stack, no matter how small — no plain-HTML escape hatch
 - **Spacing grid**: consistent scale (4/8px steps), generous whitespace at decision points, higher density where data lives — tables and lists earn compactness, forms and actions earn air.
 - **Constrain line lengths**: max content width; multi-column only when content genuinely parallels.
 - **Typography**: 4–5 sizes total; hierarchy through size and weight, never color alone.
-- **Color**: all color through theme tokens, both themes from day one — the palette itself lives in Visual character below.
+- **Color & theme**: all color through theme tokens, both themes from day one. Ship a manual light/dark/system toggle, persisted and defaulting to the OS setting — and set the theme class in an inline `<head>` script *before first paint* so there's no flash of the wrong theme on load. The palette itself lives in Visual character below.
 
 ## Visual character — designed, not default
 
@@ -75,6 +75,15 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 - Density where data lives: compact rows, `tabular-nums`, right-aligned numerics, sticky header, a row-action menu. **Virtualize** (TanStack Virtual) once a list can exceed a few hundred rows.
 - Bulk selection with an "N selected" action bar when the workflow needs it; destructive bulk actions confirm.
 
+## Data visualization
+
+Chart *design* — type choice, palette, accessibility, dashboard layout — is owned by the **`dataviz` skill**; load it for any chart and follow it. This section is only the frontend implementation:
+
+- **Library**: **Recharts v3** by default (composable, themed from your Tailwind tokens). **uPlot** for dense real-time time-series (canvas — thousands of streaming points where SVG chokes). **visx** only for a bespoke one-off. **Tremor** is an optional accelerator for KPI+chart dashboards (Tailwind-native, shadcn-matching). Never **@mantine/charts** — it pulls in Mantine's styling (the `@mantine/core` rule).
+- **Theme**: charts read the same theme tokens and categorical accent palette — never hardcode chart colors.
+- **Live data**: stream via the SSE→Query-cache path, but throttle/batch redraws (not every tick) and keep a rolling window for time-series.
+- **Perf & a11y**: canvas over SVG past ~1–2k points; downsample server-side when you can; give every chart a text or data-table alternative.
+
 ## Forms
 
 - State via **@mantine/form** (or react-hook-form): validate on blur *and* submit, never only on submit.
@@ -99,7 +108,13 @@ The SRE lens is just good engineering pointed at the screen: assume every call c
 
 ## Accessibility (baseline, not optional)
 
-Semantic HTML first; every input labeled; keyboard reachable with visible focus; contrast at AA. If a div has an onClick, it wanted to be a button.
+Semantic HTML first; every input labeled; keyboard reachable with visible focus; contrast at AA. If a div has an onClick, it wanted to be a button. On route change, move focus to the main heading and scroll to top — SPA navigation is silent to a screen reader otherwise. Responsive by default: the sidebar collapses to a drawer on narrow viewports, touch targets are ≥44px, and data tables reflow or scroll rather than overflow the page.
+
+## Performance
+
+- Route-based code splitting (lazy-load each view) and lazy-load heavy widgets — charts, editors, anything not needed on first paint.
+- **Prefetch on intent**: prefetch a route's data (TanStack Query) on hover/focus of its link, so navigation feels instant.
+- Fetch in parallel, never in a waterfall; let TanStack Query dedupe. Watch bundle size — a dashboard shouldn't ship a megabyte of JS to show five numbers.
 
 ## Testing & quality gate
 
