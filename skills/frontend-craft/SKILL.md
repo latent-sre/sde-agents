@@ -8,6 +8,8 @@ argument-hint: [the UI to build or change]
 
 **You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred is worth one batched question round with recommended defaults *before* building; a wrong build costs a full rebuild-and-review cycle, a question costs seconds. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
 
+This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the rules are domain-neutral and apply to a SaaS product or a hobby project the same way.
+
 ## Stack
 
 An existing repo's stack always wins — match it. Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
@@ -19,7 +21,7 @@ An existing repo's stack always wins — match it. Greenfield is always a **Reac
 - Optional, same Tailwind world: **HeroUI v3** as a styled layer when a polished default beats hand-building; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
 
 **Logic — zero CSS, decoupled from the paint:**
-- **TanStack Query** for server state.
+- **TanStack Query** (server state), **TanStack Router** (typed routing + URL state), **TanStack Table** (headless data grids) — one type-safe, zero-CSS suite that *is* the logic layer, painted with Tailwind.
 - **@mantine/hooks** for utility logic (disclosure, debounce, local storage, hotkeys, click-outside, media query, element size); optionally **@mantine/form** for form state. Both ship no CSS and need no provider.
 - Accessible *widget* behavior (focus trap, ARIA, roving tabindex) comes from **Radix / Base UI**, not from Mantine hooks.
 
@@ -60,18 +62,47 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 - Server state lives in TanStack Query (caching, retries, invalidation); UI state stays local. No global store until two distant components genuinely share state.
 - **Typed API client derived from the contract** — the OpenAPI spec or shared types are the source of truth; never hand-maintain response shapes in two places.
 - Every async view has designed **loading, error, and empty states**. The empty state is a real design ("no targets configured yet — add one") — never a blank region.
+- **Live data**: prefer **SSE** (`EventSource`) for one-way server→client streams (status, metrics, logs) — simpler than WebSocket and it auto-reconnects; use WebSocket only when the client must push too. Feed updates into the Query cache so streamed and fetched data share one source of truth; fall back to interval polling when no stream exists.
 
-## Resilience UX (the SRE lens applied to pixels)
+## Routing & URL state
 
-- Errors show what happened *and* what to do next; raw stack traces never reach the user.
-- Buttons disable while pending; no double-submits.
-- No infinite spinners — every wait times out into an actionable error state.
+- **TanStack Router** for the SPA: typed routes, nested layouts under the app shell, route-based code splitting so each view lazy-loads.
+- **The URL is state.** Search text, active filters, page, sort, and the open tab/detail live in URL search params — the back button works, links are shareable, a refresh restores the view. Never keep that state only in component memory.
+
+## Data-dense views (tables & lists)
+
+- **TanStack Table** (headless) for anything tabular — you own the markup and Tailwind styling; sort/filter/paginate through the URL state above.
+- Density where data lives: compact rows, `tabular-nums`, right-aligned numerics, sticky header, a row-action menu. **Virtualize** (TanStack Virtual) once a list can exceed a few hundred rows.
+- Bulk selection with an "N selected" action bar when the workflow needs it; destructive bulk actions confirm.
+
+## Forms
+
+- State via **@mantine/form** (or react-hook-form): validate on blur *and* submit, never only on submit.
+- **The server is the source of validation truth** — mirror obvious rules client-side for speed, but always map the server's field errors back to the offending fields inline.
+- **Dirty tracking**: Save disabled until something changed; warn before leaving unsaved edits (route guard + `beforeunload`). Never make the user retype after an error.
+
+## Resilience UX — failure-first, for any app
+
+The SRE lens is just good engineering pointed at the screen: assume every call can fail or hang, and design that path first. True for a SaaS app or a hobby project as much as an ops console.
+
+- **Error boundaries per panel**: a view is many independent widgets; one failing query shows a small inline error in *its* card, never a white screen for the page.
+- Errors say what happened *and* what to do next; raw stack traces never reach the user.
+- Buttons disable while pending (no double-submits); no infinite spinners — every wait times out into an actionable error state.
 - Optimistic updates only with visible rollback on failure.
+- **Toasts** confirm actions (saved / deleted / failed) and carry the retry for a failed background action; they never replace inline validation.
+
+## Auth (once the app isn't localhost-only)
+
+- Access token in memory; refresh via an **httpOnly, Secure cookie** — never localStorage for anything an XSS could steal.
+- One fetch/Query wrapper does **401 → refresh once → retry, else redirect to login**; every call inherits it instead of reinventing it.
+- Route guards gate whole areas and hide actions the user lacks — but the server still enforces; the UI is convenience, not the security boundary.
 
 ## Accessibility (baseline, not optional)
 
 Semantic HTML first; every input labeled; keyboard reachable with visible focus; contrast at AA. If a div has an onClick, it wanted to be a button.
 
-## Quality gate
+## Testing & quality gate
 
-Before "done": it typechecks, the dev server runs, and the primary flow was exercised in a real browser render — with the evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
+- **Vitest + React Testing Library** for component/logic units — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
+- **Playwright** for the few end-to-end flows whose breakage would page someone.
+- Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render** — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
