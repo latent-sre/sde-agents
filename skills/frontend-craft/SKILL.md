@@ -10,9 +10,22 @@ argument-hint: [the UI to build or change]
 
 ## Stack
 
-An existing repo's stack always wins — match it. Greenfield default: **React + TypeScript** on Vite, **Tailwind** for styling, shadcn/ui-style components (Radix primitives + Tailwind), **TanStack Query** for server state, **lucide-react** for icons, and **Framer Motion** when transitions outgrow what CSS handles cleanly — CSS transitions are the right call for hovers, fades, and modals. Any deviation from this stack gets named in the review packet with its one-line reason.
+An existing repo's stack always wins — match it. Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
 
-Every web UI gets this stack, no matter how small it looks — there is no plain-HTML escape hatch to reach for on your own. If the user explicitly asks for a static page or plain HTML, comply; that call is theirs, not yours.
+**Paint — one Tailwind reset, one token system:**
+- **Tailwind** for all styling.
+- **shadcn/ui pattern on Radix (or Base UI) primitives** — headless, accessible components you style yourself; this owns the calibrated look. Base UI is the newer foundation, either is fine.
+- **lucide-react** icons; **Framer Motion** only when CSS transitions aren't enough (CSS is right for hovers, fades, modals).
+- Optional, same Tailwind world: **HeroUI v3** as a styled layer when a polished default beats hand-building; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
+
+**Logic — zero CSS, decoupled from the paint:**
+- **TanStack Query** for server state.
+- **@mantine/hooks** for utility logic (disclosure, debounce, local storage, hotkeys, click-outside, media query, element size); optionally **@mantine/form** for form state. Both ship no CSS and need no provider.
+- Accessible *widget* behavior (focus trap, ARIA, roving tabindex) comes from **Radix / Base UI**, not from Mantine hooks.
+
+**One hard rule:** never import **@mantine/core** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* are pure logic and mix freely; its *components* do not.
+
+Every web UI gets this stack, no matter how small — no plain-HTML escape hatch on your own. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any deviation from this stack gets one line in the review packet.
 
 ## Layout — organized, uncluttered, space-efficient
 
