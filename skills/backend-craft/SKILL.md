@@ -12,11 +12,14 @@ This skill is general-purpose — any backend or API, not just ops tooling — h
 
 ## Stack
 
-An existing repo's stack always wins — match it. Greenfield, pick by the project and say why in one line:
+An existing repo's stack always wins — match it. Greenfield, pick by the **dominant constraint** and say why in one line:
 
-- **Python + FastAPI** (default): typed Pydantic models, OpenAPI generated for free — which feeds the contract-first flow — async-capable, ideal for ops tools and home-lab services.
-- **Go**: when a single static binary, tiny container, or high concurrency is the point.
-- **Node + TypeScript** (Fastify/Hono): when sharing types end-to-end with a React frontend is the dominant concern.
+- **Python + FastAPI** (default): typed Pydantic, OpenAPI for free (feeds the contract-first flow), and the richest ecosystem of API/SDK clients — best when the job is data work or integrating many upstream APIs.
+- **Go**: single static binary, tiny container, first-class concurrency — best for agents, daemons, network services, and anything that must land on a host with no runtime.
+- **Node + TypeScript** (Fastify / Hono; Bun for raw speed): when sharing types end-to-end with the React frontend is the dominant concern.
+- **Rust** (Axum): max throughput and memory safety with no GC — a data-plane component or a hot-path agent. More to write; spend it only where the performance *is* the point.
+
+Beyond these four, reach further only when a constraint clearly beats all of them and name it — e.g. **Elixir/Phoenix** when soft-real-time plus massive connection concurrency is the product. The rules below are language-neutral; only the examples are Python/Go-flavored.
 
 ## Contract first
 
