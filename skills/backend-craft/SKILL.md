@@ -1,6 +1,6 @@
 ---
 name: backend-craft
-description: Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, integrations, or the service behind a UI — from a single endpoint to a full service. Covers stack choice, contract design, resiliency, data handling, and operability.
+description: Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). Covers stack choice, contract design, resiliency, integration discipline, background jobs, persistence, auth, live data, and operability.
 argument-hint: [the API or service to build or change]
 ---
 
@@ -24,9 +24,18 @@ Beyond these four, reach further only when a constraint clearly beats all of the
 ## Contract first
 
 - The API contract (OpenAPI or equivalent) is written/generated before the frontend consumes anything; it is the single source of truth for shapes.
-- **One error shape everywhere** (problem+json style: status, code, human message, details) — a client should never parse two error formats.
+- **One error shape everywhere** (problem+json style) — a client should never parse two error formats. The shape, worked:
+
+  ```json
+  { "error": { "status": 504, "code": "upstream_timeout",
+               "message": "Grafana did not respond within 5s.",
+               "details": [], "request_id": "req_8f3a2c" } }
+  ```
+
+  Same envelope for validation errors (each field issue as a `details` entry), 404s, and 500s — and `request_id` in every one, so a user-reported error is greppable in the logs.
+- **Serialize through explicit response models** — never return ORM objects or internal dicts directly. A response model is an allowlist: anything not declared in it (password hash, internal flag) *cannot* leak.
 - `/v1` in the path from day one; breaking changes mean a new version, not a mutation.
-- Every list endpoint paginates from the start — retrofitting pagination is a breaking change.
+- Every list endpoint paginates from the start — cursor-based by default (offset is fine for small, bounded admin lists); retrofitting pagination is a breaking change.
 
 ## Resiliency (the core focus)
 
@@ -36,6 +45,8 @@ Beyond these four, reach further only when a constraint clearly beats all of the
 - **Idempotency**: mutating endpoints are safe to retry — naturally idempotent or via idempotency keys.
 - **Validate at the boundary** (Pydantic / zod / validator): reject bad input early with a clear error. Your own frontend is still an untrusted caller.
 - Guard shared mutable state and concurrent access; make every write safe under retry (transaction boundaries live under Persistence).
+
+These are the system-wide principles. The client-side mechanics for *calling other services* — retry policy, breakers, token refresh — live in Consuming APIs below; don't restate them ad hoc.
 
 ## Consuming APIs (integration discipline)
 
@@ -49,7 +60,7 @@ Much of this service's job is calling *other* APIs — take being a good client 
 - **Upstream responses are untrusted**: parse into *your own* models, tolerate schema drift (ignore unknown fields, fail loudly only on a missing critical one), and never leak a raw upstream error to your caller — translate it into your one error shape.
 - **Cache upstream data** with a TTL (stale-while-revalidate) — fewer calls, and you ride out upstream blips.
 - **Idempotency for side-effecting calls** — an idempotency key or dedup so a retry doesn't double-submit.
-- **Observe every upstream call**: log target, latency, status, correlation ID; RED metrics per upstream; reflect a hard-down critical dependency in `/readyz`.
+- **Observe every upstream call**: log target, latency, status; **propagate your request ID downstream** (`X-Request-ID`) so one trace spans services; RED metrics per upstream; reflect a hard-down critical dependency in `/readyz`.
 
 ## Background work & scheduling
 
@@ -58,13 +69,23 @@ Much of this service's job is calling *other* APIs — take being a good client 
 - **At-least-once is the norm**: jobs retry with backoff and land failures in a **dead-letter** path rather than vanishing; log job start/end with a correlation ID.
 - **Receiving webhooks**: verify the signature, respond fast (202) and process async, and dedupe by event ID — deliveries repeat.
 
+## Serving live data (SSE / WebSocket)
+
+The frontend's default for live data is SSE — this is the serving half of that contract.
+
+- **SSE for one-way push** (status, metrics, logs): send a keep-alive comment every 15–30 s so proxies don't kill idle streams; `Cache-Control: no-cache` and disable proxy buffering (flush per event).
+- **Support resume**: give events `id`s and honor `Last-Event-ID` on reconnect — EventSource auto-reconnects, so design for dropped clients rather than pretending they don't happen.
+- **WebSocket only when the client must push too**; then heartbeat/pong and close idle connections deliberately.
+- **Bound it**: cap concurrent streams, drop slow consumers instead of buffering unbounded, and count open streams in your metrics.
+- Streams are requests: authenticate them, tag them with a request ID, and close them cleanly during shutdown.
+
 ## Operability
 
 - Structured logs with a request ID on every entry — one request must be traceable end to end.
 - `/healthz` (process up) and `/readyz` (dependencies reachable) — distinct, because they answer different questions.
 - RED metrics (rate, errors, duration) on the request path.
 - Config from environment, validated at startup — fail fast and loud on bad config, never limp.
-- Graceful shutdown: stop accepting, drain in-flight, then exit.
+- Graceful shutdown: stop accepting, drain in-flight requests, finish or re-queue the running job, stop the scheduler, close live streams — then exit.
 
 ## Persistence
 
@@ -81,12 +102,13 @@ The server is the source of truth for auth — the frontend's checks are conveni
 - **Hash passwords with argon2id** (or bcrypt) — never store or log credentials, never roll your own crypto.
 - **Authz by scope/role**, checked at the handler — "authenticated" is not "authorized." Deny by default.
 - Tokens expire; support refresh and **revocation** (a logout or a leaked token must be killable). Rate-limit auth endpoints hardest.
+- **Machine callers too**: scripts and services calling your API get scoped, revocable API keys or client-credentials — logged like any user, never a shared admin token pasted into a script.
 
 ## Security
 
 - Secrets from env or a secret store — never in code, images, or logs.
 - Explicit CORS allowlist (never `*` with credentials); rate limiting on anything exposed (token bucket, return `Retry-After`).
-- Validate and bound every input at the boundary; your own frontend is still an untrusted caller.
+- **Bound what you accept**: request-body size caps, server-side request timeouts, and bounded query params (max page size, max array length). Inbound requests can do unbounded damage exactly like unbounded outbound calls — input *validation* itself lives under Resiliency.
 
 ## Testing & quality gate
 
