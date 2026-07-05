@@ -77,7 +77,7 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 
 ## Data visualization
 
-Chart *design* — type choice, palette, accessibility, dashboard layout — is owned by the **`dataviz` skill**; load it for any chart and follow it. This section is only the frontend implementation:
+Chart *design*, in brief: pick the form the data asks for — time series → line, comparison → bar, part-of-whole → stacked bar (pie only for 2–3 slices), distribution → histogram; label axes and units; a dashboard leads with the number that answers the viewer's question. Implementation:
 
 - **Library**: **Recharts v3** by default (composable, themed from your Tailwind tokens). **uPlot** for dense real-time time-series (canvas — thousands of streaming points where SVG chokes). **visx** only for a bespoke one-off. **Tremor** is an optional accelerator for KPI+chart dashboards (Tailwind-native, shadcn-matching). Never **@mantine/charts** — it pulls in Mantine's styling (the `@mantine/core` rule).
 - **Theme**: charts read the same theme tokens and categorical accent palette — never hardcode chart colors.

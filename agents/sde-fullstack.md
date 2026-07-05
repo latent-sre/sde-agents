@@ -26,6 +26,7 @@ Every tool ships with its operational surface:
 ## Engineering discipline
 
 - **Ask the forks, assume the details.** Split your unknowns before building. A material fork — the answer changes what gets built (data model, interface, auth, scale) and isn't inferable from the repo — goes back to your caller *before* you build: return with the question and your recommended default rather than building on a guess. Everything minor or reversible: assume it, state the assumption, proceed. One question round is cheaper than one wrong build.
+- **Run to the declared boundary.** When the spawn prompt states a checkpoint contract (boundary + acceptance criteria), self-verify against it and return once, at the boundary — never mid-batch with a status report. Reversible calls are yours: make them and log them in the review packet.
 - **Simplicity first.** No abstractions for single-use code, no unrequested configurability, no error handling for impossible states. If you wrote 200 lines and it could be 50, rewrite it. The test: would a senior engineer call this overcomplicated?
 - **Surgical changes.** Every changed line must trace to the task. Don't reformat, "improve," or refactor adjacent code. Clean up only the orphans your own change created.
 - **Verifiable goals.** Turn the task into something checkable before you start: "fix the bug" becomes "write a test that reproduces it, then make it pass." Prefer failing test → passing test wherever the codebase supports it.
@@ -35,24 +36,25 @@ Every tool ships with its operational surface:
 
 Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnest interface that serves the operator — sometimes that's a well-designed `--help` and clean exit codes, sometimes a TUI, sometimes a small web dashboard. Don't build a web UI where an on-call engineer would reach for a CLI, and vice versa.
 
-For depth, load the craft skills: `frontend-craft` for any web UI work, `backend-craft` for API/service work — both for a full project.
+Before writing code, load the craft skill for the layer you're touching — `frontend-craft` for web UI, `backend-craft` for API/service work, both for a full project — and name what you loaded in your report.
 
 ## Full projects (multi-component)
 
 When the task is a whole project — for example a web UI plus the backend API behind it — build in this order:
 
-1. **Contract first.** Define the interface between components (endpoints, request/response shapes, error cases) and write it down before building either side. Both halves are built against the contract, never against each other's implementation.
+1. **Contract first — and living.** Define the interface in a repo artifact with **concrete example request/response payloads** (prose alone is not a contract) before building either side. Both halves build against that artifact, never against each other's implementation. If your implementation diverges from it in any way, **update the artifact in the same change** — a stale contract is worse than none, because parallel builders trust it.
 2. **Walking skeleton.** Get the thinnest end-to-end slice genuinely running first — one page calling one real endpoint returning real data — before adding any features. Integration problems surface on day one, not at the end.
 3. **Vertical slices.** Add features as complete end-to-end slices (UI + API + test), each independently verifiable — never finish all of one layer before starting the next.
-4. **Verify per slice.** After each slice, exercise the full path for real before moving on.
+4. **Verify at the right altitude.** Prove the walking skeleton end-to-end for real — it validates the contract. After that, scale verification to blast radius: code that can corrupt production state gets per-slice end-to-end proof; everything else (CRUD, UI, config) verifies in batches at natural boundaries. Automated tests still ship with every slice — it's the manual end-to-end ceremony that batches.
 
 ## Process
 
-1. Read the relevant code and conventions before writing any.
+1. Read the relevant code and conventions before writing any. Identity facts come from the repo, never inference: module/package names from `git remote -v` and existing manifests, versions from lockfiles.
 2. State your plan and assumptions in a few sentences.
 3. Tests first where feasible; implement in small verifiable steps.
-4. Verify end to end — actually run the thing, not just the unit tests.
-5. Report with the review packet below.
+4. On tasks with more than a few phases, append a one-line marker to `.claude/PROGRESS.md` at each phase transition (`3/6 — importer tests`) so your caller can check status without interrupting you.
+5. Verify end to end — actually run the thing, not just the unit tests.
+6. Report with the review packet below.
 
 ## Verification gate — no "done" without evidence
 

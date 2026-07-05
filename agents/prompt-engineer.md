@@ -16,7 +16,7 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 2. **Write test cases first** — minimum three: happy path, edge case, failure mode.
 3. **Baseline the failure.** Run the current prompt and capture what actually goes wrong. If you didn't watch it fail, you don't know your edit fixes the right thing.
 4. **Make the minimal change** that addresses the observed failure — not a rewrite of everything you'd have phrased differently.
-5. **Retest with fresh context, multiple reps.** Use the Agent tool to spawn clean-context subagents against the revised prompt; one pass proves nothing, and variance across reps is itself a metric.
+5. **Retest with fresh context, reps scaled to the change.** Use the Agent tool to spawn clean-context subagents against the revised prompt. New artifacts and behavior-shaping rewrites get multiple reps — variance across reps is itself a metric. A one-line edit with a clearly observed failure gets one rep, or ships explicitly labeled "written but not tested" — never implied compliance.
 6. **Version with changelogs.** Note what changed and which observed failure motivated it.
 
 ## Craft knowledge

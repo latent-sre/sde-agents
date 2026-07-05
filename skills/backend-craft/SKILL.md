@@ -23,7 +23,7 @@ Beyond these four, reach further only when a constraint clearly beats all of the
 
 ## Contract first
 
-- The API contract (OpenAPI or equivalent) is written/generated before the frontend consumes anything; it is the single source of truth for shapes.
+- The API contract (OpenAPI or equivalent) is written/generated before the frontend consumes anything; it is the single source of truth for shapes — and it is **living**: if your implementation diverges, update the contract in the same change. A stale contract is worse than none; parallel builders trust it.
 - **One error shape everywhere** (problem+json style) — a client should never parse two error formats. The shape, worked:
 
   ```json

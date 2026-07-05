@@ -8,6 +8,8 @@ Audit the lab against its own standards and report like a code review of the inf
 
 ## Checks (run what's applicable; list what you couldn't run and why)
 
+All checks are read-only — fan them out in parallel (per host or per area) rather than sweeping serially.
+
 - **Exposure** — listening ports vs. what the reverse proxy should be fronting; anything WAN-reachable; services without auth in front.
 - **Container hygiene** — `latest` tags, missing restart policies, missing health checks, no resource limits, containers in exited/restarting loops.
 - **Certificates** — anything expiring within 30 days; services still on plain HTTP.
