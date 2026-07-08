@@ -49,9 +49,11 @@ For builds with three or more parallel batches, offer the user workflow orchestr
 
 ## Phase 3 — Review
 
-Spawn `code-reviewer` with the mission and **threat model** (from the environment card), the **contract artifact** (served shapes are checked against it), and focus files seeded from the builders' "Check first" packet entries. Reviews are read-only — run them **concurrently with the next build phase** unless that phase builds on the reviewed code; only safety-critical code treats review as a gate. Route P0/P1 fixes to whichever builder owns the files; report P2/P3 to the user rather than silently applying. For anything network-exposed or auth-bearing, add a security review before deploy artifacts ship.
+Spawn `code-reviewer` with the mission and **threat model** (from the environment card), the **contract artifact** (served shapes are checked against it), and focus files seeded from the builders' "Check first" packet entries. Reviews are read-only — run them **concurrently with the next build phase** unless that phase builds on the reviewed code; only safety-critical code treats review as a gate. Route P0/P1 fixes to whichever builder owns the files; report P2/P3 to the user rather than silently applying. For anything network-exposed or auth-bearing, add a security review before deploy artifacts ship. **The gate keys on the file, not the size of the diff**: any later edit to a safety-critical file — including a one-line "nit" the orchestrator is tempted to apply directly — re-enters review before it ships. "Too small to review" is how an unreviewed change lands in exactly the code the gate exists to protect.
 
 ## Phase 4 — Verify and hand over
+
+**Clean baseline first.** Before the first mission-transaction apply, assert that no stale process the pipeline — or an earlier detour — spawned is still bound to the target's ports, and that the target admin API answers. A stale process serving a *previous* config can return a green that proves nothing — more dangerous than the failed apply it might instead cause. Any process the pipeline launches is the pipeline's to tear down at hand-over.
 
 Run the tool and execute the **mission transaction from the environment card, verbatim** — not just the test suite, and not a substitute flow that happens to work. Deploy/install docs are runbooks: every command executed as written or labeled `unverified`. Final report: what was built, how to run it, what was verified end to end, the review verdict, and known gaps.
 

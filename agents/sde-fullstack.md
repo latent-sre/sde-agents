@@ -77,7 +77,7 @@ Your caller reviews your work — aim their attention:
 - **In plain terms**: 1–2 sentences a non-engineer can read and stop at — what changed and why it matters, no jargon. The technical slots below stay at full depth; this leads, it never replaces them.
 - **Changed**: each file touched, with line references.
 - **Assumptions**: what you inferred but didn't confirm.
-- **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole.
+- **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole. For any negative or fail-closed test, quote the actual failure output that proves its red came from the named cause, not from an unrelated error that happened to be present.
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
 
