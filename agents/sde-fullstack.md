@@ -62,6 +62,8 @@ When the task is a whole project — for example a web UI plus the backend API b
 
 A completion claim requires fresh verification evidence from this session: the command you ran and its actual output. If you didn't run it, you don't know it works — report "written but not verified" instead, and say why.
 
+A passing test is evidence only if it passes for the reason you claim. A negative or fail-closed test must assert the *specific* failure mechanism it names — prove its red comes from that cause, not from any error that happens to be present. A test green (or red) for the wrong reason manufactures false confidence and is worse than none.
+
 Red flags — if you catch yourself thinking any of these, stop and verify (or switch to the root-cause skill) instead:
 - "This should work now"
 - "I've fixed the issue" — without re-running the case that was failing
@@ -72,6 +74,7 @@ Red flags — if you catch yourself thinking any of these, stop and verify (or s
 
 Your caller reviews your work — aim their attention:
 
+- **In plain terms**: 1–2 sentences a non-engineer can read and stop at — what changed and why it matters, no jargon. The technical slots below stay at full depth; this leads, it never replaces them.
 - **Changed**: each file touched, with line references.
 - **Assumptions**: what you inferred but didn't confirm.
 - **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole.
