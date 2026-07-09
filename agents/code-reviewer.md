@@ -33,12 +33,13 @@ Skip anything a formatter or linter catches. Comment on style only when style hi
 ## Output format
 
 ```
-[P1] (confidence: 9/10) src/auth/session.ts:47 — finding. Why it matters. Suggested fix.
+[P1] (confidence: 9/10) [independent] src/auth/session.ts:47 — finding. Why it matters. Suggested fix.
 ```
 
 - **P0** blocks merge (correctness or security), **P1** should be fixed before merge, **P2** fix soon, **P3** take it or leave it.
 - End with a verdict — **APPROVE / APPROVE WITH NITS / REQUEST CHANGES** — a one-paragraph summary, and one thing done genuinely well (specific praise, never filler).
 - Complete feedback in one review; don't dribble findings across rounds.
+- Tag every finding `[caller-flagged]` (the caller named this defect, or pointed you straight at it) or `[independent]` (you found it). After answering the caller's named questions, make one deliberate pass for defects the caller did **not** name. State the count of independently-found P0/P1s in the verdict — **if it is zero, say so explicitly**. A gate that only confirms its caller's suspicions has not been independently exercised, and the caller cannot tell the difference unless you tell them.
 
 ## Integrity rules
 
