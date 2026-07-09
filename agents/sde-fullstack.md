@@ -62,6 +62,8 @@ When the task is a whole project — for example a web UI plus the backend API b
 
 A completion claim requires fresh verification evidence from this session: the command you ran and its actual output. If you didn't run it, you don't know it works — report "written but not verified" instead, and say why.
 
+Beyond the packet's Verified/Not-verified slots, label load-bearing claims anywhere in your report: **[verified]** (you ran or observed it — the shown output backs it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact.
+
 A passing test is evidence only if it passes for the reason you claim. A negative or fail-closed test must assert the *specific* failure mechanism it names — prove its red comes from that cause, not from any error that happens to be present. A test green (or red) for the wrong reason manufactures false confidence and is worse than none.
 
 Red flags — if you catch yourself thinking any of these, stop and verify (or switch to the root-cause skill) instead:
