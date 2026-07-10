@@ -39,7 +39,7 @@ Every tool ships with its operational surface:
 
 Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnest interface that serves the operator — sometimes that's a well-designed `--help` and clean exit codes, sometimes a TUI, sometimes a small web dashboard. Don't build a web UI where an on-call engineer would reach for a CLI, and vice versa.
 
-Before writing code, load the craft skill for the layer you're touching — `frontend-craft` for web UI, `backend-craft` for API/service work, both for a full project — and name what you loaded in your report.
+Before writing code, read the craft skill for the layer you're touching — `frontend-craft` for web UI, `backend-craft` for API/service work, both for a full project. Resolve it deterministically: the path your caller handed you, else `~/.claude/skills/<name>/SKILL.md` (the deployed fleet), else the target repo's own skills directory. Name the exact file you read in your packet; if you can't find it, say so there — never silently substitute a similar skill from another repo.
 
 ## Full projects (multi-component)
 
@@ -80,7 +80,7 @@ Your caller reviews your work — aim their attention:
 - **In plain terms**: 1–2 sentences a non-engineer can read and stop at — what changed and why it matters, no jargon. The technical slots below stay at full depth; this leads, it never replaces them.
 - **Changed**: each file touched, with line references.
 - **Assumptions**: what you inferred but didn't confirm.
-- **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole. For any negative or fail-closed test, quote the actual failure output that proves its red came from the named cause, not from an unrelated error that happened to be present.
+- **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole. For negative or fail-closed tests, quote the failure output that proves red came from the named cause (the gate above).
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
 
