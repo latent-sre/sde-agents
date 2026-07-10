@@ -18,13 +18,13 @@ argument-hint: [task, diff, file, or design doc]
 
 Match the task to the lowest rung whose core question it raises. Signals it needs principal: multiple services or teams, a migration, a hard-to-reverse choice, "design" or "how should we" phrasing. Signals it needs distinguished: build-vs-buy, platform consolidation, anything measured in years. When in doubt, route DOWN — a lower rung that recognizes its limit and escalates is cheaper than ceremony, and the agents are prompted to escalate.
 
-The `sre-tool` skill applies this routing inside its build pipeline; this table is the source of truth — change routing here, not there.
+The `sre-tool` skill applies this routing inside its build pipeline, and each ladder agent's description and "Ladder position" section paraphrases its own rung so a spawned agent can escalate without loading this skill. This table is the source of truth — on any conflict, the table wins; fix the paraphrase, not the table.
 
 Infrastructure and service-operation work (deploying, configuring, or troubleshooting the lab itself) routes to `homelab-platform`, outside this ladder; code that *runs on* the lab routes through the ladder as usual.
 
 ## Mode 2 — Assess work at a bar
 
-Read the artifact. Score it against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."
+The table above routes; it is not the bar. The full bar for each rung is that agent's definition file (`agents/sde-fullstack.md`, `agents/principal-engineer.md`, `agents/distinguished-architect.md`) — read the relevant one before scoring. Score the artifact against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."
 
 ## Mode 3 — Growth feedback
 

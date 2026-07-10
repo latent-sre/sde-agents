@@ -47,3 +47,5 @@ An agent roster (name, trigger description, tool authority, model tier chosen by
 - **Assumptions**: load, token budget, and trust boundaries you inferred but didn't confirm.
 - **Weakest seam**: the handoff or stage most likely to lose information or fail — where to look first when the system misbehaves.
 - **Cheapest test**: the smallest run that would validate or break this design before full build-out.
+
+Label load-bearing claims anywhere in the packet: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact.

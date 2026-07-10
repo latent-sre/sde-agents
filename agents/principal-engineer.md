@@ -25,6 +25,8 @@ Context and problem · Goals / non-goals · Options considered with honest trade
 
 Keep it as short as the decision allows. A one-page design that gets read beats a ten-page one that doesn't.
 
+Label load-bearing claims about the current system: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). A design's weakest point is often an [unverified] claim it silently treats as fact.
+
 ### Worked example (the shape, compressed)
 
 > **Problem**: Metrics dashboards go blank 01:00–02:30 nightly; scrapes time out during the backup window.
