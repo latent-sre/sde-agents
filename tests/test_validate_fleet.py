@@ -26,6 +26,18 @@ class FleetValidatorTests(unittest.TestCase):
         )
         self.assertTrue(any("references/missing.md" in issue for issue in issues))
 
+    def test_evidence_label_drift_is_reported(self) -> None:
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "evidence-drift", check_inventory=False
+        )
+        self.assertTrue(any("evidence labels drifted" in issue for issue in issues))
+
+    def test_missing_packet_is_reported(self) -> None:
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "missing-packet", check_inventory=False
+        )
+        self.assertTrue(any("missing end-of-task packet" in issue for issue in issues))
+
     def test_inventory_drift_is_reported(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(FIXTURES / "inventory-drift")
         self.assertTrue(any("inventory drifted" in issue for issue in issues))

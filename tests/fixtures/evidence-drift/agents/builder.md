@@ -7,6 +7,9 @@ model: inherit
 
 # Builder
 
+Label claims: **[verified]** (I checked it somehow), **[sourced]** (from somewhere), or
+**[unverified]** (assumption or couldn't check).
+
 ## Review packet
 
 - **Changed**: what changed.

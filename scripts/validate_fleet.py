@@ -24,6 +24,17 @@ INVENTORY_RE = re.compile(
     re.DOTALL,
 )
 ALLOWED_MODELS = {"inherit", "haiku", "sonnet", "opus"}
+# Canonical evidence-label phrasing; agent files may extend a definition but
+# must contain these exact stems so the triad cannot drift file by file.
+EVIDENCE_LABEL_STEMS = (
+    "**[verified]** (you ran or observed it",
+    "**[sourced]** (cited to file:line, URL, or query)",
+    "**[unverified]** (assumption or couldn't check)",
+)
+EVIDENCE_LABEL_RE = re.compile(r"\*\*\[(?:un)?(?:verified|sourced)\]\*\*")
+PACKET_HEADING_RE = re.compile(
+    r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
+)
 
 
 def read_text(path: Path) -> str:
@@ -120,6 +131,18 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
             issues.append(f"{path}: missing model")
         elif model not in ALLOWED_MODELS:
             issues.append(f"{path}: unsupported model {model!r}")
+
+        content = read_text(path)
+        if EVIDENCE_LABEL_RE.search(content):
+            for stem in EVIDENCE_LABEL_STEMS:
+                if stem not in content:
+                    issues.append(
+                        f"{path}: evidence labels drifted from canonical phrasing; expected {stem!r}"
+                    )
+        if not PACKET_HEADING_RE.search(content):
+            issues.append(
+                f"{path}: missing end-of-task packet ('## ... packet' or '## Output format' section)"
+            )
 
     if not names:
         issues.append(f"{agents_dir}: no agent definitions found")

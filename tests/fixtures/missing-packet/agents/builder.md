@@ -7,6 +7,4 @@ model: inherit
 
 # Builder
 
-## Review packet
-
-- **Changed**: what changed.
+Builds features and reports free-form.
