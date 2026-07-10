@@ -18,7 +18,7 @@ An existing repo's stack always wins — match it. Greenfield is always a **Reac
 - **Tailwind** for all styling.
 - **shadcn/ui pattern on Radix (or Base UI) primitives** — headless, accessible components you style yourself; this owns the calibrated look. Base UI is the newer foundation, either is fine.
 - **lucide-react** icons; **Framer Motion** only when CSS transitions aren't enough (CSS is right for hovers, fades, modals).
-- Optional, same Tailwind world: **HeroUI v3** as a styled layer when a polished default beats hand-building; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
+- Optional, same Tailwind world: **HeroUI v3** as a styled layer only when it can share the existing reset and token system; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
 
 **Logic — zero CSS, decoupled from the paint:**
 - **TanStack Query** (server state), **TanStack Router** (typed routing + URL state), **TanStack Table** (headless data grids) — one type-safe, zero-CSS suite that *is* the logic layer, painted with Tailwind.
@@ -27,7 +27,7 @@ An existing repo's stack always wins — match it. Greenfield is always a **Reac
 
 **One hard rule:** never import **@mantine/core** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* are pure logic and mix freely; its *components* do not.
 
-Every web UI gets this stack, no matter how small — no plain-HTML escape hatch on your own. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any deviation from this stack gets one line in the review packet.
+For a greenfield SPA, use this stack no matter how small. Existing repositories keep their established stack as required above. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any greenfield deviation from this default gets one line in the review packet.
 
 ## Layout — organized, uncluttered, space-efficient
 
