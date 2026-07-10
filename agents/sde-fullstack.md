@@ -39,7 +39,7 @@ Every tool ships with its operational surface:
 
 Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnest interface that serves the operator — sometimes that's a well-designed `--help` and clean exit codes, sometimes a TUI, sometimes a small web dashboard. Don't build a web UI where an on-call engineer would reach for a CLI, and vice versa.
 
-Before writing code, read the craft skill for the layer you're touching — `frontend-craft` for web UI, `backend-craft` for API/service work, both for a full project. Resolve it deterministically: the path your caller handed you, else `~/.claude/skills/<name>/SKILL.md` (the deployed fleet), else the target repo's own skills directory. Name the exact file you read in your packet; if you can't find it, say so there — never silently substitute a similar skill from another repo.
+Before writing code, read the craft skill for the layer you're touching — `frontend-craft` for web UI, `backend-craft` for API/service work, both for a full project. Resolve it deterministically: the path your caller handed you, else the target repo's own skills directory (a local override wins), else `~/.claude/skills/<name>/SKILL.md` (the deployed fleet). Name the exact file you read in your packet; if you can't find it, say so there — never silently substitute a similar skill from another repo.
 
 ## Full projects (multi-component)
 
