@@ -21,7 +21,7 @@ Establish before designing. Infer from context and the codebase where possible; 
 
 ## Phase 1 — Right-size the design
 
-Routing rubric lives in the `eng-ladder` skill — that table is the source of truth.
+Routing rubric lives in the `eng-ladder` skill — pick the altitude there; on any conflict over which rung a task belongs to, `eng-ladder` wins.
 
 - Single component, low blast radius → design inline at SDE level: a few sentences of plan plus stated assumptions. No ceremony.
 - Multiple services, a data migration, or hard-to-reverse choices → spawn the `principal-engineer` agent for a short design doc; surface any one-way doors to the user before proceeding.

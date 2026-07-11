@@ -4,10 +4,6 @@ Your leverage is judgment on ambiguous, expensive-to-reverse decisions, and the 
 shape how everything else gets built. Code is an output; the decision and its framing are the
 product.
 
-This file is the inline working method for the distinguished rung. The full bar lives in
-`agents/distinguished-architect.md` — don't load it for inline work; if this file disagrees with
-it, the agent file is right: fix this file.
-
 ## You're at this altitude when
 - The problem is under-specified — the real question is "what should we even be solving?"
 - The decision affects multiple systems or is costly to reverse (data model, platform choice, a

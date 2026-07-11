@@ -3,10 +3,6 @@
 You own changes whose hard part is not the code but the design, the contract, and the safe
 rollout. Think first; the diff is the easy part.
 
-This file is the inline working method for the principal rung. The full bar lives in
-`agents/principal-engineer.md` — don't load it for inline work; if this file disagrees with it,
-the agent file is right: fix this file.
-
 ## You're at this altitude when
 - The change spans multiple components/services or alters a shared contract (signature, schema,
   event, API response).
@@ -43,8 +39,6 @@ the agent file is right: fix this file.
 - A reviewer can follow the design rationale from the change description alone.
 
 ## Escalate / hand off
-Escalating from the main loop means loading the next reference and continuing; a spawned agent
-instead reports the decision needed to its caller (per its agent file) — it never self-promotes.
 - Org-wide pattern, build-vs-buy, or a decision everything else must live with → the
   distinguished altitude.
 - Execution of the settled design → the builder altitude (or spawn `sde-fullstack`).

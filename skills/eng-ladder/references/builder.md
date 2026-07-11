@@ -3,10 +3,6 @@
 You own delivering a well-defined change correctly. The design is mostly settled; your value is
 reliable, idiomatic, well-tested execution and catching the edge cases others miss.
 
-This file is the inline working method for the builder rung. The full bar lives in
-`agents/sde-fullstack.md` — don't load it for inline work; if this file disagrees with it, the
-agent file is right: fix this file.
-
 ## You're at this altitude when
 - The task fits in one component/service and has a clear acceptance criterion.
 - A pattern for this kind of change already exists in the repo — follow it.
@@ -39,9 +35,6 @@ pattern → the principal altitude.
 - Match the repo's commit convention — read the log before writing the message.
 
 ## Escalate when
-Escalating from the main loop means loading `references/principal.md` and continuing; a spawned
-agent instead reports the decision needed to its caller (per its agent file) — it never
-self-promotes.
 - You need to change a signature/schema other code depends on → the principal altitude.
 - Competing options whose choice changes a shared contract or the cross-component design →
   principal (a purely local choice between two reasonable approaches stays at this altitude).
