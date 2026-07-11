@@ -1,6 +1,6 @@
 ---
 name: frontend-craft
-description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. Covers stack choice, layout, styling, motion, state management, and API integration.
+description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use backend-craft.
 argument-hint: [the UI to build or change]
 ---
 
