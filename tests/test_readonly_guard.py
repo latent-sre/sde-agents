@@ -51,6 +51,10 @@ ALLOWED = [
     # search / inspection
     "grep -rn 'def main' scripts/",
     "rg 'git push' docs/",
+    'rg "rm -rf" docs/',
+    'grep -rn "pip install" README.md',
+    'rg "cargo install" notes.md',
+    'rg "mkdir" skills/',
     "ls -la agents/",
     "cat skills/eng-ladder/SKILL.md",
     "wc -l agents/*.md",
@@ -97,6 +101,10 @@ DENIED = [
     "gh api repos/o/r/issues -X POST",
     # filesystem / process / service mutations
     "rm -rf build/",
+    "/bin/rm -rf build/",
+    "echo $(rm -rf /)",
+    "(rm -rf /)",
+    "find . -exec rm {} \\;",
     "mkdir -p /tmp/x",
     "touch marker",
     "cp a b",
@@ -113,6 +121,7 @@ DENIED = [
     "vim agents/code-reviewer.md",
     # package installs
     "pip install requests",
+    "/usr/local/bin/pip install requests",
     "npm install left-pad",
     "apt-get install -y jq",
     "cargo install ripgrep",
@@ -144,9 +153,13 @@ DENIED = [
     "crontab newtab",
     # allowlist must not leak past its exact scope
     "python scripts/validate_fleet.py --write-inventory",
+    "python scripts/validate_fleet.py --WRITE-INVENTORY",
     "python scripts/validate_fleet.py; rm -rf /",
     "python /tmp/evil/scripts/validate_fleet.py",
     "python scripts/validate_fleet.py\nrm -rf /",
+    "python scripts/validate_fleet.py --root . > out.txt",
+    "python scripts/validate_fleet.py --root $(rm -rf /)",
+    "python scripts/validate_fleet.py `rm -rf /`",
 ]
 
 

@@ -52,6 +52,15 @@ _WRAP = r"(?:(?:sudo|xargs|nice|env|time|command|nohup|setsid|stdbuf|ionice)\b[^
 # Command-position anchor: start of string or just after a pipe/sep, plus the wrapper tolerance.
 _CMD = r"(?:^|[|;&]\s*)" + _WRAP
 
+# Wider command-position anchor for verbs that commonly appear inside QUOTED SEARCH TEXT
+# (`rg "rm -rf" docs/`, `grep "pip install" README.md` — routine review commands that must not be
+# false-positive denied). Anchors on start-of-line, separators, AND subshell/substitution openers
+# (`(`, `{`, backtick) so `$(rm …)`, `(rm …)` and `` `rm …` `` are still caught in command position,
+# while the same verb as a mere argument (after `rg`/`grep`) passes. A verb inside a quoted string
+# that ALSO contains a separator (`rg "x; rm -rf" …`) still trips this — accepted: regex cannot
+# parse shell quoting, and that residual errs toward deny, matching the guard's posture.
+_CMD_SUB = r"(?:^|[|;&(){}`]\s*)" + _WRAP
+
 # Git accepts GLOBAL options BETWEEN `git` and the subcommand (`git -C <path> push`, `git -c k=v commit`,
 # `git --git-dir=… --work-tree=… add`, `git --no-pager reset`). Without tolerating that prefix, the verb
 # anchor `\bgit\s+(push|commit|…)` is bypassed by the idiomatic, non-adversarial `git -C repo …` form.
@@ -102,9 +111,15 @@ _DENY_PATTERNS = [
     # Reads (`--get`/`--list`) lack the trailing value, so they pass through.
     _GIT_CMD + _GIT_PRE + r"config\s+(?:--\S+\s+)*\S+\.\S+\s+\S",
     _GIT_CMD + _GIT_PRE + r"config\s+(--unset|--unset-all|--replace-all|--add|--rename-section|--remove-section)\b",
-    # filesystem / process / service mutations
-    r"\b(rm|rmdir|mv|cp|rsync|dd|truncate|shred|chmod|chown|chgrp|ln|mkfs|mkdir|touch)\b",
-    r"\bfind\b.*\s-delete\b",
+    # filesystem / process / service mutations — command-position anchored (via _CMD_SUB, which also
+    # covers subshell/substitution openers) with an optional path prefix (`/bin/rm`), so the verb as
+    # quoted search text (`rg "rm -rf" docs/`) is not a false positive but `$(rm …)` is still caught.
+    _CMD_SUB + r"(?:\S*/)?(rm|rmdir|mv|cp|rsync|dd|truncate|shred|chmod|chown|chgrp|ln|mkfs|mkdir|touch)\b",
+    # find's action flags execute or mutate: -delete removes, -exec/-execdir/-ok/-okdir run an
+    # arbitrary command with find as the launcher (`find . -exec rm {} \;` would otherwise slip
+    # past the command-position anchor above, since rm sits in argument position there).
+    r"\bfind\b[^|;&]*\s-delete\b",
+    r"\bfind\b[^|;&]*\s-(exec|execdir|ok|okdir)\b",
     # GNU install copies/creates files; anchored to command position because 'install'
     # is also a common path component (e.g. `ls /opt/install`) and a package subcommand.
     _CMD + r"install\b",
@@ -128,14 +143,16 @@ _DENY_PATTERNS = [
     r"\b(kill|pkill|killall)\b",
     r"\b(systemctl|service)\s+(start|stop|restart|reload|enable|disable)\b",
     r"\b(shutdown|reboot|halt|poweroff)\b",
-    # package / dependency installs (state change, out of scope for read-only review)
-    r"\b(apt|apt-get|yum|dnf|zypper|pip|pip3|npm|pnpm|yarn|gem|brew|choco)\s+"
+    # package / dependency installs (state change, out of scope for read-only review) —
+    # command-position anchored like the filesystem rule, so `rg "pip install" docs/` (the verb as
+    # search text) passes while a real install, including by absolute path, is blocked.
+    _CMD_SUB + r"(?:\S*/)?(apt|apt-get|yum|dnf|zypper|pip|pip3|npm|pnpm|yarn|gem|brew|choco)\s+"
     r"(install|remove|uninstall|update|upgrade|add)\b",
-    r"\bcargo\s+install\b",
-    r"\b(go)\s+(install|get)\b",
-    r"\buv\s+pip\s+install\b",
-    r"\bpoetry\s+(add|install)\b",
-    r"\b(apk\s+add|pacman\s+-S)\b",
+    _CMD_SUB + r"(?:\S*/)?cargo\s+install\b",
+    _CMD_SUB + r"(?:\S*/)?go\s+(install|get)\b",
+    _CMD_SUB + r"(?:\S*/)?uv\s+pip\s+install\b",
+    _CMD_SUB + r"(?:\S*/)?poetry\s+(add|install)\b",
+    _CMD_SUB + r"(?:\S*/)?(apk\s+add|pacman\s+-S)\b",
     # HTTP writes, file downloads/uploads (these mutate the local FS or a remote)
     r"\bcurl\b.*(-X\s*(POST|PUT|DELETE|PATCH)|--request\s+(POST|PUT|DELETE|PATCH))",
     r"\bcurl\b.*(--data(-raw|-binary|-urlencode)?|--form|\s-d[\s'\"@=]|\s-F[\s'\"@=])",
@@ -215,13 +232,17 @@ _DENY_RE = re.compile("|".join(_DENY_PATTERNS), re.IGNORECASE | re.MULTILINE)
 # Allowlist: the repo's own READ-ONLY fleet validator at its EXACT path — the one local script a
 # reviewer legitimately runs. Pinned to `scripts/validate_fleet.py` (optional leading `./`) so an
 # attacker-planted look-alike at a DIFFERENT path is NOT exempted. Anchored to the WHOLE command
-# (optional interpreter, optional args, no command separators) so a chained mutation like
-# `python scripts/validate_fleet.py; rm -rf /` does NOT get a free pass. `--write-inventory` is the
-# validator's one WRITE mode and is re-checked in main() so the exemption stays read-only.
+# (optional interpreter, optional args) so a chained mutation like
+# `python scripts/validate_fleet.py; rm -rf /` does NOT get a free pass. Args are restricted to a
+# SAFE charset — no separators, no redirection (`>`), no command/process substitution (`$(`,
+# backtick, `<(`), no quotes — so the exemption cannot smuggle a write past the denylist
+# (`… --root . > out.txt`, `… --root $(rm -rf /)` fall through to the deny rules instead).
+# `--write-inventory` is the validator's one WRITE mode and is re-checked in main() so the
+# exemption stays read-only.
 _ALLOW_RE = re.compile(
     r"^\s*(?:python3?|py)\s+"
     r"(?:\./)?scripts/validate_fleet\.py"
-    r"(?:\s+[^|;&]*)?\s*$",
+    r"(?:\s+[A-Za-z0-9._/=,@\s-]*)?\s*$",
     re.IGNORECASE,
 )
 
@@ -253,7 +274,7 @@ def main() -> None:
     if (
         "\n" not in command
         and "\r" not in command
-        and "--write-inventory" not in command
+        and "--write-inventory" not in command.lower()
         and _ALLOW_RE.match(command)
     ):
         sys.exit(0)  # the repo's own read-only validator — explicitly permitted
