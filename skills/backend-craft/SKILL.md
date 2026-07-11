@@ -1,6 +1,6 @@
 ---
 name: backend-craft
-description: Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). For the UI layer use frontend-craft; for a full multi-file feature with tests, the sde-fullstack agent drives.
+description: Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). For the UI layer, use frontend-craft; for a full multi-file feature with tests, use sde-fullstack.
 argument-hint: [the API or service to build or change]
 ---
 

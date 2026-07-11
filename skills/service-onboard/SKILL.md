@@ -1,6 +1,6 @@
 ---
 name: service-onboard
-description: Use when adding a new self-hosted service to the home lab — a new container, stack, or app — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use the homelab-platform agent.
+description: Use when adding a new self-hosted service to the home lab — a new container, stack, or app — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use homelab-platform.
 argument-hint: [service to add]
 ---
 

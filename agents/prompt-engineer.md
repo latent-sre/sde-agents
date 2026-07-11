@@ -1,6 +1,6 @@
 ---
 name: prompt-engineer
-description: Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems — rosters, orchestration, handoffs — which belong to multi-agent-architect.
+description: Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems (use multi-agent-architect).
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch, Agent
 model: inherit
 color: orange

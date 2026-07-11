@@ -1,6 +1,6 @@
 ---
 name: homelab-platform
-description: Use when building, changing, or troubleshooting home-lab infrastructure — container stacks and VMs, reverse proxy, DNS and TLS, storage and backups, networking, and monitoring (Prometheus, Grafana, Alloy, Loki, or similar) — or when deploying and operating self-hosted services. Not for writing application code (use sde-fullstack) or reviewing diffs (use code-reviewer). To add one new service use service-onboard; for a health sweep, lab-audit; to write an operating doc, runbook.
+description: Use when building, changing, or troubleshooting home-lab infrastructure — container stacks and VMs, reverse proxy, DNS and TLS, storage and backups, networking, and monitoring (Prometheus, Grafana, Alloy, Loki, or similar) — or when deploying and operating self-hosted services. Not for writing application code (use sde-fullstack) or reviewing diffs (use code-reviewer). For adding one new service, use service-onboard; for a health sweep, lab-audit; for an operating doc, runbook.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch
 model: inherit
 color: yellow
