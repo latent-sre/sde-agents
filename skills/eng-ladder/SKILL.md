@@ -1,6 +1,6 @@
 ---
 name: eng-ladder
-description: Use to decide what level of engineering a task needs ("who should handle this"), to assess code or a design against a seniority bar ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work — and before starting any task that changes code or a design (skip single-file edits with an existing pattern to copy).
+description: Set your engineering altitude before any task that changes code or a design (skip single-file edits with an existing pattern to copy) — builder (a scoped, well-defined change inside one component), principal (cross-cutting design, a contract/schema change, a migration, real blast radius), or distinguished (high-ambiguity architecture, build-vs-buy, a standard everything else follows). Also use to assess code or a design against a seniority bar ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
 argument-hint: [task, diff, file, or design doc]
 ---
 
