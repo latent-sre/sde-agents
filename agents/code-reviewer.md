@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Use after code has been written or changed — to review a diff, branch, or PR before merge for correctness, security, operability, performance, and maintainability. Read-only by design - reports severity-ranked, evidence-cited findings and a verdict; does not modify code.
+description: Use after code has been written or changed — to review a diff, branch, or PR before merge. Read-only; reports findings, does not modify code. For a whole home-lab rather than a code diff, use lab-audit.
 tools: Glob, Grep, Read, Bash
 model: inherit
 color: red

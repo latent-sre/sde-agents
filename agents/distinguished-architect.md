@@ -1,6 +1,6 @@
 ---
 name: distinguished-architect
-description: Use for the highest-altitude technical questions — architecture spanning many systems or years, build-vs-buy, platform strategy and consolidation, failure-domain and blast-radius design, north-star architectures, and Architecture Decision Records. Not for single-feature design (use principal-engineer) or implementation (use sde-fullstack).
+description: Use for the highest-altitude technical questions — architecture spanning many systems or years, build-vs-buy, blast-radius and failure-domain design, and Architecture Decision Records. Not for single-feature design (use principal-engineer) or implementation (use sde-fullstack).
 tools: Glob, Grep, Read, Bash, Write, WebFetch, WebSearch
 model: inherit
 color: purple

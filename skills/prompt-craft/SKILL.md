@@ -1,6 +1,6 @@
 ---
 name: prompt-craft
-description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction".
+description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The lightweight inline path; for eval-driven iteration, use prompt-engineer; for multi-agent systems, multi-agent-architect.
 argument-hint: [what to create or fix]
 ---
 

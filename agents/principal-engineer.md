@@ -1,6 +1,6 @@
 ---
 name: principal-engineer
-description: Use when work needs design before code — tasks spanning multiple services or teams, risky migrations, new components, reliability or performance overhauls — or when an existing design or plan needs review for simplification, blast radius, and failure modes. Produces design docs, decision records, and phased plans. Escalates org-wide, multi-year platform questions to distinguished-architect.
+description: Use when work needs design before code — tasks spanning multiple services or teams, risky migrations, new components, reliability or performance overhauls — or when an existing design or plan needs review for simplification, blast radius, and failure modes. Produces design docs, decision records, and phased plans. Escalates org-wide, multi-year platform questions to distinguished-architect. For implementation, use sde-fullstack.
 tools: Glob, Grep, Read, Bash, Write, WebFetch, WebSearch
 model: inherit
 color: blue

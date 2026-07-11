@@ -1,6 +1,6 @@
 ---
 name: sre-tool
-description: Use when starting a new operator-facing or SRE tool — a dashboard, CLI, automation service, monitor, or internal web tool — or adding a major capability to one, and the work should run the full engineering ladder from requirements through review.
+description: Use when building a new operator-facing or SRE tool — a dashboard, CLI, automation service, monitor, or internal web tool — or substantially changing one, when the work is big enough to run the full engineering ladder from requirements through review. For a focused change to one layer, use backend-craft or frontend-craft.
 argument-hint: [what the tool should do]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: multi-agent-architect
-description: Use when designing, building, or debugging multi-agent AI systems — decomposing work across subagents, choosing orchestration patterns, designing agent rosters, handoff contracts and context budgets, or authoring suites of Claude Code agents, skills, and workflows. Also use to diagnose multi-agent failures such as context poisoning, telephone-game information loss, duplicated work, or runaway loops.
+description: Use when designing, building, or debugging multi-agent AI systems — orchestration patterns, agent rosters, handoff contracts and context budgets, or authoring suites of Claude Code agents, skills, and workflows. Also for multi-agent failures like context poisoning, information loss, or runaway loops. For a single prompt, agent, or skill rather than a system, use prompt-engineer.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch
 model: inherit
 color: cyan

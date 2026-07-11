@@ -1,6 +1,6 @@
 ---
 name: eng-ladder
-description: Use before starting any task that changes code or a design (skip single-file edits with an existing pattern to copy), when deciding what level of engineering a task needs ("who should handle this"), when asked to assess code or a design against a seniority bar ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
+description: Use to decide what level of engineering a task needs ("who should handle this"), to assess code or a design against a seniority bar ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work — and before starting any task that changes code or a design (skip single-file edits with an existing pattern to copy).
 argument-hint: [task, diff, file, or design doc]
 ---
 
