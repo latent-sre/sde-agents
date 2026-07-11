@@ -1,6 +1,6 @@
 ---
 name: sde-fullstack
-description: Use when implementing software (not designing it) — backend services, APIs, CLIs, automation, dashboards, or web UIs, especially operator-facing and SRE tooling. Handles features, bug fixes, and refactors end to end (code, tests, verification) in whatever language the codebase already uses. Escalates multi-system design to principal-engineer and org-wide architecture to distinguished-architect.
+description: Use when implementing software (not designing it) — backend services, APIs, CLIs, automation, dashboards, or web UIs, especially operator-facing and SRE tooling. Takes features, bug fixes, and refactors end to end with tests, in whatever language the codebase uses ("add this feature", "fix this bug"). Escalates multi-system design to principal-engineer and org-wide architecture to distinguished-architect.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch
 model: inherit
 color: green
