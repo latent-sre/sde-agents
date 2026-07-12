@@ -45,7 +45,7 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 - Agents: `~/.claude/agents/*.md` (user) or `.claude/agents/*.md` (project). Required frontmatter: `name`, `description`. Everything else is optional.
 - Full field set — `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `initialPrompt`. The authority-bearing ones are worth knowing:
   - `tools` — allowlist; **inherits every tool if omitted**, so omission is not "no tools," it's "all tools."
-  - Two traps in `tools`. `Agent(worker)` restricts spawning **only** for a main-thread agent (`claude --agent`); in a *subagent* definition the type list is silently ignored and spawn is unrestricted — so it reads like a limit and isn't one. And `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are **never** available to a subagent however you list them; granting one reads like a capability the agent does not have.
+  - Two traps in `tools`. `Agent(worker)` restricts spawning **only** for a main-thread agent (`claude --agent`); in a *subagent* definition the type list is silently ignored and spawn is unrestricted — so it reads like a limit and isn't one. And `AskUserQuestion`, `EnterPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are **never** available to a subagent however you list them (`ExitPlanMode` only under `permissionMode: plan`, which a plugin-shipped agent can't set); granting one otherwise reads like a capability the agent does not have.
   - `disallowedTools` — denylist, applied *before* `tools` resolves.
   - `permissionMode` — `default | acceptEdits | auto | dontAsk | bypassPermissions | plan | manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it as configuration that does not exist.
   - `hooks` — lifecycle hooks scoped to the agent. Real for a project- or user-scope agent, **inert in a plugin** (see below) — so this fleet, which ships as one, claws write capability back off `sde-agents:code-reviewer`'s `Bash` with a session hook in `hooks/hooks.json` that scopes itself on the payload's `agent_type` instead.
@@ -54,8 +54,8 @@ A prompt is a spec and a contract between human and model. If the model didn't d
   - `maxTurns` (int), `memory` (`user|project|local`), `background` (bool), `effort` (`low|medium|high|xhigh|max`), `isolation` (`worktree`), `color`, `initialPrompt` (main-session only).
 - Plugin-packaged agents **ignore** `hooks`, `mcpServers`, and `permissionMode` — a guard that works locally is silently absent once the agent ships in a plugin.
 - Spell these exactly. An unrecognized key is not guaranteed to fail loudly, so a typo can silently drop whatever it configured; `validate_fleet.py` rejects unknown keys for that reason.
-- Skills: `.claude/skills/<name>/SKILL.md`; frontmatter `name`, `description`, `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit); `user-invocable: false` for background-knowledge skills.
-- Project-level definitions shadow user-level ones of the same name.
+- Skills: `.claude/skills/<name>/SKILL.md`; frontmatter `name`, `description`, `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit); `user-invocable: false` for background-knowledge skills. Further fields — `when_to_use`, `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context`, `agent`, `hooks` — exist; `validate_fleet.py` keeps the authoritative set in `KNOWN_SKILL_FIELDS`, checked against code.claude.com/docs/en/skills.
+- Precedence differs by type: for **agents**, a project-level definition shadows a user-level one of the same name; for **skills** it is the reverse — personal (user) overrides project (enterprise → personal → project → plugin → bundled).
 
 ## Voice
 

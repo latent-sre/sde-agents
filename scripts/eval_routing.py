@@ -56,9 +56,13 @@ def components_fired(transcript: str) -> set[str]:
     subagent spawned). Rather than guess the exact input field name — which differs across the two
     and across CLI versions — it scans each relevant tool_use's input values for a known fleet name.
     A component named only in ASSISTANT PROSE (not a tool call) is intentionally NOT counted: the
-    model mentioning 'prompt-craft' is not the same as prompt-craft firing.
+    model mentioning 'prompt-craft' is not the same as prompt-craft firing. A tool_use whose
+    matching tool_result came back with is_error is likewise NOT counted — a failed spawn/skill call
+    is not the component actually firing, and counting it would produce false PASS results (see
+    scripts/probe_plugin.py:174 for the same correlate-by-tool_use_id pattern).
     """
-    fired: set[str] = set()
+    candidates: dict[str, set[str]] = {}  # tool_use_id -> bare names named in this call
+    errored: set[str] = set()  # tool_use_ids whose tool_result had is_error: true
     for line in transcript.splitlines():
         try:
             event = json.loads(line)
@@ -68,14 +72,19 @@ def components_fired(transcript: str) -> set[str]:
         if not isinstance(content, list):
             continue
         for block in content:
-            if not isinstance(block, dict) or block.get("type") != "tool_use":
+            if not isinstance(block, dict):
                 continue
-            if block.get("name") not in ("Skill", "Agent", "Task"):
-                continue
-            for value in _string_values(block.get("input")):
-                bare = strip_ns(value)
-                if bare in FLEET:
-                    fired.add(bare)
+            btype = block.get("type")
+            if btype == "tool_use" and block.get("name") in ("Skill", "Agent", "Task"):
+                names = {strip_ns(v) for v in _string_values(block.get("input"))} & FLEET
+                if names:
+                    candidates[block.get("id", "")] = names
+            elif btype == "tool_result" and block.get("is_error"):
+                errored.add(block.get("tool_use_id", ""))
+    fired: set[str] = set()
+    for tid, names in candidates.items():
+        if tid not in errored:
+            fired |= names
     return fired
 
 
@@ -134,9 +143,10 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180) -> dict:
             duration = event.get("duration_ms")
 
     fired = sorted(components_fired(stdout))
-    # An error only matters when we got no routing signal at all; a timeout that still captured a
-    # firing is a usable result, not a failure.
-    error = note if (note and not fired and "timed out" not in (note or "")) else None
+    # A timeout that captured a firing is a usable result; a timeout that captured NOTHING is an
+    # error (otherwise negatives would pass vacuously on empty transcripts). Non-timeout notes are
+    # always errors.
+    error = note if (note and not fired) else None
     return {"fired": fired, "tokens": tokens, "duration_ms": duration, "error": error}
 
 
@@ -188,6 +198,9 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=None, help="write benchmark.json here")
     args = parser.parse_args()
 
+    if args.runs < 1:
+        print(f"--runs must be >= 1 (got {args.runs}); 0 would make every negative pass vacuously", file=sys.stderr)
+        return 2
     if CLAUDE is None:
         print("claude CLI not found on PATH", file=sys.stderr)
         return 2

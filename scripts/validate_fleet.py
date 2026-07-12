@@ -63,6 +63,30 @@ KNOWN_AGENT_FIELDS = {
     "color",
     "initialPrompt",
 }
+# Every documented SKILL.md frontmatter field (code.claude.com/docs/en/skills, frontmatter table).
+# Same rationale as KNOWN_AGENT_FIELDS: an unrecognized key is not guaranteed to fail loudly, so a
+# typo silently drops what it configured — a `disable-model-invocaton` or `user-invokable` slip would
+# quietly turn a side-effect skill model-invocable, or expose a background skill, with no error. The
+# agent path had this check; the skill path did not (external-review gap). Kept in sync with the docs
+# by hand; `claude plugin validate --strict` is the backstop for anything added upstream since.
+KNOWN_SKILL_FIELDS = {
+    "name",
+    "description",
+    "when_to_use",
+    "argument-hint",
+    "arguments",
+    "disable-model-invocation",
+    "user-invocable",
+    "allowed-tools",
+    "disallowed-tools",
+    "model",
+    "effort",
+    "context",
+    "agent",
+    "hooks",
+    "paths",
+    "shell",
+}
 # Claude Code SILENTLY IGNORES these three on a PLUGIN-SHIPPED agent: "For security reasons,
 # `hooks`, `mcpServers`, and `permissionMode` are not supported for plugin-shipped agents"
 # (code.claude.com/docs/en/plugins-reference). Probed on CLI 2.1.200: a plugin agent's frontmatter
@@ -310,9 +334,12 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                     )
                 elif scope is not None:
                     issues.append(
-                        f"{path}: scoped grant {tool!r} uses permission-rule syntax, which is not "
-                        f"documented for the frontmatter 'tools:' field; express narrowing in "
-                        f"permission rules or the guard hook instead"
+                        f"{path}: scoped grant {tool!r} uses permission-rule syntax that the "
+                        f"frontmatter 'tools:' field SILENTLY IGNORES. Probed on CLI 2.1.200: an agent "
+                        f"granted `Bash(git diff:*)` ran `git status` exactly like one granted a bare "
+                        f"`Bash` — the specifier restricts nothing while reading as though it does. "
+                        f"Specifiers work only in settings.json permission rules (session-wide) or a "
+                        f"PreToolUse hook; narrow there, not here."
                     )
 
         # `skills:` is in KNOWN_AGENT_FIELDS, which only checks that the KEY is real -- it says
@@ -433,6 +460,15 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
         if fields is None:
             issues.append(f"{skill_file}: missing or malformed frontmatter")
             continue
+
+        for key in fields:
+            if key not in KNOWN_SKILL_FIELDS:
+                issues.append(
+                    f"{skill_file}: unknown frontmatter key {key!r} is not a Claude Code skill field. "
+                    f"An unrecognized key is not guaranteed to fail loudly, so a typo silently drops "
+                    f"what it configured (e.g. 'disable-model-invocaton' would leave a side-effect "
+                    f"skill model-invocable)."
+                )
 
         name = fields.get("name", "")
         names.append(name or skill_dir.name)

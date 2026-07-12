@@ -52,8 +52,9 @@ python3 scripts/eval_routing.py --case 'neg-*'
 ```
 
 Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
-methodology requires). The runner prints per-case pass/fail and rates and writes a `benchmark.json`.
-Exit code is non-zero if any case fails, so you *can* gate on it — but see the caveat.
+methodology requires). The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
+to also write a `benchmark.json` there for before/after diffing. Exit code is non-zero if any case
+fails, so you *can* gate on it — but see the caveat.
 
 ## How to read the results, and the caveat
 
