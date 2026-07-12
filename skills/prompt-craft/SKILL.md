@@ -31,7 +31,20 @@ Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. A
 ## Frontmatter quick reference
 
 **Agents** (`~/.claude/agents/*.md` user-level, `.claude/agents/*.md` project-level):
-`name`, `description` (the trigger), `tools` (allowlist — authority lives here, not in prose), `model` (haiku | sonnet | opus | inherit), `color`.
+Required: `name`, `description` (the trigger). Optional: `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `initialPrompt`.
+
+Authority lives in frontmatter, not in prose — the fields that carry it:
+
+| Field | Notes |
+|---|---|
+| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." |
+| `disallowedTools` | Denylist; applied before `tools` resolves. |
+| `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. This fleet forbids `bypassPermissions` — it voids the read-only guard. |
+| `hooks` | Agent-scoped lifecycle hooks; how `code-reviewer` takes write access back off `Bash`. |
+| `skills` | Preloads full skill content at startup — prefer over putting `Skill` in `tools`. |
+| `model` | Aliases `haiku \| sonnet \| opus \| fable \| inherit`, or a full ID (`claude-opus-4-8`); defaults to `inherit`. Use an alias — this fleet rejects pins, which rot silently while an alias follows the upgrade. |
+
+Plugin-packaged agents **ignore** `hooks`, `mcpServers`, and `permissionMode`. Spell keys exactly: an unrecognized key isn't guaranteed to fail loudly, so a typo can silently drop what it configured (`validate_fleet.py` rejects unknown keys for this reason).
 
 **Skills** (`.claude/skills/<name>/SKILL.md`):
 `name`, `description` (the trigger), `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit — user-only via `/name`); `user-invocable: false` for background-knowledge skills.

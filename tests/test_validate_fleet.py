@@ -163,9 +163,40 @@ class FleetValidatorTests(unittest.TestCase):
         body = VALID_AGENT.replace("name: builder", "name: other")
         self.assertTrue(any("must match filename" in i for i in self._agent_issues(("builder.md", body))))
 
-    def test_unsupported_model_is_reported(self) -> None:
+    def test_unknown_model_is_reported(self) -> None:
         body = VALID_AGENT.replace("model: inherit", "model: gpt-4")
-        self.assertTrue(any("unsupported model" in i for i in self._agent_issues(("builder.md", body))))
+        self.assertTrue(any("unknown model" in i for i in self._agent_issues(("builder.md", body))))
+
+    def test_fable_alias_is_accepted(self) -> None:
+        # `fable` is a documented Claude Code alias (code.claude.com/docs/en/sub-agents);
+        # rejecting it was a real bug, so pin the fix.
+        body = VALID_AGENT.replace("model: inherit", "model: fable")
+        self.assertEqual([], [i for i in self._agent_issues(("builder.md", body)) if "model" in i])
+
+    def test_pinned_full_model_id_is_a_policy_error_not_a_schema_error(self) -> None:
+        # Valid at runtime, banned by fleet policy — the message must say so, not claim it's unknown.
+        body = VALID_AGENT.replace("model: inherit", "model: claude-opus-4-8")
+        issues = [i for i in self._agent_issues(("builder.md", body)) if "model" in i]
+        self.assertTrue(any("pinned" in i for i in issues), issues)
+        self.assertFalse(any("unknown model" in i for i in issues), issues)
+
+    def test_unknown_frontmatter_key_is_reported(self) -> None:
+        # The regression this exists for: `hooks:` is what installs the read-only guard on
+        # code-reviewer, an agent that holds Bash. Misspell the key and the block is dropped.
+        body = VALID_AGENT.replace("model: inherit", "hook: PreToolUse\nmodel: inherit")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("unknown frontmatter key" in i and "'hook'" in i for i in issues), issues)
+
+    def test_known_optional_frontmatter_keys_are_accepted(self) -> None:
+        # All 16 documented fields must pass, or the allowlist becomes a false tripwire.
+        extra = "hooks:\nskills: runbook\neffort: high\nisolation: worktree\nmaxTurns: 5\n"
+        body = VALID_AGENT.replace("model: inherit", extra + "model: inherit")
+        self.assertEqual([], [i for i in self._agent_issues(("builder.md", body)) if "frontmatter key" in i])
+
+    def test_bypass_permissions_is_rejected(self) -> None:
+        body = VALID_AGENT.replace("model: inherit", "permissionMode: bypassPermissions\nmodel: inherit")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("nullify the read-only guard" in i for i in issues), issues)
 
     def test_invalid_agent_name_is_reported(self) -> None:
         # uppercase fails NAME_RE; filename Builder.md keeps name==stem so only the regex branch fires

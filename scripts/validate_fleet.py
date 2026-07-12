@@ -23,7 +23,44 @@ INVENTORY_RE = re.compile(
     r"<!-- fleet-inventory:start -->.*?<!-- fleet-inventory:end -->",
     re.DOTALL,
 )
-ALLOWED_MODELS = {"inherit", "haiku", "sonnet", "opus"}
+# Two different questions, two different errors: keep runtime schema ("is this a real Claude Code
+# value?") separate from fleet policy ("do we permit it?"). Claude Code accepts these aliases AND any
+# full model ID that `--model` takes, e.g.
+# `claude-opus-4-8` (per code.claude.com/docs/en/sub-agents). This fleet deliberately allows only the
+# aliases: a pinned ID goes stale silently while an alias follows the model upgrade. So a full ID is
+# a POLICY failure (valid runtime value, banned here) and anything else is a SCHEMA failure (not a
+# model at all) — never report them as the same thing.
+ALIAS_MODELS = {"inherit", "haiku", "sonnet", "opus", "fable"}
+FULL_MODEL_ID_RE = re.compile(r"^claude-[a-z0-9]+(?:-[a-z0-9]+)+$")
+# Every frontmatter key Claude Code defines for a subagent (code.claude.com/docs/en/sub-agents).
+# This exists to close a silent-disarm hole, not for tidiness: the validator used to check only the
+# VALUES of keys it knew and never the KEY NAMESPACE, so a misspelled key was dropped on the floor.
+# That matters because `hooks:` on code-reviewer is what installs the read-only guard on an agent
+# holding Bash — misspell it `hook:` and (before this check) the validator passed, the hook-wiring
+# test passed, and the guard was gone. Whether the runtime errors or silently ignores an unknown key
+# is UNDOCUMENTED, so we refuse to depend on the answer: an unknown key fails here.
+KNOWN_AGENT_FIELDS = {
+    "name",
+    "description",
+    "tools",
+    "disallowedTools",
+    "model",
+    "permissionMode",
+    "maxTurns",
+    "skills",
+    "mcpServers",
+    "hooks",
+    "memory",
+    "background",
+    "effort",
+    "isolation",
+    "color",
+    "initialPrompt",
+}
+# Authority-relevant value check. `bypassPermissions` disables the permission system wholesale, which
+# would nullify the read-only guard on any agent that has Bash. Valid Claude Code, banned by fleet
+# policy — same runtime-schema-vs-fleet-policy split as pinned models.
+BANNED_PERMISSION_MODES = {"bypassPermissions"}
 # Canonical tool-authority vocabulary. The `tools:` field is security-relevant (it is the authority
 # an agent is granted), so — like `model` — every entry is checked against a known set. Without this
 # a typo (`Wrte`) or a name from another runtime silently grants or drops authority and still passes.
@@ -136,6 +173,22 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
             issues.append(f"{path}: missing or malformed frontmatter")
             continue
 
+        for key in fields:
+            if key not in KNOWN_AGENT_FIELDS:
+                issues.append(
+                    f"{path}: unknown frontmatter key {key!r} is not a Claude Code agent field. "
+                    f"An unrecognized key does not fail loudly at load time, so a typo here silently "
+                    f"drops whatever it was meant to configure (e.g. 'hook' for 'hooks' disarms the "
+                    f"read-only guard)."
+                )
+
+        permission_mode = fields.get("permissionMode", "").strip()
+        if permission_mode in BANNED_PERMISSION_MODES:
+            issues.append(
+                f"{path}: permissionMode {permission_mode!r} disables the permission system and would "
+                f"nullify the read-only guard; this fleet forbids it"
+            )
+
         name = fields.get("name", "")
         names.append(name or path.stem)
         issues.extend(validate_name(name, "agent", path))
@@ -155,10 +208,19 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                     issues.append(f"{path}: unknown tool {tool!r} in tools authority")
 
         model = fields.get("model", "").strip()
+        aliases = "|".join(sorted(ALIAS_MODELS))
         if not model:
             issues.append(f"{path}: missing model")
-        elif model not in ALLOWED_MODELS:
-            issues.append(f"{path}: unsupported model {model!r}")
+        elif model in ALIAS_MODELS:
+            pass
+        elif FULL_MODEL_ID_RE.match(model):
+            issues.append(
+                f"{path}: model {model!r} is a valid Claude Code model but is pinned; "
+                f"this fleet requires an alias ({aliases}) so agents follow model upgrades "
+                f"instead of rotting on a stale pin"
+            )
+        else:
+            issues.append(f"{path}: unknown model {model!r} (expected one of: {aliases})")
 
         content = read_text(path)
         if EVIDENCE_LABEL_RE.search(content):

@@ -42,7 +42,17 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 
 ## Claude Code specifics
 
-- Agents: `~/.claude/agents/*.md` (user) or `.claude/agents/*.md` (project); frontmatter `name`, `description`, `tools`, `model` (haiku | sonnet | opus | inherit), `color`.
+- Agents: `~/.claude/agents/*.md` (user) or `.claude/agents/*.md` (project). Required frontmatter: `name`, `description`. Everything else is optional.
+- Full field set — `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `initialPrompt`. The authority-bearing ones are worth knowing:
+  - `tools` — allowlist; **inherits every tool if omitted**, so omission is not "no tools," it's "all tools."
+  - `disallowedTools` — denylist, applied *before* `tools` resolves.
+  - `permissionMode` — `default | acceptEdits | auto | dontAsk | bypassPermissions | plan | manual`. This fleet forbids `bypassPermissions`: it would nullify the read-only guard.
+  - `hooks` — lifecycle hooks scoped to the agent. This is how `code-reviewer` claws write capability back off `Bash`.
+  - `skills` — preloads full skill content at startup. Prefer this over listing `Skill` in `tools`.
+  - `model` — aliases `haiku | sonnet | opus | fable | inherit`, or a full ID (`claude-opus-4-8`); omitted defaults to `inherit`. **This fleet permits aliases only** — a pin rots silently while an alias follows the upgrade, so `validate_fleet.py` rejects pins as a policy error.
+  - `maxTurns` (int), `memory` (`user|project|local`), `background` (bool), `effort` (`low|medium|high|xhigh|max`), `isolation` (`worktree`), `color`, `initialPrompt` (main-session only).
+- Plugin-packaged agents **ignore** `hooks`, `mcpServers`, and `permissionMode` — a guard that works locally is silently absent once the agent ships in a plugin.
+- Spell these exactly. An unrecognized key is not guaranteed to fail loudly, so a typo can silently drop whatever it configured; `validate_fleet.py` rejects unknown keys for that reason.
 - Skills: `.claude/skills/<name>/SKILL.md`; frontmatter `name`, `description`, `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit); `user-invocable: false` for background-knowledge skills.
 - Project-level definitions shadow user-level ones of the same name.
 
