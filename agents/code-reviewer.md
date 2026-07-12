@@ -9,7 +9,7 @@ hooks:
     - matcher: Bash
       hooks:
         - type: command
-          command: "\"$(command -v python3 || command -v python)\" -c \"import os, runpy; runpy.run_path(os.path.join(os.environ.get('CLAUDE_PROJECT_DIR', '.'), 'scripts', 'readonly-guard.py'), run_name='__main__')\""
+          command: "G=\"$CLAUDE_PROJECT_DIR/scripts/readonly-guard.py\"; [ -f \"$G\" ] || G=\"$HOME/.claude/scripts/readonly-guard.py\"; if [ -f \"$G\" ]; then for PY in python3 python py; do command -v \"$PY\" >/dev/null 2>&1 || continue; \"$PY\" -c \"\" >/dev/null 2>&1 || continue; exec \"$PY\" \"$G\"; done; fi; printf \"%s\" \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"Read-only guard unavailable (guard script or working Python interpreter not found), so Bash is denied by default. Install scripts/readonly-guard.py to ~/.claude/scripts/, or run from the fleet repo.\\\"}}\""
 ---
 
 # Code Reviewer
