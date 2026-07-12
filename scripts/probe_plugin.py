@@ -275,15 +275,32 @@ def main() -> int:
     # content unconditionally present before the first token, so the RIGHT behaviour is now that NO
     # read happens at all. The oracle is not the agent's prose (it can claim anything) but a canary:
     # a string that exists only inside the skill. Quoting it without a tool call is proof of preload.
+    # Anchored to the two craft skills specifically -- a bare "craft/SKILL.md" substring also matches
+    # skills/prompt-craft/SKILL.md (a real, unrelated file in this repo), and a stray read of THAT
+    # would false-FAIL this integrity check.
     craft_reads = [
         call.get("input", {}).get("file_path", "")
         for call in tool_calls(text)
-        if "craft/SKILL.md" in call.get("input", {}).get("file_path", "").replace("\\", "/")
+        if call.get("input", {}).get("file_path", "").replace("\\", "/").endswith(
+            ("skills/backend-craft/SKILL.md", "skills/frontend-craft/SKILL.md")
+        )
     ]
     probe.check(
         PASS if not craft_reads else FAIL,
         "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
         f"agent still read a craft skill by path -- preload did not take effect: {craft_reads}",
+    )
+    # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
+    # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
+    # look like a true green. Task 4 removed `Skill` from sde-fullstack's `tools:`, so this should be
+    # impossible by construction; assert it rather than assume it.
+    skill_calls = [call.get("name", "") for call in tool_calls(text) if call.get("name") == "Skill"]
+    probe.check(
+        PASS if not skill_calls else FAIL,
+        "no agent in this session made a Skill tool call (craft skills were preloaded, not invoked)",
+        f"a Skill tool call appeared in the transcript -- craft content may have been fetched by "
+        f"invocation rather than preload, which the canary checks above cannot distinguish: "
+        f"{skill_calls}",
     )
     probe.check(
         PASS if "req_8f3a2c" in text else FAIL,
@@ -366,6 +383,37 @@ def main() -> int:
         # Anything other than the guard's voice is a pass here: even a permission prompt proves the
         # guard did not deny it, which is the property under test.
         probe.check(PASS, "the guard IGNORED the main loop's identical command")
+
+    print("\n== a conditional reference is actually READ when its predicate trips ==")
+    # Risk 1 from the design. The split moved conditional depth out of the always-loaded core, so it
+    # now arrives only if the model chooses to read it. This is the check on that choice. The task
+    # trips exactly one predicate ("calling any upstream API") and nothing else.
+    ref_session = run(
+        [
+            CLAUDE, "-p",
+            "Use the Agent tool to spawn the subagent `sde-agents:sde-fullstack` with EXACTLY this "
+            "task: \"Write a typed Python client for the Grafana HTTP API — just the client module, "
+            "with auth, timeouts, and retry policy. Follow your craft guidance.\" Then reply with "
+            "only the word DONE.",
+            "--plugin-dir", str(REPO),
+            "--output-format", "stream-json",
+            "--verbose",
+        ],
+        cwd=str(project),
+    )
+    ref_text = ref_session.stdout or ""
+    ref_reads = [
+        call.get("input", {}).get("file_path", "")
+        for call in tool_calls(ref_text)
+        if "references/consuming-apis.md" in call.get("input", {}).get("file_path", "").replace("\\", "/")
+    ]
+    probe.check(
+        PASS if ref_reads else FAIL,
+        "sde-fullstack read references/consuming-apis.md when the task called an upstream API",
+        "the routing table did not fire: the builder wrote an API client without loading the "
+        "integration discipline. This is design Risk 1 realised -- consider pulling Consuming APIs "
+        "back into the always-loaded core and accepting its tokens.",
+    )
 
     exit_code = probe.report()
     if exit_code == 0:
