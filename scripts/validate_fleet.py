@@ -29,7 +29,11 @@ ALLOWED_MODELS = {"inherit", "haiku", "sonnet", "opus"}
 # a typo (`Wrte`) or a name from another runtime silently grants or drops authority and still passes.
 # Extend this set deliberately when a new first-class tool is adopted.
 ALLOWED_TOOLS = {
-    "Agent",  # spawns a subagent (per code.claude.com/docs/en/tools-reference); NOT "Task"
+    # Spawns a subagent. Claude Code renamed "Task" to "Agent" in 2.1.63; "Task" still resolves as a
+    # deprecated alias, but this set is canonical-only on purpose, so a `Task` grant fails validation
+    # and gets rewritten rather than lingering. Do not "fix" an Agent grant to Task — see
+    # code.claude.com/docs/en/sub-agents.
+    "Agent",
     "Bash",
     "BashOutput",
     "Edit",
