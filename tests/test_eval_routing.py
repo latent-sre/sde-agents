@@ -8,15 +8,12 @@ the live arm can't.
 """
 from __future__ import annotations
 
-import importlib.util
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from scripts import eval_routing
 
-_spec = importlib.util.spec_from_file_location("eval_routing", REPO / "scripts" / "eval_routing.py")
-eval_routing = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(eval_routing)
+REPO = Path(__file__).resolve().parents[1]
 
 
 def transcript(*tool_uses: dict) -> str:
@@ -26,12 +23,16 @@ def transcript(*tool_uses: dict) -> str:
     return json.dumps(event)
 
 
-def skill_use(name: str) -> dict:
-    return {"type": "tool_use", "name": "Skill", "input": {"command": name}}
+def skill_use(name: str, tool_id: str = "t1") -> dict:
+    return {"type": "tool_use", "id": tool_id, "name": "Skill", "input": {"command": name}}
 
 
-def agent_use(name: str) -> dict:
-    return {"type": "tool_use", "name": "Agent", "input": {"subagent_type": name, "prompt": "go"}}
+def agent_use(name: str, tool_id: str = "t1") -> dict:
+    return {"type": "tool_use", "id": tool_id, "name": "Agent", "input": {"subagent_type": name, "prompt": "go"}}
+
+
+def tool_result(tool_id: str, is_error: bool) -> dict:
+    return {"type": "tool_result", "tool_use_id": tool_id, "is_error": is_error}
 
 
 class ComponentDetectionTest(unittest.TestCase):
@@ -47,7 +48,7 @@ class ComponentDetectionTest(unittest.TestCase):
 
     def test_detects_multiple_components(self) -> None:
         fired = eval_routing.components_fired(
-            transcript(skill_use("sde-agents:backend-craft"), agent_use("sde-agents:sde-fullstack"))
+            transcript(skill_use("sde-agents:backend-craft", tool_id="a"), agent_use("sde-agents:sde-fullstack", tool_id="b"))
         )
         self.assertEqual({"backend-craft", "sde-fullstack"}, fired)
 
@@ -65,6 +66,25 @@ class ComponentDetectionTest(unittest.TestCase):
 
     def test_malformed_lines_do_not_crash(self) -> None:
         self.assertEqual(set(), eval_routing.components_fired("not json\n{bad\n"))
+
+    def test_errored_tool_result_does_not_count_as_fired(self) -> None:
+        # A failed skill invocation (is_error: true) is NOT the skill firing — counting it would
+        # produce false PASS results on positives whose spawn failed.
+        line1 = transcript(skill_use("sde-agents:prompt-craft", tool_id="tu_1"))
+        line2 = transcript(tool_result("tu_1", is_error=True))
+        self.assertEqual(set(), eval_routing.components_fired(line1 + "\n" + line2))
+
+    def test_successful_tool_result_counts_as_fired(self) -> None:
+        line1 = transcript(agent_use("prompt-engineer", tool_id="tu_2"))
+        line2 = transcript(tool_result("tu_2", is_error=False))
+        self.assertEqual({"prompt-engineer"}, eval_routing.components_fired(line1 + "\n" + line2))
+
+    def test_missing_tool_result_still_counts_as_fired(self) -> None:
+        # Streams can end before the result comes back (timeout); absence of an error is not an error.
+        self.assertEqual(
+            {"prompt-craft"},
+            eval_routing.components_fired(transcript(skill_use("sde-agents:prompt-craft", tool_id="tu_3"))),
+        )
 
 
 class ScoringTest(unittest.TestCase):
