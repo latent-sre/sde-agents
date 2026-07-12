@@ -37,7 +37,7 @@ Authority lives in frontmatter, not in prose — the fields that carry it:
 
 | Field | Notes |
 |---|---|
-| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." `Agent(worker)` scoping works only for a main-thread agent (`claude --agent`); a subagent silently ignores the type list. `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are never available to a subagent, however listed. |
+| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." `Agent(worker)` scoping works only for a main-thread agent (`claude --agent`); a subagent silently ignores the type list. `AskUserQuestion`, `EnterPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are never available to a subagent, however listed; `ExitPlanMode` only under `permissionMode: plan`. |
 | `disallowedTools` | Denylist; applied before `tools` resolves. |
 | `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it. |
 | `hooks` | Agent-scoped lifecycle hooks. Real at project/user scope, **inert in a plugin** (see below). A plugin must instead ship `hooks/hooks.json`, which is session-wide, and scope the hook itself on the payload's `agent_type` — that is how this fleet guards `sde-agents:code-reviewer`'s `Bash`. |
@@ -47,6 +47,6 @@ Authority lives in frontmatter, not in prose — the fields that carry it:
 Plugin-packaged agents **ignore** `hooks`, `mcpServers`, and `permissionMode`. Spell keys exactly: an unrecognized key isn't guaranteed to fail loudly, so a typo can silently drop what it configured (`validate_fleet.py` rejects unknown keys for this reason).
 
 **Skills** (`.claude/skills/<name>/SKILL.md`):
-`name`, `description` (the trigger), `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit — user-only via `/name`); `user-invocable: false` for background-knowledge skills.
+`name`, `description` (the trigger), `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit — user-only via `/name`); `user-invocable: false` for background-knowledge skills. Also available: `when_to_use`, `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context`, `agent`, `hooks` — not exhaustive; see code.claude.com/docs/en/skills for the current table. `allowed-tools` takes bare tool names, not specifiers.
 
-Project-level definitions shadow user-level ones of the same name. Keep descriptions lean — they load into context every session.
+Skill precedence is the **reverse** of agents: a personal (user-level) skill overrides a project-level one of the same name — full order enterprise → personal → project → plugin → bundled (code.claude.com/docs/en/skills). (Agents go the other way: project shadows user.) Keep descriptions lean — they load into context every session.

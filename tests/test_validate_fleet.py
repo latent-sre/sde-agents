@@ -160,6 +160,37 @@ class FleetValidatorTests(unittest.TestCase):
             issues, _ = validate_fleet.validate_agents(Path(tmp))
             return issues
 
+    def _skill_issues(self, name: str, frontmatter: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / "skills" / name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(
+                f"---\n{frontmatter}---\n\nBody.\n", encoding="utf-8"
+            )
+            issues, _ = validate_fleet.validate_skills(Path(tmp))
+            return issues
+
+    def test_unknown_skill_frontmatter_key_is_reported(self) -> None:
+        # Symmetric with the agent check. Before this, the skill path validated name/description/
+        # bundle refs but never the KEY namespace, so a `disable-model-invocaton` typo left a
+        # side-effect skill model-invocable with no error (external-review gap).
+        issues = self._skill_issues(
+            "craft",
+            "name: craft\ndescription: Use when building.\ndisable-model-invocaton: true\n",
+        )
+        self.assertTrue(
+            any("unknown frontmatter key" in i and "disable-model-invocaton" in i for i in issues),
+            issues,
+        )
+
+    def test_documented_skill_frontmatter_keys_are_accepted(self) -> None:
+        # The full documented set must pass, or the allowlist is a false tripwire.
+        extra = "when_to_use: x\nallowed-tools: Read\nmodel: inherit\neffort: high\ncontext: fresh\n"
+        issues = self._skill_issues(
+            "craft", "name: craft\ndescription: Use when building.\n" + extra
+        )
+        self.assertEqual([], [i for i in issues if "frontmatter key" in i])
+
     def test_agent_name_must_match_filename(self) -> None:
         body = VALID_AGENT.replace("name: builder", "name: other")
         self.assertTrue(any("must match filename" in i for i in self._agent_issues(("builder.md", body))))
