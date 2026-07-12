@@ -293,14 +293,25 @@ def main() -> int:
     # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
     # look like a true green. Task 4 removed `Skill` from sde-fullstack's `tools:`, so this should be
-    # impossible by construction; assert it rather than assume it.
-    skill_calls = [call.get("name", "") for call in tool_calls(text) if call.get("name") == "Skill"]
+    # impossible by construction; assert it rather than assume it. Scoped to the craft skills BY NAME
+    # (not "any Skill call") because homelab-platform legitimately holds the Skill tool and legitimately
+    # routes to `runbook` / `lab-audit` -- a blanket "no Skill call at all" assertion would false-FAIL
+    # this check the moment anyone changes homelab-platform's probe prompt to exercise that routing.
+    # Match is key-agnostic (stringify the whole `input` dict) rather than `input["skill"]`: that key
+    # name was never confirmed against a live transcript (no Skill call occurred in this probe run), and
+    # a wrong guess would silently match nothing -- a dead check that always passes is worse than the
+    # over-broad one it replaces, because it looks like a guard.
+    craft_skill_calls = [
+        call for call in tool_calls(text)
+        if call.get("name") == "Skill"
+        and any(s in str(call.get("input", {})) for s in ("backend-craft", "frontend-craft"))
+    ]
     probe.check(
-        PASS if not skill_calls else FAIL,
-        "no agent in this session made a Skill tool call (craft skills were preloaded, not invoked)",
-        f"a Skill tool call appeared in the transcript -- craft content may have been fetched by "
-        f"invocation rather than preload, which the canary checks above cannot distinguish: "
-        f"{skill_calls}",
+        PASS if not craft_skill_calls else FAIL,
+        "no agent INVOKED a craft skill via the Skill tool (preloaded, not invoked)",
+        "a Skill call named backend-craft or frontend-craft. The canary checks above cannot tell "
+        "invoked-content from preloaded-content, so this would be a FALSE green: "
+        f"{craft_skill_calls}",
     )
     probe.check(
         PASS if "req_8f3a2c" in text else FAIL,
