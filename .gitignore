@@ -9,3 +9,7 @@ audit-results/
 # and the transcript it keeps only when a check fails.
 .probe-tmp/
 probe-transcript.jsonl
+
+# scripts/eval_routing.py output — regenerable benchmark.json per run, and the run
+# captures local paths/timing. The case files under evals/routing/ ARE committed.
+evals/results/
