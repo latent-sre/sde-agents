@@ -67,7 +67,7 @@ _CMD_SUB = r"(?:^|[|;&(){}`]\s*)" + _WRAP
 # argument position (`… app.py | grep -e def`, `cat deploy.sh | grep -c x`) from colliding with the
 # two-letter `py`/`sh` interpreter tokens — the whole false-positive class the bare `\b(py|sh)\b`
 # form produced.
-_INTERP = _CMD_SUB + r"(?:\w+=\S+\s+)*(?:\S*/)?"
+_INTERP = _CMD_SUB + r"(?:\w+=(?:\"[^\"]*\"|'[^']*'|\S+)\s+)*(?:\S*/)?"
 
 # Git accepts GLOBAL options BETWEEN `git` and the subcommand (`git -C <path> push`, `git -c k=v commit`,
 # `git --git-dir=… --work-tree=… add`, `git --no-pager reset`). Without tolerating that prefix, the verb
@@ -144,9 +144,20 @@ _DENY_PATTERNS = [
     # obvious read-only sub-forms exempted: `patch --dry-run`, `tar t…`/list, `unzip -l/-t`,
     # `gunzip -c/-l/-t`. `tar` fires only when the mode token carries an extract/create flag.
     _CMD_SUB + r"(?:\S*/)?patch\b(?![^|;&]*--dry-run)",
-    _CMD_SUB + r"(?:\S*/)?tar\b\s+(?:--(?:extract|create|append|update|delete)\b|-?[A-Za-z]*[xc])",
-    _CMD_SUB + r"(?:\S*/)?unzip\b(?![^|;&]*\s-[lt]\b)",
-    _CMD_SUB + r"(?:\S*/)?(?:gunzip|gzip)\b(?![^|;&]*\s-[clt]\b)",
+    # tar writes in extract (x) or create (c) mode; the mode may be the classic first-token flag
+    # cluster (`tar xzf`, `tar -xzf`, `tar czf`) OR a `-x`/`-c` flag AFTER other options
+    # (`tar -C /tmp -xf …`, `tar --directory=/tmp -xf …`), OR a long-form mode word. List/verify
+    # modes (`tar tf`, `tar --list`) carry no x/c in an option token and stay allowed.
+    _CMD_SUB + r"(?:\S*/)?tar\b(?:"
+    r"\s+-?[A-Za-z]*[xc]"
+    r"|[^|;&]*?\s-[A-Za-z]*[xc]"
+    r"|[^|;&]*?\s--(?:extract|create|append|update|delete)\b"
+    r")",
+    # unzip / gunzip / gzip WRITE by default; exempt the non-extracting read modes. The read flag
+    # may sit inside a COMBINED short-option cluster (`unzip -lq`, `gunzip -ck`), so match the letter
+    # anywhere in the cluster rather than requiring it to stand alone.
+    _CMD_SUB + r"(?:\S*/)?unzip\b(?![^|;&]*\s-[A-Za-z]*[lt])",
+    _CMD_SUB + r"(?:\S*/)?(?:gunzip|gzip)\b(?![^|;&]*\s-[A-Za-z]*[clt])",
     # GNU install copies/creates files; anchored to command position because 'install'
     # is also a common path component (e.g. `ls /opt/install`) and a package subcommand.
     _CMD + r"install\b",

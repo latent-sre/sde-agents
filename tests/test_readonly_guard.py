@@ -64,7 +64,9 @@ ALLOWED = [
     "cat deploy.sh | grep -c foo",
     "cat notes.py | grep -e todo",
     "unzip -l archive.zip",
+    "unzip -lq archive.zip",
     "tar tf archive.tar.gz",
+    "gunzip -ck data.gz",
     # search / inspection
     "grep -rn 'def main' scripts/",
     "rg 'git push' docs/",
@@ -145,6 +147,13 @@ DENIED = [
     "systemctl restart nginx",
     "find . -name '*.pyc' -delete",
     "vim agents/code-reviewer.md",
+    # PowerShell mutations (Windows shells behind the Bash tool name) — the guard carries a
+    # dedicated verb list for these but nothing exercised it on any platform before now
+    "Remove-Item -Recurse -Force build",
+    "Set-Content -Path out.txt -Value x",
+    "Stop-Service nginx",
+    "New-Item -ItemType File marker",
+    "Out-File -FilePath log.txt",
     # package installs
     "pip install requests",
     "/usr/local/bin/pip install requests",
@@ -165,6 +174,8 @@ DENIED = [
     # nested shells / interpreters / scripts
     "bash -c 'rm -rf /'",
     "python3 -c 'import os; os.remove(\"x\")'",
+    "FOO=bar python3 -c 'import os'",
+    'FOO="a b" python3 -c \'import os\'',  # quoted assignment value must not defeat the anchor
     "python3 mutate.py",
     "node build.js",
     "bash deploy.sh",
@@ -179,6 +190,8 @@ DENIED = [
     "patch -p1 < changes.diff",
     "tar xzf archive.tar.gz",
     "tar -xf backup.tar",
+    "tar -C /tmp -xf backup.tar",
+    "tar --directory=/tmp -xf backup.tar",
     "unzip pkg.zip",
     "gunzip -k data.gz",
     "scripts/setup.sh --yes",
