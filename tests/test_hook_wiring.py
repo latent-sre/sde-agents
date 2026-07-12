@@ -1,81 +1,95 @@
-"""End-to-end test of the code-reviewer PreToolUse hook AS THE AGENT FILE DEFINES IT.
+"""End-to-end test of the read-only guard AS hooks/hooks.json DEFINES IT.
 
-tests/test_readonly_guard.py tests the guard's decisions by invoking the script
-directly. That is not the same thing as testing the hook: the hook is a shell
-command string in agents/code-reviewer.md, and it is what Claude Code actually
-runs. This string is also a trust boundary: CLAUDE_PROJECT_DIR is the repository
-being reviewed, so executing a guard from there would execute untrusted target
-code. The hook must use the installed fleet guard and convert missing interpreters,
-missing files, and guard crashes into an explicit deny decision. Otherwise an empty
-stdout or a non-blocking hook error lets the Bash call proceed unguarded.
+tests/test_readonly_guard.py tests the guard's decisions by invoking the script directly.
+That is not the same thing as testing the hook: the hook is a shell command string in
+hooks/hooks.json, and it is what Claude Code actually runs. These tests extract that string
+and run it under `sh`, exactly as the runtime does.
 
-So these tests extract the command from the agent frontmatter and run it, and the
-load-bearing case is the one where the guard cannot be found at all: a read-only
-agent whose guard is unavailable must DENY, never fall through.
+Why the wiring moved here from the agent's frontmatter — the load-bearing fact:
+
+    A plugin-shipped agent's `hooks:` frontmatter is SILENTLY IGNORED. ("For security reasons,
+    `hooks`, `mcpServers`, and `permissionMode` are not supported for plugin-shipped agents" —
+    code.claude.com/docs/en/plugins-reference.) Probed on CLI 2.1.200: a plugin agent's
+    frontmatter hook never fired, while a byte-identical hook on a project-scope agent did.
+
+This fleet ships as a plugin, so a guard on the agent would be armor that isn't there — the
+reviewer would hold Bash with nothing watching it, and every test would still pass. The guard
+therefore lives in hooks/hooks.json, which Claude Code registers SESSION-WIDE, and scopes itself
+on the payload's `agent_type`. Two properties follow, and both are tested below because getting
+either wrong is worse than having no guard at all:
+
+  1. It must DENY state-changing Bash for the reviewer, and fail CLOSED when it cannot decide.
+  2. It must NEVER touch anyone else — above all the user's own main-session Bash, which carries
+     no `agent_type` key at all.
+
+The trust boundary also moved, and improved: the guard now runs from ${CLAUDE_PLUGIN_ROOT}, the
+plugin's installed copy, which by construction is not inside the repository under review.
 """
 from __future__ import annotations
 
 import json
 import os
-import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from scripts import install_reviewer_guard
-
 REPO = Path(__file__).resolve().parents[1]
+HOOKS = REPO / "hooks" / "hooks.json"
 AGENT = REPO / "agents" / "code-reviewer.md"
-INSTALLER = REPO / "scripts" / "install_reviewer_guard.py"
 SH = shutil.which("sh")
 
-PUSH = {"tool_name": "Bash", "tool_input": {"command": "git push --force origin main"}}
-DIFF = {"tool_name": "Bash", "tool_input": {"command": "git diff HEAD~1"}}
+REVIEWER = "sde-agents:code-reviewer"
+PUSH = "git push --force origin main"
+DIFF = "git diff HEAD~1"
 
 
 def hook_command() -> str:
-    """The PreToolUse command string, read from the agent definition itself.
+    """The PreToolUse command string, read from hooks/hooks.json itself.
 
-    Walks the real `hooks: -> PreToolUse: -> matcher: Bash -> command:` path rather than
-    grepping the frontmatter for any `command:` line. The loose grep passed even when the
-    wiring was broken: rename `hooks:` to `hook:` and the runtime stops installing the guard
-    entirely, but the `command:` string is still sitting there in the frontmatter, so the old
-    regex found it and every test went green while the guard was dead. The structure IS the
-    thing under test — an unreachable command is not a wired hook.
+    Walks the real `hooks -> PreToolUse -> matcher: Bash -> command` path rather than grepping
+    for any `command` key. The structure IS the thing under test: a command string sitting at a
+    path Claude Code never reads is not a wired hook, and that is precisely how the previous
+    wiring died — the string was still in the agent file, perfectly valid, and completely inert.
     """
-    # Only split off the leading frontmatter block; the agent body may legitimately
-    # contain '---' (e.g. in markdown), and an unbounded split would misalign it.
-    frontmatter = AGENT.read_text(encoding="utf-8").split("---", 2)[1]
+    config = json.loads(HOOKS.read_text(encoding="utf-8"))
+    for entry in config["hooks"]["PreToolUse"]:
+        if entry.get("matcher") == "Bash":
+            for hook in entry["hooks"]:
+                if hook.get("type") == "command" and hook.get("command"):
+                    return hook["command"]
+    raise RuntimeError(
+        "hooks/hooks.json: no PreToolUse hook with matcher 'Bash' and a command. The read-only "
+        "guard is wired through hooks->PreToolUse->matcher: Bash->command; a renamed or misnested "
+        "key silently disarms it."
+    )
 
-    # A plain `assert` would be stripped under `python -O`, turning a broken wiring path into a
-    # confusing NoneType error further down; these must fail loudly.
-    def require(pattern: str, what: str) -> re.Match:
-        match = re.search(pattern, frontmatter, re.MULTILINE)
-        if match is None:
-            raise RuntimeError(
-                f"code-reviewer frontmatter: {what} not found. The read-only guard is wired "
-                f"through hooks->PreToolUse->matcher: Bash->command; a renamed or misnested key "
-                f"silently disarms it."
-            )
-        return match
 
-    require(r"^hooks:\s*$", "top-level 'hooks:' key")
-    require(r"^\s+PreToolUse:\s*$", "'PreToolUse:' event under hooks")
-    require(r"^\s+-\s*matcher:\s*Bash\s*$", "'matcher: Bash' under PreToolUse")
-    match = require(r'^\s*command:\s*"(.*)"\s*$', "PreToolUse 'command:' string")
+def payload(command: str, agent_type: str | None = None) -> str:
+    """A PreToolUse payload shaped like the real one (compact JSON, as observed on CLI 2.1.200).
 
-    # Undo the YAML double-quoted escaping to recover the shell string.
-    return match.group(1).replace('\\"', '"').replace("\\\\", "\\")
+    The main loop genuinely has NO `agent_type` key — it is not empty, it is absent — so
+    `agent_type=None` omits it rather than sending a null.
+    """
+    data: dict = {
+        "hook_event_name": "PreToolUse",
+        "session_id": "s-1",
+        "cwd": str(REPO),
+        "permission_mode": "default",
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+    }
+    if agent_type is not None:
+        data["agent_id"] = "a-1"
+        data["agent_type"] = agent_type
+    return json.dumps(data)
 
 
 def run_hook(
-    payload: dict,
+    pl: str,
     *,
-    project_dir: str,
-    home: str,
+    plugin_root: str = str(REPO),
     cwd: str | None = None,
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
@@ -83,17 +97,17 @@ def run_hook(
     # Inherit the real environment and override only what the hook resolves paths from.
     # (A stripped env breaks Windows: unset SystemDrive/SystemRoot make native calls
     # expand %SystemDrive% literally and scatter directories into the CWD.)
-    env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, HOME=home)
+    env = dict(os.environ, CLAUDE_PLUGIN_ROOT=plugin_root)
     if extra_env:
         env.update(extra_env)
     return subprocess.run(
         [str(SH), "-c", hook_command()],
-        input=json.dumps(payload),
+        input=pl,
         capture_output=True,
         text=True,
         env=env,
         cwd=cwd,
-        timeout=30,
+        timeout=60,
     )
 
 
@@ -103,16 +117,8 @@ def decision(stdout: str) -> str | None:
     return json.loads(stdout)["hookSpecificOutput"]["permissionDecision"]
 
 
-def install_guard(home: str, *, contents: str | None = None) -> Path:
-    """Install either the real guard or a test double into a throwaway HOME."""
-    installed, _ = install_reviewer_guard.install(Path(home) / ".claude" / "scripts")
-    if contents is not None:
-        installed.write_text(contents, encoding="utf-8")
-    return installed
-
-
 def seed_target_guard(project: str) -> Path:
-    """Create a target-repository guard that leaves proof if it is executed."""
+    """Plant a guard in the repository under review that leaves proof if it is ever executed."""
     marker = Path(project) / "target-guard-executed"
     target_guard = Path(project) / "scripts" / "readonly-guard.py"
     target_guard.parent.mkdir(parents=True)
@@ -124,159 +130,131 @@ def seed_target_guard(project: str) -> Path:
     return marker
 
 
-class GuardInstallerTest(unittest.TestCase):
-    def test_cli_installs_guard_and_records_absolute_interpreter(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            target = Path(tmp) / "scripts"
-            result = subprocess.run(
-                [sys.executable, str(INSTALLER), "--target-dir", str(target)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            installed = target / "readonly-guard.py"
-            record = target / "readonly-guard.python"
-            self.assertEqual(
-                installed.read_bytes(),
-                (REPO / "scripts" / "readonly-guard.py").read_bytes(),
-            )
-            record_bytes = record.read_bytes()
-            self.assertTrue(record_bytes.endswith(b"\n"))
-            self.assertNotIn(b"\r", record_bytes)
-            recorded_python = Path(record_bytes.decode("utf-8").strip())
-            self.assertTrue(recorded_python.is_absolute())
-            self.assertEqual(recorded_python.resolve(), Path(sys.executable).resolve())
+class AgentMustNotCarryAnInertHookTest(unittest.TestCase):
+    def test_code_reviewer_has_no_frontmatter_hooks_key(self) -> None:
+        # A `hooks:` block here is IGNORED for a plugin-shipped agent. Leaving one would read as
+        # protection and provide none — the single most dangerous thing this file guards against.
+        frontmatter = AGENT.read_text(encoding="utf-8").split("---", 2)[1]
+        self.assertNotRegex(
+            frontmatter,
+            r"(?m)^hooks:",
+            "agents/code-reviewer.md declares frontmatter 'hooks:', which Claude Code SILENTLY "
+            "IGNORES for a plugin-shipped agent. The guard belongs in hooks/hooks.json.",
+        )
 
 
 @unittest.skipIf(SH is None, "POSIX sh unavailable")
 class HookWiringTest(unittest.TestCase):
-    def _run(
-        self,
-        payload: dict,
-        *,
-        project_dir: str,
-        home: str,
-        cwd: str | None = None,
-        extra_env: dict[str, str] | None = None,
-    ) -> str:
-        # A crashing hook prints nothing on stdout, and empty stdout is silently
-        # treated as allow -- exactly the failure mode this test file exists to
-        # catch. Fail loudly instead, surfacing stderr for debugging.
-        result = run_hook(
-            payload,
-            project_dir=project_dir,
-            home=home,
-            cwd=cwd,
-            extra_env=extra_env,
-        )
+    def _run(self, pl: str, **kwargs) -> str:
+        # A crashing hook prints nothing on stdout, and empty stdout is silently treated as
+        # ALLOW -- exactly the failure mode this file exists to catch. Fail loudly instead.
+        result = run_hook(pl, **kwargs)
         self.assertEqual(
             result.returncode, 0,
             f"hook exited {result.returncode}; stderr:\n{result.stderr}",
         )
         return result.stdout
 
-    def test_denies_state_change_when_installed_guard_resolves(self) -> None:
-        with tempfile.TemporaryDirectory() as home:
-            install_guard(home)
-            out = self._run(PUSH, project_dir=str(REPO), home=home)
+    # --- the guarded agent -------------------------------------------------------------
+    def test_denies_state_change_for_the_reviewer(self) -> None:
+        self.assertEqual(decision(self._run(payload(PUSH, REVIEWER))), "deny")
+
+    def test_allows_read_only_command_for_the_reviewer(self) -> None:
+        self.assertIsNone(decision(self._run(payload(DIFF, REVIEWER))))
+
+    def test_guards_the_bare_agent_name_too(self) -> None:
+        # Project/user-scope installs report a bare `agent_type` (the --plugin-dir dev loop
+        # reports the NAMESPACED form). The guard must not be sidestepped by hand-installing the
+        # agent at a different scope.
+        self.assertEqual(decision(self._run(payload(PUSH, "code-reviewer"))), "deny")
+
+    # --- everyone else, above all the user ---------------------------------------------
+    def test_main_loop_is_never_guarded(self) -> None:
+        # The main loop carries NO agent_type. This is the property that makes a session-wide
+        # hook safe to ship: get it wrong and the user cannot run git in their own session.
+        self.assertIsNone(decision(self._run(payload(PUSH))))
+
+    def test_other_subagents_are_never_guarded(self) -> None:
+        self.assertIsNone(decision(self._run(payload(PUSH, "sde-agents:sde-fullstack"))))
+
+    def test_main_loop_command_that_merely_names_the_reviewer_is_allowed(self) -> None:
+        # `tool_input.command` is user-controlled text. Scanning it for the agent's name would deny
+        # an ordinary commit -- and this is the exact command someone editing this guard would run.
+        self.assertIsNone(
+            decision(self._run(payload('git commit -m "fix sde-agents:code-reviewer"')))
+        )
+
+    # --- failing closed, but only for the reviewer ---------------------------------------
+    def test_fails_closed_for_the_reviewer_when_the_guard_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as empty:
+            out = self._run(payload(DIFF, REVIEWER), plugin_root=empty)
+            self.assertEqual(decision(out), "deny")
+            self.assertIn("guard unavailable", out)
+
+    def test_missing_guard_does_not_break_the_main_session(self) -> None:
+        # Fail-closed must never escalate into "the user cannot use Bash". A broken plugin install
+        # degrades the reviewer; it must not brick the session.
+        with tempfile.TemporaryDirectory() as empty:
+            self.assertIsNone(decision(self._run(payload(PUSH), plugin_root=empty)))
+
+    def test_broken_guard_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / "scripts").mkdir()
+            (Path(root) / "scripts" / "readonly-guard.py").write_text(
+                "raise RuntimeError('broken guard')\n", encoding="utf-8"
+            )
+            out = self._run(payload(DIFF, REVIEWER), plugin_root=root)
             self.assertEqual(decision(out), "deny")
 
-    def test_allows_read_only_command_when_installed_guard_resolves(self) -> None:
-        with tempfile.TemporaryDirectory() as home:
-            install_guard(home)
-            out = self._run(DIFF, project_dir=str(REPO), home=home)
-            self.assertIsNone(decision(out))
-
-    def test_fails_closed_when_guard_is_missing_everywhere(self) -> None:
-        # A foreign target repo with no fleet install: the guard cannot be found.
-        # A read-only agent MUST deny rather than run unguarded.
-        out = self._run(DIFF, project_dir="/nonexistent-project", home="/nonexistent-home")
-        self.assertEqual(decision(out), "deny")
-        self.assertIn("guard unavailable", out)
-
-    def test_installed_guard_works_outside_the_repo(self) -> None:
-        # CLAUDE_PROJECT_DIR points at a foreign repo, but the fleet is installed
-        # at ~/.claude/scripts -- the guard must still enforce. Seed a throwaway HOME
-        # so the test never depends on the developer's real installation.
-        with tempfile.TemporaryDirectory() as home:
-            install_guard(home)
-            out = self._run(PUSH, project_dir="/nonexistent-project", home=home)
-            self.assertEqual(decision(out), "deny")
-            # and a read-only command in that same fallback config is allowed
-            allow = self._run(DIFF, project_dir="/nonexistent-project", home=home)
-            self.assertIsNone(decision(allow))
-
-    def test_ignores_untrusted_guard_in_target_repository(self) -> None:
-        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as home:
+    # --- trust boundary: never execute code from the repository under review --------------
+    def test_never_executes_a_guard_from_the_repository_under_review(self) -> None:
+        with tempfile.TemporaryDirectory() as project:
             marker = seed_target_guard(project)
-            install_guard(home)
-
-            out = self._run(DIFF, project_dir=project, home=home, cwd=project)
-
+            out = self._run(payload(DIFF, REVIEWER), cwd=project)
             self.assertIsNone(decision(out))
             self.assertFalse(marker.exists(), "the target repository's guard was executed")
 
-    def test_never_falls_back_to_target_guard_when_install_is_missing(self) -> None:
-        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as home:
+    def test_target_guard_is_not_used_even_when_the_plugin_copy_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as empty:
             marker = seed_target_guard(project)
-
-            out = self._run(DIFF, project_dir=project, home=home, cwd=project)
-
+            out = self._run(payload(DIFF, REVIEWER), plugin_root=empty, cwd=project)
             self.assertEqual(decision(out), "deny")
             self.assertFalse(marker.exists(), "the target repository's guard was executed")
 
-    def test_installed_guard_runtime_failure_fails_closed(self) -> None:
-        with tempfile.TemporaryDirectory() as home:
-            install_guard(home, contents="raise RuntimeError('broken guard')\n")
+    def test_poisoned_interpreter_cannot_disarm_the_guard(self) -> None:
+        """A PATH-planted `python3` that exits 0 with empty stdout must not read as ALLOW.
 
-            out = self._run(DIFF, project_dir="/nonexistent-project", home=home)
+        This is why the guard asserts its verdict with distinctive exit codes (EXIT_ALLOW /
+        EXIT_DENY) instead of relying on "exit 0 + empty stdout". A stand-in interpreter cannot
+        forge those, so the hook rejects it and moves on to a real Python.
 
-            self.assertEqual(decision(out), "deny")
-            self.assertIn("guard unavailable or failed", out)
-
-    def test_target_cannot_inject_guard_interpreter_or_python_imports(self) -> None:
-        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as home:
-            install_guard(home)
-            path_marker = Path(project) / "path-shim-executed"
-            import_marker = Path(project) / "pythonpath-executed"
-
+        Honest boundary: the plugin has no install step, so no absolute interpreter can be pinned
+        ahead of time and the shim IS executed once while the hook looks for a working Python.
+        Whoever can write to PATH already has code execution; what must not happen -- and does not
+        -- is that they thereby turn the guard off. `-I` additionally neutralizes PYTHONPATH and
+        PYTHONHOME.
+        """
+        with tempfile.TemporaryDirectory() as project:
             poison_bin = Path(project) / "poison-bin"
             poison_bin.mkdir()
-            python_shim = poison_bin / "python3"
-            python_shim.write_text(
-                "#!/bin/sh\n"
-                'printf executed > "$CLAUDE_PROJECT_DIR/path-shim-executed"\n',
-                encoding="utf-8",
-            )
-            python_shim.chmod(0o755)
+            shim = poison_bin / "python3"
+            shim.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            shim.chmod(0o755)
 
             poison_imports = Path(project) / "poison-imports"
             poison_imports.mkdir()
-            (poison_imports / "json.py").write_text(
-                "import os\n"
-                "open(os.path.join(os.environ['CLAUDE_PROJECT_DIR'], "
-                "'pythonpath-executed'), 'w').write('executed')\n",
-                encoding="utf-8",
-            )
-            injected = {
-                "PATH": str(poison_bin) + os.pathsep + os.environ.get("PATH", ""),
-                "PYTHONHOME": str(poison_imports),
-                "PYTHONPATH": str(poison_imports),
-            }
+            (poison_imports / "json.py").write_text("raise SystemExit(0)\n", encoding="utf-8")
 
             out = self._run(
-                DIFF,
-                project_dir=project,
-                home=home,
+                payload(PUSH, REVIEWER),
                 cwd=project,
-                extra_env=injected,
+                extra_env={
+                    "PATH": str(poison_bin) + os.pathsep + os.environ.get("PATH", ""),
+                    "PYTHONHOME": str(poison_imports),
+                    "PYTHONPATH": str(poison_imports),
+                },
             )
-
-            self.assertIsNone(decision(out))
-            self.assertFalse(path_marker.exists(), "the PATH interpreter shim was executed")
-            self.assertFalse(import_marker.exists(), "PYTHONPATH code was imported")
+            self.assertEqual(decision(out), "deny")
 
 
 if __name__ == "__main__":

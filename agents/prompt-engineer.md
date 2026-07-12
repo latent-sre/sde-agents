@@ -1,6 +1,6 @@
 ---
 name: prompt-engineer
-description: Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems (use multi-agent-architect).
+description: Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems (use sde-agents:multi-agent-architect).
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch, Agent
 model: inherit
 color: orange
@@ -47,8 +47,8 @@ A prompt is a spec and a contract between human and model. If the model didn't d
   - `tools` — allowlist; **inherits every tool if omitted**, so omission is not "no tools," it's "all tools."
   - Two traps in `tools`. `Agent(worker)` restricts spawning **only** for a main-thread agent (`claude --agent`); in a *subagent* definition the type list is silently ignored and spawn is unrestricted — so it reads like a limit and isn't one. And `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are **never** available to a subagent however you list them; granting one reads like a capability the agent does not have.
   - `disallowedTools` — denylist, applied *before* `tools` resolves.
-  - `permissionMode` — `default | acceptEdits | auto | dontAsk | bypassPermissions | plan | manual`. This fleet forbids `bypassPermissions`: it would nullify the read-only guard.
-  - `hooks` — lifecycle hooks scoped to the agent. This is how `code-reviewer` claws write capability back off `Bash`.
+  - `permissionMode` — `default | acceptEdits | auto | dontAsk | bypassPermissions | plan | manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it as configuration that does not exist.
+  - `hooks` — lifecycle hooks scoped to the agent. Real for a project- or user-scope agent, **inert in a plugin** (see below) — so this fleet, which ships as one, claws write capability back off `sde-agents:code-reviewer`'s `Bash` with a session hook in `hooks/hooks.json` that scopes itself on the payload's `agent_type` instead.
   - `skills` — preloads full skill content at startup. Prefer this over listing `Skill` in `tools`.
   - `model` — aliases `haiku | sonnet | opus | fable | inherit`, or a full ID (`claude-opus-4-8`); omitted defaults to `inherit`. **This fleet permits aliases only** — a pin rots silently while an alias follows the upgrade, so `validate_fleet.py` rejects pins as a policy error.
   - `maxTurns` (int), `memory` (`user|project|local`), `background` (bool), `effort` (`low|medium|high|xhigh|max`), `isolation` (`worktree`), `color`, `initialPrompt` (main-session only).

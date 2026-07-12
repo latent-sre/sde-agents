@@ -1,8 +1,18 @@
 """Offline tests for scripts/readonly-guard.py.
 
-Runs the guard exactly as the hook does: as a subprocess with the pending tool
-call piped as JSON on stdin. A deny is a permissionDecision JSON on stdout with
-exit 0; an allow is empty stdout with exit 0. No network, no model, stdlib only.
+Runs the guard exactly as the hook does: as a subprocess with the pending tool call piped as
+JSON on stdin. A deny is a permissionDecision JSON on stdout with exit EXIT_DENY; an allow is
+empty stdout with exit EXIT_ALLOW. No network, no model, stdlib only.
+
+The guard is registered SESSION-WIDE (hooks/hooks.json), because a plugin-shipped agent cannot
+carry its own `hooks:` frontmatter. Two consequences shape every test here:
+
+  * The guard no-ops unless the payload's `agent_type` names a guarded agent. A payload WITHOUT
+    `agent_type` therefore exercises nothing at all — so `bash_call` supplies the reviewer by
+    default, or the entire denylist below would pass while testing the short-circuit.
+  * The verdict is carried by the EXIT CODE as well as stdout, so the hook can tell the real
+    guard apart from a stand-in interpreter that merely exits 0. `decision()` asserts the two
+    agree on every single call.
 """
 
 from __future__ import annotations
@@ -15,6 +25,12 @@ from pathlib import Path
 
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
 
+# Must match scripts/readonly-guard.py.
+EXIT_ALLOW = 42
+EXIT_DENY = 43
+
+REVIEWER = "sde-agents:code-reviewer"
+
 
 def run_guard(stdin_text: str) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -26,16 +42,39 @@ def run_guard(stdin_text: str) -> subprocess.CompletedProcess:
 
 
 def decision(proc: subprocess.CompletedProcess) -> str:
-    """Return 'deny' or 'allow' from a guard run."""
+    """Return 'deny' or 'allow', asserting the exit code and stdout agree.
+
+    The exit code is not decoration: the hook uses it to authenticate that this guard — rather
+    than some PATH-planted stand-in that merely exits 0 with empty stdout — produced the answer.
+    If stdout and the exit code ever disagreed, the hook's contract would be broken, so both are
+    checked on every call rather than in one lonely test.
+    """
     out = proc.stdout.decode("utf-8").strip()
-    if not out:
+    if proc.returncode == EXIT_ALLOW:
+        if out:
+            raise AssertionError(f"EXIT_ALLOW but stdout was not empty: {out!r}")
         return "allow"
-    payload = json.loads(out)
-    return payload["hookSpecificOutput"]["permissionDecision"]
+    if proc.returncode == EXIT_DENY:
+        verdict = json.loads(out)["hookSpecificOutput"]["permissionDecision"]
+        if verdict != "deny":
+            raise AssertionError(f"EXIT_DENY but stdout said {verdict!r}")
+        return verdict
+    raise AssertionError(
+        f"guard exited {proc.returncode}, expected {EXIT_ALLOW} (allow) or {EXIT_DENY} (deny); "
+        f"stdout={out!r} stderr={proc.stderr.decode('utf-8', 'replace')[:300]!r}"
+    )
 
 
-def bash_call(command: str) -> str:
-    return json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+def bash_call(command: str, agent_type: str | None = REVIEWER) -> str:
+    """A PreToolUse payload from the guarded agent unless told otherwise.
+
+    `agent_type=None` omits the key entirely, which is what the MAIN LOOP actually sends — the
+    key is absent, not null (probed on CLI 2.1.200).
+    """
+    data: dict = {"tool_name": "Bash", "tool_input": {"command": command}}
+    if agent_type is not None:
+        data["agent_type"] = agent_type
+    return json.dumps(data)
 
 
 ALLOWED = [
@@ -91,7 +130,6 @@ ALLOWED = [
     # the repo's own read-only validator (exact-path allowlist)
     "python scripts/validate_fleet.py",
     "python3 scripts/validate_fleet.py",
-    "python3 ./scripts/validate_fleet.py --root .",
     # harmless plumbing
     "echo hello",
     "ps aux | head -5",
@@ -224,6 +262,13 @@ DENIED = [
     "python scripts/validate_fleet.py --root . > out.txt",
     "python scripts/validate_fleet.py --root $(rm -rf /)",
     "python scripts/validate_fleet.py `rm -rf /`",
+    # --root even with a clean charset: validate_plugin() imports and EXECUTES
+    # <root>/scripts/readonly-guard.py, so an attacker-chosen root is code execution
+    # wearing the exemption. Rejected wholesale — even the benign-looking `--root .` —
+    # because the reviewer never needs a non-default root and a value allowlist would
+    # just be a second parser to get wrong.
+    "python scripts/validate_fleet.py --root ../repo-under-review",
+    "python3 ./scripts/validate_fleet.py --root .",
 ]
 
 
@@ -232,14 +277,14 @@ class ReadonlyGuardTest(unittest.TestCase):
         for command in ALLOWED:
             with self.subTest(command=command):
                 proc = run_guard(bash_call(command))
-                self.assertEqual(proc.returncode, 0)
+                self.assertEqual(proc.returncode, EXIT_ALLOW)
                 self.assertEqual(decision(proc), "allow", f"falsely denied: {command!r}")
 
     def test_denies_state_changing_commands(self) -> None:
         for command in DENIED:
             with self.subTest(command=command):
                 proc = run_guard(bash_call(command))
-                self.assertEqual(proc.returncode, 0)
+                self.assertEqual(proc.returncode, EXIT_DENY)
                 self.assertEqual(decision(proc), "deny", f"falsely allowed: {command!r}")
 
     def test_deny_reason_tells_agent_what_to_do(self) -> None:
@@ -250,15 +295,19 @@ class ReadonlyGuardTest(unittest.TestCase):
         self.assertIn("read-only agent", output["permissionDecisionReason"])
 
     def test_non_bash_tools_pass_through(self) -> None:
-        proc = run_guard(json.dumps({"tool_name": "Read", "tool_input": {"file_path": "/x"}}))
-        self.assertEqual(proc.returncode, 0)
+        proc = run_guard(
+            json.dumps(
+                {"tool_name": "Read", "agent_type": REVIEWER, "tool_input": {"file_path": "/x"}}
+            )
+        )
+        self.assertEqual(proc.returncode, EXIT_ALLOW)
         self.assertEqual(decision(proc), "allow")
 
     def test_unparseable_and_empty_input_pass_through(self) -> None:
         for stdin_text in ("", "not json {", "﻿"):
             with self.subTest(stdin=stdin_text):
                 proc = run_guard(stdin_text)
-                self.assertEqual(proc.returncode, 0)
+                self.assertEqual(proc.returncode, EXIT_ALLOW)
                 self.assertEqual(decision(proc), "allow")
 
     def test_bom_prefixed_payload_is_still_parsed(self) -> None:
@@ -266,7 +315,80 @@ class ReadonlyGuardTest(unittest.TestCase):
         self.assertEqual(decision(proc), "deny")
 
     def test_missing_command_field_passes_through(self) -> None:
-        proc = run_guard(json.dumps({"tool_name": "Bash", "tool_input": {}}))
+        proc = run_guard(json.dumps({"tool_name": "Bash", "agent_type": REVIEWER, "tool_input": {}}))
+        self.assertEqual(decision(proc), "allow")
+
+
+class GuardScopingTest(unittest.TestCase):
+    """The guard is registered SESSION-WIDE, so it must scope itself — precisely.
+
+    Too loose and it denies the user's own `git commit` in their own session. Too tight and the
+    reviewer runs unguarded. Both failures are worse than having no guard at all, so they get
+    their own tests rather than riding along inside the denylist cases.
+    """
+
+    def test_main_loop_is_never_guarded(self) -> None:
+        # The main loop carries no `agent_type` key at all (probed on CLI 2.1.200). This is the
+        # property that makes a session-wide read-only guard safe to ship.
+        proc = run_guard(bash_call("git push --force origin main", agent_type=None))
+        self.assertEqual(decision(proc), "allow")
+
+    def test_other_subagents_are_never_guarded(self) -> None:
+        proc = run_guard(bash_call("git push origin main", agent_type="sde-agents:sde-fullstack"))
+        self.assertEqual(decision(proc), "allow")
+
+    def test_bare_agent_name_is_guarded(self) -> None:
+        # Project/user-scope installs report a bare agent_type (probed on CLI 2.1.200; the
+        # --plugin-dir dev loop reports the NAMESPACED form). The guard must not be sidestepped by
+        # hand-installing the agent at a different scope.
+        proc = run_guard(bash_call("git push origin main", agent_type="code-reviewer"))
+        self.assertEqual(decision(proc), "deny")
+
+    def test_main_loop_command_that_merely_names_the_reviewer_is_allowed(self) -> None:
+        # `tool_input.command` is user-controlled text. A guard that scanned it for the agent name
+        # would deny this exact commit — the one someone editing this guard is about to make.
+        proc = run_guard(
+            bash_call('git commit -m "fix sde-agents:code-reviewer"', agent_type=None)
+        )
+        self.assertEqual(decision(proc), "allow")
+
+    def test_renamed_agent_type_field_fails_closed(self) -> None:
+        # The contract canary. `agent_type` is undocumented; if it is ever renamed upstream, every
+        # payload would look like the main loop and the guard would silently stop guarding. When
+        # some other agent-ish key still names a guarded agent but no `agent_type` did, that is the
+        # contract moving under us — deny loudly rather than disarm quietly.
+        #
+        # BOTH spellings must fail closed: the namespaced form (plugin scope) and the bare form
+        # (project/user scope). The first canary design searched the envelope only for the
+        # namespaced string, so a rename disarmed the guard silently in exactly the scope a
+        # hand-installed copy runs in — caught in review, pinned here.
+        for renamed_value in (REVIEWER, "code-reviewer"):
+            with self.subTest(agent_type=renamed_value):
+                proc = run_guard(
+                    json.dumps(
+                        {
+                            "tool_name": "Bash",
+                            "subagent_type": renamed_value,  # hypothetical upstream rename
+                            "tool_input": {"command": "git diff HEAD~1"},
+                        }
+                    )
+                )
+                self.assertEqual(decision(proc), "deny")
+                self.assertIn("contract has changed", proc.stdout.decode("utf-8"))
+
+    def test_agent_name_in_a_non_agent_envelope_key_is_not_a_canary_trip(self) -> None:
+        # The canary consults only keys whose NAME contains "agent". A directory literally named
+        # after the agent can appear in cwd/transcript_path on a case-sensitive filesystem; that
+        # must not brick the user's main-loop Bash.
+        proc = run_guard(
+            json.dumps(
+                {
+                    "tool_name": "Bash",
+                    "cwd": f"/home/user/{REVIEWER}/work",
+                    "tool_input": {"command": "git push origin main"},
+                }
+            )
+        )
         self.assertEqual(decision(proc), "allow")
 
 

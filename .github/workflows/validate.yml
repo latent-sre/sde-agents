@@ -37,3 +37,21 @@ jobs:
 
       - name: Run validator unit tests
         run: ${{ matrix.py }} -m unittest discover -s tests -v
+
+  plugin-contract:
+    # validate_fleet.py enforces THIS FLEET's rules. It cannot see the PLATFORM
+    # contract -- manifest schema, frontmatter parsing, hook JSON -- where an
+    # unrecognized key is dropped silently at load time instead of failing. That
+    # blind spot is precisely how this repo came to advertise a canonical `agents/`
+    # and `skills/` layout that Claude Code never actually discovered. `--strict`
+    # turns warnings into errors. No API key needed: validation is local and offline.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate the plugin manifest, frontmatter, and hooks
+        run: claude plugin validate . --strict

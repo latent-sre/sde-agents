@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 import unittest
@@ -218,22 +219,31 @@ class FleetValidatorTests(unittest.TestCase):
             self.assertTrue(any("is not a Claude Code tool" in i for i in issues), (retired, issues))
 
     def test_unknown_frontmatter_key_is_reported(self) -> None:
-        # The regression this exists for: `hooks:` is what installs the read-only guard on
-        # code-reviewer, an agent that holds Bash. Misspell the key and the block is dropped.
+        # An unrecognized key is not guaranteed to fail loudly, so a typo silently drops whatever
+        # it configured. The key namespace itself is the tripwire.
         body = VALID_AGENT.replace("model: inherit", "hook: PreToolUse\nmodel: inherit")
         issues = self._agent_issues(("builder.md", body))
         self.assertTrue(any("unknown frontmatter key" in i and "'hook'" in i for i in issues), issues)
 
     def test_known_optional_frontmatter_keys_are_accepted(self) -> None:
-        # All 16 documented fields must pass, or the allowlist becomes a false tripwire.
-        extra = "hooks:\nskills: runbook\neffort: high\nisolation: worktree\nmaxTurns: 5\n"
+        # The documented fields must pass, or the allowlist becomes a false tripwire. `hooks`,
+        # `mcpServers`, and `permissionMode` are deliberately NOT here — see the test below.
+        extra = "skills: runbook\neffort: high\nisolation: worktree\nmaxTurns: 5\n"
         body = VALID_AGENT.replace("model: inherit", extra + "model: inherit")
         self.assertEqual([], [i for i in self._agent_issues(("builder.md", body)) if "frontmatter key" in i])
 
-    def test_bypass_permissions_is_rejected(self) -> None:
-        body = VALID_AGENT.replace("model: inherit", "permissionMode: bypassPermissions\nmodel: inherit")
-        issues = self._agent_issues(("builder.md", body))
-        self.assertTrue(any("nullify the read-only guard" in i for i in issues), issues)
+    def test_fields_that_a_plugin_silently_ignores_are_rejected(self) -> None:
+        # THE bug this whole layout exists to prevent. Claude Code silently ignores `hooks`,
+        # `mcpServers`, and `permissionMode` on a plugin-shipped agent. This fleet ships as a
+        # plugin, so a `hooks:` block on code-reviewer would look exactly like a read-only guard
+        # and be nothing at all — and no test, no load error, and no log would say so.
+        for field in ("hooks", "mcpServers", "permissionMode"):
+            with self.subTest(field=field):
+                body = VALID_AGENT.replace("model: inherit", f"{field}: whatever\nmodel: inherit")
+                issues = self._agent_issues(("builder.md", body))
+                self.assertTrue(
+                    any("SILENTLY IGNORED" in i and repr(field) in i for i in issues), issues
+                )
 
     def test_invalid_agent_name_is_reported(self) -> None:
         # uppercase fails NAME_RE; filename Builder.md keeps name==stem so only the regex branch fires
@@ -250,6 +260,145 @@ class FleetValidatorTests(unittest.TestCase):
             issues, names = validate_fleet.validate_agents(Path(tmp))
             self.assertEqual([], names)
             self.assertTrue(any("missing agents directory" in i for i in issues))
+
+
+REPO = Path(__file__).resolve().parents[1]
+
+READONLY_BASH_AGENT = (
+    "---\n"
+    "name: auditor\n"
+    "description: Use when auditing something read-only.\n"
+    "tools: Read, Grep, Bash\n"
+    "model: inherit\n"
+    "---\n\n"
+    "# Auditor\n\n"
+    "## Review packet\n\n"
+    "- **Changed**: nothing.\n"
+)
+
+
+class PluginWiringTests(unittest.TestCase):
+    """Tripwires for failures that are SILENT at runtime.
+
+    A plugin-shipped agent cannot carry its own `hooks:` — Claude Code ignores the field without a
+    word. So the read-only guard has exactly one place to live (hooks/hooks.json) and exactly one
+    way to recognize its subject (the payload's namespaced `agent_type`). Break any link in that
+    chain and nothing errors, nothing logs, and code-reviewer simply runs Bash unguarded against
+    the repository it was pointed at. Only a validator can see it, so each link gets a test.
+
+    These mutate a COPY of the real repository: the invariant is about this fleet's actual wiring,
+    not a synthetic fixture that could drift away from it.
+    """
+
+    def _issues_after(self, mutate) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(
+                REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__", "tests")
+            )
+            mutate(dst)
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+            return issues
+
+    def test_the_real_repo_is_a_valid_plugin(self) -> None:
+        # The positive control. Without it, every test below could pass for the wrong reason.
+        self.assertEqual([], self._issues_after(lambda _: None))
+
+    def test_missing_hook_registration_is_reported(self) -> None:
+        issues = self._issues_after(lambda r: (r / "hooks" / "hooks.json").unlink())
+        self.assertTrue(any("ONLY place the read-only guard" in i for i in issues), issues)
+
+    def test_hook_that_does_not_use_the_plugin_root_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "hooks" / "hooks.json"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("${CLAUDE_PLUGIN_ROOT}", "$HOME/.claude"),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("CLAUDE_PLUGIN_ROOT" in i for i in issues), issues)
+
+    def test_plugin_name_mismatch_is_reported(self) -> None:
+        # The guard matches a NAMESPACED agent_type. Rename the plugin and it matches nobody.
+        def mutate(repo: Path) -> None:
+            path = repo / ".claude-plugin" / "plugin.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["name"] = "renamed-fleet"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("silently guards nothing" in i for i in issues), issues)
+
+    def test_missing_author_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / ".claude-plugin" / "plugin.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            del manifest["author"]
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("--strict" in i for i in issues), issues)
+
+    def test_unguarded_readonly_bash_agent_is_reported(self) -> None:
+        # Add a new read-only agent that holds Bash and forget to register it with the guard --
+        # the exact way a future agent would arrive unguarded while every test stayed green.
+        issues = self._issues_after(
+            lambda r: (r / "agents" / "auditor.md").write_text(READONLY_BASH_AGENT, encoding="utf-8")
+        )
+        self.assertTrue(
+            any("'read-only' is a promise, not a control" in i for i in issues), issues
+        )
+
+    def test_guarding_an_agent_that_does_not_exist_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "readonly-guard.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})',
+                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer", "ghost"})',
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("'ghost'" in i and "not an agent" in i for i in issues), issues)
+
+    def test_bare_cross_reference_in_a_description_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "code-reviewer.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "use sde-agents:lab-audit", "use lab-audit"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("without the plugin namespace" in i for i in issues), issues)
+
+    def test_home_claude_skill_path_is_reported(self) -> None:
+        # The fleet-breaker: ~/.claude/skills does NOT hold this fleet once it ships as a plugin,
+        # and `service-onboard` (model-invocation-disabled) is reachable ONLY by path -- so a stale
+        # path here silently removes a capability rather than erroring.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "homelab-platform.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "${CLAUDE_PLUGIN_ROOT}/skills/service-onboard/SKILL.md",
+                    "~/.claude/skills/service-onboard/SKILL.md",
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("will NOT contain this fleet" in i for i in issues), issues)
+
+    def test_documentation_reference_to_user_level_agents_is_not_a_false_positive(self) -> None:
+        # `~/.claude/agents/*.md` correctly describes where USER-level agents live; the prompt
+        # skills teach it. Only a path resolved to a specific file is the bug.
+        issues = self._issues_after(lambda _: None)
+        self.assertEqual([], [i for i in issues if "will NOT contain this fleet" in i])
 
 
 if __name__ == "__main__":

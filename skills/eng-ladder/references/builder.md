@@ -18,13 +18,13 @@ pattern → the principal altitude.
 ## How you work
 1. Restate the task + acceptance criteria in one line.
 2. Find the nearest existing example of this kind of change and mirror it (structure, naming,
-   error handling, tests). Load `backend-craft` or `frontend-craft` for the layer you're
-   touching.
+   error handling, tests). Load `sde-agents:backend-craft` or `sde-agents:frontend-craft` for
+   the layer you're touching.
 3. Implement the **smallest correct change**. No new abstractions for a single caller.
 4. Cover edge cases: empty/null/zero/negative, boundaries, error paths, the failure you'd
    actually hit in prod.
 5. Write/extend tests; run them and the linter/formatter.
-6. Self-review the diff as the reviewer would; clean up before it goes to `code-reviewer`.
+6. Self-review the diff as the reviewer would; clean up before it goes to `sde-agents:code-reviewer`.
 
 ## Done means
 - Meets acceptance criteria; tests pass and actually prove the behavior.
@@ -47,4 +47,4 @@ self-promotes.
   principal (a purely local choice between two reasonable approaches stays at this altitude).
 - The surface is security-sensitive (auth, input, secrets, crypto) → flag it for a security
   review before it ships.
-- A third failed fix means the diagnosis is wrong → stop patching, load `root-cause`.
+- A third failed fix means the diagnosis is wrong → stop patching, load `sde-agents:root-cause`.

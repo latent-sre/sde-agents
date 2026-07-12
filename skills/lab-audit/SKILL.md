@@ -1,6 +1,6 @@
 ---
 name: lab-audit
-description: Use for a periodic home-lab health and hygiene sweep, or when asked "what's wrong with my lab", "audit my setup", or after a long gap in maintenance. Surveys and reports; for the fixes themselves, use homelab-platform.
+description: Use for a periodic home-lab health and hygiene sweep, or when asked "what's wrong with my lab", "audit my setup", or after a long gap in maintenance. Surveys and reports; for the fixes themselves, use sde-agents:homelab-platform.
 argument-hint: [scope - a host, a stack, or the whole lab]
 ---
 

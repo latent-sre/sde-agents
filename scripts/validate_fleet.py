@@ -9,6 +9,8 @@ runtime's generated directories.
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -57,10 +59,24 @@ KNOWN_AGENT_FIELDS = {
     "color",
     "initialPrompt",
 }
-# Authority-relevant value check. `bypassPermissions` disables the permission system wholesale, which
-# would nullify the read-only guard on any agent that has Bash. Valid Claude Code, banned by fleet
-# policy — same runtime-schema-vs-fleet-policy split as pinned models.
-BANNED_PERMISSION_MODES = {"bypassPermissions"}
+# Claude Code SILENTLY IGNORES these three on a PLUGIN-SHIPPED agent: "For security reasons,
+# `hooks`, `mcpServers`, and `permissionMode` are not supported for plugin-shipped agents"
+# (code.claude.com/docs/en/plugins-reference). Probed on CLI 2.1.200: a plugin agent's frontmatter
+# hook never fired, while a byte-identical hook on a project-scope agent did.
+#
+# This fleet SHIPS AS A PLUGIN, so any of them here is configuration that does not exist. `hooks:`
+# is the dangerous one — it is how the read-only guard used to be attached to `code-reviewer`, and
+# leaving it would read as armor while providing none. An agent that LOOKS guarded and isn't is
+# strictly worse than one that is honestly unguarded, because nobody goes looking. The guard now
+# lives in hooks/hooks.json (session-wide) and scopes itself on the payload's `agent_type`.
+#
+# This replaces the old `bypassPermissions` value check: banning `permissionMode` outright covers
+# it, and the old error ("it would nullify the read-only guard") is no longer even true for a
+# plugin agent — the field is ignored, so it nullifies nothing. Wrong reasons rot into wrong fixes.
+PLUGIN_INERT_AGENT_FIELDS = {"hooks", "mcpServers", "permissionMode"}
+# Tools that make an agent a WRITER. An agent holding Bash but none of these is a read-only agent
+# whose only route to mutation is the shell — exactly what the guard exists to close.
+WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
 # The `tools:` field IS the authority an agent is granted, so it gets the same runtime-schema vs
 # fleet-policy split as `model`: RUNTIME_TOOLS answers "is this a real Claude Code tool?" and
 # FLEET_TOOLS answers "do we grant it here?". A typo (`Wrte`) is a schema error; a real-but-unadopted
@@ -214,16 +230,15 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                 issues.append(
                     f"{path}: unknown frontmatter key {key!r} is not a Claude Code agent field. "
                     f"An unrecognized key does not fail loudly at load time, so a typo here silently "
-                    f"drops whatever it was meant to configure (e.g. 'hook' for 'hooks' disarms the "
-                    f"read-only guard)."
+                    f"drops whatever it was meant to configure."
                 )
-
-        permission_mode = fields.get("permissionMode", "").strip()
-        if permission_mode in BANNED_PERMISSION_MODES:
-            issues.append(
-                f"{path}: permissionMode {permission_mode!r} disables the permission system and would "
-                f"nullify the read-only guard; this fleet forbids it"
-            )
+            elif key in PLUGIN_INERT_AGENT_FIELDS:
+                issues.append(
+                    f"{path}: frontmatter key {key!r} is SILENTLY IGNORED for a plugin-shipped agent, "
+                    f"and this fleet ships as a plugin. Declaring it configures nothing while reading "
+                    f"as though it does. The read-only guard belongs in hooks/hooks.json, scoped on "
+                    f"the payload's 'agent_type'."
+                )
 
         name = fields.get("name", "")
         names.append(name or path.stem)
@@ -405,10 +420,171 @@ def validate_inventory(root: Path, expected: str) -> list[str]:
     return []
 
 
+def load_guard(root: Path):
+    """Import scripts/readonly-guard.py by path — the hyphen makes it un-importable by name."""
+    source = root / "scripts" / "readonly-guard.py"
+    spec = importlib.util.spec_from_file_location("readonly_guard", source)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {source}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def hook_command(root: Path) -> str | None:
+    """The PreToolUse/Bash command string from hooks/hooks.json, following the real key path."""
+    path = root / "hooks" / "hooks.json"
+    if not path.is_file():
+        return None
+    try:
+        config = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    for entry in config.get("hooks", {}).get("PreToolUse", []):
+        if entry.get("matcher") == "Bash":
+            for hook in entry.get("hooks", []):
+                if hook.get("type") == "command" and hook.get("command"):
+                    return hook["command"]
+    return None
+
+
+def agent_tool_bases(path: Path) -> set[str]:
+    fields = parse_frontmatter(path) or {}
+    bases: set[str] = set()
+    for entry in split_tools(fields.get("tools", "")):
+        match = TOOL_ENTRY_RE.match(entry)
+        if match:
+            bases.add(match.group(1))
+    return bases
+
+
+def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) -> list[str]:
+    """Checks that only apply to a repo which SHIPS AS A PLUGIN.
+
+    Returns [] when there is no manifest, so the synthetic fixtures under tests/ — bare agents/ and
+    skills/ trees that are not plugins — stay valid.
+
+    Every rule here is a tripwire for a failure that is SILENT at runtime. A plugin-shipped agent
+    cannot carry its own `hooks:`, so the read-only guard has exactly one place to live and exactly
+    one way to find its subject; get any link in that chain wrong and nothing errors, nothing logs,
+    and `code-reviewer` simply runs Bash unguarded against the repository it is reviewing.
+    """
+    manifest_path = root / ".claude-plugin" / "plugin.json"
+    if not manifest_path.is_file():
+        return []
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"{manifest_path}: unreadable plugin manifest: {exc}"]
+
+    issues: list[str] = []
+    plugin_name = str(manifest.get("name", "")).strip()
+    if not plugin_name:
+        issues.append(f"{manifest_path}: manifest is missing the required 'name'")
+    if not manifest.get("author"):
+        # `claude plugin validate --strict` treats a missing author as an error; say so here rather
+        # than letting CI be the first to find out.
+        issues.append(
+            f"{manifest_path}: missing 'author' — `claude plugin validate --strict` fails without it"
+        )
+
+    guard_path = root / "scripts" / "readonly-guard.py"
+    if not guard_path.is_file():
+        return issues + [f"{guard_path}: missing the read-only guard"]
+    try:
+        guard = load_guard(root)
+    except Exception as exc:  # a guard that cannot even import guards nothing
+        return issues + [f"{guard_path}: cannot load guard: {exc}"]
+
+    if plugin_name and guard.PLUGIN_NAME != plugin_name:
+        issues.append(
+            f"{guard_path}: PLUGIN_NAME {guard.PLUGIN_NAME!r} does not match the manifest name "
+            f"{plugin_name!r}. The guard recognizes its subject by a NAMESPACED agent_type, so a "
+            f"mismatch means it matches nobody and silently guards nothing."
+        )
+
+    command = hook_command(root)
+    if command is None:
+        issues.append(
+            f"{root / 'hooks' / 'hooks.json'}: no PreToolUse hook with matcher 'Bash' and a command. "
+            f"A plugin-shipped agent cannot carry its own hooks, so this file is the ONLY place the "
+            f"read-only guard can be attached — without it, code-reviewer holds Bash unguarded."
+        )
+    else:
+        if "readonly-guard.py" not in command:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: the PreToolUse/Bash hook does not run "
+                f"scripts/readonly-guard.py"
+            )
+        if "${CLAUDE_PLUGIN_ROOT}" not in command:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: the PreToolUse/Bash hook must run the guard from "
+                f"${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy. Resolving it any other "
+                f"way risks executing a guard supplied by the repository under review."
+            )
+
+    # The guard's subject list and the agent roster must agree, in both directions.
+    guarded = set(guard.GUARDED_AGENT_NAMES)
+    for name in sorted(guarded - set(agent_names)):
+        issues.append(
+            f"{guard_path}: GUARDED_AGENT_NAMES lists {name!r}, which is not an agent in agents/"
+        )
+    for path in sorted((root / "agents").glob("*.md")):
+        tools = agent_tool_bases(path)
+        if "Bash" in tools and not (tools & WRITE_TOOLS) and path.stem not in guarded:
+            issues.append(
+                f"{path}: agent {path.stem!r} holds Bash and no write tool — a read-only agent whose "
+                f"only route to mutation is the shell — but it is absent from GUARDED_AGENT_NAMES in "
+                f"scripts/readonly-guard.py, so the guard ignores it and its 'read-only' is a promise, "
+                f"not a control."
+            )
+
+    # Cross-references and paths, across every agent and skill definition.
+    fleet = set(agent_names) | set(skill_names)
+    definitions = [(path, path.stem) for path in sorted((root / "agents").glob("*.md"))]
+    skills_dir = root / "skills"
+    if skills_dir.is_dir():
+        definitions += [
+            (directory / "SKILL.md", directory.name)
+            for directory in sorted(p for p in skills_dir.iterdir() if p.is_dir())
+            if (directory / "SKILL.md").is_file()
+        ]
+
+    for path, own in definitions:
+        text = read_text(path)
+        for line in text.splitlines():
+            if not line.startswith("description:"):
+                continue
+            for other in sorted(fleet - {own}):
+                if re.search(rf"(?<![\w:-]){re.escape(other)}(?![\w-])", line):
+                    issues.append(
+                        f"{path}: description names {other!r} without the plugin namespace. Every "
+                        f"component a plugin ships is namespaced, so the real name is "
+                        f"{plugin_name}:{other} — a bare reference points at nothing and degrades "
+                        f"the routing this description exists to drive."
+                    )
+        # `~/.claude/agents|skills/` does NOT contain this fleet once it ships as a plugin; its files
+        # live under ${CLAUDE_PLUGIN_ROOT}. The `(?!\*)` spares the doc-reference form
+        # (`~/.claude/agents/*.md`, which correctly describes where USER-level agents live) and
+        # catches only a path being resolved to a specific file — the thing that silently stops
+        # resolving, taking `service-onboard` (unreachable any other way) down with it.
+        for match in re.finditer(r"~/\.claude/(agents|skills)/(?!\*)", text):
+            kind = match.group(1)
+            issues.append(
+                f"{path}: resolves a fleet file under '~/.claude/{kind}/', which will NOT contain this "
+                f"fleet once it ships as a plugin — those files live under ${{CLAUDE_PLUGIN_ROOT}}. "
+                f"Use '${{CLAUDE_PLUGIN_ROOT}}/{kind}/...' instead."
+            )
+
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
+    issues.extend(validate_plugin(root, agent_names, skill_names))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names
