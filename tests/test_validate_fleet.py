@@ -180,6 +180,43 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertTrue(any("pinned" in i for i in issues), issues)
         self.assertFalse(any("unknown model" in i for i in issues), issues)
 
+    def test_scoped_agent_grant_is_reported_as_a_false_restriction(self) -> None:
+        # `Agent(code-reviewer)` restricts spawning only for a main-thread agent (`claude --agent`).
+        # Everything in agents/ is a SUBAGENT definition, where the type list is ignored — so this
+        # reads like a limit and grants unrestricted spawn. It must not pass silently.
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(code-reviewer)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("does not restrict anything here" in i for i in issues), issues)
+
+    def test_scoped_grant_survives_the_comma_split(self) -> None:
+        # A naive split(",") shreds `Agent(worker, researcher)` into `Agent(worker` and `researcher)`,
+        # which would surface as two bogus "unknown tool" errors instead of the real problem.
+        self.assertEqual(
+            ["Read", "Agent(worker, researcher)", "Bash"],
+            validate_fleet.split_tools("Read, Agent(worker, researcher), Bash"),
+        )
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(worker, researcher)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertFalse(any("unknown tool" in i for i in issues), issues)
+
+    def test_real_but_unadopted_tool_is_a_policy_error_not_a_schema_error(self) -> None:
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, PowerShell")
+        issues = [i for i in self._agent_issues(("builder.md", body)) if "PowerShell" in i]
+        self.assertTrue(any("not adopted by this fleet" in i for i in issues), issues)
+        self.assertFalse(any("is not a Claude Code tool" in i for i in issues), issues)
+
+    def test_tool_unavailable_to_subagents_is_reported(self) -> None:
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, AskUserQuestion")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("never available to a subagent" in i for i in issues), issues)
+
+    def test_retired_tool_names_are_rejected(self) -> None:
+        # BashOutput/KillShell/SlashCommand were allowed but appear nowhere in the canonical table.
+        for retired in ("BashOutput", "KillShell", "SlashCommand"):
+            body = VALID_AGENT.replace("tools: Read", f"tools: Read, {retired}")
+            issues = self._agent_issues(("builder.md", body))
+            self.assertTrue(any("is not a Claude Code tool" in i for i in issues), (retired, issues))
+
     def test_unknown_frontmatter_key_is_reported(self) -> None:
         # The regression this exists for: `hooks:` is what installs the read-only guard on
         # code-reviewer, an agent that holds Bash. Misspell the key and the block is dropped.

@@ -37,7 +37,7 @@ Authority lives in frontmatter, not in prose — the fields that carry it:
 
 | Field | Notes |
 |---|---|
-| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." |
+| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." `Agent(worker)` scoping works only for a main-thread agent (`claude --agent`); a subagent silently ignores the type list. `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are never available to a subagent, however listed. |
 | `disallowedTools` | Denylist; applied before `tools` resolves. |
 | `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. This fleet forbids `bypassPermissions` — it voids the read-only guard. |
 | `hooks` | Agent-scoped lifecycle hooks; how `code-reviewer` takes write access back off `Bash`. |

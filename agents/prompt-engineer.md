@@ -45,6 +45,7 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 - Agents: `~/.claude/agents/*.md` (user) or `.claude/agents/*.md` (project). Required frontmatter: `name`, `description`. Everything else is optional.
 - Full field set — `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `initialPrompt`. The authority-bearing ones are worth knowing:
   - `tools` — allowlist; **inherits every tool if omitted**, so omission is not "no tools," it's "all tools."
+  - Two traps in `tools`. `Agent(worker)` restricts spawning **only** for a main-thread agent (`claude --agent`); in a *subagent* definition the type list is silently ignored and spawn is unrestricted — so it reads like a limit and isn't one. And `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are **never** available to a subagent however you list them; granting one reads like a capability the agent does not have.
   - `disallowedTools` — denylist, applied *before* `tools` resolves.
   - `permissionMode` — `default | acceptEdits | auto | dontAsk | bypassPermissions | plan | manual`. This fleet forbids `bypassPermissions`: it would nullify the read-only guard.
   - `hooks` — lifecycle hooks scoped to the agent. This is how `code-reviewer` claws write capability back off `Bash`.

@@ -61,31 +61,67 @@ KNOWN_AGENT_FIELDS = {
 # would nullify the read-only guard on any agent that has Bash. Valid Claude Code, banned by fleet
 # policy — same runtime-schema-vs-fleet-policy split as pinned models.
 BANNED_PERMISSION_MODES = {"bypassPermissions"}
-# Canonical tool-authority vocabulary. The `tools:` field is security-relevant (it is the authority
-# an agent is granted), so — like `model` — every entry is checked against a known set. Without this
-# a typo (`Wrte`) or a name from another runtime silently grants or drops authority and still passes.
-# Extend this set deliberately when a new first-class tool is adopted.
-ALLOWED_TOOLS = {
-    # Spawns a subagent. Claude Code renamed "Task" to "Agent" in 2.1.63; "Task" still resolves as a
-    # deprecated alias, but this set is canonical-only on purpose, so a `Task` grant fails validation
-    # and gets rewritten rather than lingering. Do not "fix" an Agent grant to Task — see
-    # code.claude.com/docs/en/sub-agents.
-    "Agent",
-    "Bash",
-    "BashOutput",
-    "Edit",
-    "Glob",
-    "Grep",
-    "KillShell",
-    "NotebookEdit",
-    "Read",
-    "Skill",
-    "SlashCommand",
-    "TodoWrite",
-    "WebFetch",
-    "WebSearch",
-    "Write",
+# The `tools:` field IS the authority an agent is granted, so it gets the same runtime-schema vs
+# fleet-policy split as `model`: RUNTIME_TOOLS answers "is this a real Claude Code tool?" and
+# FLEET_TOOLS answers "do we grant it here?". A typo (`Wrte`) is a schema error; a real-but-unadopted
+# tool (`PowerShell`) is a policy error you can lift deliberately. Collapsing the two would either
+# let typos through or make the validator a mirror of the runtime with no opinion of its own.
+#
+# Canonical table: code.claude.com/docs/en/tools-reference. Note `BashOutput`, `KillShell`, and
+# `SlashCommand` were previously allowed here and appear nowhere in it — they were accepted names
+# that grant nothing.
+RUNTIME_TOOLS = {
+    # "Task" was renamed to "Agent" in 2.1.63 and survives only as a deprecated alias; we take the
+    # canonical name so a legacy `Task` grant fails and gets rewritten. Do not "fix" Agent -> Task.
+    "Agent", "Artifact", "AskUserQuestion", "Bash", "CronCreate", "CronDelete", "CronList", "Edit",
+    "EnterPlanMode", "EnterWorktree", "ExitPlanMode", "ExitWorktree", "Glob", "Grep",
+    "ListMcpResourcesTool", "LSP", "Monitor", "NotebookEdit", "PowerShell", "PushNotification",
+    "Read", "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage",
+    "SendUserFile", "ShareOnboardingGuide", "Skill", "TaskCreate", "TaskGet", "TaskList", "TaskOutput",
+    "TaskStop", "TaskUpdate", "TodoWrite", "ToolSearch", "WaitForMcpServers", "WebFetch", "WebSearch",
+    "Workflow", "Write",
 }
+# What this fleet actually grants. Widen deliberately; every entry is authority.
+FLEET_TOOLS = {
+    "Agent", "Bash", "Edit", "Glob", "Grep", "NotebookEdit", "Read", "Skill", "TodoWrite",
+    "WebFetch", "WebSearch", "Write",
+}
+# Real tools that a SUBAGENT never receives, however they are listed, because they depend on the main
+# conversation's UI or session state (code.claude.com/docs/en/sub-agents). Everything in agents/ is a
+# subagent definition, so granting one of these is a no-op that reads like a capability.
+SUBAGENT_UNAVAILABLE_TOOLS = {
+    "AskUserQuestion",
+    "EnterPlanMode",
+    "ExitPlanMode",  # unless permissionMode is `plan`
+    "ScheduleWakeup",
+    "WaitForMcpServers",
+}
+# A tools entry: a bare name, or a name with a parenthesized scope, e.g. `Agent(worker, researcher)`.
+TOOL_ENTRY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)(?:\((.*)\))?$")
+
+
+def split_tools(raw: str) -> list[str]:
+    """Split a `tools:` value on top-level commas only.
+
+    A naive ``raw.split(",")`` shreds a scoped grant: `Agent(worker, researcher)` becomes
+    `Agent(worker` and `researcher)`. Splitting at paren depth 0 keeps the scope intact so it can be
+    judged rather than mangled into two bogus tool names.
+    """
+    entries: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for char in raw:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        if char == "," and depth == 0:
+            entries.append("".join(current))
+            current = []
+            continue
+        current.append(char)
+    entries.append("".join(current))
+    return [entry.strip(" []'\"") for entry in entries if entry.strip(" []'\"")]
 # Canonical evidence-label phrasing; agent files may extend a definition but
 # must contain these exact stems so the triad cannot drift file by file.
 EVIDENCE_LABEL_STEMS = (
@@ -198,14 +234,50 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
 
         tools = fields.get("tools", "").strip()
         if not tools:
-            issues.append(f"{path}: missing explicit tools authority")
+            # Not a harmless omission: an absent `tools:` INHERITS EVERY TOOL rather than granting
+            # none, so a reviewer meant to be read-only would silently receive Write and Edit.
+            issues.append(f"{path}: missing explicit tools authority (omitting it inherits ALL tools)")
         else:
-            parsed_tools = [tool.strip(" []'\"") for tool in tools.split(",") if tool.strip()]
+            parsed_tools = split_tools(tools)
             if len(parsed_tools) != len(set(parsed_tools)):
                 issues.append(f"{path}: duplicate tool in tools authority")
             for tool in parsed_tools:
-                if tool not in ALLOWED_TOOLS:
-                    issues.append(f"{path}: unknown tool {tool!r} in tools authority")
+                entry = TOOL_ENTRY_RE.match(tool)
+                if not entry:
+                    issues.append(f"{path}: malformed tool entry {tool!r} in tools authority")
+                    continue
+                base, scope = entry.group(1), entry.group(2)
+
+                if base not in RUNTIME_TOOLS:
+                    issues.append(f"{path}: unknown tool {base!r} in tools authority is not a Claude Code tool")
+                elif base in SUBAGENT_UNAVAILABLE_TOOLS:
+                    issues.append(
+                        f"{path}: tool {base!r} is never available to a subagent regardless of this "
+                        f"grant (it needs the main conversation's UI or session state); granting it "
+                        f"reads like a capability the agent does not have"
+                    )
+                elif base not in FLEET_TOOLS:
+                    issues.append(
+                        f"{path}: tool {base!r} is a real Claude Code tool but is not adopted by this "
+                        f"fleet; add it to FLEET_TOOLS deliberately if the agent needs it"
+                    )
+
+                if scope is not None and base == "Agent":
+                    # The trap: `Agent(worker)` restricts spawning ONLY for an agent running as the
+                    # main thread (`claude --agent`). In a subagent definition the parenthesized type
+                    # list is IGNORED, so this grants UNRESTRICTED spawn while reading like a limit.
+                    issues.append(
+                        f"{path}: scoped grant {tool!r} does not restrict anything here. The "
+                        f"Agent(type) allowlist applies only to a main-thread agent (claude --agent); "
+                        f"in a subagent definition the type list is ignored and spawning is "
+                        f"unrestricted. Use a bare 'Agent' so the grant matches reality"
+                    )
+                elif scope is not None:
+                    issues.append(
+                        f"{path}: scoped grant {tool!r} uses permission-rule syntax, which is not "
+                        f"documented for the frontmatter 'tools:' field; express narrowing in "
+                        f"permission rules or the guard hook instead"
+                    )
 
         model = fields.get("model", "").strip()
         aliases = "|".join(sorted(ALIAS_MODELS))
