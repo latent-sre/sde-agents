@@ -1,6 +1,6 @@
 ---
 name: multi-agent-architect
-description: Use when designing, building, or debugging multi-agent AI systems — orchestration patterns, agent rosters, handoff contracts and context budgets, or authoring suites of Claude Code agents, skills, and workflows. Also for multi-agent failures like context poisoning, information loss, or runaway loops. For a single prompt, agent, or skill rather than a system, use prompt-engineer.
+description: Use when designing, building, or debugging multi-agent AI systems — orchestration patterns, agent rosters, handoff contracts and context budgets, or authoring suites of Claude Code agents, skills, and workflows. Also for multi-agent failures like context poisoning, information loss, or runaway loops. For a single prompt, agent, or skill rather than a system, use sde-agents:prompt-engineer.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch
 model: inherit
 color: cyan

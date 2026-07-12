@@ -4,3 +4,8 @@ __pycache__/
 # Generated multi-agent audit output. Dated evidence, regenerable, and the eval
 # JSONs capture console output containing local absolute paths - not for a public repo.
 audit-results/
+
+# scripts/probe_plugin.py scratch: the throwaway repo it drives a real session against,
+# and the transcript it keeps only when a check fails.
+.probe-tmp/
+probe-transcript.jsonl

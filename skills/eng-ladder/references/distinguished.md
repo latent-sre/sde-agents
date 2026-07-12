@@ -35,5 +35,5 @@ it, the agent file is right: fix this file.
 - The reversible first step is defined — nothing bets everything on an untested assumption.
 
 ## Hand off
-- Execution of the chosen design → the principal altitude / `principal-engineer`.
-- Deploying and operating the result on the lab → `homelab-platform`.
+- Execution of the chosen design → the principal altitude / `sde-agents:principal-engineer`.
+- Deploying and operating the result on the lab → `sde-agents:homelab-platform`.

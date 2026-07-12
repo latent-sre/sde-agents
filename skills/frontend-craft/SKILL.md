@@ -1,6 +1,6 @@
 ---
 name: frontend-craft
-description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use backend-craft.
+description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft.
 argument-hint: [the UI to build or change]
 ---
 

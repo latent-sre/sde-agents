@@ -1,10 +1,10 @@
 ---
 name: prompt-craft
-description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The lightweight inline path; for eval-driven iteration, use prompt-engineer; for multi-agent systems, multi-agent-architect.
+description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The lightweight inline path; for eval-driven iteration, use sde-agents:prompt-engineer; for multi-agent systems, sde-agents:multi-agent-architect.
 argument-hint: [what to create or fix]
 ---
 
-For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `prompt-engineer` agent with the target file, the observed failure, and the success criteria.
+For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `sde-agents:prompt-engineer` agent with the target file, the observed failure, and the success criteria.
 
 ## Method
 
@@ -39,8 +39,8 @@ Authority lives in frontmatter, not in prose — the fields that carry it:
 |---|---|
 | `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." `Agent(worker)` scoping works only for a main-thread agent (`claude --agent`); a subagent silently ignores the type list. `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are never available to a subagent, however listed. |
 | `disallowedTools` | Denylist; applied before `tools` resolves. |
-| `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. This fleet forbids `bypassPermissions` — it voids the read-only guard. |
-| `hooks` | Agent-scoped lifecycle hooks; how `code-reviewer` takes write access back off `Bash`. |
+| `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it. |
+| `hooks` | Agent-scoped lifecycle hooks. Real at project/user scope, **inert in a plugin** (see below). A plugin must instead ship `hooks/hooks.json`, which is session-wide, and scope the hook itself on the payload's `agent_type` — that is how this fleet guards `sde-agents:code-reviewer`'s `Bash`. |
 | `skills` | Preloads full skill content at startup — prefer over putting `Skill` in `tools`. |
 | `model` | Aliases `haiku \| sonnet \| opus \| fable \| inherit`, or a full ID (`claude-opus-4-8`); defaults to `inherit`. Use an alias — this fleet rejects pins, which rot silently while an alias follows the upgrade. |
 
