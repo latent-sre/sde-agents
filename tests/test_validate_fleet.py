@@ -20,6 +20,12 @@ class FleetValidatorTests(unittest.TestCase):
         )
         self.assertTrue(any("missing explicit tools authority" in issue for issue in issues))
 
+    def test_unknown_tool_is_reported(self) -> None:
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "unknown-tool", check_inventory=False
+        )
+        self.assertTrue(any("unknown tool 'Bogus'" in issue for issue in issues))
+
     def test_missing_bundled_reference_fails(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(
             FIXTURES / "missing-reference", check_inventory=False
