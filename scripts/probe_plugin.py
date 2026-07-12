@@ -9,6 +9,10 @@ only thing standing between "undocumented" and "silently disarmed after a CLI up
 
 Re-run after upgrading the Claude Code CLI.
 
+It also proves that `skills:` preloading actually fires for a plugin-shipped agent — an undocumented
+guarantee this fleet now depends on — and that ${CLAUDE_PLUGIN_ROOT} still expands for the one skill
+that cannot be preloaded (service-onboard, which is model-invocation-disabled).
+
 The oracle is deliberately NOT the model's prose, which can claim anything, and NOT the filesystem,
 which lies by omission. Two earlier designs failed here and both failures are instructive:
 
@@ -56,7 +60,7 @@ GUARD_DENY = "read-only agent"
 REVIEWER_CMD = 'find . -name "*.md" -exec grep -l REVIEWER_PROBE {} \\;'
 MAINLOOP_CMD = 'find . -name "*.md" -exec grep -l MAINLOOP_PROBE {} \\;'
 
-PROMPT = """Do exactly these three steps, in order. Do nothing else, and do not summarize the repo.
+PROMPT = """Do exactly these four steps, in order. Do nothing else, and do not summarize the repo.
 
 1. Use the Agent tool to spawn the subagent `sde-agents:code-reviewer`. Give it EXACTLY this task:
    "As part of reviewing this repository, run this read-only search with the Bash tool, exactly as
@@ -65,14 +69,20 @@ PROMPT = """Do exactly these three steps, in order. Do nothing else, and do not 
     different command, and do not skip it — the exact response to this command is what is needed."
 
 2. Use the Agent tool to spawn the subagent `sde-agents:sde-fullstack`. Give it EXACTLY this task:
-   "Do not write, design, or plan any code. Your instructions name a fallback location for
-    resolving a craft skill when the caller gives you no path and the target repo has none. Use the
-    Read tool to read the backend-craft SKILL.md from that fallback location. Then reply with only
-    the absolute file path you read."
+   "Do not write, design, or plan any code, and DO NOT USE ANY TOOL — answer only from context you
+    already have. Two questions: (a) in your backend-craft guidance, the JSON error-envelope example
+    carries a request_id — quote its exact value. (b) your frontend-craft guidance states the visual
+    bar by naming two companies and a two-word phrase about color — quote that phrase. If you do not
+    have this content in context, reply exactly NO_SKILL_CONTENT."
 
-3. You yourself run this Bash command with the Bash tool, exactly as written: {mainloop_cmd}
+3. Use the Agent tool to spawn the subagent `sde-agents:homelab-platform`. Give it EXACTLY this task:
+   "Do not change anything — this is Tier 0 inspection only. Your instructions name a fallback
+    location for the service-onboard checklist. Use the Read tool to read it from that fallback
+    location, then reply with only the absolute file path you read."
 
-Then report, in three short lines, what happened at each step."""
+4. You yourself run this Bash command with the Bash tool, exactly as written: {mainloop_cmd}
+
+Then report, in four short lines, what happened at each step."""
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "INCONCLUSIVE"
 
@@ -251,7 +261,7 @@ def main() -> int:
     )
 
     print("\n== the plugin loaded, and its components are namespaced ==")
-    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack"):
+    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack", "sde-agents:homelab-platform"):
         probe.check(
             PASS if spawn_succeeded(text, agent) else FAIL,
             f"{agent} spawned and returned without error",
@@ -259,26 +269,55 @@ def main() -> int:
             "did not load, or the namespaced name did not resolve",
         )
 
-    print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
-    # The fleet-breaker: sde-fullstack and homelab-platform resolve skills by PATH. If the variable
-    # does not expand in agent body content, those paths point nowhere -- and service-onboard, which
-    # is model-invocation-disabled, becomes unreachable by ANY route.
+    print("\n== sde-fullstack's craft skills are PRELOADED, not read ==")
+    # The inversion. sde-fullstack used to resolve craft skills by path at inference time -- three
+    # branches, each a chance to skip the read or answer from memory. `skills:` frontmatter makes the
+    # content unconditionally present before the first token, so the RIGHT behaviour is now that NO
+    # read happens at all. The oracle is not the agent's prose (it can claim anything) but a canary:
+    # a string that exists only inside the skill. Quoting it without a tool call is proof of preload.
     craft_reads = [
         call.get("input", {}).get("file_path", "")
         for call in tool_calls(text)
+        if "craft/SKILL.md" in call.get("input", {}).get("file_path", "").replace("\\", "/")
+    ]
+    probe.check(
+        PASS if not craft_reads else FAIL,
+        "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
+        f"agent still read a craft skill by path -- preload did not take effect: {craft_reads}",
+    )
+    probe.check(
+        PASS if "req_8f3a2c" in text else FAIL,
+        "backend-craft core content was preloaded (canary quoted)",
+        "the canary req_8f3a2c never appeared: backend-craft was not in the agent's context",
+    )
+    probe.check(
+        PASS if "color courage" in text else FAIL,
+        "frontend-craft core content was preloaded (canary quoted)",
+        "the canary 'color courage' never appeared: frontend-craft was not in the agent's context",
+    )
+
+    print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
+    # Still load-bearing, but ONLY for homelab-platform now: service-onboard sets
+    # `disable-model-invocation: true`, and a skill so marked CANNOT be preloaded ("preloading draws
+    # from the same set of skills Claude can invoke" -- code.claude.com/docs/en/sub-agents). So a PATH
+    # is the only route in, and if the variable stops expanding, that checklist becomes unreachable by
+    # ANY means. This check moved here from sde-fullstack, which no longer resolves anything by path.
+    onboard_reads = [
+        call.get("input", {}).get("file_path", "")
+        for call in tool_calls(text)
         if call.get("input", {}).get("file_path", "").replace("\\", "/").endswith(
-            "skills/backend-craft/SKILL.md"
+            "skills/service-onboard/SKILL.md"
         )
     ]
     probe.check(
-        PASS if craft_reads else FAIL,
-        "sde-fullstack resolved backend-craft by path",
-        "no Read of skills/backend-craft/SKILL.md in the transcript",
+        PASS if onboard_reads else FAIL,
+        "homelab-platform resolved service-onboard by path",
+        "no Read of skills/service-onboard/SKILL.md in the transcript",
     )
     probe.check(
-        PASS if craft_reads and all("CLAUDE_PLUGIN_ROOT" not in p for p in craft_reads) else FAIL,
+        PASS if onboard_reads and all("CLAUDE_PLUGIN_ROOT" not in p for p in onboard_reads) else FAIL,
         "the path was EXPANDED, not a literal ${CLAUDE_PLUGIN_ROOT}",
-        f"agent read an unexpanded path: {craft_reads}",
+        f"agent read an unexpanded path: {onboard_reads}",
     )
 
     print("\n== the guard denies the reviewer, and ONLY the reviewer ==")
