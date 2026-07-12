@@ -40,13 +40,13 @@ def hook_command() -> str:
     return match.group(1).replace('\\"', '"').replace("\\\\", "\\")
 
 
-def run_hook(payload: dict, *, project_dir: str, home: str) -> str:
+def run_hook(payload: dict, *, project_dir: str, home: str) -> subprocess.CompletedProcess:
     """Run the hook exactly as Claude Code would: sh -c <command>, JSON on stdin."""
     # Inherit the real environment and override only what the hook resolves paths from.
     # (A stripped env breaks Windows: unset SystemDrive/SystemRoot make native calls
     # expand %SystemDrive% literally and scatter directories into the CWD.)
     env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, HOME=home)
-    completed = subprocess.run(
+    return subprocess.run(
         ["sh", "-c", hook_command()],
         input=json.dumps(payload),
         capture_output=True,
@@ -54,7 +54,6 @@ def run_hook(payload: dict, *, project_dir: str, home: str) -> str:
         env=env,
         timeout=30,
     )
-    return completed.stdout
 
 
 def decision(stdout: str) -> str | None:
@@ -65,18 +64,29 @@ def decision(stdout: str) -> str | None:
 
 @unittest.skipIf(shutil.which("sh") is None, "POSIX sh unavailable")
 class HookWiringTest(unittest.TestCase):
+    def _run(self, payload: dict, *, project_dir: str, home: str) -> str:
+        # A crashing hook prints nothing on stdout, and empty stdout is silently
+        # treated as allow -- exactly the failure mode this test file exists to
+        # catch. Fail loudly instead, surfacing stderr for debugging.
+        result = run_hook(payload, project_dir=project_dir, home=home)
+        self.assertEqual(
+            result.returncode, 0,
+            f"hook exited {result.returncode}; stderr:\n{result.stderr}",
+        )
+        return result.stdout
+
     def test_denies_state_change_when_guard_resolves_in_repo(self) -> None:
-        out = run_hook(PUSH, project_dir=str(REPO), home=str(Path.home()))
+        out = self._run(PUSH, project_dir=str(REPO), home=str(Path.home()))
         self.assertEqual(decision(out), "deny")
 
     def test_allows_read_only_command_when_guard_resolves(self) -> None:
-        out = run_hook(DIFF, project_dir=str(REPO), home=str(Path.home()))
+        out = self._run(DIFF, project_dir=str(REPO), home=str(Path.home()))
         self.assertIsNone(decision(out))
 
     def test_fails_closed_when_guard_is_missing_everywhere(self) -> None:
         # A foreign target repo with no fleet install: the guard cannot be found.
         # A read-only agent MUST deny rather than run unguarded.
-        out = run_hook(DIFF, project_dir="/nonexistent-project", home="/nonexistent-home")
+        out = self._run(DIFF, project_dir="/nonexistent-project", home="/nonexistent-home")
         self.assertEqual(decision(out), "deny")
         self.assertIn("guard unavailable", out)
 
@@ -86,7 +96,7 @@ class HookWiringTest(unittest.TestCase):
         installed = Path.home() / ".claude" / "scripts" / "readonly-guard.py"
         if not installed.is_file():
             self.skipTest("fleet guard not installed at ~/.claude/scripts")
-        out = run_hook(PUSH, project_dir="/nonexistent-project", home=str(Path.home()))
+        out = self._run(PUSH, project_dir="/nonexistent-project", home=str(Path.home()))
         self.assertEqual(decision(out), "deny")
 
 
