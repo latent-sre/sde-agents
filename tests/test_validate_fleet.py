@@ -149,6 +149,15 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertIn("line one", fields["description"])
         self.assertIn("line two", fields["description"])
 
+    def test_parser_reads_yaml_block_sequence(self) -> None:
+        # TOP_LEVEL_KEY_RE is anchored at column zero, so `  - item` lines under `skills:` never
+        # matched it and `fields["skills"]` silently came back "" -- the root cause of P1-a.
+        fields = self._parse(
+            "---\nname: builder\nskills:\n  - backend-craft\n  - frontend-craft\nmodel: inherit\n---\n"
+        )
+        self.assertEqual("backend-craft, frontend-craft", fields["skills"])
+        self.assertEqual("inherit", fields["model"])  # the key after the list is still parsed
+
     # --- validator guardrail branches (T2) ---
 
     def _agent_issues(self, *files: tuple[str, str]) -> list[str]:
@@ -260,6 +269,58 @@ class FleetValidatorTests(unittest.TestCase):
             issues, names = validate_fleet.validate_agents(Path(tmp))
             self.assertEqual([], names)
             self.assertTrue(any("missing agents directory" in i for i in issues))
+
+    # --- skills: list validation (P1-a): `skills` passed KNOWN_AGENT_FIELDS' key-namespace check,
+    # but nothing ever validated its VALUES -- a typo'd or dropped entry, or a skill that cannot be
+    # preloaded at all, passed silently. ---
+
+    def _agent_issues_with_skills(
+        self, agent_file: tuple[str, str], skill_files: dict[str, str]
+    ) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            agents = Path(tmp) / "agents"
+            agents.mkdir()
+            filename, body = agent_file
+            (agents / filename).write_text(body, encoding="utf-8")
+            for skill_name, skill_body in skill_files.items():
+                skill_dir = Path(tmp) / "skills" / skill_name
+                skill_dir.mkdir(parents=True)
+                (skill_dir / "SKILL.md").write_text(skill_body, encoding="utf-8")
+            issues, _ = validate_fleet.validate_agents(Path(tmp))
+            return issues
+
+    SKILL_BODY = (
+        "---\nname: {name}\ndescription: Use when doing the thing.\n---\n\n# Skill\n"
+    )
+    DISABLED_SKILL_BODY = (
+        "---\nname: {name}\ndescription: Use when doing the thing.\n"
+        "disable-model-invocation: true\n---\n\n# Skill\n"
+    )
+
+    def test_skills_entry_that_does_not_resolve_is_reported(self) -> None:
+        body = VALID_AGENT.replace("model: inherit", "skills:\n  - ghost-skill\nmodel: inherit")
+        issues = self._agent_issues_with_skills(("builder.md", body), {})
+        self.assertTrue(
+            any("'ghost-skill'" in i and "does not resolve" in i for i in issues), issues
+        )
+
+    def test_skills_entry_naming_a_model_invocation_disabled_skill_is_reported(self) -> None:
+        # A skill with `disable-model-invocation: true` cannot be preloaded ("preloading draws from
+        # the same set of skills Claude can invoke") -- listing one under `skills:` is a silent no-op.
+        body = VALID_AGENT.replace("model: inherit", "skills:\n  - disabled\nmodel: inherit")
+        issues = self._agent_issues_with_skills(
+            ("builder.md", body), {"disabled": self.DISABLED_SKILL_BODY.format(name="disabled")}
+        )
+        self.assertTrue(
+            any("'disabled'" in i and "disable-model-invocation" in i for i in issues), issues
+        )
+
+    def test_skills_entry_that_resolves_to_a_preloadable_skill_is_accepted(self) -> None:
+        body = VALID_AGENT.replace("model: inherit", "skills:\n  - ok\nmodel: inherit")
+        issues = self._agent_issues_with_skills(
+            ("builder.md", body), {"ok": self.SKILL_BODY.format(name="ok")}
+        )
+        self.assertEqual([], [i for i in issues if "skills:" in i], issues)
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -399,6 +460,62 @@ class PluginWiringTests(unittest.TestCase):
         # skills teach it. Only a path resolved to a specific file is the bug.
         issues = self._issues_after(lambda _: None)
         self.assertEqual([], [i for i in issues if "will NOT contain this fleet" in i])
+
+    def test_typo_d_skills_list_entry_is_reported(self) -> None:
+        # sde-fullstack's real `skills:` frontmatter. A typo here used to pass validate_fleet.py,
+        # all unit tests, and `claude plugin validate --strict` -- only the 9-minute behavioral
+        # probe would have caught it, and only for 2 of the 3 entries.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "sde-fullstack.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "  - backend-craft", "  - backend-crafts"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("'backend-crafts'" in i and "does not resolve" in i for i in issues), issues
+        )
+
+    def test_skills_list_naming_service_onboard_is_reported(self) -> None:
+        # service-onboard is the one skill in this repo with `disable-model-invocation: true`, which
+        # makes it unpreloadable by construction. Use it as the real-repo trigger for that check.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "sde-fullstack.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "  - root-cause", "  - root-cause\n  - service-onboard"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("'service-onboard'" in i and "disable-model-invocation" in i for i in issues),
+            issues,
+        )
+
+    # --- orphaned reference files (P2-b): validate_bundle_references only ever checks "does the
+    # linked file exist?" -- never the reverse. A references/*.md file with no routing-table row is
+    # silently unreachable: validator green, tests green, probe green (it only exercises linked rows).
+
+    def test_orphaned_reference_file_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            (repo / "skills" / "backend-craft" / "references" / "caching.md").write_text(
+                "# Caching\n\nNever linked from SKILL.md.\n", encoding="utf-8"
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("orphaned" in i and "caching.md" in i for i in issues), issues
+        )
+
+    def test_real_repo_has_no_orphaned_reference_files(self) -> None:
+        # The positive control for the orphan check, mirroring test_the_real_repo_is_a_valid_plugin.
+        issues = self._issues_after(lambda _: None)
+        self.assertEqual([], [i for i in issues if "orphaned" in i])
 
 
 if __name__ == "__main__":
