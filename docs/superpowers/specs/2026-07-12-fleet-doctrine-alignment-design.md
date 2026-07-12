@@ -1,7 +1,7 @@
 # Fleet doctrine alignment
 
 **Date:** 2026-07-12
-**Status:** approved, not implemented
+**Status:** implemented
 
 ## Problem
 
@@ -213,3 +213,85 @@ Whether preloaded skill content is as behaviorally load-bearing as system-prompt
 **[unverified]** — the docs do not say, and the design does not depend on it (Change 1 and 2 move
 *skill* content, which was always intended to be loaded content). It becomes load-bearing only for
 the deferred doctrine-dedup work, and should be settled before that starts.
+
+## Outcome
+
+Implemented across commits `4cb6d71..e382c63`. Full sweep on `e382c63`, all green:
+
+| Check | Result |
+|---|---|
+| `scripts/validate_fleet.py` | PASS — 7 agents, 9 skills, inventory current |
+| `python -m unittest discover -s tests` | PASS — 83 tests, OK |
+| `claude plugin validate . --strict` | PASS |
+| `scripts/probe_plugin.py` | **14/14 passed, 0 failed, 0 inconclusive** (exit 0) |
+
+### Risk 1 — the design's one falsifiable claim
+
+The split moved conditional depth out of the always-loaded core, so it now arrives only if the model
+*chooses* to read it. The question was whether the routing table would actually fire, or whether the
+split had quietly starved the builder.
+
+The probe spawned `sde-fullstack` on *"write a typed Python client for the Grafana HTTP API — auth,
+timeouts, retry policy"* — a realistic task that trips exactly one predicate, **with no hint at any
+reference file in the prompt**. It read `skills/backend-craft/references/consuming-apis.md` on its
+own, before writing the client.
+
+**This is n=1.** It is an *existence proof that the routing table CAN fire from a realistic, unhinted
+task* — not a measured hit rate. A single pass says nothing about how *often* the reference is
+reached. Risk 1 is **not retired**; it is one observation better than a hypothesis. Anyone relying on
+a conditional reference should treat its arrival as likely, not guaranteed.
+
+### Preloaded line count — the design's estimate was off
+
+The design predicted **~181** preloaded lines against **269** unsplit. Measured on `e382c63`:
+
+| | unsplit (`d9a673c`) | split core (`e382c63`) | predicted |
+|---|---|---|---|
+| `backend-craft` | 118 | 76 | ~68 |
+| `frontend-craft` | 123 | 93 | ~85 |
+| `root-cause` | 28 | 28 | 28 |
+| **total (raw lines)** | **269** | **197** | **~181** |
+| **total (non-blank)** | 190 | **142** | — |
+
+On the design's own counting method (raw lines — its 269 is exactly `wc -l` of the three unsplit
+files), the real figure is **197, not ~181**. The cut is **26.8%, not the 33% claimed**. Both craft
+cores ended up fatter than estimated (backend 76 vs ~68, frontend 93 vs ~85), because the
+move-not-rewrite rule preserved the routing-table scaffolding and section headers the estimate did
+not account for.
+
+This is the design's **second** bad estimate on this exact number (an earlier draft claimed a 3x cut
+before the sections were counted). That is worth stating plainly: the token argument for the split
+has now been overstated twice, and it was never the real justification. The honest case remains the
+one the design already landed on — **signal-to-noise in the always-on context**, chiefly getting the
+rot-prone greenfield stack pins out of every bug-fix spawn. Preloading still works, still cuts real
+tokens, and the reliability win (Change 2) stands entirely on its own.
+
+By non-blank lines the split preloads 142 vs 190 unsplit — a 25.3% cut, consistent with the raw-line
+figure.
+
+### Routing
+
+`scripts/eval_routing.py --runs 1` — a **smoke check, not a before/after baseline**. Justified:
+**zero `description:` fields changed anywhere on this branch**
+(`git diff d9a673c..HEAD -- agents/ skills/ | grep -E '^[+-]description:'` is empty), and
+descriptions are the only input routing sees. A before/after would have measured run-to-run variance,
+not regression.
+
+Result: **14/16 cases passed.**
+
+- **Negatives: 8/8 correctly did NOT fire.** This is the load-bearing signal, and it is clean. An
+  over-triggering near-miss is a defect regardless of variance; none occurred.
+- **Positives: 6/8 routed correctly.** `pos-fires-too-often` and `pos-skill-never-loads` came back
+  0/1. At a single run per case this is **expected noise, not a regression** — `evals/README.md` is
+  explicit that a low positive rate at low `n` is as likely variance as a real problem, and there is
+  no description change here that could plausibly have moved them.
+
+### Known limitations
+
+- **Only 1 of the 11 routing-table rows is behaviorally tested.** The cores ship 6 backend + 5
+  frontend predicate rows; the probe exercises exactly one (`consuming-apis.md`). The other 10 are
+  unverified — the validator proves the links *resolve*, nothing proves they get *read*.
+- **Risk 1 is n=1.** An existence proof, not a hit rate (see above).
+- **Routing was smoke-checked, not baselined.** One run per case, no pre-change comparison.
+- The two failing positives are unmeasured at higher `n`. If a future change *does* touch
+  descriptions, generate a real baseline first — this smoke run is not one.
