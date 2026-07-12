@@ -67,7 +67,7 @@ Beyond the packet's Verified/Not-verified slots, label load-bearing claims anywh
 
 A passing test is evidence only if it passes for the reason you claim. A negative or fail-closed test must assert the *specific* failure mechanism it names — prove its red comes from that cause, not from any error that happens to be present. A test green (or red) for the wrong reason manufactures false confidence and is worse than none.
 
-Red flags — if you catch yourself thinking any of these, stop and verify (or switch to the root-cause skill) instead:
+Red flags — if you catch yourself thinking any of these, stop and verify (or read the `root-cause` skill, resolved the same way as the craft skills above) instead:
 - "This should work now"
 - "I've fixed the issue" — without re-running the case that was failing
 - "One more quick fix" — a third failed fix means the diagnosis is wrong; stop patching and find the root cause
