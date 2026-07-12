@@ -27,6 +27,26 @@ Long-running work should use the progress file declared by that project context.
 use `.agents/PROGRESS.md`. Progress files are coordination state, not a substitute for the final review
 packet or committed documentation.
 
+## Reviewer guard installation
+
+The `code-reviewer` enables Bash only when its guard and the absolute interpreter used to run it were
+installed from a trusted fleet checkout. Install or refresh both files with `python3` on Linux/macOS:
+
+```bash
+python3 scripts/install_reviewer_guard.py
+```
+
+On Windows, use the working `python` command (or `py -3`) instead of the Microsoft Store `python3`
+stub:
+
+```powershell
+python scripts/install_reviewer_guard.py
+```
+
+This writes under `~/.claude/scripts/` and records the current Python interpreter so a repository under
+review cannot replace it through `PATH`, `PYTHONPATH`, or `PYTHONHOME`. If the installation is missing
+or fails at runtime, the hook denies Bash by default.
+
 ## Validation
 
 ```bash

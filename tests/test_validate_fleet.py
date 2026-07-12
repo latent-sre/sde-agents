@@ -163,9 +163,77 @@ class FleetValidatorTests(unittest.TestCase):
         body = VALID_AGENT.replace("name: builder", "name: other")
         self.assertTrue(any("must match filename" in i for i in self._agent_issues(("builder.md", body))))
 
-    def test_unsupported_model_is_reported(self) -> None:
+    def test_unknown_model_is_reported(self) -> None:
         body = VALID_AGENT.replace("model: inherit", "model: gpt-4")
-        self.assertTrue(any("unsupported model" in i for i in self._agent_issues(("builder.md", body))))
+        self.assertTrue(any("unknown model" in i for i in self._agent_issues(("builder.md", body))))
+
+    def test_fable_alias_is_accepted(self) -> None:
+        # `fable` is a documented Claude Code alias (code.claude.com/docs/en/sub-agents);
+        # rejecting it was a real bug, so pin the fix.
+        body = VALID_AGENT.replace("model: inherit", "model: fable")
+        self.assertEqual([], [i for i in self._agent_issues(("builder.md", body)) if "model" in i])
+
+    def test_pinned_full_model_id_is_a_policy_error_not_a_schema_error(self) -> None:
+        # Valid at runtime, banned by fleet policy — the message must say so, not claim it's unknown.
+        body = VALID_AGENT.replace("model: inherit", "model: claude-opus-4-8")
+        issues = [i for i in self._agent_issues(("builder.md", body)) if "model" in i]
+        self.assertTrue(any("pinned" in i for i in issues), issues)
+        self.assertFalse(any("unknown model" in i for i in issues), issues)
+
+    def test_scoped_agent_grant_is_reported_as_a_false_restriction(self) -> None:
+        # `Agent(code-reviewer)` restricts spawning only for a main-thread agent (`claude --agent`).
+        # Everything in agents/ is a SUBAGENT definition, where the type list is ignored — so this
+        # reads like a limit and grants unrestricted spawn. It must not pass silently.
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(code-reviewer)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("does not restrict anything here" in i for i in issues), issues)
+
+    def test_scoped_grant_survives_the_comma_split(self) -> None:
+        # A naive split(",") shreds `Agent(worker, researcher)` into `Agent(worker` and `researcher)`,
+        # which would surface as two bogus "unknown tool" errors instead of the real problem.
+        self.assertEqual(
+            ["Read", "Agent(worker, researcher)", "Bash"],
+            validate_fleet.split_tools("Read, Agent(worker, researcher), Bash"),
+        )
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(worker, researcher)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertFalse(any("unknown tool" in i for i in issues), issues)
+
+    def test_real_but_unadopted_tool_is_a_policy_error_not_a_schema_error(self) -> None:
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, PowerShell")
+        issues = [i for i in self._agent_issues(("builder.md", body)) if "PowerShell" in i]
+        self.assertTrue(any("not adopted by this fleet" in i for i in issues), issues)
+        self.assertFalse(any("is not a Claude Code tool" in i for i in issues), issues)
+
+    def test_tool_unavailable_to_subagents_is_reported(self) -> None:
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, AskUserQuestion")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("never available to a subagent" in i for i in issues), issues)
+
+    def test_retired_tool_names_are_rejected(self) -> None:
+        # BashOutput/KillShell/SlashCommand were allowed but appear nowhere in the canonical table.
+        for retired in ("BashOutput", "KillShell", "SlashCommand"):
+            body = VALID_AGENT.replace("tools: Read", f"tools: Read, {retired}")
+            issues = self._agent_issues(("builder.md", body))
+            self.assertTrue(any("is not a Claude Code tool" in i for i in issues), (retired, issues))
+
+    def test_unknown_frontmatter_key_is_reported(self) -> None:
+        # The regression this exists for: `hooks:` is what installs the read-only guard on
+        # code-reviewer, an agent that holds Bash. Misspell the key and the block is dropped.
+        body = VALID_AGENT.replace("model: inherit", "hook: PreToolUse\nmodel: inherit")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("unknown frontmatter key" in i and "'hook'" in i for i in issues), issues)
+
+    def test_known_optional_frontmatter_keys_are_accepted(self) -> None:
+        # All 16 documented fields must pass, or the allowlist becomes a false tripwire.
+        extra = "hooks:\nskills: runbook\neffort: high\nisolation: worktree\nmaxTurns: 5\n"
+        body = VALID_AGENT.replace("model: inherit", extra + "model: inherit")
+        self.assertEqual([], [i for i in self._agent_issues(("builder.md", body)) if "frontmatter key" in i])
+
+    def test_bypass_permissions_is_rejected(self) -> None:
+        body = VALID_AGENT.replace("model: inherit", "permissionMode: bypassPermissions\nmodel: inherit")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("nullify the read-only guard" in i for i in issues), issues)
 
     def test_invalid_agent_name_is_reported(self) -> None:
         # uppercase fails NAME_RE; filename Builder.md keeps name==stem so only the regex branch fires

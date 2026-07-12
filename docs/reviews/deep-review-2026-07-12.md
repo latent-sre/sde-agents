@@ -10,6 +10,8 @@ Caveat: the ai:agent-design lens degraded to a placeholder stub and contributed 
 
 *Synthesized from 12 blind reviewers (5 deep, 3 devil's-advocate, 4 AI-best-practice). Every finding below was adversarially re-verified; the verdict column reflects that second pass. Severities are post-verification (several reviewer-assigned "high" ratings were corrected down during verification and are reported at their verified level).*
 
+> **Erratum (2026-07-12, post-publication) — finding #22 / D1 is RETRACTED.** The report asserted that Claude Code's subagent tool is `Task` and that `Agent` does not exist. That is false. Claude Code renamed `Task` to `Agent` in **v2.1.63**; `Agent` is canonical and `Task(...)` survives only as a deprecated compatibility alias ([sub-agents docs](https://code.claude.com/docs/en/sub-agents), [tools reference](https://code.claude.com/docs/en/tools-reference)). The reviewers' model predated the rename. **Do not apply the `Agent`→`Task` rename this report recommends** — it was briefly applied and then reverted in `3409d83`. `agents/prompt-engineer.md` is correct as written.
+
 ---
 
 ## Executive Summary
@@ -43,7 +45,7 @@ The repository is in **fundamentally sound health**: it is a small, disciplined 
 | 19 | Low | CONFIRMED | Testing | `tests/test_hook_wiring.py:98` | Installed-guard `$HOME` fallback branch is always skipped in CI |
 | 20 | Low | CONFIRMED | Testing | `tests/test_validate_fleet.py:45` | Frontmatter parser: literal-block (`\|`, `\|-`) and quoted/malformed inputs untested |
 | 21 | Low | CONFIRMED | Docs | `README.md:32` | Setup blocks fenced `powershell` and use `python`, contradicting CI's bash/`python3` reality |
-| 22 | Low | CONFIRMED | Consistency | `agents/prompt-engineer.md:4` | Grants a tool named `Agent`; the real Claude Code subagent tool is `Task` |
+| 22 | ~~Low~~ | **RETRACTED** | Consistency | `agents/prompt-engineer.md:4` | ~~Grants a tool named `Agent`; the real Claude Code subagent tool is `Task`~~ — **false; `Agent` is canonical since v2.1.63. See erratum above and D1.** |
 | 23 | Low | CONFIRMED | Consistency | `skills/eng-ladder/SKILL.md:29` | eng-ladder references agents by bare `agents/*.md` paths that don't resolve in the deployed layout |
 | 24 | Low | PLAUSIBLE | Devil's-advocate | `scripts/readonly-guard.py:14` | The 293-line regex guard reinvents a boundary the platform provides — and its own docstring says the real control is elsewhere |
 
@@ -177,9 +179,13 @@ The guard invests heavily in Windows: a PowerShell mutation-verb block (`Remove-
 
 ## AI / Agent / Skill / Prompt Design
 
-### D1 — `prompt-engineer` grants a nonexistent tool (#22, Low, CONFIRMED)
+### D1 — ~~`prompt-engineer` grants a nonexistent tool~~ (#22) — **RETRACTED, the finding was wrong**
 
-`prompt-engineer.md:4` grants `… WebSearch, Agent` and the body (line 19) says "Use the Agent tool to spawn clean-context subagents." The file explicitly targets Claude Code (`## Claude Code specifics`, `.claude/agents/*.md`, line 45), where the subagent tool is **`Task`**, not `Agent`. Because the validator has no tool vocabulary (see A2), this passes validation while granting a tool that doesn't exist, leaving the eval-first Step 5 without a working spawn path. *Verification refuted the secondary claim* that this breaks the `sre-tool` spawn orchestration — a spawnee doesn't need a `Task` grant to be spawned. The agent also has a graceful fallback ("If you're running as a subagent and can't spawn, ship labeled written but not tested"). **Fix:** rename grant + body reference to `Task`, or document the intended non-Claude-Code runtime.
+**Original claim (do not act on it):** that `prompt-engineer.md:4`'s `Agent` grant names a tool that doesn't exist, because Claude Code's subagent tool is `Task`, and that the fix is to rename the grant and the body reference to `Task`.
+
+**Why it's wrong.** Claude Code renamed `Task` to `Agent` in **v2.1.63**. `Agent` is the canonical, documented name; `Task(...)` still resolves as a deprecated alias, so *both* work but only `Agent` is current ([sub-agents](https://code.claude.com/docs/en/sub-agents), [tools reference](https://code.claude.com/docs/en/tools-reference)). All twelve reviewers shared a pre-2.1.63 knowledge cutoff, and the adversarial verification pass inherited the same stale prior, so a unanimous-but-wrong claim was stamped CONFIRMED — a reminder that agreement across reviewers is not independent evidence when they share a training corpus. `agents/prompt-engineer.md` was correct as originally written; the recommended rename was applied and then reverted in `3409d83`.
+
+**What survives.** Only the *generalization*: at the time, the validator had no tool vocabulary, so any string in `tools:` passed. That is the real defect, and it is tracked on its own as **A2 (#6)** — now fixed by `ALLOWED_TOOLS` in `scripts/validate_fleet.py`, which is deliberately canonical-only (an `Agent` grant passes; a legacy `Task` grant fails and must be rewritten).
 
 ### D2 — eng-ladder references agents by bare repo-relative paths (#23, Low, CONFIRMED)
 
@@ -207,7 +213,7 @@ The full separate refuted-findings list was truncated from the data provided to 
 
 1. **`grep -e def src/app.py` is NOT denied.** The finding-#13 headline example is actually ALLOWED — no interpreter token precedes `-e`; the `py` is inside `app.py` after the flag. (The broader false-positive class still holds.)
 2. **Renames are not silently invisible fleet-wide.** For the routing-graph drift (#15), `validate_inventory` (`validate_fleet.py:231–243`) *does* validate the README name inventory, so a rename yields at least one loud failure even though the individual prose reference is unchecked.
-3. **The `Agent`/`Task` bug does not break `sre-tool` spawn orchestration.** A spawnee agent needs no `Task` grant to be spawned; the secondary breakage claim in #22 was refuted.
+3. **The `Agent`/`Task` bug does not break `sre-tool` spawn orchestration.** A spawnee agent needs no subagent-tool grant to be spawned; the secondary breakage claim in #22 was refuted. *(Post-publication: the #22 headline claim was refuted too — `Agent` is canonical. See the erratum and D1.)*
 4. **eng-ladder reference-file path citations are not broken load instructions.** They say "don't load it for inline work," so #23's real impact is confined to the Mode 2 line 29 case, not the reference files.
 5. **The PowerShell denylist regexes are not OS-conditional in matching.** For #10, the patterns compile and match identically on ubuntu; the actual gap is that they have *no test on any platform*, not that ubuntu can't run them.
 6. **The guard's fail-open no-op is already fixed.** The devil's-advocate history (#24) cites `c01b3bb`/`bd5809e` as *past* fixes; the guard currently fails closed, so the fail-open behavior is not a live issue.
@@ -222,7 +228,7 @@ The full separate refuted-findings list was truncated from the data provided to 
 2. **Add stdin-redirect and file-writer deny rules (S1, S3):** cover `interpreter < file`, `patch`/`tar x`/`unzip`, and the trailing-redirect pipe-to-shell bypass.
 3. **Extend the git write verb list (S2, C3):** `tag`/`branch` creation, `notes`, `replace`, `fetch`, `format-patch -o`, `bundle`, `archive`; scope `stash`/`worktree` to mutating sub-forms (C2).
 4. **Pin all of the above with tests (T4):** add the piped/compound ALLOWED and git-create DENIED fixtures — they fail today.
-5. **Add an `ALLOWED_TOOLS` set (A2)** mirroring `ALLOWED_MODELS`, validate every `tools:` entry, and fix `Agent`→`Task` (D1).
+5. **Add an `ALLOWED_TOOLS` set (A2)** mirroring `ALLOWED_MODELS`, and validate every `tools:` entry. ~~and fix `Agent`→`Task` (D1)~~ — **struck: D1 is retracted, `Agent` is the canonical name. Do not perform this rename.**
 6. **Doc fixes:** update the README validator list (A6), re-fence + `python3` the setup blocks (D3), add eng-ladder's deployed-path fallback (D2).
 
 **Medium effort (a day; test/CI hardening):**

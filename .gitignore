@@ -1,2 +1,6 @@
 __pycache__/
 *.py[cod]
+
+# Generated multi-agent audit output. Dated evidence, regenerable, and the eval
+# JSONs capture console output containing local absolute paths - not for a public repo.
+audit-results/
