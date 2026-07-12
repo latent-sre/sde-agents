@@ -42,9 +42,18 @@ claude --plugin-dir .
 
 ## Project context convention
 
-Agents should use the target repository's existing project-instruction file. `AGENTS.md` is the portable
-default; if a repository already uses an equivalent such as `CLAUDE.md`, respect it instead of creating a
-competing file. Record the environment card and mission block there.
+Claude Code natively loads `CLAUDE.md` (project, user, and managed levels) and passes it to
+subagents automatically — it does **not** read a bare `AGENTS.md`
+([memory docs](https://code.claude.com/docs/en/memory): "Claude Code reads `CLAUDE.md`, not
+`AGENTS.md`"). So for this fleet, whose agents run as Claude Code subagents, `CLAUDE.md` is the file
+that actually reaches a builder without being handed to it.
+
+Agents should use the target repository's existing project-instruction file. Prefer `CLAUDE.md`. A
+repository that keeps its instructions in a portable `AGENTS.md` (shared across agent tools) must
+bridge it with a root `CLAUDE.md` containing a single `@AGENTS.md` import — on Windows the docs
+recommend the import over a symlink — or Claude Code never sees it. Record the environment card and
+mission block in whichever file Claude Code will actually load, and don't create a competing file
+next to an existing one.
 
 Long-running work should use the progress file declared by that project context. When none is declared,
 use `.agents/PROGRESS.md`. Progress files are coordination state, not a substitute for the final review
@@ -52,9 +61,22 @@ packet or committed documentation.
 
 ## The read-only guard
 
-`code-reviewer` holds `Bash` so it can run `git diff`/`log`/`show`/`blame` and the existing test
-suite. A `PreToolUse` hook denies the state-changing and data-egress verbs, so "read-only" is
+`code-reviewer` holds `Bash` so it can run read-only inspection commands — `git diff`/`log`/`show`/
+`blame`/`status`, `rg`/`grep`, `ls`/`cat`/`find`. A `PreToolUse` hook enforces that by **allowlist**:
+it permits an enumerated set of read-only commands and denies everything else, so "read-only" is
 enforced rather than promised.
+
+An allowlist, not a denylist, on purpose. Enumerating the ways a command can *write* is unbounded
+and always a step behind — the previous denylist let `git clone`, `git submodule update`,
+`git lfs pull`, `npm ci`, `uv sync`, `gh api -f` (which POSTs) and `curl --json` through, while
+denying `rg "gh pr create" docs/` because its search *text* held a verb. Enumerating what a reviewer
+*needs* is bounded and knowable, and its failure mode is loud: a legitimate read that isn't listed
+gets blocked and you add one line, rather than a novel write slipping by in silence.
+
+The guard runs **no code** — no `python`, `pytest`, `npm`, `make`, and no exemption for any script,
+not even this repo's own validator. Running a repository's test suite executes that repository's code
+under your account, which no command filter can make read-only; the reviewer cites the builder's or
+CI's test evidence instead.
 
 The wiring is not obvious, and the reason matters:
 
@@ -88,9 +110,12 @@ any source — another plugin, your own `~/.claude/agents` — gets read-only Ba
 plugin while it is enabled. That is deliberate (the guard must not be sidestepped by installing the
 agent at a different scope), and the deny message names this guard so the collision is diagnosable.
 
-Honest boundary: the guard is a denylist, not a sandbox. It stops the common state-changing verbs a
-cooperative agent emits; it will not stop a determined adversary who fully controls the command
-string. The load-bearing control is OS-level least privilege.
+Honest boundary: an allowlist is tighter than the old denylist but still not a sandbox. An
+allowlisted reader invoked with a flag combination nobody anticipated might yet surprise, and a
+reviewer that can read files can read secrets. What the allowlist now guarantees — that nothing
+outside a short, reviewed set of readers ever runs — is far narrower and more defensible than
+"we blocked the writes we thought of," but the load-bearing control remains OS-level least
+privilege.
 
 ## Validation
 
