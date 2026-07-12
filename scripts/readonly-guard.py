@@ -118,20 +118,34 @@ _SIMPLE_READERS = frozenset({
     "echo", "diff", "cmp", "jq", "true", "false",
 })
 
-# `git` subcommands that have NO write form at all.
+# `git` subcommands that have no write SUBCOMMAND (per `git-<name>(1)` synopsis). Several still
+# accept `--output=<file>`/`-o <file>` to write a report to disk (diff, log, show, diff-tree,
+# whatchanged) — those flag forms are rejected below in _git_allowed, since being on this list is
+# not a licence to write files.
 _GIT_READ = frozenset({
     "diff", "log", "show", "blame", "status", "shortlog", "describe", "rev-parse", "rev-list",
-    "ls-files", "ls-tree", "cat-file", "show-ref", "grep", "whatchanged", "diff-tree", "reflog",
+    "ls-files", "ls-tree", "cat-file", "show-ref", "grep", "whatchanged", "diff-tree",
     "merge-base", "name-rev", "version", "help",
 })
+# Flags on _GIT_READ subcommands that redirect output into a file. `--output=<file>` and its
+# separate-argument form `-o <file>` are accepted by diff/log/show/diff-tree/whatchanged (they
+# share the diff plumbing) and write to the named path with no shell redirect involved, so
+# _STRUCTURE_DENY never sees them. Any occurrence is disqualifying.
+_GIT_READ_WRITE_FLAGS = frozenset({"-o", "--output"})
 # Subcommands whose FIRST POSITIONAL decides read vs write (`git stash list` reads, a bare
-# `git stash` pushes; `git submodule status` reads, `git submodule update` writes).
+# `git stash` pushes; `git submodule status` reads, `git submodule update` writes;
+# `git reflog show` reads, `git reflog expire` prunes reflog entries).
 _GIT_READ_VERBS = {
     "stash": frozenset({"list", "show"}),
     "worktree": frozenset({"list"}),
     "notes": frozenset({"list", "show"}),
     "submodule": frozenset({"status"}),
     "remote": frozenset({"show", "get-url"}),
+    # `git reflog` with no subcommand defaults to `show`, but `expire`, `delete`, `drop`, and
+    # `write` all mutate the reflog. Gate on an EXPLICIT read verb; a bare `git reflog` is denied
+    # rather than defaulted, since the "no positional" shape here is indistinguishable from a
+    # typo of a write verb and the safe direction is loud.
+    "reflog": frozenset({"show", "list", "exists"}),
 }
 # Subcommands that list when read-flagged and CREATE when handed a bare name (`git branch feature`,
 # `git tag v1.0`). Allowed only when no positional is present, or a read flag makes the intent
@@ -247,7 +261,9 @@ def _git_allowed(args: list[str]) -> bool:
     subcommand, rest = args[index], args[index + 1:]
 
     if subcommand in _GIT_READ:
-        return True
+        # Even for a read subcommand, `--output=<file>` / `-o <file>` writes to disk without any
+        # shell redirect. Reject the flag in every form (`--output=x`, `--output x`, `-o x`).
+        return not any(arg.split("=", 1)[0] in _GIT_READ_WRITE_FLAGS for arg in rest)
 
     if subcommand in _GIT_READ_VERBS:
         verbs = _positionals(rest)

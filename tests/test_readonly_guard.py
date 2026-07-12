@@ -99,6 +99,8 @@ ALLOWED = [
     "git worktree list",
     "git submodule status",
     "git remote show origin",
+    "git reflog show",
+    "git reflog show --date=iso HEAD",
     "git notes list",
     "git notes --ref=review list",
     "git tag",
@@ -169,6 +171,20 @@ DENIED = [
     "git notes add -m hi HEAD",
     "git notes --ref=review add -m x HEAD",
     "git remote add origin https://example.com/x.git",
+    # A "read" git subcommand abused to WRITE via a flag or verb: the top-level name says read,
+    # the argv says otherwise. `git diff --output=<file>` and its `-o` / space forms write to
+    # disk with no shell redirect, so _STRUCTURE_DENY never sees them; `git reflog expire|delete|
+    # drop|write` prune or rewrite the reflog. Regression cases for the reviewer-flagged gap.
+    "git diff --output=/tmp/leak.diff",
+    "git diff --output /tmp/leak.diff",
+    "git diff -o /tmp/leak.diff",
+    "git log --output=/tmp/leak.log",
+    "git show --output=/tmp/leak HEAD",
+    "git diff-tree --output=/tmp/leak HEAD",
+    "git reflog expire --expire=now --all",
+    "git reflog delete HEAD@{0}",
+    "git reflog drop refs/heads/main",
+    "git reflog",
     # REGRESSION (reviewer-reported, reproduced): every one of these WROTE and the old denylist
     # allowed it. They are gone now not because each was listed, but because none is a reader.
     "git clone https://github.com/x/y.git",
