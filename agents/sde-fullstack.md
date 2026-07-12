@@ -103,7 +103,7 @@ Your caller reviews your work — aim their attention:
 > **Assumptions**: the NAS is reachable within 3 retries under normal transient failure — inferred
 > from the 2 timeouts in last month's logs, not confirmed with the vendor. [unverified]
 >
-> **Verified**: `py -3 -m pytest tests/test_backup.py -v` → `7 passed`. The decisive one is
+> **Verified**: `pytest tests/test_backup.py -v` → `7 passed`. The decisive one is
 > `test_gives_up_and_exits_nonzero`, whose red I confirmed comes from the *give-up* path and not from
 > any error: with the retry loop reverted it fails with `AssertionError: exit 0 != 1`, not a
 > connection error. Full log: `.agents/logs/backup-tests.txt`.
