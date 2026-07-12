@@ -24,6 +24,27 @@ INVENTORY_RE = re.compile(
     re.DOTALL,
 )
 ALLOWED_MODELS = {"inherit", "haiku", "sonnet", "opus"}
+# Canonical tool-authority vocabulary. The `tools:` field is security-relevant (it is the authority
+# an agent is granted), so — like `model` — every entry is checked against a known set. Without this
+# a typo (`Wrte`) or a name from another runtime silently grants or drops authority and still passes.
+# Extend this set deliberately when a new first-class tool is adopted.
+ALLOWED_TOOLS = {
+    "Agent",  # spawns a subagent (per code.claude.com/docs/en/tools-reference); NOT "Task"
+    "Bash",
+    "BashOutput",
+    "Edit",
+    "Glob",
+    "Grep",
+    "KillShell",
+    "NotebookEdit",
+    "Read",
+    "Skill",
+    "SlashCommand",
+    "TodoWrite",
+    "WebFetch",
+    "WebSearch",
+    "Write",
+}
 # Canonical evidence-label phrasing; agent files may extend a definition but
 # must contain these exact stems so the triad cannot drift file by file.
 EVIDENCE_LABEL_STEMS = (
@@ -125,6 +146,9 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
             parsed_tools = [tool.strip(" []'\"") for tool in tools.split(",") if tool.strip()]
             if len(parsed_tools) != len(set(parsed_tools)):
                 issues.append(f"{path}: duplicate tool in tools authority")
+            for tool in parsed_tools:
+                if tool not in ALLOWED_TOOLS:
+                    issues.append(f"{path}: unknown tool {tool!r} in tools authority")
 
         model = fields.get("model", "").strip()
         if not model:

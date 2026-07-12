@@ -21,6 +21,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -97,12 +98,18 @@ class HookWiringTest(unittest.TestCase):
 
     def test_falls_back_to_installed_guard_outside_the_repo(self) -> None:
         # CLAUDE_PROJECT_DIR points at a foreign repo, but the fleet is installed
-        # at ~/.claude/scripts -- the guard must still enforce.
-        installed = Path.home() / ".claude" / "scripts" / "readonly-guard.py"
-        if not installed.is_file():
-            self.skipTest("fleet guard not installed at ~/.claude/scripts")
-        out = self._run(PUSH, project_dir="/nonexistent-project", home=str(Path.home()))
-        self.assertEqual(decision(out), "deny")
+        # at ~/.claude/scripts -- the guard must still enforce. Seed a throwaway HOME
+        # with the guard installed so the fallback branch runs deterministically in CI
+        # (the real ~/.claude install is absent on a clean runner).
+        with tempfile.TemporaryDirectory() as home:
+            installed = Path(home) / ".claude" / "scripts" / "readonly-guard.py"
+            installed.parent.mkdir(parents=True)
+            shutil.copyfile(REPO / "scripts" / "readonly-guard.py", installed)
+            out = self._run(PUSH, project_dir="/nonexistent-project", home=home)
+            self.assertEqual(decision(out), "deny")
+            # and a read-only command in that same fallback config is allowed
+            allow = self._run(DIFF, project_dir="/nonexistent-project", home=home)
+            self.assertIsNone(decision(allow))
 
 
 if __name__ == "__main__":

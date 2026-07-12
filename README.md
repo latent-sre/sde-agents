@@ -13,8 +13,8 @@ them rather than becoming a second source of truth.
 
 Refresh the generated block after adding, renaming, or removing an agent or skill:
 
-```powershell
-python scripts/validate_fleet.py --write-inventory
+```bash
+python3 scripts/validate_fleet.py --write-inventory
 ```
 
 ## Project context convention
@@ -29,11 +29,12 @@ packet or committed documentation.
 
 ## Validation
 
-```powershell
-python scripts/validate_fleet.py
-python -m unittest discover -s tests -v
+```bash
+python3 scripts/validate_fleet.py
+python3 -m unittest discover -s tests -v
 ```
 
-The validator checks frontmatter, names, descriptions, explicit agent tool authority, models, bundled
-skill references, and README inventory drift. It is intentionally runtime-neutral and uses only the
-Python standard library.
+The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a known
+tool vocabulary), models, bundled skill references, the canonical evidence-label phrasing, the required
+end-of-task packet heading, and README inventory drift. It is intentionally runtime-neutral and uses
+only the Python standard library.
