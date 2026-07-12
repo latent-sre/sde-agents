@@ -53,8 +53,13 @@ ALLOWED = [
     "git worktree list",
     "git tag",
     "git tag -l 'v1.*'",
+    "git tag -v v1.0",
     "git branch -a",
+    "git branch -r",
     "git branch --list 'feat/*'",
+    "git branch -r --contains HEAD",
+    "git notes list",
+    "git notes --ref=review list",
     # piped/compound reads whose downstream flag or .py/.sh filename must NOT read as an inline-eval
     # flag or a script interpreter (the false-positive class the command-position anchor closes)
     "git log -p src/app.py | grep -e def",
@@ -123,6 +128,12 @@ DENIED = [
     "git bundle create /tmp/x.bundle HEAD",
     "git stash",
     "git worktree add ../wt main",
+    # a leading read selector must not shield a later write flag, and subcommands after --ref still write
+    "git branch -r -d origin/old",
+    "git branch -a -D dead",
+    "git tag -n -d v1.0",
+    "git notes add -m hi HEAD",
+    "git notes --ref=review add -m x HEAD",
     # gh writes
     "gh pr create --title x",
     "gh pr merge 12",
@@ -192,6 +203,8 @@ DENIED = [
     "tar -xf backup.tar",
     "tar -C /tmp -xf backup.tar",
     "tar --directory=/tmp -xf backup.tar",
+    "tar -f archive.tar -x",
+    "tar --file=archive.tar --extract",
     "unzip pkg.zip",
     "gunzip -k data.gz",
     "scripts/setup.sh --yes",

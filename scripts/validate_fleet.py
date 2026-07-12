@@ -29,6 +29,7 @@ ALLOWED_MODELS = {"inherit", "haiku", "sonnet", "opus"}
 # a typo (`Wrte`) or a name from another runtime silently grants or drops authority and still passes.
 # Extend this set deliberately when a new first-class tool is adopted.
 ALLOWED_TOOLS = {
+    "Agent",  # spawns a subagent (per code.claude.com/docs/en/tools-reference); NOT "Task"
     "Bash",
     "BashOutput",
     "Edit",
@@ -39,7 +40,6 @@ ALLOWED_TOOLS = {
     "Read",
     "Skill",
     "SlashCommand",
-    "Task",
     "TodoWrite",
     "WebFetch",
     "WebSearch",

@@ -115,17 +115,18 @@ _DENY_PATTERNS = [
     r"restore|checkout|switch|pull|fetch|gc|prune|init|update-ref|update-index|"
     r"symbolic-ref|filter-branch|format-patch|bundle|archive|send-email|replace|"
     r"stash\b(?!\s+(?:list|show)\b)|worktree\b(?!\s+list\b)|"
-    r"notes\s+(?:add|append|copy|edit|remove|prune)|"
+    r"notes\s+(?:--ref(?:=\S+|\s+\S+)\s+)?(?:add|append|copy|edit|remove|prune)|"
     r"remote\s+(?:add|rm|remove|set-url))\b",
-    # `git tag <name>` / `git branch <name>` CREATE refs, and `-d/-D/-m/-M/-f` etc. mutate them —
-    # only the read-only LISTING/verify flags are safe. Deny when the first token after the verb is a
-    # name or a write flag; the negative lookahead exempts the listing/inspection flags so
-    # `git tag`, `git tag -l 'v*'`, `git branch -a`, `git branch --list` still pass.
-    _GIT_CMD + _GIT_PRE + r"tag\s+(?!-l\b|--list\b|-n|--contains\b|--no-contains\b|--points-at\b|"
-    r"--merged\b|--no-merged\b|--sort|--format|--column|--color\b|-i\b)\S",
-    _GIT_CMD + _GIT_PRE + r"branch\s+(?!-a\b|-r\b|-l\b|-v\b|-vv\b|--list\b|--all\b|--remotes\b|"
-    r"--contains\b|--no-contains\b|--merged\b|--no-merged\b|--show-current\b|--points-at\b|"
-    r"--format\b|--color\b|--sort\b|--column\b|-i\b)\S",
+    # `git branch`/`git tag` WRITE forms. A leading read selector (`-r`, `-a`, `-l`) must NOT exempt a
+    # later mutating flag, so deny when a delete/rename/copy/force/create flag appears ANYWHERE, or when
+    # the first token is a bare name (lightweight create). Pure listing/verify commands carry none of
+    # these, so `git branch -a`, `git branch -r --contains X`, `git tag -l 'v*'`, `git tag -v x` pass.
+    _GIT_CMD + _GIT_PRE + r"branch\b[^|;&]*\s(?:-[dDmMcCf]|"
+    r"--(?:delete|move|copy|force|set-upstream-to|unset-upstream|track|no-track|edit-description)\b)",
+    _GIT_CMD + _GIT_PRE + r"branch\s+(?!-)\S",
+    _GIT_CMD + _GIT_PRE + r"tag\b[^|;&]*\s(?:-[adsfFmu]|"
+    r"--(?:delete|annotate|sign|local-user|force|create-reflog)\b)",
+    _GIT_CMD + _GIT_PRE + r"tag\s+(?!-)\S",
     # git config WRITE: a dotted key followed by a value, or an explicit write flag.
     # Reads (`--get`/`--list`) lack the trailing value, so they pass through.
     _GIT_CMD + _GIT_PRE + r"config\s+(?:--\S+\s+)*\S+\.\S+\s+\S",
