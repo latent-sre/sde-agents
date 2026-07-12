@@ -33,9 +33,14 @@ DIFF = {"tool_name": "Bash", "tool_input": {"command": "git diff HEAD~1"}}
 
 def hook_command() -> str:
     """The PreToolUse command string, read from the agent definition itself."""
-    frontmatter = AGENT.read_text(encoding="utf-8").split("---")[1]
+    # Only split off the leading frontmatter block; the agent body may legitimately
+    # contain '---' (e.g. in markdown), and an unbounded split would misalign it.
+    frontmatter = AGENT.read_text(encoding="utf-8").split("---", 2)[1]
     match = re.search(r'^\s*command:\s*"(.*)"\s*$', frontmatter, re.MULTILINE)
-    assert match, "no PreToolUse command found in code-reviewer frontmatter"
+    # A plain `assert` here would be stripped under `python -O`, turning a missing
+    # or renamed frontmatter key into a confusing NoneType error further down.
+    if match is None:
+        raise RuntimeError("no PreToolUse command found in code-reviewer frontmatter")
     # Undo the YAML double-quoted escaping to recover the shell string.
     return match.group(1).replace('\\"', '"').replace("\\\\", "\\")
 
