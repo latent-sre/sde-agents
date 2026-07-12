@@ -212,6 +212,41 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
     )
 
 
+def agent_spawn_results(text: str, agent_name: str) -> list[str]:
+    """[tool_result body] for every Agent/Task call whose input named `agent_name`, correlated by
+    tool_use_id -- not a transcript-wide grep.
+
+    Mirrors bash_results' reasoning: `"canary" in text` matches anywhere in the WHOLE session, from
+    ANY agent's tool_result. sde-fullstack holds Bash, so a `cat`/`grep` of a craft SKILL.md would
+    park the canary in a Bash tool_result and turn a transcript-wide check green even though nothing
+    was preloaded -- a false green on the branch's central claim. Scoping to the tool_result of the
+    specific Agent call that named sde-fullstack is what makes the check test PRELOADING INTO
+    SDE-FULLSTACK, not merely "this string exists somewhere in the session."
+    """
+    spawns: dict[str, bool] = {}
+    results: dict[str, str] = {}
+    for line in text.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = (event.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
+                spawns[block.get("id", "")] = agent_name in json.dumps(block.get("input", {}))
+            elif block.get("type") == "tool_result":
+                raw = block.get("content")
+                body = raw if isinstance(raw, str) else " ".join(
+                    part.get("text", "") for part in (raw or []) if isinstance(part, dict)
+                )
+                results[block.get("tool_use_id", "")] = body or ""
+    return [results[tid] for tid, named in spawns.items() if named and tid in results]
+
+
 def main() -> int:
     probe = Probe()
     if CLAUDE is None:
@@ -285,10 +320,27 @@ def main() -> int:
             ("skills/backend-craft/SKILL.md", "skills/frontend-craft/SKILL.md")
         )
     ]
+    # sde-fullstack also holds Bash. A `cat`/`grep`/`sed` of a craft SKILL.md never touches
+    # `file_path` -- it is invisible to the Read-only check above -- but it WOULD put the canary
+    # into that command's own tool_result, which is exactly what would turn the (now correlated)
+    # canary checks below green for the wrong reason: read via Bash, not preloaded. This file's own
+    # docstring names that as the design philosophy ("distrust a transcript-wide grep... 'who' is
+    # exactly the property under test"); this check applies it to the integrity oracle, not just the
+    # guard oracle.
+    craft_bash_reads = [
+        call.get("input", {}).get("command", "")
+        for call in tool_calls(text)
+        if call.get("name") == "Bash"
+        and any(
+            marker in call.get("input", {}).get("command", "")
+            for marker in ("backend-craft/SKILL.md", "frontend-craft/SKILL.md")
+        )
+    ]
     probe.check(
-        PASS if not craft_reads else FAIL,
+        PASS if not craft_reads and not craft_bash_reads else FAIL,
         "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
-        f"agent still read a craft skill by path -- preload did not take effect: {craft_reads}",
+        f"agent still read a craft skill by path -- preload did not take effect: "
+        f"Read calls={craft_reads} Bash commands={craft_bash_reads}",
     )
     # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
@@ -313,15 +365,23 @@ def main() -> int:
         "invoked-content from preloaded-content, so this would be a FALSE green: "
         f"{craft_skill_calls}",
     )
+    # Scoped to sde-fullstack's OWN spawn result, not `text` (the whole transcript). A transcript-wide
+    # `"req_8f3a2c" in text` matches the canary in ANY tool_result from ANY agent -- including a Bash
+    # `cat` of the skill file by sde-fullstack itself (see craft_bash_reads above), which would false
+    # green this check on the branch's central claim without proving preload at all. See
+    # agent_spawn_results for the full reasoning.
+    fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))
     probe.check(
-        PASS if "req_8f3a2c" in text else FAIL,
+        PASS if "req_8f3a2c" in fullstack_text else FAIL,
         "backend-craft core content was preloaded (canary quoted)",
-        "the canary req_8f3a2c never appeared: backend-craft was not in the agent's context",
+        "the canary req_8f3a2c never appeared in sde-fullstack's own spawn result: backend-craft "
+        "was not in the agent's context",
     )
     probe.check(
-        PASS if "color courage" in text else FAIL,
+        PASS if "color courage" in fullstack_text else FAIL,
         "frontend-craft core content was preloaded (canary quoted)",
-        "the canary 'color courage' never appeared: frontend-craft was not in the agent's context",
+        "the canary 'color courage' never appeared in sde-fullstack's own spawn result: "
+        "frontend-craft was not in the agent's context",
     )
 
     print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
