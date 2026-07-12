@@ -237,7 +237,19 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
-                spawns[block.get("id", "")] = agent_name in json.dumps(block.get("input", {}))
+                # Not a transcript-wide `agent_name in json.dumps(input)`: that also matches when the
+                # name merely appears inside ANOTHER agent's prompt TEXT (e.g. a code-reviewer task
+                # that mentions "sde-agents:sde-fullstack" in passing), which would feed the wrong
+                # spawn's result body into the canary oracle. Prefer the actual field; fall back to
+                # the substring match only if it's absent, so this stays safe even if the input shape
+                # ever changes.
+                inp = block.get("input", {})
+                named = (
+                    inp["subagent_type"] == agent_name
+                    if "subagent_type" in inp
+                    else agent_name in json.dumps(inp)
+                )
+                spawns[block.get("id", "")] = named
             elif block.get("type") == "tool_result":
                 raw = block.get("content")
                 body = raw if isinstance(raw, str) else " ".join(
@@ -313,34 +325,33 @@ def main() -> int:
     # Anchored to the two craft skills specifically -- a bare "craft/SKILL.md" substring also matches
     # skills/prompt-craft/SKILL.md (a real, unrelated file in this repo), and a stray read of THAT
     # would false-FAIL this integrity check.
-    craft_reads = [
-        call.get("input", {}).get("file_path", "")
-        for call in tool_calls(text)
-        if call.get("input", {}).get("file_path", "").replace("\\", "/").endswith(
-            ("skills/backend-craft/SKILL.md", "skills/frontend-craft/SKILL.md")
-        )
-    ]
-    # sde-fullstack also holds Bash. A `cat`/`grep`/`sed` of a craft SKILL.md never touches
-    # `file_path` -- it is invisible to the Read-only check above -- but it WOULD put the canary
-    # into that command's own tool_result, which is exactly what would turn the (now correlated)
-    # canary checks below green for the wrong reason: read via Bash, not preloaded. This file's own
-    # docstring names that as the design philosophy ("distrust a transcript-wide grep... 'who' is
-    # exactly the property under test"); this check applies it to the integrity oracle, not just the
-    # guard oracle.
-    craft_bash_reads = [
-        call.get("input", {}).get("command", "")
-        for call in tool_calls(text)
-        if call.get("name") == "Bash"
-        and any(
-            marker in call.get("input", {}).get("command", "")
-            for marker in ("backend-craft/SKILL.md", "frontend-craft/SKILL.md")
-        )
+    craft_reads = []
+    for call in tool_calls(text):
+        call_input = call.get("input", {})
+        # Widened past `file_path`: the Grep and Glob tools take a craft path under the key `path`,
+        # not `file_path`, and were invisible to this check entirely -- caught by NEITHER integrity
+        # check (see canary_leaks below for the Bash-side gap).
+        path = (call_input.get("file_path") or call_input.get("path") or "").replace("\\", "/")
+        if path.endswith(("skills/backend-craft/SKILL.md", "skills/frontend-craft/SKILL.md")):
+            craft_reads.append(path)
+    # sde-fullstack also holds Bash, and a leak there can be spelled arbitrarily: `cat x/*.md`,
+    # `grep -r req_8f3a2c skills/`, `cd skills/backend-craft && cat SKILL.md` all leak the canary
+    # while naming no craft SKILL.md path, so filtering on the command's SPELLING (the previous
+    # version of this check) missed all three. Assert on the LEAK instead: a canary appearing in ANY
+    # Bash tool_result means the content was fetched, not preloaded, regardless of how the command
+    # that fetched it was written. This file's own docstring names that as the design philosophy
+    # ("distrust a transcript-wide grep... 'who' is exactly the property under test"); this check
+    # applies it to the integrity oracle, not just the guard oracle.
+    canary_leaks = [
+        cmd for cmd, body in bash_results(text).items()
+        if "req_8f3a2c" in body or "color courage" in body
     ]
     probe.check(
-        PASS if not craft_reads and not craft_bash_reads else FAIL,
+        PASS if not craft_reads and not canary_leaks else FAIL,
         "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
-        f"agent still read a craft skill by path -- preload did not take effect: "
-        f"Read calls={craft_reads} Bash commands={craft_bash_reads}",
+        f"agent still read a craft skill by path, or leaked its canary through a Bash command -- "
+        f"preload did not take effect: Read/Grep/Glob calls={craft_reads} leaking Bash "
+        f"commands={canary_leaks}",
     )
     # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
@@ -367,7 +378,7 @@ def main() -> int:
     )
     # Scoped to sde-fullstack's OWN spawn result, not `text` (the whole transcript). A transcript-wide
     # `"req_8f3a2c" in text` matches the canary in ANY tool_result from ANY agent -- including a Bash
-    # `cat` of the skill file by sde-fullstack itself (see craft_bash_reads above), which would false
+    # `cat` of the skill file by sde-fullstack itself (see canary_leaks above), which would false
     # green this check on the branch's central claim without proving preload at all. See
     # agent_spawn_results for the full reasoning.
     fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))

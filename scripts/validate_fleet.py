@@ -408,8 +408,10 @@ def validate_reference_orphans(skill_dir: Path, skill_file: Path) -> list[str]:
         rel = ref_file.relative_to(skill_dir).as_posix()
         if rel not in linked:
             issues.append(
-                f"{ref_file}: orphaned -- no link to {rel!r} in {skill_file}; a reference file with "
-                f"no routing-table row is unreachable by any means"
+                f"{ref_file}: orphaned -- no skill-relative link to {rel!r} found in {skill_file}; a "
+                f"reference file with no routing-table row is unreachable by any means. Routing-table "
+                f"links must be written skill-relative (e.g. {rel!r}) -- a full path such as "
+                f"'{skill_dir.name}/{rel}' will not be recognized by this check"
             )
     return issues
 
