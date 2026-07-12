@@ -280,7 +280,7 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                     )
 
         model = fields.get("model", "").strip()
-        aliases = "|".join(sorted(ALIAS_MODELS))
+        aliases = ", ".join(sorted(ALIAS_MODELS))
         if not model:
             issues.append(f"{path}: missing model")
         elif model in ALIAS_MODELS:
