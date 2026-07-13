@@ -10,25 +10,6 @@ argument-hint: [the UI to build or change]
 
 This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the rules are domain-neutral and apply to a SaaS product or a hobby project the same way.
 
-## Stack
-
-An existing repo's stack always wins — match it. Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
-
-**Paint — one Tailwind reset, one token system:**
-- **Tailwind** for all styling.
-- **shadcn/ui pattern on Radix (or Base UI) primitives** — headless, accessible components you style yourself; this owns the calibrated look. Base UI is the newer foundation, either is fine.
-- **lucide-react** icons; **Framer Motion** only when CSS transitions aren't enough (CSS is right for hovers, fades, modals).
-- Optional, same Tailwind world: **HeroUI v3** as a styled layer only when it can share the existing reset and token system; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
-
-**Logic — zero CSS, decoupled from the paint:**
-- **TanStack Query** (server state), **TanStack Router** (typed routing + URL state), **TanStack Table** (headless data grids) — one type-safe, zero-CSS suite that *is* the logic layer, painted with Tailwind.
-- **@mantine/hooks** for utility logic (disclosure, debounce, local storage, hotkeys, click-outside, media query, element size); optionally **@mantine/form** for form state. Both ship no CSS and need no provider.
-- Accessible *widget* behavior (focus trap, ARIA, roving tabindex) comes from **Radix / Base UI**, not from Mantine hooks.
-
-**One hard rule:** never import **@mantine/core** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* are pure logic and mix freely; its *components* do not.
-
-For a greenfield SPA, use this stack no matter how small. Existing repositories keep their established stack as required above. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any greenfield deviation from this default gets one line in the review packet.
-
 ## Layout — organized, uncluttered, space-efficient
 
 - **App shell — default to a sidebar rail.** Any app with more than ~5 destinations gets a persistent left sidebar rail, not top tabs (tabs don't scale past a handful and this is the preferred shell): icon + label nav grouped by area, the active item marked with an accent bar or tint, a brand mark at the top and the user/account with theme toggle pinned at the bottom. Top tabs or a single-column layout are reserved for genuinely small apps (≤5 views) or a focused single-purpose tool. The rail collapses to icons-only on narrow viewports.
@@ -59,6 +40,7 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 
 ## State and data
 
+- **Never import `@mantine/core`** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* and `@mantine/form` ship no CSS and mix freely; its *components* do not.
 - Server state lives in TanStack Query (caching, retries, invalidation); UI state stays local. No global store until two distant components genuinely share state.
 - **Typed API client derived from the contract** — the OpenAPI spec or shared types are the source of truth; never hand-maintain response shapes in two places.
 - Every async view has designed **loading, error, and empty states**. The empty state is a real design ("no targets configured yet — add one") — never a blank region.
@@ -69,27 +51,6 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 - **TanStack Router** for the SPA: typed routes, nested layouts under the app shell, route-based code splitting so each view lazy-loads.
 - **The URL is state.** Search text, active filters, page, sort, and the open tab/detail live in URL search params — the back button works, links are shareable, a refresh restores the view. Never keep that state only in component memory.
 
-## Data-dense views (tables & lists)
-
-- **TanStack Table** (headless) for anything tabular — you own the markup and Tailwind styling; sort/filter/paginate through the URL state above.
-- Density where data lives: compact rows, `tabular-nums`, right-aligned numerics, sticky header, a row-action menu. **Virtualize** (TanStack Virtual) once a list can exceed a few hundred rows.
-- Bulk selection with an "N selected" action bar when the workflow needs it; destructive bulk actions confirm.
-
-## Data visualization
-
-Chart *design*, in brief: pick the form the data asks for — time series → line, comparison → bar, part-of-whole → stacked bar (pie only for 2–3 slices), distribution → histogram; label axes and units; a dashboard leads with the number that answers the viewer's question. Implementation:
-
-- **Library**: **Recharts v3** by default (composable, themed from your Tailwind tokens). **uPlot** for dense real-time time-series (canvas — thousands of streaming points where SVG chokes). **visx** only for a bespoke one-off. **Tremor** is an optional accelerator for KPI+chart dashboards (Tailwind-native, shadcn-matching). Never **@mantine/charts** — it pulls in Mantine's styling (the `@mantine/core` rule).
-- **Theme**: charts read the same theme tokens and categorical accent palette — never hardcode chart colors.
-- **Live data**: stream via the SSE→Query-cache path, but throttle/batch redraws (not every tick) and keep a rolling window for time-series.
-- **Perf & a11y**: canvas over SVG past ~1–2k points; downsample server-side when you can; give every chart a text or data-table alternative.
-
-## Forms
-
-- State via **@mantine/form** (or react-hook-form): validate on blur *and* submit, never only on submit.
-- **The server is the source of validation truth** — mirror obvious rules client-side for speed, but always map the server's field errors back to the offending fields inline.
-- **Dirty tracking**: Save disabled until something changed; warn before leaving unsaved edits (route guard + `beforeunload`). Never make the user retype after an error.
-
 ## Resilience UX — failure-first, for any app
 
 The SRE lens is just good engineering pointed at the screen: assume every call can fail or hang, and design that path first. True for a SaaS app or a hobby project as much as an ops console.
@@ -99,12 +60,6 @@ The SRE lens is just good engineering pointed at the screen: assume every call c
 - Buttons disable while pending (no double-submits); no infinite spinners — every wait times out into an actionable error state.
 - Optimistic updates only with visible rollback on failure.
 - **Toasts** confirm actions (saved / deleted / failed) and carry the retry for a failed background action; they never replace inline validation.
-
-## Auth (once the app isn't localhost-only)
-
-- Access token in memory; refresh via an **httpOnly, Secure cookie** — never localStorage for anything an XSS could steal.
-- One fetch/Query wrapper does **401 → refresh once → retry, else redirect to login**; every call inherits it instead of reinventing it.
-- Route guards gate whole areas and hide actions the user lacks — but the server still enforces; the UI is convenience, not the security boundary.
 
 ## Accessibility (baseline, not optional)
 
@@ -121,3 +76,19 @@ Semantic HTML first; every input labeled; keyboard reachable with visible focus;
 - **Vitest + React Testing Library** for component/logic units — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
 - **Playwright** for the few end-to-end flows whose breakage would page someone.
 - Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render** — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
+
+## Before you write it — load the reference for what you're building
+
+Everything above applies to every UI task. The rules below apply only when the view involves the thing
+named. Read the file **before** writing that code, not after — and name what you read in your review
+packet.
+
+| If the view involves… | Read first |
+|---|---|
+| choosing a stack for a greenfield UI | `references/stack.md` |
+| a table, list, or grid of records | `references/data-views.md` |
+| a chart, graph, or metric visualization | `references/data-viz.md` |
+| a form or any user input to submit | `references/forms.md` |
+| login, tokens, or route guarding | `references/auth.md` |
+
+Trips two predicates? Read both. Trips none? The core above is the whole job.

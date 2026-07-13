@@ -21,6 +21,10 @@ BUNDLE_REF_RE = re.compile(
     r"(?<![\w./])(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
 )
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
+# A YAML block-sequence item, e.g. `  - backend-craft`. TOP_LEVEL_KEY_RE is anchored at column zero
+# and never matches an indented `- item` line, so a key like `skills:` whose value is a block
+# sequence rather than an inline scalar needs its own reader or it silently parses to "".
+LIST_ITEM_RE = re.compile(r"^\s*-\s+(\S.*?)\s*$")
 INVENTORY_RE = re.compile(
     r"<!-- fleet-inventory:start -->.*?<!-- fleet-inventory:end -->",
     re.DOTALL,
@@ -210,6 +214,23 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
             fields[key] = " ".join(part for part in parts if part).strip()
             continue
 
+        if not value:
+            # An empty inline value can mean a YAML block sequence follows (`skills:` then indented
+            # `- item` lines). Collect it so a value like `skills:` doesn't silently become "" with
+            # nothing downstream ever able to check it -- see LIST_ITEM_RE.
+            items: list[str] = []
+            j = i + 1
+            while j < end:
+                item_match = LIST_ITEM_RE.match(lines[j])
+                if not item_match:
+                    break
+                items.append(item_match.group(1).strip("'\""))
+                j += 1
+            if items:
+                fields[key] = ", ".join(items)
+                i = j
+                continue
+
         fields[key] = value.strip("'\"")
         i += 1
 
@@ -321,6 +342,31 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                         f"PreToolUse hook; narrow there, not here."
                     )
 
+        # `skills:` is in KNOWN_AGENT_FIELDS, which only checks that the KEY is real -- it says
+        # nothing about whether each listed VALUE resolves to anything. Two ways that silently
+        # disarms preloading: a typo'd or dropped skill name (skills/<name>/SKILL.md doesn't exist),
+        # and a skill that sets `disable-model-invocation: true` -- such a skill cannot be preloaded
+        # ("preloading draws from the same set of skills Claude can invoke"), so listing it here is a
+        # no-op that reads like a guarantee.
+        for skill_name in (entry.strip() for entry in fields.get("skills", "").split(",")):
+            if not skill_name:
+                continue
+            skill_file = root / "skills" / skill_name / "SKILL.md"
+            if not skill_file.is_file():
+                issues.append(
+                    f"{path}: skills: entry {skill_name!r} does not resolve to "
+                    f"skills/{skill_name}/SKILL.md -- preloading silently drops it"
+                )
+                continue
+            skill_fields = parse_frontmatter(skill_file) or {}
+            if skill_fields.get("disable-model-invocation", "").strip().lower() == "true":
+                issues.append(
+                    f"{path}: skills: entry {skill_name!r} names {skill_file}, which sets "
+                    f"disable-model-invocation: true -- a skill so marked CANNOT be preloaded "
+                    f"(preloading draws from the same set of skills Claude can invoke), so listing "
+                    f"it here configures nothing"
+                )
+
         model = fields.get("model", "").strip()
         aliases = ", ".join(sorted(ALIAS_MODELS))
         if not model:
@@ -366,6 +412,37 @@ def validate_bundle_references(root: Path, skill_dir: Path, skill_file: Path) ->
     return issues
 
 
+def validate_reference_orphans(skill_dir: Path, skill_file: Path) -> list[str]:
+    """The other direction from validate_bundle_references: every file under references/ must be
+    named by at least one link in SKILL.md.
+
+    validate_bundle_references only ever asks "does the thing this link points at exist?" -- it never
+    asks the reverse. So a references/*.md file with no routing-table row is invisible to it: the
+    validator stays green, the tests stay green, and the probe only ever exercises the rows that DO
+    have links. Dead knowledge that looks shipped.
+    """
+    issues: list[str] = []
+    references_dir = skill_dir / "references"
+    if not references_dir.is_dir():
+        return issues
+    linked = {
+        match.group(0).rstrip(".,;:)]}")
+        for match in BUNDLE_REF_RE.finditer(read_text(skill_file))
+    }
+    for ref_file in sorted(references_dir.rglob("*")):
+        if not ref_file.is_file():
+            continue
+        rel = ref_file.relative_to(skill_dir).as_posix()
+        if rel not in linked:
+            issues.append(
+                f"{ref_file}: orphaned -- no skill-relative link to {rel!r} found in {skill_file}; a "
+                f"reference file with no routing-table row is unreachable by any means. Routing-table "
+                f"links must be written skill-relative (e.g. {rel!r}) -- a full path such as "
+                f"'{skill_dir.name}/{rel}' will not be recognized by this check"
+            )
+    return issues
+
+
 def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     issues: list[str] = []
     names: list[str] = []
@@ -402,6 +479,7 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
             )
         issues.extend(validate_description(fields, "skill", skill_file))
         issues.extend(validate_bundle_references(root, skill_dir, skill_file))
+        issues.extend(validate_reference_orphans(skill_dir, skill_file))
 
     if not names:
         issues.append(f"{skills_dir}: no skill definitions found")

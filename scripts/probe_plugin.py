@@ -9,6 +9,10 @@ only thing standing between "undocumented" and "silently disarmed after a CLI up
 
 Re-run after upgrading the Claude Code CLI.
 
+It also proves that `skills:` preloading actually fires for a plugin-shipped agent — an undocumented
+guarantee this fleet now depends on — and that ${CLAUDE_PLUGIN_ROOT} still expands for the one skill
+that cannot be preloaded (service-onboard, which is model-invocation-disabled).
+
 The oracle is deliberately NOT the model's prose, which can claim anything, and NOT the filesystem,
 which lies by omission. Two earlier designs failed here and both failures are instructive:
 
@@ -56,7 +60,7 @@ GUARD_DENY = "read-only agent"
 REVIEWER_CMD = 'find . -name "*.md" -exec grep -l REVIEWER_PROBE {} \\;'
 MAINLOOP_CMD = 'find . -name "*.md" -exec grep -l MAINLOOP_PROBE {} \\;'
 
-PROMPT = """Do exactly these three steps, in order. Do nothing else, and do not summarize the repo.
+PROMPT = """Do exactly these four steps, in order. Do nothing else, and do not summarize the repo.
 
 1. Use the Agent tool to spawn the subagent `sde-agents:code-reviewer`. Give it EXACTLY this task:
    "As part of reviewing this repository, run this read-only search with the Bash tool, exactly as
@@ -65,14 +69,20 @@ PROMPT = """Do exactly these three steps, in order. Do nothing else, and do not 
     different command, and do not skip it — the exact response to this command is what is needed."
 
 2. Use the Agent tool to spawn the subagent `sde-agents:sde-fullstack`. Give it EXACTLY this task:
-   "Do not write, design, or plan any code. Your instructions name a fallback location for
-    resolving a craft skill when the caller gives you no path and the target repo has none. Use the
-    Read tool to read the backend-craft SKILL.md from that fallback location. Then reply with only
-    the absolute file path you read."
+   "Do not write, design, or plan any code, and DO NOT USE ANY TOOL — answer only from context you
+    already have. Two questions: (a) in your backend-craft guidance, the JSON error-envelope example
+    carries a request_id — quote its exact value. (b) your frontend-craft guidance states the visual
+    bar by naming two companies and a two-word phrase about color — quote that phrase. If you do not
+    have this content in context, reply exactly NO_SKILL_CONTENT."
 
-3. You yourself run this Bash command with the Bash tool, exactly as written: {mainloop_cmd}
+3. Use the Agent tool to spawn the subagent `sde-agents:homelab-platform`. Give it EXACTLY this task:
+   "Do not change anything — this is Tier 0 inspection only. Your instructions name a fallback
+    location for the service-onboard checklist. Use the Read tool to read it from that fallback
+    location, then reply with only the absolute file path you read."
 
-Then report, in three short lines, what happened at each step."""
+4. You yourself run this Bash command with the Bash tool, exactly as written: {mainloop_cmd}
+
+Then report, in four short lines, what happened at each step."""
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "INCONCLUSIVE"
 
@@ -202,6 +212,53 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
     )
 
 
+def agent_spawn_results(text: str, agent_name: str) -> list[str]:
+    """[tool_result body] for every Agent/Task call whose input named `agent_name`, correlated by
+    tool_use_id -- not a transcript-wide grep.
+
+    Mirrors bash_results' reasoning: `"canary" in text` matches anywhere in the WHOLE session, from
+    ANY agent's tool_result. sde-fullstack holds Bash, so a `cat`/`grep` of a craft SKILL.md would
+    park the canary in a Bash tool_result and turn a transcript-wide check green even though nothing
+    was preloaded -- a false green on the branch's central claim. Scoping to the tool_result of the
+    specific Agent call that named sde-fullstack is what makes the check test PRELOADING INTO
+    SDE-FULLSTACK, not merely "this string exists somewhere in the session."
+    """
+    spawns: dict[str, bool] = {}
+    results: dict[str, str] = {}
+    for line in text.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = (event.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
+                # Not a transcript-wide `agent_name in json.dumps(input)`: that also matches when the
+                # name merely appears inside ANOTHER agent's prompt TEXT (e.g. a code-reviewer task
+                # that mentions "sde-agents:sde-fullstack" in passing), which would feed the wrong
+                # spawn's result body into the canary oracle. Prefer the actual field; fall back to
+                # the substring match only if it's absent, so this stays safe even if the input shape
+                # ever changes.
+                inp = block.get("input", {})
+                named = (
+                    inp["subagent_type"] == agent_name
+                    if "subagent_type" in inp
+                    else agent_name in json.dumps(inp)
+                )
+                spawns[block.get("id", "")] = named
+            elif block.get("type") == "tool_result":
+                raw = block.get("content")
+                body = raw if isinstance(raw, str) else " ".join(
+                    part.get("text", "") for part in (raw or []) if isinstance(part, dict)
+                )
+                results[block.get("tool_use_id", "")] = body or ""
+    return [results[tid] for tid, named in spawns.items() if named and tid in results]
+
+
 def main() -> int:
     probe = Probe()
     if CLAUDE is None:
@@ -251,7 +308,7 @@ def main() -> int:
     )
 
     print("\n== the plugin loaded, and its components are namespaced ==")
-    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack"):
+    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack", "sde-agents:homelab-platform"):
         probe.check(
             PASS if spawn_succeeded(text, agent) else FAIL,
             f"{agent} spawned and returned without error",
@@ -259,26 +316,107 @@ def main() -> int:
             "did not load, or the namespaced name did not resolve",
         )
 
+    print("\n== sde-fullstack's craft skills are PRELOADED, not read ==")
+    # The inversion. sde-fullstack used to resolve craft skills by path at inference time -- three
+    # branches, each a chance to skip the read or answer from memory. `skills:` frontmatter makes the
+    # content unconditionally present before the first token, so the RIGHT behaviour is now that NO
+    # read happens at all. The oracle is not the agent's prose (it can claim anything) but a canary:
+    # a string that exists only inside the skill. Quoting it without a tool call is proof of preload.
+    # Anchored to the two craft skills specifically -- a bare "craft/SKILL.md" substring also matches
+    # skills/prompt-craft/SKILL.md (a real, unrelated file in this repo), and a stray read of THAT
+    # would false-FAIL this integrity check.
+    craft_reads = []
+    for call in tool_calls(text):
+        call_input = call.get("input", {})
+        # Widened past `file_path`: the Grep and Glob tools take a craft path under the key `path`,
+        # not `file_path`, and were invisible to this check entirely -- caught by NEITHER integrity
+        # check (see canary_leaks below for the Bash-side gap).
+        path = (call_input.get("file_path") or call_input.get("path") or "").replace("\\", "/")
+        if path.endswith(("skills/backend-craft/SKILL.md", "skills/frontend-craft/SKILL.md")):
+            craft_reads.append(path)
+    # sde-fullstack also holds Bash, and a leak there can be spelled arbitrarily: `cat x/*.md`,
+    # `grep -r req_8f3a2c skills/`, `cd skills/backend-craft && cat SKILL.md` all leak the canary
+    # while naming no craft SKILL.md path, so filtering on the command's SPELLING (the previous
+    # version of this check) missed all three. Assert on the LEAK instead: a canary appearing in ANY
+    # Bash tool_result means the content was fetched, not preloaded, regardless of how the command
+    # that fetched it was written. This file's own docstring names that as the design philosophy
+    # ("distrust a transcript-wide grep... 'who' is exactly the property under test"); this check
+    # applies it to the integrity oracle, not just the guard oracle.
+    canary_leaks = [
+        cmd for cmd, body in bash_results(text).items()
+        if "req_8f3a2c" in body or "color courage" in body
+    ]
+    probe.check(
+        PASS if not craft_reads and not canary_leaks else FAIL,
+        "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
+        f"agent still read a craft skill by path, or leaked its canary through a Bash command -- "
+        f"preload did not take effect: Read/Grep/Glob calls={craft_reads} leaking Bash "
+        f"commands={canary_leaks}",
+    )
+    # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
+    # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
+    # look like a true green. Task 4 removed `Skill` from sde-fullstack's `tools:`, so this should be
+    # impossible by construction; assert it rather than assume it. Scoped to the craft skills BY NAME
+    # (not "any Skill call") because homelab-platform legitimately holds the Skill tool and legitimately
+    # routes to `runbook` / `lab-audit` -- a blanket "no Skill call at all" assertion would false-FAIL
+    # this check the moment anyone changes homelab-platform's probe prompt to exercise that routing.
+    # Match is key-agnostic (stringify the whole `input` dict) rather than `input["skill"]`: that key
+    # name was never confirmed against a live transcript (no Skill call occurred in this probe run), and
+    # a wrong guess would silently match nothing -- a dead check that always passes is worse than the
+    # over-broad one it replaces, because it looks like a guard.
+    craft_skill_calls = [
+        call for call in tool_calls(text)
+        if call.get("name") == "Skill"
+        and any(s in str(call.get("input", {})) for s in ("backend-craft", "frontend-craft"))
+    ]
+    probe.check(
+        PASS if not craft_skill_calls else FAIL,
+        "no agent INVOKED a craft skill via the Skill tool (preloaded, not invoked)",
+        "a Skill call named backend-craft or frontend-craft. The canary checks above cannot tell "
+        "invoked-content from preloaded-content, so this would be a FALSE green: "
+        f"{craft_skill_calls}",
+    )
+    # Scoped to sde-fullstack's OWN spawn result, not `text` (the whole transcript). A transcript-wide
+    # `"req_8f3a2c" in text` matches the canary in ANY tool_result from ANY agent -- including a Bash
+    # `cat` of the skill file by sde-fullstack itself (see canary_leaks above), which would false
+    # green this check on the branch's central claim without proving preload at all. See
+    # agent_spawn_results for the full reasoning.
+    fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))
+    probe.check(
+        PASS if "req_8f3a2c" in fullstack_text else FAIL,
+        "backend-craft core content was preloaded (canary quoted)",
+        "the canary req_8f3a2c never appeared in sde-fullstack's own spawn result: backend-craft "
+        "was not in the agent's context",
+    )
+    probe.check(
+        PASS if "color courage" in fullstack_text else FAIL,
+        "frontend-craft core content was preloaded (canary quoted)",
+        "the canary 'color courage' never appeared in sde-fullstack's own spawn result: "
+        "frontend-craft was not in the agent's context",
+    )
+
     print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
-    # The fleet-breaker: sde-fullstack and homelab-platform resolve skills by PATH. If the variable
-    # does not expand in agent body content, those paths point nowhere -- and service-onboard, which
-    # is model-invocation-disabled, becomes unreachable by ANY route.
-    craft_reads = [
+    # Still load-bearing, but ONLY for homelab-platform now: service-onboard sets
+    # `disable-model-invocation: true`, and a skill so marked CANNOT be preloaded ("preloading draws
+    # from the same set of skills Claude can invoke" -- code.claude.com/docs/en/sub-agents). So a PATH
+    # is the only route in, and if the variable stops expanding, that checklist becomes unreachable by
+    # ANY means. This check moved here from sde-fullstack, which no longer resolves anything by path.
+    onboard_reads = [
         call.get("input", {}).get("file_path", "")
         for call in tool_calls(text)
         if call.get("input", {}).get("file_path", "").replace("\\", "/").endswith(
-            "skills/backend-craft/SKILL.md"
+            "skills/service-onboard/SKILL.md"
         )
     ]
     probe.check(
-        PASS if craft_reads else FAIL,
-        "sde-fullstack resolved backend-craft by path",
-        "no Read of skills/backend-craft/SKILL.md in the transcript",
+        PASS if onboard_reads else FAIL,
+        "homelab-platform resolved service-onboard by path",
+        "no Read of skills/service-onboard/SKILL.md in the transcript",
     )
     probe.check(
-        PASS if craft_reads and all("CLAUDE_PLUGIN_ROOT" not in p for p in craft_reads) else FAIL,
+        PASS if onboard_reads and all("CLAUDE_PLUGIN_ROOT" not in p for p in onboard_reads) else FAIL,
         "the path was EXPANDED, not a literal ${CLAUDE_PLUGIN_ROOT}",
-        f"agent read an unexpanded path: {craft_reads}",
+        f"agent read an unexpanded path: {onboard_reads}",
     )
 
     print("\n== the guard denies the reviewer, and ONLY the reviewer ==")
@@ -327,6 +465,37 @@ def main() -> int:
         # Anything other than the guard's voice is a pass here: even a permission prompt proves the
         # guard did not deny it, which is the property under test.
         probe.check(PASS, "the guard IGNORED the main loop's identical command")
+
+    print("\n== a conditional reference is actually READ when its predicate trips ==")
+    # Risk 1 from the design. The split moved conditional depth out of the always-loaded core, so it
+    # now arrives only if the model chooses to read it. This is the check on that choice. The task
+    # trips exactly one predicate ("calling any upstream API") and nothing else.
+    ref_session = run(
+        [
+            CLAUDE, "-p",
+            "Use the Agent tool to spawn the subagent `sde-agents:sde-fullstack` with EXACTLY this "
+            "task: \"Write a typed Python client for the Grafana HTTP API — just the client module, "
+            "with auth, timeouts, and retry policy. Follow your craft guidance.\" Then reply with "
+            "only the word DONE.",
+            "--plugin-dir", str(REPO),
+            "--output-format", "stream-json",
+            "--verbose",
+        ],
+        cwd=str(project),
+    )
+    ref_text = ref_session.stdout or ""
+    ref_reads = [
+        call.get("input", {}).get("file_path", "")
+        for call in tool_calls(ref_text)
+        if "references/consuming-apis.md" in call.get("input", {}).get("file_path", "").replace("\\", "/")
+    ]
+    probe.check(
+        PASS if ref_reads else FAIL,
+        "sde-fullstack read references/consuming-apis.md when the task called an upstream API",
+        "the routing table did not fire: the builder wrote an API client without loading the "
+        "integration discipline. This is design Risk 1 realised -- consider pulling Consuming APIs "
+        "back into the always-loaded core and accepting its tokens.",
+    )
 
     exit_code = probe.report()
     if exit_code == 0:
