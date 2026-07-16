@@ -1,6 +1,6 @@
 ---
 name: service-onboard
-description: Use when adding a new self-hosted service to the home lab — a new container, stack, or app ("add Jellyfin to my lab", "set up a new container") — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use sde-agents:homelab-platform.
+description: The checklist for adding a new self-hosted service to the home lab, from placement through end-to-end verification. Use when adding a new container, stack, or app ("add Jellyfin to my lab", "set up a new container") — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use sde-agents:homelab-platform.
 argument-hint: [service to add]
 disable-model-invocation: true
 ---

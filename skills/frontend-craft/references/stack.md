@@ -9,9 +9,9 @@ Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers clean
 
 **Paint — one Tailwind reset, one token system:**
 - **Tailwind** for all styling.
-- **shadcn/ui pattern on Radix (or Base UI) primitives** — headless, accessible components you style yourself; this owns the calibrated look. Base UI is the newer foundation, either is fine.
+- **shadcn/ui pattern on Radix (or Base UI) primitives** — headless, accessible components you style yourself; this owns the calibrated look. Either primitive layer is fine.
 - **lucide-react** icons; **Framer Motion** only when CSS transitions aren't enough (CSS is right for hovers, fades, modals).
-- Optional, same Tailwind world: **HeroUI v3** as a styled layer only when it can share the existing reset and token system; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
+- Optional, same Tailwind world: **HeroUI** as a styled layer only when it can share the existing reset and token system; **Aceternity / Magic UI** as a sparing garnish for hero / login / empty-state moments — named in the review packet.
 
 **Logic — zero CSS, decoupled from the paint:**
 - **TanStack Query** (server state), **TanStack Router** (typed routing + URL state), **TanStack Table** (headless data grids) — one type-safe, zero-CSS suite that *is* the logic layer, painted with Tailwind.

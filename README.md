@@ -42,6 +42,10 @@ editing. Load it straight from the working tree instead:
 claude --plugin-dir .
 ```
 
+Several files deliberately paraphrase another — the `eng-ladder` altitude references paraphrase the
+agent files, and its routing table is the source of truth for routing. Each such file states which
+side wins on conflict; when they drift, fix the paraphrase, never the source.
+
 ## Project context convention
 
 Claude Code natively loads `CLAUDE.md` (project, user, and managed levels) and passes it to

@@ -1,6 +1,6 @@
 ---
 name: runbook
-description: Use when asked to write or update a runbook or operating doc for a service or tool — how to check it, restart it, and recover it.
+description: Writes terse, copy-pasteable operating docs to a fixed template. Use when asked to write or update a runbook or operating doc for a service or tool — how to check it, restart it, and recover it.
 argument-hint: [service or tool]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: prompt-craft
-description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The lightweight inline path; for eval-driven iteration, use sde-agents:prompt-engineer; for multi-agent systems, sde-agents:multi-agent-architect.
+description: The lightweight inline method for prompt work — success criteria, baseline, minimal change, fresh retest. Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". For eval-driven iteration, use sde-agents:prompt-engineer; for multi-agent systems, sde-agents:multi-agent-architect.
 argument-hint: [what to create or fix]
 ---
 

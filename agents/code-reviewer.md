@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Use after code has been written or changed — "review my PR", "is this ready to merge" — to review a diff, branch, or PR before merge. Read-only; reports findings, does not modify code. For a whole home-lab rather than a code diff, use sde-agents:lab-audit.
+description: Mentor-grade, read-only code review that reports severity-ranked findings and a merge verdict without modifying code. Use proactively after code has been written or changed — "review my PR", "is this ready to merge" — on a diff, branch, or PR before merge. For a whole home-lab rather than a code diff, use sde-agents:lab-audit.
 tools: Glob, Grep, Read, Bash
 model: inherit
 color: red

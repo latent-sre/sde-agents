@@ -60,3 +60,17 @@ Also available: `when_to_use`, `arguments`, `model`, `effort`, `context`, `agent
 (`validate_fleet.py` keeps `KNOWN_SKILL_FIELDS` as the fleet's checked copy).
 
 Keep descriptions lean — they load into context every session.
+
+## Fleet decisions on unused fields
+
+Fields the fleet deliberately does not use — considered, not overlooked. Reopen only with a reason:
+
+- **`when_to_use`** — trigger phrasings live in `description` so routing has one surface to tune
+  (and one surface for the routing evals to measure). Both fields share the same 1,536-character
+  listing cap, so splitting saves nothing.
+- **`maxTurns`** — loop bounds are task-shaped prose rules (three-strikes, two-round review caps),
+  which fail with a diagnosis; a turn cap fails mid-thought. Revisit if a runaway loop is ever
+  actually observed.
+- **`memory`** — agents are stateless by design; durable lab knowledge lives in the repo (runbooks,
+  `CLAUDE.md`). And setting `memory` auto-enables Read/Write/Edit, so it must never be added to
+  `sde-agents:code-reviewer`.

@@ -32,8 +32,8 @@ to its phases. On any conflict, SKILL.md wins.
    `sde-agents:sde-fullstack` per component with **disjoint file ownership**, each citing the
    contract artifact.
 4. **Model tiers.** Mechanical scope (scaffolding, boilerplate, packaging, docs) may run on a faster
-   model (spawn-time model override; sonnet by default); safety-critical code and all reviews stay
-   at full effort.
+   model alias (spawn-time model override — e.g. sonnet; aliases follow upgrades, so they don't
+   rot); safety-critical code and all reviews stay at full effort.
 5. **Prefer messaging a running builder** with scope changes over killing and relaunching; if one is
    stopped early, inventory its partial writes and have the successor verify-and-finish rather than
    redo.

@@ -1,12 +1,12 @@
 ---
 name: frontend-craft
-description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft.
+description: Designed, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft.
 argument-hint: [the UI to build or change]
 ---
 
 # Frontend craft
 
-**You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred is worth one batched question round with recommended defaults *before* building; a wrong build costs a full rebuild-and-review cycle, a question costs seconds. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
+**You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred goes back as one batched question round with recommended defaults *before* building; a materially better alternative to the requested approach gets one recommendation line with the trade-off, then build what was chosen — never silently substitute.
 
 This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the rules are domain-neutral and apply to a SaaS product or a hobby project the same way.
 
@@ -78,6 +78,8 @@ Semantic HTML first; every input labeled; keyboard reachable with visible focus;
 - Component/logic units in the repo's test runner (Vitest + React Testing Library in the default stack) — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
 - **Playwright** (or the repo's E2E runner) for the few end-to-end flows whose breakage would page someone.
 - Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render** — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
+
+The **review packet** is the end-of-task report defined by the calling agent (`sde-agents:sde-fullstack`, which preloads this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.
 
 ## Before you write it — load the reference for what you're building
 

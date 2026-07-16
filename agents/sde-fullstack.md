@@ -1,6 +1,6 @@
 ---
 name: sde-fullstack
-description: Use when implementing software (not designing it) — backend services, APIs, CLIs, automation, dashboards, or web UIs, especially operator-facing and SRE tooling. Takes features, bug fixes, and refactors end to end with tests, in whatever language the codebase uses ("add this feature", "fix this bug"). Escalates multi-system design to sde-agents:principal-engineer and org-wide architecture to sde-agents:distinguished-architect.
+description: Senior full-stack builder that takes features, bug fixes, and refactors end to end with tests, in whatever language the codebase uses. Use when implementing software (not designing it) — backend services, APIs, CLIs, automation, dashboards, or web UIs, especially operator-facing and SRE tooling ("add this feature", "fix this bug"). Escalates multi-system design to sde-agents:principal-engineer and org-wide architecture to sde-agents:distinguished-architect.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch
 model: inherit
 color: green
