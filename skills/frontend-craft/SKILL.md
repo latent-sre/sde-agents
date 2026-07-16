@@ -8,9 +8,11 @@ argument-hint: [the UI to build or change]
 
 **You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred goes back as one batched question round with recommended defaults *before* building; a materially better alternative to the requested approach gets one recommendation line with the trade-off, then build what was chosen — never silently substitute.
 
-This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the rules are domain-neutral and apply to a SaaS product or a hobby project the same way.
+This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the engineering rules are domain-neutral and apply to a SaaS product or a hobby project the same way. The stack and the design language, though, are **defaults with a carve-out**:
 
 **An existing repository's stack always wins.** The library names below (TanStack, Tailwind, shadcn) are the **default stack** — chosen in `references/stack.md` for greenfield work. In a repo built on other libraries, match that repo and apply the same rules through its equivalents; never rewrite toward the default stack as part of a task.
+
+**An existing design system wins the same way.** The shell, theme, and aesthetic below (sidebar rail, dark-first, the accent-and-glow language) are the **default design language** for greenfield or unbranded work. In a repo or brand with an established design system — a light-first identity, Material, a corporate token set, a settled shell convention — match it and apply the same discipline (hierarchy, spacing, designed states, accessibility) through its vocabulary; never restyle toward this default as part of a task.
 
 ## Layout — organized, uncluttered, space-efficient
 
@@ -23,7 +25,7 @@ This skill is general-purpose — any web UI, not just operator tooling — held
 
 ## Visual character — designed, not default
 
-Organized and uncluttered is the floor, not the ceiling. The bar: at home next to Linear or Vercel's dashboard with the color courage turned up — never mistakable for an unstyled admin template.
+Organized and uncluttered is the floor, not the ceiling. For the default design language (greenfield or unbranded work — an existing design system wins, per above), the bar: at home next to Linear or Vercel's dashboard with the color courage turned up — never mistakable for an unstyled admin template.
 
 - **Dark-first, layered surfaces.** Dark is the designed-for theme (light stays supported via tokens): a deep page background, cards a distinct step lighter, raised elements a step lighter again. Depth comes from this layering plus low-alpha borders and soft shadows — not heavy lines.
 - **Color with courage.** One vivid accent used confidently: gradient touches on primary actions and active states, and one hero moment per view — a gradient heading, a glowing stat. Status colors saturated enough to glow against dark surfaces; status pills get a colored dot *plus* text, never color alone.
