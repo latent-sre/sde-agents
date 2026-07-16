@@ -1,6 +1,6 @@
 ---
 name: eng-ladder
-description: Routes work to the right engineering altitude — builder, principal, or distinguished — and assesses artifacts against a seniority bar. Use before any task that changes code or a design (skip single-file edits with an existing pattern to copy) to set the altitude; also to assess code or a design at a named level ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
+description: Routes work to the right engineering altitude — builder, principal, or distinguished — and assesses artifacts against a seniority bar. Use when the right altitude is genuinely unclear — work spans components or teams, a migration or hard-to-reverse choice is involved, or the ask is "design/how should we"-shaped; a scoped change with an obvious owner and an existing pattern routes straight to its builder or craft skill without this. Also use to assess code or a design at a named level ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
 argument-hint: [task, diff, file, or design doc]
 ---
 

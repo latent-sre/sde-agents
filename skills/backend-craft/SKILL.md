@@ -1,6 +1,6 @@
 ---
 name: backend-craft
-description: Failure-first backend engineering rules — contracts, resiliency, operability, security, testing. Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). For the UI layer, use sde-agents:frontend-craft; for a full multi-file feature with tests, use sde-agents:sde-fullstack.
+description: Failure-first backend engineering rules — contracts, resiliency, operability, security, testing. Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). This skill owns the backend layer at any size; for the UI layer, use sde-agents:frontend-craft, and when the work spans layers end to end — UI plus the service behind it, or a spawned builder taking a feature through tests and verification — use sde-agents:sde-fullstack.
 argument-hint: [the API or service to build or change]
 ---
 
