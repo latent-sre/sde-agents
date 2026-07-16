@@ -1,6 +1,6 @@
 ---
 name: root-cause
-description: Use when debugging any bug, test failure, or unexpected behavior — before proposing a fix — and especially after a fix attempt has already failed, or when guessing has started ("maybe it's X, let me try changing it").
+description: A reproduce → evidence → hypothesis → verify → fix debugging loop that finds the cause before any fix is attempted. Use proactively when debugging any bug, test failure, or unexpected behavior — before proposing a fix — and especially after a fix attempt has already failed, or when guessing has started ("maybe it's X, let me try changing it").
 argument-hint: [the bug or unexpected behavior]
 ---
 

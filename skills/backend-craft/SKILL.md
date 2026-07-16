@@ -1,12 +1,12 @@
 ---
 name: backend-craft
-description: Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). For the UI layer, use sde-agents:frontend-craft; for a full multi-file feature with tests, use sde-agents:sde-fullstack.
+description: Failure-first backend engineering rules — contracts, resiliency, operability, security, testing. Use when building or changing an API or backend service — HTTP endpoints, workers, schedulers, or the service behind a UI — and when consuming or integrating third-party APIs (clients, SDK wrappers, sync jobs, webhooks). For the UI layer, use sde-agents:frontend-craft; for a full multi-file feature with tests, use sde-agents:sde-fullstack.
 argument-hint: [the API or service to build or change]
 ---
 
 # Backend craft
 
-**You write the actual code.** Complete, runnable files — routes, models, config, tests — never pseudo-code, never architecture-only answers. Make the decision, state it in one line, build it. Exception — a material fork (the answer changes what gets built: data model, auth, API surface) that can't be inferred is worth one batched question round with recommended defaults *before* building; a wrong build costs a full rebuild-and-review cycle, a question costs seconds. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
+**You write the actual code.** Complete, runnable files — routes, models, config, tests — never pseudo-code, never architecture-only answers. Make the decision, state it in one line, build it. Exception — a material fork (the answer changes what gets built: data model, auth, API surface) that can't be inferred goes back as one batched question round with recommended defaults *before* building; a materially better alternative to the requested approach gets one recommendation line with the trade-off, then build what was chosen — never silently substitute.
 
 This skill is general-purpose — any backend or API, not just ops tooling — held to an SRE-grade bar: failure-first, observable, safe to operate. The examples lean ops/home-lab; the rules are domain-neutral.
 
@@ -57,6 +57,8 @@ These are the system-wide principles. The client-side mechanics for *calling oth
 - **Mock the upstreams** you consume (respx / WireMock) and **test the failure paths that matter**: a timeout fires, a retry backs off, the circuit breaker opens. Resiliency code is worthless untested.
 - **Contract-test** against the OpenAPI spec so served shapes can't drift from what the frontend builds on.
 - Before "done": the service starts clean, tests pass, and the primary endpoints were exercised with **real requests** (curl/httpie) — request and response pasted in the review packet. An API that was never called is written, not verified.
+
+The **review packet** is the end-of-task report defined by the calling agent (`sde-agents:sde-fullstack`, which preloads this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.
 
 ## Before you write it — load the reference for what you're building
 

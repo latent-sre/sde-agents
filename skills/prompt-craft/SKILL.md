@@ -1,6 +1,6 @@
 ---
 name: prompt-craft
-description: Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The lightweight inline path; for eval-driven iteration, use sde-agents:prompt-engineer; for multi-agent systems, sde-agents:multi-agent-architect.
+description: The lightweight inline method for prompt work — success criteria, baseline, minimal change, fresh retest. Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". For eval-driven iteration, use sde-agents:prompt-engineer; for multi-agent systems, sde-agents:multi-agent-architect.
 argument-hint: [what to create or fix]
 ---
 
@@ -30,23 +30,7 @@ Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. A
 
 ## Frontmatter quick reference
 
-**Agents** (`~/.claude/agents/*.md` user-level, `.claude/agents/*.md` project-level):
-Required: `name`, `description` (the trigger). Optional: `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `initialPrompt`.
-
-Authority lives in frontmatter, not in prose — the fields that carry it:
-
-| Field | Notes |
-|---|---|
-| `tools` | Allowlist. **Omitting it inherits every tool** — omission is "all tools," not "none." `Agent(worker)` scoping works only for a main-thread agent (`claude --agent`); a subagent silently ignores the type list. `AskUserQuestion`, `EnterPlanMode`, `ScheduleWakeup`, `WaitForMcpServers` are never available to a subagent, however listed; `ExitPlanMode` only under `permissionMode: plan`. |
-| `disallowedTools` | Denylist; applied before `tools` resolves. |
-| `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it. |
-| `hooks` | Agent-scoped lifecycle hooks. Real at project/user scope, **inert in a plugin** (see below). A plugin must instead ship `hooks/hooks.json`, which is session-wide, and scope the hook itself on the payload's `agent_type` — that is how this fleet guards `sde-agents:code-reviewer`'s `Bash`. |
-| `skills` | Preloads full skill content at startup — prefer over putting `Skill` in `tools`. |
-| `model` | Aliases `haiku \| sonnet \| opus \| fable \| inherit`, or a full ID (`claude-opus-4-8`); defaults to `inherit`. Use an alias — this fleet rejects pins, which rot silently while an alias follows the upgrade. |
-
-Plugin-packaged agents **ignore** `hooks`, `mcpServers`, and `permissionMode`. Spell keys exactly: an unrecognized key isn't guaranteed to fail loudly, so a typo can silently drop what it configured (`validate_fleet.py` rejects unknown keys for this reason).
-
-**Skills** (`.claude/skills/<name>/SKILL.md`):
-`name`, `description` (the trigger), `argument-hint`; `disable-model-invocation: true` for side-effect skills (deploy, send, commit — user-only via `/name`); `user-invocable: false` for background-knowledge skills. Also available: `when_to_use`, `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context`, `agent`, `hooks` — not exhaustive; see code.claude.com/docs/en/skills for the current table. `allowed-tools` takes bare tool names, not specifiers.
-
-Skill precedence is the **reverse** of agents: a personal (user-level) skill overrides a project-level one of the same name — full order enterprise → personal → project → plugin → bundled (code.claude.com/docs/en/skills). (Agents go the other way: project shadows user.) Keep descriptions lean — they load into context every session.
+Authority lives in frontmatter, not in prose. Before writing or editing any agent or skill
+frontmatter, read [`references/claude-code-frontmatter.md`](references/claude-code-frontmatter.md) —
+the fleet's single source of truth for Claude Code fields and their traps. Platform facts and the
+trap list belong in that file and nowhere else — on drift, fix it there, never a local copy.

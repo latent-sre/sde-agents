@@ -4,8 +4,6 @@ Read this when the service streams to clients — status, metrics, or logs pushe
 
 The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conflict, SKILL.md wins.
 
-## Serving live data (SSE / WebSocket)
-
 The frontend's default for live data is SSE — this is the serving half of that contract.
 
 - **SSE for one-way push** (status, metrics, logs): send a keep-alive comment every 15–30 s so proxies don't kill idle streams; `Cache-Control: no-cache` and disable proxy buffering (flush per event).

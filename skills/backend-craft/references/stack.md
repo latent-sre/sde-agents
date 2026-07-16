@@ -5,9 +5,7 @@ if you are working in one, you do not need this file.
 
 The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conflict, SKILL.md wins.
 
-## Stack
-
-An existing repo's stack always wins — match it. Greenfield, pick by the **dominant constraint** and say why in one line:
+Greenfield, pick by the **dominant constraint** and say why in one line:
 
 - **Python + FastAPI** (default): typed Pydantic, OpenAPI for free (feeds the contract-first flow), and the richest ecosystem of API/SDK clients — best when the job is data work or integrating many upstream APIs.
 - **Go**: single static binary, tiny container, first-class concurrency — best for agents, daemons, network services, and anything that must land on a host with no runtime.

@@ -1,0 +1,49 @@
+# Multi-component builds — contract, batches, and review routing
+
+Read this the moment the design has more than one component (e.g. a web UI plus the backend API
+behind it), before spawning any builder. The pipeline in `SKILL.md` still governs; these rules add
+to its phases. On any conflict, SKILL.md wins.
+
+## Design additions (Phase 1)
+
+- **Interface contract as a repo artifact** with concrete example payloads — endpoints,
+  request/response JSON, error cases. It cannot be skipped, and it is **living**: a builder whose
+  implementation diverges updates it in the same change, and parallel builders cite the artifact —
+  never each other's code.
+- During a parallel batch the contract has **one named owner**; every other builder is read-only on
+  it and routes change requests through the orchestrator. Contract changes are a required
+  review-packet slot, and the orchestrator propagates them to every affected builder at once.
+- The build order is a **dependency graph, not a sequence**: serialize only what genuinely blocks —
+  walking skeleton, then the safety core — and group every independent slice into parallel batches
+  by file ownership. A numbered slice list where each item waits on the previous is a planning bug
+  unless the dependencies are real.
+- If the tool has a web UI, a static mockup (artifact, key screens, light + dark) gets user approval
+  **before any framework code** — the approved mockup is the visual spec and a named gate in the
+  cadence contract.
+
+## Build additions (Phase 2)
+
+1. **Walking skeleton first** — the thinnest end-to-end slice running against the real contract,
+   fully verified: it proves the contract.
+2. **Triage by blast radius.** Safety-critical components (anything that can corrupt production
+   state) keep per-slice verification and review-as-gate; everything else builds in **batches**,
+   verified once at the batch boundary.
+3. **Launch each batch's builders in one message** so they run concurrently — one
+   `sde-agents:sde-fullstack` per component with **disjoint file ownership**, each citing the
+   contract artifact.
+4. **Model tiers.** Mechanical scope (scaffolding, boilerplate, packaging, docs) may run on a faster
+   model alias (spawn-time model override — e.g. sonnet; aliases follow upgrades, so they don't
+   rot); safety-critical code and all reviews stay at full effort.
+5. **Prefer messaging a running builder** with scope changes over killing and relaunching; if one is
+   stopped early, inventory its partial writes and have the successor verify-and-finish rather than
+   redo.
+
+## Review additions (Phase 3)
+
+- The **contract artifact** is the one addition to the Phase-3 seed set (SKILL.md's "and nothing
+  more" bars your diagnosis and your fix, not the contract): hand it to the reviewer along with the
+  mission and threat model — served shapes are checked against it.
+- For builds with **three or more parallel batches**, offer the user workflow orchestration — a
+  scripted multi-agent pipeline (Claude Code's Workflow tool or equivalent) that starts each batch's
+  review the moment its build returns, removing the orchestrator as the serial hop between build
+  finishing and review starting. Their opt-in: it spawns many agents at once.

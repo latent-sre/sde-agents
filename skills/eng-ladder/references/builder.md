@@ -3,9 +3,9 @@
 You own delivering a well-defined change correctly. The design is mostly settled; your value is
 reliable, idiomatic, well-tested execution and catching the edge cases others miss.
 
-This file is the inline working method for the builder rung. The full bar lives in
-`agents/sde-fullstack.md` — don't load it for inline work; if this file disagrees with it, the
-agent file is right: fix this file.
+This file is the inline working method for the builder rung. The full bar is the agent file —
+`agents/sde-fullstack.md` in this repo, `${CLAUDE_PLUGIN_ROOT}/agents/sde-fullstack.md` once the
+plugin is installed — don't load it for inline work; on any conflict, the agent file wins.
 
 ## You're at this altitude when
 - The task fits in one component/service and has a clear acceptance criterion.
@@ -19,7 +19,8 @@ pattern → the principal altitude.
 1. Restate the task + acceptance criteria in one line.
 2. Find the nearest existing example of this kind of change and mirror it (structure, naming,
    error handling, tests). Load `sde-agents:backend-craft` or `sde-agents:frontend-craft` for
-   the layer you're touching.
+   the layer you're touching — via the `Skill` tool if you hold it, else read the file by path
+   (`${CLAUDE_PLUGIN_ROOT}/skills/<name>/SKILL.md`).
 3. Implement the **smallest correct change**. No new abstractions for a single caller.
 4. Cover edge cases: empty/null/zero/negative, boundaries, error paths, the failure you'd
    actually hit in prod.

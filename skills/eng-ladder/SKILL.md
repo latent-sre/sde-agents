@@ -1,6 +1,6 @@
 ---
 name: eng-ladder
-description: Set your engineering altitude before any task that changes code or a design (skip single-file edits with an existing pattern to copy) — builder (a scoped, well-defined change inside one component), principal (cross-cutting design, a contract/schema change, a migration, real blast radius), or distinguished (high-ambiguity architecture, build-vs-buy, a standard everything else follows). Also use to assess code or a design against a seniority bar ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
+description: Routes work to the right engineering altitude — builder, principal, or distinguished — and assesses artifacts against a seniority bar. Use before any task that changes code or a design (skip single-file edits with an existing pattern to copy) to set the altitude; also to assess code or a design at a named level ("review this at the principal level"), or to generate ladder-based growth feedback on a body of work.
 argument-hint: [task, diff, file, or design doc]
 ---
 
@@ -20,7 +20,7 @@ Match the task to the lowest rung whose core question it raises. Signals it need
 
 Routing includes routing to yourself. Work stays in the current context when it fits the conversation you're already in; spawn the rung's agent when the work needs fresh context or runs alongside other work. For in-context work, load the matching altitude reference and work its method: [`references/builder.md`](references/builder.md), [`references/principal.md`](references/principal.md), or [`references/distinguished.md`](references/distinguished.md). Load **only** the tier that matches, and move up the moment it isn't enough — moving up means loading the next reference; a spawned agent never self-promotes, it reports the fork to its caller. The references paraphrase each rung's method and self-checks; the full bar stays the agent file (Mode 2) — on any conflict over method or bar, the agent file wins.
 
-The `sre-tool` skill applies this routing inside its build pipeline, and each ladder agent's description and "Ladder position" section paraphrases its own rung so a spawned agent can escalate without loading this skill; the altitude references paraphrase the rungs the same way. This table is the source of truth for routing — on any conflict over which rung a task belongs to, the table wins; fix the paraphrase, not the table.
+The `sde-agents:sre-tool` skill applies this routing inside its build pipeline, and each ladder agent's description and "Ladder position" section paraphrases its own rung so a spawned agent can escalate without loading this skill; the altitude references paraphrase the rungs the same way. This table is the source of truth for routing — on any conflict over which rung a task belongs to, the table wins; fix the paraphrase, not the table.
 
 Infrastructure and service-operation work (deploying, configuring, or troubleshooting the lab itself) routes to `sde-agents:homelab-platform`, outside this ladder; code that *runs on* the lab routes through the ladder as usual.
 

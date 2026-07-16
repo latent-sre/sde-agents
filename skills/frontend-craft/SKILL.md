@@ -1,14 +1,16 @@
 ---
 name: frontend-craft
-description: Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft.
+description: Design-forward, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft; for a full multi-file feature with tests, use sde-agents:sde-fullstack.
 argument-hint: [the UI to build or change]
 ---
 
 # Frontend craft
 
-**You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred is worth one batched question round with recommended defaults *before* building; a wrong build costs a full rebuild-and-review cycle, a question costs seconds. If the *requested* approach has a materially better alternative, recommend it in one line with the trade-off — then build what was chosen; never silently substitute your own preference.
+**You write the actual code.** Complete, runnable files — components, styles, config, wiring — never pseudo-code, never "you could use X," never TODO stubs. If a decision is needed, make it, state it in one line, and build. Exception — a material fork (the answer changes what gets built: data model, auth, interface scope) that can't be inferred goes back as one batched question round with recommended defaults *before* building; a materially better alternative to the requested approach gets one recommendation line with the trade-off, then build what was chosen — never silently substitute.
 
 This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the rules are domain-neutral and apply to a SaaS product or a hobby project the same way.
+
+**An existing repository's stack always wins.** The library names below (TanStack, Tailwind, shadcn) are the **default stack** — chosen in `references/stack.md` for greenfield work. In a repo built on other libraries, match that repo and apply the same rules through its equivalents; never rewrite toward the default stack as part of a task.
 
 ## Layout — organized, uncluttered, space-efficient
 
@@ -40,15 +42,15 @@ Organized and uncluttered is the floor, not the ceiling. The bar: at home next t
 
 ## State and data
 
-- **Never import `@mantine/core`** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* and `@mantine/form` ship no CSS and mix freely; its *components* do not.
-- Server state lives in TanStack Query (caching, retries, invalidation); UI state stays local. No global store until two distant components genuinely share state.
+- **Never import `@mantine/core`** or any styled Mantine component into a Tailwind codebase — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* and `@mantine/form` ship no CSS and mix freely; its *components* do not. (A repo already built on Mantine keeps its stack — the rule is about mixing resets, not about Mantine.) This is the rule's one authoritative statement; the references point here.
+- Server state lives in the query/cache layer — TanStack Query in the default stack — with caching, retries, and invalidation; UI state stays local. No global store until two distant components genuinely share state.
 - **Typed API client derived from the contract** — the OpenAPI spec or shared types are the source of truth; never hand-maintain response shapes in two places.
 - Every async view has designed **loading, error, and empty states**. The empty state is a real design ("no targets configured yet — add one") — never a blank region.
 - **Live data**: prefer **SSE** (`EventSource`) for one-way server→client streams (status, metrics, logs) — simpler than WebSocket and it auto-reconnects; use WebSocket only when the client must push too. Feed updates into the Query cache so streamed and fetched data share one source of truth; fall back to interval polling when no stream exists.
 
 ## Routing & URL state
 
-- **TanStack Router** for the SPA: typed routes, nested layouts under the app shell, route-based code splitting so each view lazy-loads.
+- Typed routing (TanStack Router in the default stack): typed routes, nested layouts under the app shell, route-based code splitting so each view lazy-loads.
 - **The URL is state.** Search text, active filters, page, sort, and the open tab/detail live in URL search params — the back button works, links are shareable, a refresh restores the view. Never keep that state only in component memory.
 
 ## Resilience UX — failure-first, for any app
@@ -73,9 +75,11 @@ Semantic HTML first; every input labeled; keyboard reachable with visible focus;
 
 ## Testing & quality gate
 
-- **Vitest + React Testing Library** for component/logic units — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
-- **Playwright** for the few end-to-end flows whose breakage would page someone.
+- Component/logic units in the repo's test runner (Vitest + React Testing Library in the default stack) — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
+- **Playwright** (or the repo's E2E runner) for the few end-to-end flows whose breakage would page someone.
 - Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render** — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
+
+The **review packet** is the end-of-task report defined by the calling agent (`sde-agents:sde-fullstack`, which preloads this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.
 
 ## Before you write it — load the reference for what you're building
 

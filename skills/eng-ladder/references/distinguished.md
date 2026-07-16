@@ -4,9 +4,10 @@ Your leverage is judgment on ambiguous, expensive-to-reverse decisions, and the 
 shape how everything else gets built. Code is an output; the decision and its framing are the
 product.
 
-This file is the inline working method for the distinguished rung. The full bar lives in
-`agents/distinguished-architect.md` — don't load it for inline work; if this file disagrees with
-it, the agent file is right: fix this file.
+This file is the inline working method for the distinguished rung. The full bar is the agent file —
+`agents/distinguished-architect.md` in this repo,
+`${CLAUDE_PLUGIN_ROOT}/agents/distinguished-architect.md` once the plugin is installed — don't load
+it for inline work; on any conflict, the agent file wins.
 
 ## You're at this altitude when
 - The problem is under-specified — the real question is "what should we even be solving?"

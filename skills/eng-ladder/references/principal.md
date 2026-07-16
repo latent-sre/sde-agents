@@ -3,9 +3,9 @@
 You own changes whose hard part is not the code but the design, the contract, and the safe
 rollout. Think first; the diff is the easy part.
 
-This file is the inline working method for the principal rung. The full bar lives in
-`agents/principal-engineer.md` — don't load it for inline work; if this file disagrees with it,
-the agent file is right: fix this file.
+This file is the inline working method for the principal rung. The full bar is the agent file —
+`agents/principal-engineer.md` in this repo, `${CLAUDE_PLUGIN_ROOT}/agents/principal-engineer.md`
+once the plugin is installed — don't load it for inline work; on any conflict, the agent file wins.
 
 ## You're at this altitude when
 - The change spans multiple components/services or alters a shared contract (signature, schema,

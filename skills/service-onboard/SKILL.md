@@ -1,13 +1,13 @@
 ---
 name: service-onboard
-description: Use when adding a new self-hosted service to the home lab — a new container, stack, or app ("add Jellyfin to my lab", "set up a new container") — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use sde-agents:homelab-platform.
+description: The checklist for adding a new self-hosted service to the home lab, from placement through end-to-end verification. Use when adding a new container, stack, or app ("add Jellyfin to my lab", "set up a new container") — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use sde-agents:homelab-platform.
 argument-hint: [service to add]
 disable-model-invocation: true
 ---
 
 The checklist that keeps the lab from rotting. Work through every step in order; when one is skipped, say so explicitly and why — silence reads as "done."
 
-`sde-agents:homelab-platform` owns change authority for everything below. Steps 2–5 apply config, storage, proxy, DNS, and TLS to a live lab: classify each apply under that agent's tiers and get the approval it requires. This checklist grants no permission of its own — a step being on the list is not approval to run it.
+`sde-agents:homelab-platform` owns change authority for everything below, and this checklist runs **under** that agent — it is not self-sufficient standalone. Steps 2–5 apply config, storage, proxy, DNS, and TLS to a live lab: classify each apply under homelab-platform's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change, needs approval · 3 destructive/access-path, needs approval + proven recovery) and get the approval each requires. This checklist grants no permission of its own — a step being on the list is not approval to run it. Whichever way you arrived here (homelab-platform reads it by path; it may also be model-invocable as a plugin skill), the authority stays with homelab-platform: if you reached it without that agent's tier discipline, stop and route through it.
 
 1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names).
 2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`); restart policy; health check; resource limits.
@@ -15,7 +15,7 @@ The checklist that keeps the lab from rotting. Work through every step in order;
 4. **Network** — reverse proxy entry, DNS record, TLS. No direct port exposure without written justification.
 5. **Security** — auth in front (SSO, basic auth, or app-native); default credentials changed; not WAN-reachable unless genuinely required.
 6. **Observability** — health or metrics endpoint scraped or probed; an alert exists if the household would notice this service being down.
-7. **Runbook stub** — what it is, how to restart it, where its data lives, known quirks. Use the `runbook` skill.
+7. **Runbook stub** — what it is, how to restart it, where its data lives, known quirks. Use the `sde-agents:runbook` skill.
 8. **End-to-end verify** — reach it at its final URL as a normal user would; restart the container once and confirm it comes back up on its own.
 
 Finish with the review packet: what was deployed, the rollback (how to remove it cleanly), the evidence from step 8, and anything that was skipped.
