@@ -3,14 +3,9 @@
 Read this when starting a **greenfield** UI. An existing repository's stack always wins — if you are
 working in one, you do not need this file.
 
-This file also carries the one hard prohibition: never import `@mantine/core` or any styled Mantine
-component. Mantine's *hooks* mix freely with Tailwind; its *components* do not.
-
 The universal frontend rules live in `skills/frontend-craft/SKILL.md`. On any conflict, SKILL.md wins.
 
-## Stack
-
-An existing repo's stack always wins — match it. Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
+Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
 
 **Paint — one Tailwind reset, one token system:**
 - **Tailwind** for all styling.
@@ -23,6 +18,6 @@ An existing repo's stack always wins — match it. Greenfield is always a **Reac
 - **@mantine/hooks** for utility logic (disclosure, debounce, local storage, hotkeys, click-outside, media query, element size); optionally **@mantine/form** for form state. Both ship no CSS and need no provider.
 - Accessible *widget* behavior (focus trap, ARIA, roving tabindex) comes from **Radix / Base UI**, not from Mantine hooks.
 
-**One hard rule:** never import **@mantine/core** or any styled Mantine component — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* are pure logic and mix freely; its *components* do not.
+**The one hard rule** — never import `@mantine/core` or any styled Mantine component — is stated in full in `SKILL.md` (State and data); hooks-vs-components is the line.
 
 For a greenfield SPA, use this stack no matter how small. Existing repositories keep their established stack as required above. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any greenfield deviation from this default gets one line in the review packet.

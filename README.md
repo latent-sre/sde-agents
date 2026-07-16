@@ -29,7 +29,9 @@ That is the whole installation. The agents, the skills, and the read-only guard 
 nothing is copied into `~/.claude`, and there is no separate setup script to forget.
 
 Components are **namespaced** by the plugin, so they are `sde-agents:code-reviewer`,
-`/sde-agents:backend-craft`, and so on. The fleet's own cross-references use those names.
+`/sde-agents:backend-craft`, and so on. The fleet's own cross-references use those names; a bare
+backticked name appears only for content already in context (e.g. a skill the agent preloads via
+`skills:`).
 
 ### Working on the fleet itself
 

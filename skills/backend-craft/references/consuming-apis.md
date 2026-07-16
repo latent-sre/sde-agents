@@ -6,10 +6,6 @@ seriously as being a server.
 
 The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conflict, SKILL.md wins.
 
-## Consuming APIs (integration discipline)
-
-Much of this service's job is calling *other* APIs — take being a good client as seriously as being a good server.
-
 - **One typed client per upstream**, configured once — base URL, auth, timeout, retry policy in a single place; never scatter ad-hoc calls (a shared `httpx.AsyncClient`, not a new session per call).
 - **Auth to upstreams**: API key / bearer / OAuth2 client-credentials — **cache the token and refresh before expiry**, never re-auth per call.
 - **Respect their limits**: honor `429` + `Retry-After`, self-throttle to their quota, backoff + jitter on retryable failures. Never be the reason an upstream rate-limits you.

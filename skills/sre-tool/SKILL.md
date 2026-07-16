@@ -6,6 +6,8 @@ argument-hint: [what the tool should do]
 
 Announce at start: "Running the sre-tool pipeline: requirements → right-sized design → build → review → verify."
 
+**Multi-component builds** (e.g. a web UI plus the backend API behind it): the contract, parallel-batch, and review-routing rules live in [`references/multi-component.md`](references/multi-component.md). Read it at Phase 1, the moment the design has more than one component — before spawning any builder. Single-component runs never need it.
+
 ## Phase 0 — Requirements (don't skip)
 
 Establish before designing. Infer from context and the codebase where possible; ask the user only what genuinely can't be inferred, batched into one question round:
@@ -21,35 +23,34 @@ Establish before designing. Infer from context and the codebase where possible; 
 
 ## Phase 1 — Right-size the design
 
-Routing rubric lives in the `eng-ladder` skill — that table is the source of truth.
+Routing rubric lives in the `sde-agents:eng-ladder` skill — that table is the source of truth.
 
 - Single component, low blast radius → design inline at SDE level: a few sentences of plan plus stated assumptions. No ceremony.
 - Multiple services, a data migration, or hard-to-reverse choices → spawn the `sde-agents:principal-engineer` agent for a short design doc; surface any one-way doors to the user before proceeding.
 - Platform-shaping work (many teams or systems, multi-year consequences) → spawn `sde-agents:distinguished-architect` first.
 
-For a **multi-component project** (e.g. a web UI plus its backend API), the design must include the interface contract as a **repo artifact with concrete example payloads** — endpoints, request/response JSON, error cases. It cannot be skipped, and it is **living**: a builder whose implementation diverges updates it in the same change, and parallel builders cite the artifact — never each other's code. During a parallel batch the contract has **one named owner**; every other builder is read-only on it and routes change requests through the orchestrator, contract changes are a required review-packet slot, and the orchestrator propagates them to every affected builder at once.
-
-The design's build order is a **dependency graph, not a sequence**: serialize only what genuinely blocks — walking skeleton, then the safety core — and group every independent slice into parallel batches by file ownership. A numbered slice list where each item waits on the previous is a planning bug unless the dependencies are real.
-
-If the tool has a web UI, a static mockup (artifact, key screens, light + dark) gets user approval **before any framework code** — the approved mockup is the visual spec and a named gate in the cadence contract.
+A multi-component design must also satisfy the contract-artifact, dependency-graph, and mockup-gate rules in [`references/multi-component.md`](references/multi-component.md).
 
 Agents do not inherit this conversation. Pass each one full context: the Phase 0 requirements, repo layout and conventions, and constraints.
 
 ## Phase 2 — Build
 
-Spawn `sde-agents:sde-fullstack` with the requirements, the design, exact repo paths and conventions, and the success criterion. Every spawn prompt states a **checkpoint contract**: the boundary to run to, the acceptance criteria the builder self-verifies against, and the leash — reversible decisions are the builder's to make and log, and it returns only at the boundary or on a material fork. For trivial scope, implement directly while holding to the same SRE-lens standards (observability, timeouts, idempotency, dry-run for destructive actions).
+1. **Spawn** `sde-agents:sde-fullstack` with the requirements, the design, exact repo paths and conventions, and the success criterion. The builder preloads both craft skills — do not name a skill, hand it a path, or tell it to load anything. For trivial scope, implement directly while holding to the same SRE-lens standards (observability, timeouts, idempotency, dry-run for destructive actions).
+2. **State a checkpoint contract in every spawn prompt**: the boundary to run to, the acceptance criteria the builder self-verifies against, and the leash — reversible decisions are the builder's to make and log; it returns only at the boundary or on a material fork.
+3. **Accept a builder's review packet on its evidence** (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification.
+4. **Answer status questions from the progress file** declared in the project context (portable default: `.agents/PROGRESS.md`) — never interrupt a running builder to ask.
+5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds — a third means the diagnosis is wrong; switch to the `sde-agents:root-cause` method.
 
-For multi-component projects: **walking skeleton first** (the thinnest end-to-end slice running against the real contract), fully verified — it proves the contract. Then **triage by blast radius**: safety-critical components (anything that can corrupt production state) keep per-slice verification and review-as-gate; everything else builds in **batches**, verified once at the batch boundary. After the skeleton, launch each batch's builders **in one message** so they run concurrently — one `sde-agents:sde-fullstack` per component with **disjoint file ownership**, each citing the contract artifact (`sde-agents:sde-fullstack` preloads both craft skills, so builders arrive with them already in context — do not name a skill, hand them a path, or tell them to load anything). Mechanical scope (scaffolding, boilerplate, packaging, docs) may run on a faster model (spawn-time model override; sonnet by default); safety-critical code and all reviews stay at full effort. Prefer messaging a running builder with scope changes over killing and relaunching; if one is stopped early, inventory its partial writes and have the successor verify-and-finish rather than redo.
-
-Accept a builder's review packet on its evidence (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification. Answer status questions from the progress file declared in the project context (portable default: `.agents/PROGRESS.md`) — never interrupt a running builder to ask.
-
-Failure path: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds — a third means the diagnosis is wrong; switch to root-cause. Files a reviewer skipped as mid-edit are queued for the next review, never dropped. When routing a review fix on **safety-core** code, hand the builder the defect and the acceptance test the fix must satisfy — **not the implementation**. A fix you dictate is only as good as your own untested reasoning, and it collapses the builder into a typist whose verification is no longer independent of yours. Dictate only genuinely mechanical fixes.
-
-For builds with three or more parallel batches, offer the user workflow orchestration (their opt-in) — it removes the orchestrator as the serial hop between build finishing and review starting.
+Multi-component builds add the walking-skeleton, blast-radius-batching, and builder-fleet rules from [`references/multi-component.md`](references/multi-component.md).
 
 ## Phase 3 — Review
 
-Spawn `sde-agents:code-reviewer` with the mission and **threat model** (from the environment card), the **contract artifact** (served shapes are checked against it), and focus files seeded from the builders' "Check first" packet entries. **Seed the gate with those and nothing more — never your diagnosis or your fix.** If you already suspect a specific defect, record it in the plan file and let the reviewer report independently first, then reconcile: a reviewer handed your hypothesis can only confirm it, and you will not be able to tell a discovering gate from an echoing one. Read the reviewer's independent P0/P1 count — a gate that returns zero independent findings has not been exercised, and your own suspicions were the only net. Reviews are read-only — run them **concurrently with the next build phase** unless that phase builds on the reviewed code; only safety-critical code treats review as a gate. Route P0/P1 fixes to whichever builder owns the files; report P2/P3 to the user rather than silently applying. For anything network-exposed or auth-bearing, add a security review before deploy artifacts ship. **The gate keys on the file, not the size of the diff**: any later edit to a safety-critical file — including a one-line "nit" the orchestrator is tempted to apply directly — re-enters review before it ships. "Too small to review" is how an unreviewed change lands in exactly the code the gate exists to protect.
+1. **Spawn** `sde-agents:code-reviewer` with the mission and **threat model** (from the environment card) and focus files seeded from the builders' "Check first" packet entries. **Seed the gate with those and nothing more — never your diagnosis or your fix.** If you already suspect a specific defect, record it in the plan file and let the reviewer report independently first, then reconcile: a reviewer handed your hypothesis can only confirm it, and you will not be able to tell a discovering gate from an echoing one.
+2. **Read the reviewer's independent P0/P1 count** — a gate that returns zero independent findings has not been exercised, and your own suspicions were the only net.
+3. **Reviews are read-only** — run them concurrently with the next build phase unless that phase builds on the reviewed code; only safety-critical code treats review as a gate.
+4. **Route fixes**: P0/P1 to whichever builder owns the files; report P2/P3 to the user rather than silently applying. Files a reviewer skipped as mid-edit are queued for the next review, never dropped. On **safety-core** code, hand the builder the defect and the acceptance test the fix must satisfy — **not the implementation**. A fix you dictate is only as good as your own untested reasoning, and it collapses the builder into a typist whose verification is no longer independent of yours. Dictate only genuinely mechanical fixes.
+5. **The gate keys on the file, not the size of the diff**: any later edit to a safety-critical file — including a one-line "nit" you are tempted to apply directly — re-enters review before it ships. "Too small to review" is how an unreviewed change lands in exactly the code the gate exists to protect.
+6. For anything network-exposed or auth-bearing, add a **security review** before deploy artifacts ship.
 
 ## Phase 4 — Verify and hand over
 
@@ -59,4 +60,4 @@ Run the tool and execute the **mission transaction from the environment card, ve
 
 ## Phase 5 — Deploy and onboard
 
-If the tool lands on the lab, hand off to `sde-agents:homelab-platform` with the `service-onboard` checklist and the tool's runbook as acceptance criteria — built-but-never-onboarded is not done. Name this gate in the Phase 0 cadence contract.
+If the tool lands on the lab, hand off to `sde-agents:homelab-platform` with the `sde-agents:service-onboard` checklist and the tool's runbook as acceptance criteria — built-but-never-onboarded is not done. Name this gate in the Phase 0 cadence contract.
