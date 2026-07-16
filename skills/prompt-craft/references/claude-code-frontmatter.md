@@ -40,14 +40,19 @@ is not guaranteed to fail loudly, so a typo can silently drop what it configured
 ## Skills
 
 Locations: `skills/<name>/SKILL.md` in a plugin; `.claude/skills/<name>/SKILL.md` project-level.
-Precedence is the **reverse** of agents: a personal (user-level) skill overrides a project-level one
-of the same name — full order enterprise → personal → project → plugin → bundled.
+Precedence for **same-named non-namespaced skills** is the **reverse** of agents: a personal
+(user-level) skill overrides a project-level one — enterprise → personal → project → bundled. Plugin
+skills are namespaced (`plugin:name`, e.g. `sde-agents:service-onboard`) and don't participate in
+that chain — a same-named project skill does not shadow them.
 
 Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior switches:
 
-- `disable-model-invocation: true` — side-effect skills (deploy, send, commit): user-only via
-  `/name`, the description is removed from the model's context entirely, and the skill cannot be
-  preloaded via an agent's `skills:` field.
+- `disable-model-invocation: true` — intended for side-effect skills (deploy, send, commit):
+  user-only via `/name`, description removed from the model's context, and not preloadable via an
+  agent's `skills:` field. **Caveat: this flag is currently ignored for plugin-shipped skills**
+  (anthropics/claude-code#22345) — a plugin skill so marked still loads into context and stays
+  model-invocable. Set it anyway (correct once fixed, and it documents intent), but do not treat it
+  as an enforced boundary in a plugin; make the skill's own content defer authority instead.
 - `user-invocable: false` — background-knowledge skills, hidden from the `/` menu.
 - `allowed-tools` **grants** (pre-approves, no permission prompt) while the skill is active — it
   does **not** restrict availability. Takes bare tool names or permission-rule specifiers

@@ -1,6 +1,6 @@
 ---
 name: frontend-craft
-description: Design-forward, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft.
+description: Design-forward, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. For the backend or service layer, use sde-agents:backend-craft; for a full multi-file feature with tests, use sde-agents:sde-fullstack.
 argument-hint: [the UI to build or change]
 ---
 

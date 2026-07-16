@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 The checklist that keeps the lab from rotting. Work through every step in order; when one is skipped, say so explicitly and why — silence reads as "done."
 
-`sde-agents:homelab-platform` owns change authority for everything below. Steps 2–5 apply config, storage, proxy, DNS, and TLS to a live lab: classify each apply under that agent's tiers and get the approval it requires. This checklist grants no permission of its own — a step being on the list is not approval to run it.
+`sde-agents:homelab-platform` owns change authority for everything below, and this checklist runs **under** that agent — it is not self-sufficient standalone. Steps 2–5 apply config, storage, proxy, DNS, and TLS to a live lab: classify each apply under homelab-platform's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change, needs approval · 3 destructive/access-path, needs approval + proven recovery) and get the approval each requires. This checklist grants no permission of its own — a step being on the list is not approval to run it. Whichever way you arrived here (homelab-platform reads it by path; it may also be model-invocable as a plugin skill), the authority stays with homelab-platform: if you reached it without that agent's tier discipline, stop and route through it.
 
 1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names).
 2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`); restart policy; health check; resource limits.

@@ -1,6 +1,6 @@
 ---
 name: sre-tool
-description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify — with spawned builders and reviewers. Use when building a new operator-facing or SRE tool — a dashboard, CLI, automation service, monitor, or internal web tool — or substantially changing one, when the work is big enough to run the full engineering ladder from requirements through review. For a focused change to one layer, use sde-agents:backend-craft or sde-agents:frontend-craft.
+description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify — with spawned builders and reviewers. Use when building a new operator-facing or SRE tool — a dashboard, CLI, automation service, monitor, or internal web tool — or substantially changing one, when the work is big enough to run the full engineering ladder from requirements through review. For a feature, fix, or refactor inside an existing codebase rather than a net-new tool, use sde-agents:sde-fullstack; for a focused change to one layer, use sde-agents:backend-craft or sde-agents:frontend-craft.
 argument-hint: [what the tool should do]
 ---
 
@@ -39,7 +39,7 @@ Agents do not inherit this conversation. Pass each one full context: the Phase 0
 2. **State a checkpoint contract in every spawn prompt**: the boundary to run to, the acceptance criteria the builder self-verifies against, and the leash — reversible decisions are the builder's to make and log; it returns only at the boundary or on a material fork.
 3. **Accept a builder's review packet on its evidence** (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification.
 4. **Answer status questions from the progress file** declared in the project context (portable default: `.agents/PROGRESS.md`) — never interrupt a running builder to ask.
-5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds — a third means the diagnosis is wrong; switch to the `sde-agents:root-cause` method.
+5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds — a third means the diagnosis is wrong; switch to the `sde-agents:root-cause` method. Record these counts in the plan file next to the cadence contract — like the contract, they must survive compaction, or a mid-pipeline compaction silently resets the cap.
 
 Multi-component builds add the walking-skeleton, blast-radius-batching, and builder-fleet rules from [`references/multi-component.md`](references/multi-component.md).
 
@@ -47,10 +47,10 @@ Multi-component builds add the walking-skeleton, blast-radius-batching, and buil
 
 1. **Spawn** `sde-agents:code-reviewer` with the mission and **threat model** (from the environment card) and focus files seeded from the builders' "Check first" packet entries. **Seed the gate with those and nothing more — never your diagnosis or your fix.** If you already suspect a specific defect, record it in the plan file and let the reviewer report independently first, then reconcile: a reviewer handed your hypothesis can only confirm it, and you will not be able to tell a discovering gate from an echoing one.
 2. **Read the reviewer's independent P0/P1 count** — a gate that returns zero independent findings has not been exercised, and your own suspicions were the only net.
-3. **Reviews are read-only** — run them concurrently with the next build phase unless that phase builds on the reviewed code; only safety-critical code treats review as a gate.
+3. **Reviews are read-only** — run them concurrently with the next build phase unless that phase builds on the reviewed code; only **safety-critical** code (anything that can corrupt production state, delete data, or breach the threat model) treats review as a gate.
 4. **Route fixes**: P0/P1 to whichever builder owns the files; report P2/P3 to the user rather than silently applying. Files a reviewer skipped as mid-edit are queued for the next review, never dropped. On **safety-core** code, hand the builder the defect and the acceptance test the fix must satisfy — **not the implementation**. A fix you dictate is only as good as your own untested reasoning, and it collapses the builder into a typist whose verification is no longer independent of yours. Dictate only genuinely mechanical fixes.
 5. **The gate keys on the file, not the size of the diff**: any later edit to a safety-critical file — including a one-line "nit" you are tempted to apply directly — re-enters review before it ships. "Too small to review" is how an unreviewed change lands in exactly the code the gate exists to protect.
-6. For anything network-exposed or auth-bearing, add a **security review** before deploy artifacts ship.
+6. For anything network-exposed or auth-bearing, add a **security review** before deploy artifacts ship — a second `sde-agents:code-reviewer` pass seeded with a security-only threat model (or the CLI's built-in `/security-review`), kept independent of the correctness review.
 
 ## Phase 4 — Verify and hand over
 

@@ -19,7 +19,8 @@ pattern → the principal altitude.
 1. Restate the task + acceptance criteria in one line.
 2. Find the nearest existing example of this kind of change and mirror it (structure, naming,
    error handling, tests). Load `sde-agents:backend-craft` or `sde-agents:frontend-craft` for
-   the layer you're touching.
+   the layer you're touching — via the `Skill` tool if you hold it, else read the file by path
+   (`${CLAUDE_PLUGIN_ROOT}/skills/<name>/SKILL.md`).
 3. Implement the **smallest correct change**. No new abstractions for a single caller.
 4. Cover edge cases: empty/null/zero/negative, boundaries, error paths, the failure you'd
    actually hit in prod.

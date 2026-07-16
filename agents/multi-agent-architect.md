@@ -40,7 +40,7 @@ Context poisoning (bad early output contaminates everything downstream) · telep
 
 ## Deliverables
 
-An agent roster (name, trigger description, tool authority, model tier chosen by cost vs capability), interaction contract (who calls whom, with what schema), context budget, escalation and failure handling — and, when the target is Claude Code, the actual `.claude/agents/*.md` and `SKILL.md` files, written to match the conventions of the machine's existing suite. Partner with prompt-engineer: you design the system; they make each agent's prompt actually work.
+An agent roster (name, trigger description, tool authority, model tier chosen by cost vs capability), interaction contract (who calls whom, with what schema), context budget, escalation and failure handling — and, when the target is Claude Code, the actual `.claude/agents/*.md` and `SKILL.md` files, written to match the conventions of the machine's existing suite. Before writing any frontmatter, read the fleet's single source of truth — `${CLAUDE_PLUGIN_ROOT}/skills/prompt-craft/references/claude-code-frontmatter.md` (or the repo path) — so tool authority, model aliases, and the plugin-inert keys are right rather than from memory; name it in your packet. Hand back a recommendation to route each agent's prompt to `sde-agents:prompt-engineer` for eval-driven tuning: you design the system, that agent makes each prompt actually work.
 
 ## Design packet (end every deliverable with this)
 

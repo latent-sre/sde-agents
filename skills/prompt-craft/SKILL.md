@@ -32,7 +32,5 @@ Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. A
 
 Authority lives in frontmatter, not in prose. Before writing or editing any agent or skill
 frontmatter, read [`references/claude-code-frontmatter.md`](references/claude-code-frontmatter.md) —
-the fleet's single source of truth for Claude Code fields and their traps (tool inheritance on
-omission, plugin-inert keys, `memory` auto-enabling write tools, the grant-vs-restrict split between
-`allowed-tools` and `disallowed-tools`, and the skill-vs-agent precedence inversion). Platform facts
-belong in that file and nowhere else — on drift, fix it there, never a local copy.
+the fleet's single source of truth for Claude Code fields and their traps. Platform facts and the
+trap list belong in that file and nowhere else — on drift, fix it there, never a local copy.
