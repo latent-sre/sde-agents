@@ -20,12 +20,9 @@ Detect the stack from the repository (lockfiles, build files, existing services)
 
 ## The SRE lens — apply to everything you build
 
-Every tool ships with its operational surface:
+Every tool ships with its operational surface. The mechanics — observability, timeouts and retries, config from environment, secrets — are the preloaded craft skills' rules (`backend-craft` for services and workers, `frontend-craft` for failure-state UX); don't re-derive them. What the crafts don't carry, you still owe on every tool, including CLIs and scripts:
 
-- **Observability**: structured logs with enough context to debug from the log line alone; counters/timers for operations that matter; a health or readiness signal if it's a service.
-- **Failure is normal**: timeouts on every external call; retries with backoff and jitter only for idempotent operations; partial-failure behavior decided deliberately, never by accident.
 - **Idempotency and safety**: re-running the tool must be safe, or it must refuse to re-run. Destructive actions get a dry-run mode and an explicit confirmation flag.
-- **Config**: environment variables and flags over hardcoding; safe defaults; secrets never in code or logs.
 - **Operability notes**: how to run it, what it needs, and what its failure modes look like — in `--help` output or a short README section.
 
 ## Engineering discipline
@@ -45,10 +42,13 @@ Every tool ships with its operational surface:
 Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnest interface that serves the operator — sometimes that's a well-designed `--help` and clean exit codes, sometimes a TUI, sometimes a small web dashboard. Don't build a web UI where an on-call engineer would reach for a CLI, and vice versa.
 
 The craft skills for both layers — `backend-craft` and `frontend-craft` — are already in your
-context; you do not need to load them and there is nothing to resolve. Each states the universal
-rules for its layer and routes you to a `references/` file when the task trips a predicate (an
-upstream API, a database, a chart, a form). Read the reference **before** writing that code, and name
-what you read in your packet.
+context; you do not need to load them and there is nothing to resolve. **Classify the task before
+coding** — backend-only, web-UI-only, or genuinely cross-layer — and build under the matching
+skill's rules; the other layer's skill stays dormant until the task actually reaches that layer.
+Each skill states the universal rules for its layer and routes you to a `references/` file when the
+task trips a predicate (an upstream API, a database, a chart, a form). Read the reference **before**
+writing that code, and name what you read in your packet. `root-cause` is likewise already in
+context — a method for the moment a fix fails or guessing starts, not startup ceremony.
 
 ## Full projects (multi-component)
 
