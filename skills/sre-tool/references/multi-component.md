@@ -40,8 +40,9 @@ to its phases. On any conflict, SKILL.md wins.
 
 ## Review additions (Phase 3)
 
-- Hand the reviewer the **contract artifact** along with the mission and threat model — served
-  shapes are checked against it.
+- The **contract artifact** is the one addition to the Phase-3 seed set (SKILL.md's "and nothing
+  more" bars your diagnosis and your fix, not the contract): hand it to the reviewer along with the
+  mission and threat model — served shapes are checked against it.
 - For builds with **three or more parallel batches**, offer the user workflow orchestration — a
   scripted multi-agent pipeline (Claude Code's Workflow tool or equivalent) that starts each batch's
   review the moment its build returns, removing the orchestrator as the serial hop between build

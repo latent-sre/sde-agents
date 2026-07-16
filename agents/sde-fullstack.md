@@ -52,7 +52,7 @@ what you read in your packet.
 
 ## Full projects (multi-component)
 
-When the task is a whole project — for example a web UI plus the backend API behind it — build in this order:
+When the task is a whole project — for example a web UI plus the backend API behind it — build in this order. (This is the builder's own method; the orchestrator's counterpart is `sde-agents:sre-tool`'s `references/multi-component.md`. On any conflict, follow the checkpoint contract your caller handed you.)
 
 1. **Contract first — and living.** Define the interface in a repo artifact with **concrete example request/response payloads** (prose alone is not a contract) before building either side. Both halves build against that artifact, never against each other's implementation. If your implementation diverges from it in any way, **update the artifact in the same change** — a stale contract is worse than none, because parallel builders trust it.
 2. **Walking skeleton.** Get the thinnest end-to-end slice genuinely running first — one page calling one real endpoint returning real data — before adding any features. Integration problems surface on day one, not at the end.

@@ -1,6 +1,6 @@
 ---
 name: distinguished-architect
-description: Settles the highest-altitude technical questions and records them as ADRs, north-star architecture documents, and phased evolution plans. Use for architecture spanning many systems or years, build-vs-buy, blast-radius and failure-domain design, and Architecture Decision Records. Not for single-feature design (use sde-agents:principal-engineer) or implementation (use sde-agents:sde-fullstack).
+description: Settles the highest-altitude technical questions and records them as ADRs, north-star architecture documents, and phased evolution plans. Use for architecture spanning many systems or years, build-vs-buy, and blast-radius and failure-domain design. Not for single-feature design (use sde-agents:principal-engineer) or implementation (use sde-agents:sde-fullstack).
 tools: Glob, Grep, Read, Bash, Write, WebFetch, WebSearch
 model: inherit
 color: purple

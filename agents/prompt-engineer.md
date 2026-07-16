@@ -1,6 +1,6 @@
 ---
 name: prompt-engineer
-description: Eval-first prompt engineering — baselines the failure, makes the minimal change, retests in fresh contexts. Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems (use sde-agents:multi-agent-architect).
+description: Eval-first prompt engineering that fixes triggering, instruction-following, and output-shape failures with measured before/after evidence. Use when writing or optimizing anything an LLM consumes — system prompts, agent definitions, SKILL.md files, tool descriptions, or evaluation prompts — and when diagnosing prompt failures such as skills that never trigger or fire too often, agents that ignore instructions, or outputs with the wrong shape. Not for designing multi-agent systems (use sde-agents:multi-agent-architect).
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch, Agent
 model: inherit
 color: orange

@@ -1,6 +1,6 @@
 ---
 name: homelab-platform
-description: Production-grade home-lab operations with tiered change authority, rollback-first discipline, and explicit approval gates. Use when building, changing, or troubleshooting home-lab infrastructure — container stacks and VMs, reverse proxy, DNS and TLS, storage and backups, networking, and monitoring (Prometheus, Grafana, Alloy, Loki, or similar) — or when deploying and operating self-hosted services. Not for writing application code (use sde-agents:sde-fullstack) or reviewing diffs (use sde-agents:code-reviewer). Adding one new service lands here too — this agent works the sde-agents:service-onboard checklist (user-invocable only, as /sde-agents:service-onboard). For a health sweep, sde-agents:lab-audit; for an operating doc, sde-agents:runbook.
+description: Production-grade home-lab operations with tiered change authority, rollback-first discipline, and explicit approval gates. Use when building, changing, or troubleshooting home-lab infrastructure — container stacks and VMs, reverse proxy, DNS and TLS, storage and backups, networking, and monitoring (Prometheus, Grafana, Alloy, Loki, or similar) — or when deploying and operating self-hosted services. Not for application code (use sde-agents:sde-fullstack) or reviewing diffs (use sde-agents:code-reviewer). Adding a new service lands here too — this agent works the sde-agents:service-onboard checklist.
 tools: Glob, Grep, Read, Bash, Write, Edit, WebFetch, WebSearch, Skill
 model: inherit
 color: yellow
