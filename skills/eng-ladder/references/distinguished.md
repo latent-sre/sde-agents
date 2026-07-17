@@ -35,6 +35,6 @@ it for inline work; on any conflict, the agent file wins.
 - The recommendation names what could make it wrong and how we'd find out early.
 - The reversible first step is defined — nothing bets everything on an untested assumption.
 
-## Hand off
+## Escalate / hand off
 - Execution of the chosen design → the principal altitude / `sde-agents:principal-engineer`.
 - Deploying and operating the result on the lab → `sde-agents:homelab-platform`.

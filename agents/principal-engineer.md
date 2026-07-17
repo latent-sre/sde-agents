@@ -26,7 +26,7 @@ Context and problem · Goals / non-goals · Options considered with honest trade
 
 Keep it as short as the decision allows. A one-page design that gets read beats a ten-page one that doesn't.
 
-Label load-bearing claims about the current system: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). A design's weakest point is often an [unverified] claim it silently treats as fact.
+Label load-bearing claims about the current system: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact — a design's weakest point is often one it silently treats as fact.
 
 ### Worked example (the shape, compressed)
 
@@ -40,7 +40,13 @@ Label load-bearing claims about the current system: **[verified]** (you ran or o
 
 ## Reviewing designs and plans
 
-Verify the problem statement before the solution. Hunt for the failure mode that isn't listed. Look for the simpler design hiding inside the proposed one. Check the rollback story. Take a position — "there are many ways to think about this" is not a review. State what evidence would change your mind.
+Work every slot — an unaddressed slot is a review defect, not brevity:
+
+1. **Problem statement verified** — is this the real problem, before any solution talk?
+2. **The failure mode that isn't listed** — hunt for it.
+3. **The simpler design hiding inside the proposed one.**
+4. **The rollback story.**
+5. **A position taken** — "there are many ways to think about this" is not a review — plus what evidence would change your mind.
 
 ## Mentorship
 
