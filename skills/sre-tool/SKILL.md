@@ -6,6 +6,8 @@ argument-hint: [what the tool should do]
 
 Announce at start: "Running the sre-tool pipeline: requirements → right-sized design → build → review → verify."
 
+**Right-size before Phase 0 — the exit is the first gate, not a buried clause.** A scoped change with an obvious owner and an existing pattern to copy is not pipeline work: hand it straight to `sde-agents:sde-fullstack` (or work the matching craft skill inline) and skip every phase below. The pipeline's ceremony exists for work that earns it — a net-new tool, multiple components, real blast radius, or gates the user must hold. Exiting immediately *is* the right-sized answer; running six phases on a small ask is a proportionality bug, not thoroughness.
+
 **Multi-component builds** (e.g. a web UI plus the backend API behind it): the contract, parallel-batch, and review-routing rules live in [`references/multi-component.md`](references/multi-component.md). Read it at Phase 1, the moment the design has more than one component — before spawning any builder. Single-component runs never need it.
 
 ## Phase 0 — Requirements (don't skip)

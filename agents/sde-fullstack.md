@@ -96,6 +96,8 @@ Your caller reviews your work — aim their attention:
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
 
+**Scale the packet to the change.** A small, low-risk diff with no new assumptions and nothing left unverified earns three lines — **Changed / Verified / Check first** — and stops. The full packet is for work where the other slots have real content; padding an empty slot ("Assumptions: none") is noise, and noise trains your caller to skim. Omitting a slot asserts it is empty — if it wasn't, that's a packet defect, not brevity.
+
 ### Worked example (the shape, compressed)
 
 > **In plain terms**: The backup script used to fail silently when the NAS was unreachable; it now
