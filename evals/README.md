@@ -82,7 +82,33 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Seeded with the tightest, highest-risk cluster (`prompt-tooling`: `prompt-engineer` vs
-`prompt-craft`). Extend by adding a `routing/<cluster>.json` for the other overlaps
-(`sde-fullstack` vs the craft skills, `homelab-platform` vs `service-onboard`/`lab-audit`/`runbook`,
-the eng-ladder rungs) using the same shape.
+Four clusters are seeded — every overlap this README names:
+
+| Cluster file | Members | Guards |
+|---|---|---|
+| `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
+| `homelab-ops.json` | homelab-platform, service-onboard, lab-audit, runbook | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
+| `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
+
+`homelab-ops` is a **baseline of the current members**, to be re-run and diffed after the planned
+`incident` / `restore-drill` / `upgrade-campaign` skills land (see
+`docs/skills-modernization-plan.md`). A captured baseline lives under `baselines/`.
+
+### Measurement caveat: skills fire, agents must be delegated to
+
+This runner grades on which component the headless session actually **invoked** — a Skill tool call
+(a skill fired) or an Agent/Task spawn (a subagent fired). Those are not equally likely. A skill is
+invoked inline in the main session; an **agent** only registers when the main session chooses to
+**delegate** to it, and a one-shot `claude -p` session tends to just start doing the work (often with
+`Bash`) rather than spawn a subagent — so **agent positives systematically under-fire here relative
+to skill positives**, and a low agent-positive rate is partly a property of headless one-shot mode,
+not only of the description. Read the clusters accordingly:
+
+- **Skill-heavy clusters** (`prompt-tooling`, the skill positives of `homelab-ops`) measure routing
+  cleanly.
+- **Agent positives** (`homelab-platform`, the `ladder` and `craft-vs-fullstack` agent members) are
+  a weaker signal one run at a time; trust the **negatives** (over-trigger is a real defect at any
+  rate) and **regressions across runs** over an absolute agent-positive rate.
+- The native `claude plugin eval` (see below) delegates properly and will tighten the agent signal;
+  these case files migrate to it unchanged.

@@ -1,0 +1,234 @@
+{
+  "cluster": "homelab-ops",
+  "runs_per_case": 3,
+  "members": [
+    "homelab-platform",
+    "lab-audit",
+    "runbook",
+    "service-onboard"
+  ],
+  "summary": {
+    "passed": 11,
+    "total": 15
+  },
+  "cases": [
+    {
+      "id": "pos-add-service",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "add-service"
+      ],
+      "passed": false,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-onboard-standardize",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "standardize"
+      ],
+      "passed": false,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-troubleshoot-proxy",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "troubleshoot"
+      ],
+      "passed": false,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-pin-and-restart",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "change"
+      ],
+      "passed": false,
+      "cluster_fire_rate": 0.333,
+      "correct_rate": 0.333,
+      "detail": "expected ['homelab-platform'] fired in 1/3 runs",
+      "also_fired": [],
+      "errors": [
+        "exit 1: "
+      ]
+    },
+    {
+      "id": "pos-audit-whats-wrong",
+      "polarity": "positive",
+      "tags": [
+        "lab-audit",
+        "sweep"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['lab-audit'] fired in 3/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-audit-security",
+      "polarity": "positive",
+      "tags": [
+        "lab-audit",
+        "security-sweep"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['lab-audit'] fired in 3/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-runbook-write",
+      "polarity": "positive",
+      "tags": [
+        "runbook",
+        "write-doc"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['runbook'] fired in 3/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "pos-runbook-update",
+      "polarity": "positive",
+      "tags": [
+        "runbook",
+        "update-doc"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['runbook'] fired in 3/3 runs",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "neg-app-feature",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "app-feature"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "neg-review-deploy",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "review"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "neg-debug-test",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "debug"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "errors": [
+        "exit 1: "
+      ]
+    },
+    {
+      "id": "neg-api-docs",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "api-docs"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "neg-lab-architecture",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "architecture"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "errors": []
+    },
+    {
+      "id": "neg-status-dashboard",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "frontend"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "frontend-craft"
+      ],
+      "errors": []
+    },
+    {
+      "id": "neg-prompt-fix",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "prompt-tooling"
+      ],
+      "passed": true,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "prompt-craft"
+      ],
+      "errors": []
+    }
+  ]
+}

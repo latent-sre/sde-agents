@@ -1,0 +1,112 @@
+{
+  "cluster": "craft-vs-fullstack",
+  "description": "Routing eval for the builder overlap: backend-craft and frontend-craft (single-layer craft skills) vs sde-fullstack (the cross-layer builder agent). This session re-drew the boundary as LAYER OWNERSHIP, not file count ('full multi-file feature' → sde-fullstack was replaced with 'spans layers end to end'), so these cases measure that edit. Positives name the acceptable builder(s); negatives share build/add/implement vocabulary but must route to a non-builder (reviewer, designer, lab, prompt tooling).",
+  "members": ["backend-craft", "frontend-craft", "sde-fullstack"],
+  "notes": "What this cluster can and cannot assert, given the deterministic grader (scripts/eval_routing.py): sde-fullstack PRELOADS backend-craft and frontend-craft via its skills: field, and preloaded skills are injected at startup, NOT invoked via the Skill tool — so they do NOT register as 'fired'. Only a direct Skill call (main session invokes a craft skill inline) or an Agent/Task spawn of sde-fullstack registers. A single-layer task legitimately routes to EITHER the craft skill or sde-fullstack, so single-layer positives accept both and the load-bearing assertions are: (a) cross-layer work routes to sde-fullstack (pos-fullstack-*), and (b) build vocabulary does NOT drag review/design/lab/prompt requests onto a builder (the negatives). Fine-grained backend-vs-frontend contamination is not cleanly gradeable here and is left to output-quality review.",
+  "cases": [
+    {
+      "id": "pos-backend-pagination",
+      "prompt": "Add cursor-based pagination to the /events endpoint in our FastAPI service.",
+      "polarity": "positive",
+      "expect_fires": ["backend-craft", "sde-fullstack"],
+      "expected_output": "Focused backend change — backend-craft inline, or sde-fullstack if delegated. Either is a correct builder route; frontend-craft would be wrong.",
+      "tags": ["backend-craft", "single-layer"]
+    },
+    {
+      "id": "pos-backend-webhook",
+      "prompt": "Write a webhook receiver that verifies the signature, returns 202 fast, and dedupes by event id.",
+      "polarity": "positive",
+      "expect_fires": ["backend-craft", "sde-fullstack"],
+      "expected_output": "Inbound-webhook backend work — backend-craft's background-work reference territory.",
+      "tags": ["backend-craft", "single-layer"]
+    },
+    {
+      "id": "pos-backend-resiliency",
+      "prompt": "Add timeouts, retries with backoff and jitter, and a circuit breaker to our upstream Stripe client.",
+      "polarity": "positive",
+      "expect_fires": ["backend-craft", "sde-fullstack"],
+      "expected_output": "Consuming-APIs resiliency — squarely backend-craft.",
+      "tags": ["backend-craft", "single-layer"]
+    },
+    {
+      "id": "pos-frontend-table",
+      "prompt": "Build a sortable, filterable table view for the admin users page.",
+      "polarity": "positive",
+      "expect_fires": ["frontend-craft", "sde-fullstack"],
+      "expected_output": "A data-dense UI view — frontend-craft (data-views), or sde-fullstack. backend-craft would be wrong.",
+      "tags": ["frontend-craft", "single-layer"]
+    },
+    {
+      "id": "pos-frontend-form",
+      "prompt": "Add a settings form that validates on blur and warns before leaving with unsaved changes.",
+      "polarity": "positive",
+      "expect_fires": ["frontend-craft", "sde-fullstack"],
+      "expected_output": "Form UX — frontend-craft's forms reference.",
+      "tags": ["frontend-craft", "single-layer"]
+    },
+    {
+      "id": "pos-fullstack-crosslayer",
+      "prompt": "Build the admin dashboard end to end — the React UI and the API behind it — with tests.",
+      "polarity": "positive",
+      "expect_fires": ["sde-fullstack"],
+      "expected_output": "Genuinely cross-layer with tests — the sde-fullstack path (walking skeleton, vertical slices). This is the load-bearing positive for the layer-ownership boundary.",
+      "tags": ["sde-fullstack", "cross-layer"]
+    },
+    {
+      "id": "pos-fullstack-feature",
+      "prompt": "Implement user-configurable alert thresholds across the UI, the API, and the worker, with tests.",
+      "polarity": "positive",
+      "expect_fires": ["sde-fullstack"],
+      "expected_output": "A feature spanning three layers end to end — sde-fullstack.",
+      "tags": ["sde-fullstack", "cross-layer"]
+    },
+    {
+      "id": "neg-review",
+      "prompt": "Review this branch for correctness and security bugs before I merge.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "Reviewing a diff — code-reviewer, not a builder.",
+      "tags": ["near-miss", "review"]
+    },
+    {
+      "id": "neg-design-migration",
+      "prompt": "Design how to move our monolith's auth into a separate service without downtime.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "Cross-service design with a migration — principal-engineer. 'Move/build' shares vocabulary, but the hard part is the design, not the code.",
+      "tags": ["near-miss", "design"]
+    },
+    {
+      "id": "neg-lab-service",
+      "prompt": "Add Prometheus and Grafana to my home lab.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "Deploying self-hosted services — homelab-platform. 'Add' is shared vocabulary with a build task, but this is lab ops.",
+      "tags": ["near-miss", "lab"]
+    },
+    {
+      "id": "neg-debug",
+      "prompt": "This function returns the wrong total when the input list is empty. Find the bug.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "A debugging task — root-cause. Building is not the ask; diagnosis is.",
+      "tags": ["near-miss", "debug"]
+    },
+    {
+      "id": "neg-prompt",
+      "prompt": "Rewrite my agent's system prompt so it stops over-triggering on unrelated questions.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "Prompt tooling — prompt-craft / prompt-engineer, not a code builder.",
+      "tags": ["near-miss", "prompt-tooling"]
+    },
+    {
+      "id": "neg-adr",
+      "prompt": "Write an ADR comparing Postgres and DynamoDB for our new service and pick one.",
+      "polarity": "negative",
+      "expect_not_fires": ["backend-craft", "frontend-craft", "sde-fullstack"],
+      "expected_output": "A build-vs-adopt decision record — distinguished-architect / principal-engineer, not a builder.",
+      "tags": ["near-miss", "adr"]
+    }
+  ]
+}

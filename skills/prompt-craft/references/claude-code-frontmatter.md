@@ -25,7 +25,7 @@ Authority lives in frontmatter, not in prose — the fields that carry it:
 | `disallowedTools` | Denylist; applied before `tools` resolves. |
 | `permissionMode` | `default \| acceptEdits \| auto \| dontAsk \| bypassPermissions \| plan \| manual`. Ignored for plugin-shipped agents, so this fleet (a plugin) rejects the field outright — `validate_fleet.py` flags it as configuration that does not exist. |
 | `hooks` | Agent-scoped lifecycle hooks. Real at project/user scope, **inert in a plugin**. A plugin must instead ship `hooks/hooks.json`, which is session-wide, and scope the hook itself on the payload's `agent_type` — that is how this fleet guards `sde-agents:code-reviewer`'s `Bash`. |
-| `skills` | Preloads full skill content at startup — prefer this over putting `Skill` in `tools`. A `disable-model-invocation: true` skill **cannot** be preloaded; listing it configures nothing. |
+| `skills` | Preloads full skill content at startup — prefer this over putting `Skill` in `tools`. Don't list a `disable-model-invocation: true` skill here — the fleet's validator rejects it as policy. (Documented behavior is that such skills can't be preloaded; since that flag is unreliable in a plugin — see the caveat under Skills below — the fleet enforces the rule rather than depending on the runtime honoring it.) |
 | `model` | Aliases `haiku \| sonnet \| opus \| fable \| inherit`, or a full ID (`claude-opus-4-8`); defaults to `inherit`. Use an alias — this fleet rejects pins, which rot silently while an alias follows the upgrade. |
 | `memory` | `user \| project \| local`. **Setting it auto-enables Read, Write, and Edit** — never add it to a read-only agent (it would silently widen `sde-agents:code-reviewer`'s mandate). |
 

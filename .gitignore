@@ -1,15 +1,7 @@
+# Python bytecode caches (created by running scripts/*.py and tests)
 __pycache__/
-*.py[cod]
+*.pyc
 
-# Generated multi-agent audit output. Dated evidence, regenerable, and the eval
-# JSONs capture console output containing local absolute paths - not for a public repo.
-audit-results/
-
-# scripts/probe_plugin.py scratch: the throwaway repo it drives a real session against,
-# and the transcript it keeps only when a check fails.
-.probe-tmp/
-probe-transcript.jsonl
-
-# scripts/eval_routing.py output — regenerable benchmark.json per run, and the run
-# captures local paths/timing. The case files under evals/routing/ ARE committed.
-evals/results/
+# Transient routing-eval console logs; distilled results live in the baseline summary
+# and the machine-readable benchmark.json anchors.
+evals/baselines/**/*.log
