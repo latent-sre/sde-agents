@@ -27,11 +27,6 @@ pattern → the principal altitude.
 5. Write/extend tests; run them and the linter/formatter.
 6. Self-review the diff as the reviewer would; clean up before it goes to `sde-agents:code-reviewer`.
 
-## Done means
-- Meets acceptance criteria; tests pass and actually prove the behavior.
-- Matches surrounding conventions; no dead code, no debug leftovers.
-- You can explain every line — nothing pasted that you don't understand.
-
 ## Craft heuristics
 - **Make it work, make it right, make it fast — in that order.** Correct behavior under test
   first, clean up second; optimize only what you've *measured* to be slow.
@@ -39,7 +34,12 @@ pattern → the principal altitude.
   little duplication is cheaper than the *wrong* abstraction (hard to back out of).
 - Match the repo's commit convention — read the log before writing the message.
 
-## Escalate when
+## Done means
+- Meets acceptance criteria; tests pass and actually prove the behavior.
+- Matches surrounding conventions; no dead code, no debug leftovers.
+- You can explain every line — nothing pasted that you don't understand.
+
+## Escalate / hand off
 Escalating from the main loop means loading `references/principal.md` and continuing; a spawned
 agent instead reports the decision needed to its caller (per its agent file) — it never
 self-promotes.

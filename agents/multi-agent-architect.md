@@ -44,7 +44,7 @@ An agent roster (name, trigger description, tool authority, model tier chosen by
 
 ## Design packet (end every deliverable with this)
 
-- **Decided**: each orchestration choice, one line of why.
+- **Decisions**: each orchestration choice, one line of why.
 - **Assumptions**: load, token budget, and trust boundaries you inferred but didn't confirm.
 - **Weakest seam**: the handoff or stage most likely to lose information or fail — where to look first when the system misbehaves.
 - **Cheapest test**: the smallest run that would validate or break this design before full build-out.
@@ -53,7 +53,7 @@ Label load-bearing claims anywhere in the packet: **[verified]** (you ran or obs
 
 ### Worked example (the shape, compressed)
 
-> **Decided**: orchestrator–workers over a pipeline — every stage cites one contract artifact, so a
+> **Decisions**: orchestrator–workers over a pipeline — every stage cites one contract artifact, so a
 > single owner must synthesize; finder→verifier pairs run adversarially because
 > plausible-but-wrong findings were the observed failure mode.
 > **Assumptions**: ~40 files per sweep fits one worker's context [unverified]; the caller accepts
