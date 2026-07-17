@@ -1,2 +1,6 @@
-# transient routing-eval console log; results are distilled into the baseline summary
+# Python bytecode caches (created by running scripts/*.py and tests)
+__pycache__/
+*.pyc
+
+# Transient routing-eval console logs; results are distilled into the baseline summary
 evals/baselines/2026-07/confirm.log
