@@ -1,7 +1,9 @@
-<!-- Plan file — instantiate at the progress-file path (see the environment card) before Phase 1.
-     This is the pipeline's durable coordination record: conversation memory does not survive
-     compaction, so anything the pipeline must not forget lives HERE, not in the conversation.
-     Update slots as state changes; never delete history — strike through and append. -->
+<!-- Plan file — instantiate at the plan-file path (default .agents/plan.md) before Phase 1.
+     ORCHESTRATOR-OWNED, single writer: builders never write this file — their status flows through
+     their own progress shards (see the environment card), which the orchestrator reads. This is the
+     pipeline's durable coordination record: conversation memory does not survive compaction, so
+     anything the pipeline must not forget lives HERE, not in the conversation. Update slots as
+     state changes; never delete history — strike through and append. -->
 
 # Plan — <tool name>
 

@@ -62,7 +62,9 @@ mission block in whichever file Claude Code will actually load, and don't create
 next to an existing one.
 
 Long-running work should use the progress file declared by that project context. When none is declared,
-use `.agents/PROGRESS.md`. Progress files are coordination state, not a substitute for the final review
+use `.agents/PROGRESS.md` — and in a parallel batch, one shard per builder
+(`.agents/progress/<component>.md`), one writer per file, with the orchestrator's plan file
+(`.agents/plan.md`) owned by the orchestrator alone. Progress files are coordination state, not a substitute for the final review
 packet or committed documentation.
 
 ## The read-only guard

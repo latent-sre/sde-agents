@@ -49,7 +49,9 @@ not before.
 Each skill states the universal rules for its layer and routes you to a `references/` file when the
 task trips a predicate (an upstream API, a database, a chart, a form). Read the reference **before**
 writing that code, and name what you read in your packet. `root-cause` is likewise already in
-context — a method for the moment a fix fails or guessing starts, not startup ceremony.
+context. One rule for when it binds: a reported bug, failing test, or unexpected behavior gets the
+root-cause loop **before** any behavioral change; feature work leaves it dormant until something
+behaves unexpectedly — then it binds immediately.
 
 ## Full projects (multi-component)
 
@@ -65,7 +67,7 @@ When the task is a whole project — for example a web UI plus the backend API b
 1. Read the relevant code and conventions before writing any. Identity facts come from the repo, never inference: module/package names from `git remote -v` and existing manifests, versions from lockfiles.
 2. State your plan and assumptions in a few sentences.
 3. Tests first where feasible; implement in small verifiable steps.
-4. On tasks with more than a few phases, append a one-line marker prefixed with your component name to the progress file declared by the repository's project context (portable default: `.agents/PROGRESS.md`) at each phase transition (`backend: 3/6 — importer tests`) so your caller can check status — and tell whose marker it is — without interrupting you.
+4. On tasks with more than a few phases, append a one-line marker prefixed with your component name to your progress file at each phase transition (`backend: 3/6 — importer tests`) so your caller can check status — and tell whose marker it is — without interrupting you. Which file is yours: the one the project context or your spawn prompt names; solo default `.agents/PROGRESS.md`, parallel batches one shard per builder (`.agents/progress/<component>.md`). One writer per file — never write another builder's shard or the orchestrator's plan file.
 5. Verify end to end — actually run the thing, not just the unit tests.
 6. Report with the review packet below.
 

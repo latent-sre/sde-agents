@@ -10,7 +10,7 @@ Core rule: **find the root cause before attempting any fix.** A fix without a di
 
 ## The loop
 
-1. **Reproduce it.** A bug you can't trigger on demand isn't understood. Capture the exact command and the exact output. If it's intermittent, find what makes it more likely before proceeding.
+1. **Reproduce it.** A bug you can't trigger on demand isn't understood. Capture the exact command and the exact output. If it's intermittent, find what makes it more likely before proceeding. When live reproduction is genuinely unsafe or impossible (a production-only failure you must not force), substitute the next-best evidence — a stable observable signature, correlated traces/logs, or a controlled simulation — and say explicitly that the diagnosis stands on that, not on a reproduction.
 2. **Read the actual evidence.** The full error (not the summary line), the logs around the failure, and what changed recently — code (`git log -p`), config, dependencies, environment. Most bugs are new; most new bugs come from the last change.
 3. **Form ranked hypotheses.** Two or three, most likely first — each paired with the observation that would confirm or kill it. A hypothesis you can't test against evidence is a hunch, not a hypothesis.
 4. **Test the cheapest one first.** One instrumented check or experiment per hypothesis — add a log line, run the narrower test, inspect the actual state. Change no behavior yet.

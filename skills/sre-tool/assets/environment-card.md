@@ -11,7 +11,10 @@
 - **Ports**: <!-- required: every port the tool binds, and what owns each -->
 - **Module identity**: <!-- required: module/package name from `git remote -v` + manifests, never inferred -->
 - **Credentials**: <!-- required: where secrets live (env file path, store) — never the values -->
-- **Progress file**: <!-- required: path builders append phase markers to; default .agents/PROGRESS.md -->
+- **Progress**: <!-- required: where builders append phase markers — one writer per file. Solo
+     builder: .agents/PROGRESS.md. Parallel batch: each builder appends only to its own shard,
+     .agents/progress/<component>.md. The orchestrator's plan file (default .agents/plan.md) is
+     separate and orchestrator-owned — builders never write it. -->
 
 ## Mission block
 
