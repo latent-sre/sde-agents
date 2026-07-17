@@ -2,5 +2,6 @@
 __pycache__/
 *.pyc
 
-# Transient routing-eval console logs; results are distilled into the baseline summary
-evals/baselines/2026-07/confirm.log
+# Transient routing-eval console logs; distilled results live in the baseline summary
+# and the machine-readable benchmark.json anchors.
+evals/baselines/**/*.log

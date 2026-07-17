@@ -1,78 +1,0 @@
-############### homelab-ops ###############
-cluster 'homelab-ops': 15 cases x 1 runs = 15 sessions (members: ['homelab-platform', 'lab-audit', 'runbook', 'service-onboard'], concurrency 6)
-
-  [1/15] runs complete  [2/15] runs complete  [3/15] runs complete  [4/15] runs complete  [5/15] runs complete  [6/15] runs complete  [7/15] runs complete  [8/15] runs complete  [9/15] runs complete  [10/15] runs complete  [11/15] runs complete  [12/15] runs complete  [13/15] runs complete  [14/15] runs complete  [15/15] runs complete
-
-case                         verdict     rate detail                                  
-------------------------------------------------------------------------------------------
-pos-add-service              FAIL          0% expected ['homelab-platform', 'service-onboard'] fired in 0/1 runs
-pos-onboard-standardize      FAIL          0% expected ['homelab-platform', 'service-onboard'] fired in 0/1 runs
-pos-troubleshoot-proxy       PASS        100% expected ['homelab-platform'] fired in 1/1 runs
-pos-pin-and-restart          FAIL          0% expected ['homelab-platform'] fired in 0/1 runs
-pos-audit-whats-wrong        FAIL          0% expected ['lab-audit'] fired in 0/1 runs
-pos-audit-security           FAIL          0% expected ['lab-audit'] fired in 0/1 runs
-pos-runbook-write            PASS        100% expected ['runbook'] fired in 1/1 runs
-pos-runbook-update           FAIL          0% expected ['runbook'] fired in 0/1 runs
-neg-app-feature              PASS        100% cluster fired in 0/1 runs (want 0)
-neg-review-deploy            PASS        100% cluster fired in 0/1 runs (want 0)
-neg-debug-test               PASS        100% cluster fired in 0/1 runs (want 0)
-neg-api-docs                 PASS        100% cluster fired in 0/1 runs (want 0)
-neg-lab-architecture         PASS        100% cluster fired in 0/1 runs (want 0)
-neg-status-dashboard         PASS        100% cluster fired in 0/1 runs (want 0)  [also fired: frontend-craft]
-neg-prompt-fix               PASS        100% cluster fired in 0/1 runs (want 0)  [also fired: prompt-craft]
-------------------------------------------------------------------------------------------
-9/15 passed  (positives: 2/8 routed correctly, negatives: 7/7 correctly did NOT fire)
-
-wrote evals/baselines/2026-07/homelab-ops/benchmark.json
-
-############### craft-vs-fullstack ###############
-cluster 'craft-vs-fullstack': 13 cases x 1 runs = 13 sessions (members: ['backend-craft', 'frontend-craft', 'sde-fullstack'], concurrency 6)
-
-  [1/13] runs complete  [2/13] runs complete  [3/13] runs complete  [4/13] runs complete  [5/13] runs complete  [6/13] runs complete  [7/13] runs complete  [8/13] runs complete  [9/13] runs complete  [10/13] runs complete  [11/13] runs complete  [12/13] runs complete  [13/13] runs complete
-
-case                         verdict     rate detail                                  
-------------------------------------------------------------------------------------------
-pos-backend-pagination       FAIL          0% expected ['backend-craft', 'sde-fullstack'] fired in 0/1 runs
-pos-backend-webhook          FAIL          0% expected ['backend-craft', 'sde-fullstack'] fired in 0/1 runs
-pos-backend-resiliency       FAIL          0% expected ['backend-craft', 'sde-fullstack'] fired in 0/1 runs
-pos-frontend-table           FAIL          0% expected ['frontend-craft', 'sde-fullstack'] fired in 0/1 runs
-pos-frontend-form            FAIL          0% expected ['frontend-craft', 'sde-fullstack'] fired in 0/1 runs
-pos-fullstack-crosslayer     FAIL          0% expected ['sde-fullstack'] fired in 0/1 runs
-pos-fullstack-feature        FAIL          0% expected ['sde-fullstack'] fired in 0/1 runs
-neg-review                   PASS        100% cluster fired in 0/1 runs (want 0)
-neg-design-migration         PASS        100% cluster fired in 0/1 runs (want 0)
-neg-lab-service              PASS        100% cluster fired in 0/1 runs (want 0)  [also fired: homelab-platform]
-neg-debug                    PASS        100% cluster fired in 0/1 runs (want 0)
-neg-prompt                   PASS        100% cluster fired in 0/1 runs (want 0)
-neg-adr                      PASS        100% cluster fired in 0/1 runs (want 0)
-------------------------------------------------------------------------------------------
-6/13 passed  (positives: 0/7 routed correctly, negatives: 6/6 correctly did NOT fire)
-
-wrote evals/baselines/2026-07/craft-vs-fullstack/benchmark.json
-
-############### ladder ###############
-cluster 'ladder': 12 cases x 1 runs = 12 sessions (members: ['distinguished-architect', 'eng-ladder', 'principal-engineer', 'sde-fullstack'], concurrency 6)
-
-  [1/12] runs complete  [2/12] runs complete  [3/12] runs complete  [4/12] runs complete  [5/12] runs complete  [6/12] runs complete  [7/12] runs complete  [8/12] runs complete  [9/12] runs complete  [10/12] runs complete  [11/12] runs complete  [12/12] runs complete
-
-case                         verdict     rate detail                                  
-------------------------------------------------------------------------------------------
-pos-builder-scoped           FAIL          0% expected ['sde-fullstack'] fired in 0/1 runs
-pos-builder-bugfix           FAIL          0% expected ['sde-fullstack'] fired in 0/1 runs
-pos-principal-migration      FAIL          0% expected ['principal-engineer'] fired in 0/1 runs
-pos-principal-review-design  FAIL          0% expected ['principal-engineer'] fired in 0/1 runs
-pos-distinguished-buildbuy   FAIL          0% expected ['distinguished-architect'] fired in 0/1 runs
-pos-distinguished-adr        FAIL          0% expected ['distinguished-architect'] fired in 0/1 runs
-    ! run error: timed out after 75s (partial transcript graded)
-pos-engladder-assess         FAIL          0% expected ['eng-ladder'] fired in 0/1 runs
-pos-engladder-altitude       PASS        100% expected ['eng-ladder'] fired in 1/1 runs
-neg-lab-deploy               PASS        100% cluster fired in 0/1 runs (want 0)
-neg-code-review              PASS        100% cluster fired in 0/1 runs (want 0)
-neg-prompt-author            PASS        100% cluster fired in 0/1 runs (want 0)  [also fired: prompt-craft]
-neg-debug-prod               PASS        100% cluster fired in 0/1 runs (want 0)
-------------------------------------------------------------------------------------------
-5/12 passed  (positives: 1/8 routed correctly, negatives: 4/4 correctly did NOT fire)
-
-wrote evals/baselines/2026-07/ladder/benchmark.json
-
-BASELINE_COMPLETE
