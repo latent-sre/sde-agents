@@ -1,6 +1,6 @@
 ---
 name: service-onboard
-description: The checklist for adding a new self-hosted service to the home lab, from placement through end-to-end verification. Use when adding a new container, stack, or app ("add Jellyfin to my lab", "set up a new container") — or when bringing an existing ad-hoc service up to standard. For broader platform work or troubleshooting, use sde-agents:homelab-platform.
+description: The standardization checklist sde-agents:homelab-platform works when adding a self-hosted service — placement, config-as-code, storage, network, security, observability, an operating doc, end-to-end verify. To add or standardize a service, ask sde-agents:homelab-platform (it owns change authority and works this checklist under its tiers); a user can also run it directly as /sde-agents:service-onboard.
 argument-hint: [service to add]
 disable-model-invocation: true
 ---

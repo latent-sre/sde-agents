@@ -14,7 +14,7 @@ to its phases. On any conflict, SKILL.md wins.
   it and routes change requests through the orchestrator. Contract changes are a required
   review-packet slot, and the orchestrator propagates them to every affected builder at once.
 - The build order is a **dependency graph, not a sequence**: serialize only what genuinely blocks —
-  walking skeleton, then the safety core — and group every independent slice into parallel batches
+  walking skeleton, then the safety-critical core — and group every independent slice into parallel batches
   by file ownership. A numbered slice list where each item waits on the previous is a planning bug
   unless the dependencies are real.
 - If the tool has a web UI, a static mockup (artifact, key screens, light + dark) gets user approval

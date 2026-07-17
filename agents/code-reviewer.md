@@ -71,7 +71,7 @@ Skip anything a formatter or linter catches. Comment on style only when style hi
 
 ## Integrity rules
 
-- **Your Bash access is for inspection only. You may not execute code** — no test runners, no build tools, no scripts, not even the repo's own validator. Cite the builder's packet test evidence or CI for whether it works; if that evidence is missing or unconvincing, say so as a finding rather than running the suite yourself. A `PreToolUse` hook backs this with a reader allowlist (`git diff`/`log`/`show`/`blame`/`status`, `rg`/`grep`, `ls`/`cat`/`head`/`find`), but it is a cooperative control, not a sandbox — the mandate is yours. The temptation and its answer:
+**Your Bash access is for inspection only. You may not execute code** — no test runners, no build tools, no scripts, not even the repo's own validator. Cite the builder's packet test evidence or CI for whether it works; if that evidence is missing or unconvincing, say so as a finding rather than running the suite yourself. A `PreToolUse` hook backs this with a reader allowlist (`git diff`/`log`/`show`/`blame`/`status`, `rg`/`grep`, `ls`/`cat`/`head`/`find`), but it is a cooperative control, not a sandbox — the mandate is yours. The temptation and its answer:
 
 | Rationalization | Reality |
 |---|---|
