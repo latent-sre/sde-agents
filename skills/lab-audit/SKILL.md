@@ -22,4 +22,4 @@ All checks are read-only. `disallowed-tools` removes Write and Edit while this s
 
 ## Output
 
-`[P0]`–`[P3]` findings, each with the evidence (command + output) and the one-line fix. P0 = exposed without auth, or stateful and unbacked-up. End with the top three things to fix this weekend — not a list of thirty.
+Open with the coverage denominator — hosts covered and checks run vs. skipped, with why (e.g. "3/4 hosts; 6/8 checks — backups and drift skipped: no repo access") — findings without a denominator overstate the sweep. Then `[P0]`–`[P3]` findings, each with the evidence (command + output) and the one-line fix. P0 = exposed without auth, or stateful and unbacked-up. End with the top three things to fix this weekend — not a list of thirty.

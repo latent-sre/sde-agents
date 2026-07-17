@@ -12,35 +12,19 @@ This skill is general-purpose — any web UI, not just operator tooling — held
 
 **An existing repository's stack always wins.** The library names below (TanStack, Tailwind, shadcn) are the **default stack** — chosen in `references/stack.md` for greenfield work. In a repo built on other libraries, match that repo and apply the same rules through its equivalents; never rewrite toward the default stack as part of a task.
 
-**An existing design system wins the same way.** The shell, theme, and aesthetic below (sidebar rail, dark-first, the accent-and-glow language) are the **default design language** for greenfield or unbranded work. In a repo or brand with an established design system — a light-first identity, Material, a corporate token set, a settled shell convention — match it and apply the same discipline (hierarchy, spacing, designed states, accessibility) through its vocabulary; never restyle toward this default as part of a task.
+**An existing design system wins the same way.** The **default design language** (sidebar rail, dark-first, the accent-and-glow language) lives in `references/design-language.md` and applies only to greenfield or unbranded work. In a repo or brand with an established design system — a light-first identity, Material, a corporate token set, a settled shell convention — match it and apply the same discipline (hierarchy, spacing, designed states, accessibility) through its vocabulary; never restyle toward this default as part of a task.
 
 ## Layout — organized, uncluttered, space-efficient
 
-- **App shell — default to a sidebar rail.** Any app with more than ~5 destinations gets a persistent left sidebar rail, not top tabs (tabs don't scale past a handful and this is the preferred shell): icon + label nav grouped by area, the active item marked with an accent bar or tint, a brand mark at the top and the user/account with theme toggle pinned at the bottom. Top tabs or a single-column layout are reserved for genuinely small apps (≤5 views) or a focused single-purpose tool. The rail collapses to icons-only on narrow viewports.
 - **Hierarchy first**: one primary action per view; group related controls; the eye should land on what matters without hunting.
 - **Spacing grid**: consistent scale (4/8px steps), generous whitespace at decision points, higher density where data lives — tables and lists earn compactness, forms and actions earn air.
 - **Constrain line lengths**: max content width; multi-column only when content genuinely parallels.
 - **Typography**: 4–5 sizes total; hierarchy through size and weight, never color alone.
-- **Color & theme**: all color through theme tokens, both themes from day one. Ship a manual light/dark/system toggle, persisted and defaulting to the OS setting — and set the theme class in an inline `<head>` script *before first paint* so there's no flash of the wrong theme on load. The palette itself lives in Visual character below.
+- **Color & theme**: all color through theme tokens, both themes from day one. Ship a manual light/dark/system toggle, persisted and defaulting to the OS setting — and set the theme class in an inline `<head>` script *before first paint* so there's no flash of the wrong theme on load.
 
-## Visual character — designed, not default
+## Visual character & motion — designed, not default
 
-Organized and uncluttered is the floor, not the ceiling. For the default design language (greenfield or unbranded work — an existing design system wins, per above), the bar: at home next to Linear or Vercel's dashboard with the color courage turned up — never mistakable for an unstyled admin template.
-
-- **Dark-first, layered surfaces.** Dark is the designed-for theme (light stays supported via tokens): a deep page background, cards a distinct step lighter, raised elements a step lighter again. Depth comes from this layering plus low-alpha borders and soft shadows — not heavy lines.
-- **Color with courage.** One vivid accent used confidently: gradient touches on primary actions and active states, and one hero moment per view — a gradient heading, a glowing stat. Status colors saturated enough to glow against dark surfaces; status pills get a colored dot *plus* text, never color alone.
-- **Categorical accents on KPI grids.** When a view shows a row of distinct metrics or stat cards, give each its own accent hue (e.g. purple / teal / amber / cyan) rather than repeating one color — the color *codes* the category, with the icon and number tinted to match. Elevate one card above the rest (an accent border-glow on the most important metric) so the grid has a focal point. Keep the accent set to ~4–5 hues drawn from the theme tokens; this is categorical coding, not a rainbow.
-- **Typography with character.** A quality UI font (Inter or similar, self-hosted — no CDN dependency), tight letter-spacing on large headings, `tabular-nums` for data, big confident numbers on stat tiles.
-- **Depth cues, spent sparingly.** Rounded-xl cards, soft elevation shadows, hover lift (small translate + shadow), accent-colored focus rings. If every surface is elevated, nothing is.
-- **Designed states.** Skeleton shimmer instead of spinners for content areas; empty states get an icon and a call to action; icons anchor navigation, actions, and stats.
-- **Every view is a composition.** If the primary content fills only a fraction of the viewport, that's a design defect: either enrich the view (supporting detail, recent activity, a trend over time — whatever the data honestly supports) or constrain the canvas to fit the content. Never ship a screen that is mostly empty page.
-
-## Motion — smooth, purposeful, alive
-
-- Transitions 150–250 ms, ease-out; animate `opacity` and `transform` only (compositor-friendly — no layout thrash).
-- Micro-interactions are part of the design, not decoration on top of it: hover lifts, pressed states, animated number changes on live stats, staggered list entrances (30–50 ms steps), smooth expand/collapse.
-- Motion serves state change and perceived quality — but stays fast and interruptible; if an animation makes the user wait, cut it.
-- Respect `prefers-reduced-motion`.
+Organized and uncluttered is the floor, not the ceiling: keep the color courage turned up — never ship something mistakable for an unstyled admin template. The default design language — app shell, dark-first surfaces, the accent-and-glow palette, motion timings — lives in [`references/design-language.md`](references/design-language.md); read it **before** styling greenfield or unbranded work (in a branded repo, the existing design system wins — see above). Two rules are universal regardless of design system: animate `opacity` and `transform` only (compositor-friendly — no layout thrash), and respect `prefers-reduced-motion`.
 
 ## State and data
 
@@ -91,6 +75,7 @@ packet.
 
 | If the view involves… | Read first |
 |---|---|
+| styling greenfield or unbranded work (no design system to match) | `references/design-language.md` |
 | choosing a stack for a greenfield UI | `references/stack.md` |
 | a table, list, or grid of records | `references/data-views.md` |
 | a chart, graph, or metric visualization | `references/data-viz.md` |

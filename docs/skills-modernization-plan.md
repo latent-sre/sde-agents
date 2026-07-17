@@ -20,7 +20,12 @@ invocation-disabled checklists, and each partitions from its neighbors by an obs
 
 ## Tier 1 — strongest convergence (3–4 reviewers each)
 
-### 1. sre-tool coordination templates (all three structural reviewers ranked this #1)
+### 1. sre-tool coordination templates (all three structural reviewers ranked this #1) — **done**
+
+Landed as four assets (the three below plus `assets/spawn-prompt.template.md`, added when a later
+handoff-package finding independently converged on the same gap: the spawn prompt is the fleet's
+handoff, and it needed a shape — objective, scope in/out, acceptance criteria, boundary, inputs
+with contract version, leash, return contract).
 
 The pipeline mandates repo artifacts in prose and gives none of them a shape; every run re-derives
 slots, and compaction-survival promises ride on ad-hoc structure. Add three assets, each linked
@@ -102,6 +107,7 @@ trigger-sensitive description.
    declares ("greenfield or unbranded UI → read first", first row of the table); body keeps the
    universal discipline plus a one-line bar statement. Third independent flag for this across
    review rounds; also cuts every `sde-fullstack` spawn by several hundred preloaded words.
+   **Done** — landed as the response to the fourth raise of the preload finding.
 8. **`service-onboard/assets/compose.template.yml`** — annotated service block with every step-2
    slot (pinned tag, restart policy, healthcheck, resource limits, named volume); used only when
    the lab has no existing pattern (carve-out mirrors frontend-craft's).

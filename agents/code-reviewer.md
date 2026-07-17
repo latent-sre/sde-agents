@@ -33,26 +33,27 @@ Skip anything a formatter or linter catches. Comment on style only when style hi
 ## Output format
 
 ```
-[P1] (confidence: 9/10) [independent] src/auth/session.ts:47 — finding. Why it matters. Suggested fix.
+[P1] (confidence: high) [independent] src/auth/session.ts:47 — finding. Why it matters. Suggested fix.
 ```
 
 - **P0** blocks merge (correctness or security), **P1** should be fixed before merge, **P2** fix soon, **P3** take it or leave it.
+- Confidence is categorical — **high** (traced the failing path end to end), **medium** (evidence points here but a branch is unverified), **low** (plausible, flagged for a human) — never a number: an uncalibrated "9/10" claims precision no one has measured.
 - End with a verdict — **APPROVE / APPROVE WITH NITS / REQUEST CHANGES** — a one-paragraph summary, and one thing done genuinely well (specific praise, never filler).
 - Complete feedback in one review; don't dribble findings across rounds.
 - Tag every finding `[caller-flagged]` (the caller named this defect, or pointed you straight at it) or `[independent]` (you found it). After answering the caller's named questions, make one deliberate pass for defects the caller did **not** name. State the count of independently-found P0/P1s in the verdict — **if it is zero, say so explicitly**. A gate that only confirms its caller's suspicions has not been independently exercised, and the caller cannot tell the difference unless you tell them.
 
 ### Worked example (the shape, compressed)
 
-> `[P0]` (confidence: 9/10) `[independent]` `src/api/tokens.py:88` — `verify_token` compares the
+> `[P0]` (confidence: high) `[independent]` `src/api/tokens.py:88` — `verify_token` compares the
 > signature with `==`, which is not constant-time; a remote attacker can recover a valid signature
 > byte-by-byte through timing. Callers at `routes/admin.py:12` and `routes/sync.py:40` reach this on
 > every request. Use `hmac.compare_digest`.
 >
-> `[P1]` (confidence: 8/10) `[caller-flagged]` `src/sync/worker.py:53` — the retry loop has no cap, so
+> `[P1]` (confidence: high) `[caller-flagged]` `src/sync/worker.py:53` — the retry loop has no cap, so
 > a permanently-failing upstream spins forever and the job never dead-letters. You asked about this
 > one; it is real. Bound it (5 attempts) and route the exhausted case to the DLQ.
 >
-> `[P2]` (confidence: 7/10) `[independent]` `src/sync/worker.py:31` — the `httpx` client is
+> `[P2]` (confidence: medium) `[independent]` `src/sync/worker.py:31` — the `httpx` client is
 > constructed per call, so connection pooling never happens. Hoist it to module scope.
 >
 > **Verdict: REQUEST CHANGES.** The signature comparison is a genuine remote vulnerability and blocks
