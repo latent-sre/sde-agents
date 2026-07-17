@@ -56,13 +56,24 @@ def components_fired(transcript: str) -> set[str]:
     subagent spawned). Rather than guess the exact input field name — which differs across the two
     and across CLI versions — it scans each relevant tool_use's input values for a known fleet name.
     A component named only in ASSISTANT PROSE (not a tool call) is intentionally NOT counted: the
-    model mentioning 'prompt-craft' is not the same as prompt-craft firing. A tool_use whose
-    matching tool_result came back with is_error is likewise NOT counted — a failed spawn/skill call
-    is not the component actually firing, and counting it would produce false PASS results (see
-    scripts/probe_plugin.py:174 for the same correlate-by-tool_use_id pattern).
+    model mentioning 'prompt-craft' is not the same as prompt-craft firing. A tool_use whose matching
+    tool_result is a GENUINE dispatch failure is likewise NOT counted — counting a truly failed
+    spawn would produce false PASS results (see scripts/probe_plugin.py:174 for the same
+    correlate-by-tool_use_id pattern).
+
+    Crucially, `is_error` is NOT a reliable "the call failed" flag for the Skill tool. A skill that
+    restricts tools (allowed-tools / disallowed-tools) is LAUNCHED via a tool_result the CLI marks
+    `is_error: true` with content "Execute skill: <name>"; a skill WITHOUT restrictions reports
+    "Launching skill: <name>" with is_error unset. Both mean the skill was invoked — the routing fact
+    we grade. Treating the first as an error silently dropped every tool-restricting skill's
+    invocation: `lab-audit` (which sets `disallowed-tools`) scored 0/N despite routing correctly on
+    every run, and — worse — an over-trigger of `lab-audit` on a NEGATIVE case was invisible, a false
+    PASS. So a skill-launch control signal is never treated as a failure; only a genuine hard error
+    (real dispatch failure, different content) excludes the routing decision.
     """
+    launch_signals = ("execute skill:", "launching skill:")
     candidates: dict[str, set[str]] = {}  # tool_use_id -> bare names named in this call
-    errored: set[str] = set()  # tool_use_ids whose tool_result had is_error: true
+    errored: set[str] = set()  # tool_use_ids whose tool_result was a genuine dispatch failure
     for line in transcript.splitlines():
         try:
             event = json.loads(line)
@@ -80,6 +91,9 @@ def components_fired(transcript: str) -> set[str]:
                 if names:
                     candidates[block.get("id", "")] = names
             elif btype == "tool_result" and block.get("is_error"):
+                result_text = " ".join(_string_values(block.get("content"))).lower()
+                if any(sig in result_text for sig in launch_signals):
+                    continue  # skill-launch control signal, not a failure — the skill WAS invoked
                 errored.add(block.get("tool_use_id", ""))
     fired: set[str] = set()
     for tid, names in candidates.items():
