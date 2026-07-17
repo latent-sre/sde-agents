@@ -49,10 +49,13 @@ Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior swit
 
 - `disable-model-invocation: true` — intended for side-effect skills (deploy, send, commit):
   user-only via `/name`, description removed from the model's context, and not preloadable via an
-  agent's `skills:` field. **Caveat: this flag is currently ignored for plugin-shipped skills**
-  (anthropics/claude-code#22345) — a plugin skill so marked still loads into context and stays
-  model-invocable. Set it anyway (correct once fixed, and it documents intent), but do not treat it
-  as an enforced boundary in a plugin; make the skill's own content defer authority instead.
+  agent's `skills:` field. **Caveat — version-sensitive, not timeless: this flag is currently
+  ignored for plugin-shipped skills** (anthropics/claude-code#22345; last verified against CLI
+  2.1.212, 2026-07-17 — the issue was open and the docs still described the flag as preventing
+  model invocation). A plugin skill so marked still loads into context and stays model-invocable.
+  Set it anyway (correct once fixed, and it documents intent), but do not treat it as an enforced
+  boundary in a plugin; make the skill's own content defer authority instead. Re-verify after CLI
+  upgrades — `scripts/probe_plugin.py` is the capability test — and update this stamp.
 - `user-invocable: false` — background-knowledge skills, hidden from the `/` menu.
 - `allowed-tools` **grants** (pre-approves, no permission prompt) while the skill is active — it
   does **not** restrict availability. Takes bare tool names or permission-rule specifiers
