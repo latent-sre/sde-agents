@@ -1,6 +1,6 @@
 {
   "cluster": "homelab-ops",
-  "runs_per_case": 1,
+  "runs_per_case": 3,
   "members": [
     "homelab-platform",
     "lab-audit",
@@ -8,7 +8,7 @@
     "service-onboard"
   ],
   "summary": {
-    "passed": 9,
+    "passed": 11,
     "total": 15
   },
   "cases": [
@@ -22,7 +22,7 @@
       "passed": false,
       "cluster_fire_rate": 0.0,
       "correct_rate": 0.0,
-      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/1 runs",
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -36,7 +36,7 @@
       "passed": false,
       "cluster_fire_rate": 0.0,
       "correct_rate": 0.0,
-      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/1 runs",
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -47,10 +47,10 @@
         "homelab-platform",
         "troubleshoot"
       ],
-      "passed": true,
-      "cluster_fire_rate": 1.0,
-      "correct_rate": 1.0,
-      "detail": "expected ['homelab-platform'] fired in 1/1 runs",
+      "passed": false,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -62,11 +62,13 @@
         "change"
       ],
       "passed": false,
-      "cluster_fire_rate": 0.0,
-      "correct_rate": 0.0,
-      "detail": "expected ['homelab-platform'] fired in 0/1 runs",
+      "cluster_fire_rate": 0.333,
+      "correct_rate": 0.333,
+      "detail": "expected ['homelab-platform'] fired in 1/3 runs",
       "also_fired": [],
-      "errors": []
+      "errors": [
+        "exit 1: "
+      ]
     },
     {
       "id": "pos-audit-whats-wrong",
@@ -75,10 +77,10 @@
         "lab-audit",
         "sweep"
       ],
-      "passed": false,
-      "cluster_fire_rate": 0.0,
-      "correct_rate": 0.0,
-      "detail": "expected ['lab-audit'] fired in 0/1 runs",
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['lab-audit'] fired in 3/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -89,10 +91,10 @@
         "lab-audit",
         "security-sweep"
       ],
-      "passed": false,
-      "cluster_fire_rate": 0.0,
-      "correct_rate": 0.0,
-      "detail": "expected ['lab-audit'] fired in 0/1 runs",
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['lab-audit'] fired in 3/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -106,7 +108,7 @@
       "passed": true,
       "cluster_fire_rate": 1.0,
       "correct_rate": 1.0,
-      "detail": "expected ['runbook'] fired in 1/1 runs",
+      "detail": "expected ['runbook'] fired in 3/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -117,10 +119,10 @@
         "runbook",
         "update-doc"
       ],
-      "passed": false,
-      "cluster_fire_rate": 0.0,
-      "correct_rate": 0.0,
-      "detail": "expected ['runbook'] fired in 0/1 runs",
+      "passed": true,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['runbook'] fired in 3/3 runs",
       "also_fired": [],
       "errors": []
     },
@@ -134,7 +136,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "errors": []
     },
@@ -148,7 +150,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "errors": []
     },
@@ -162,9 +164,11 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
-      "errors": []
+      "errors": [
+        "exit 1: "
+      ]
     },
     {
       "id": "neg-api-docs",
@@ -176,7 +180,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "errors": []
     },
@@ -190,7 +194,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "errors": []
     },
@@ -204,7 +208,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [
         "frontend-craft"
       ],
@@ -220,7 +224,7 @@
       "passed": true,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "cluster fired in 0/1 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [
         "prompt-craft"
       ],
