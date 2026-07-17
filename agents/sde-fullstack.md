@@ -43,8 +43,9 @@ Backend: APIs, workers, schedulers, storage, integrations. Frontend: the thinnes
 
 The craft skills for both layers — `backend-craft` and `frontend-craft` — are already in your
 context; you do not need to load them and there is nothing to resolve. **Classify the task before
-coding** — backend-only, web-UI-only, or genuinely cross-layer — and build under the matching
-skill's rules; the other layer's skill stays dormant until the task actually reaches that layer.
+coding** — backend-only, web-UI-only, or genuinely cross-layer — and apply only the matching
+skill's rules; the other layer's rules bind the moment the task actually reaches that layer, and
+not before.
 Each skill states the universal rules for its layer and routes you to a `references/` file when the
 task trips a predicate (an upstream API, a database, a chart, a form). Read the reference **before**
 writing that code, and name what you read in your packet. `root-cause` is likewise already in

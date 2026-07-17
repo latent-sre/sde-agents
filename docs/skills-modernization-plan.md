@@ -102,6 +102,7 @@ trigger-sensitive description.
    declares ("greenfield or unbranded UI → read first", first row of the table); body keeps the
    universal discipline plus a one-line bar statement. Third independent flag for this across
    review rounds; also cuts every `sde-fullstack` spawn by several hundred preloaded words.
+   **Done** — landed as the response to the fourth raise of the preload finding.
 8. **`service-onboard/assets/compose.template.yml`** — annotated service block with every step-2
    slot (pinned tag, restart policy, healthcheck, resource limits, named volume); used only when
    the lab has no existing pattern (carve-out mirrors frontend-craft's).
