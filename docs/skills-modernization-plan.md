@@ -20,7 +20,12 @@ invocation-disabled checklists, and each partitions from its neighbors by an obs
 
 ## Tier 1 — strongest convergence (3–4 reviewers each)
 
-### 1. sre-tool coordination templates (all three structural reviewers ranked this #1)
+### 1. sre-tool coordination templates (all three structural reviewers ranked this #1) — **done**
+
+Landed as four assets (the three below plus `assets/spawn-prompt.template.md`, added when a later
+handoff-package finding independently converged on the same gap: the spawn prompt is the fleet's
+handoff, and it needed a shape — objective, scope in/out, acceptance criteria, boundary, inputs
+with contract version, leash, return contract).
 
 The pipeline mandates repo artifacts in prose and gives none of them a shape; every run re-derives
 slots, and compaction-survival promises ride on ad-hoc structure. Add three assets, each linked
