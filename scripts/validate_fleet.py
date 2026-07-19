@@ -734,17 +734,15 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
 
     for path, own in definitions:
         text = read_text(path)
-        for line in text.splitlines():
-            if not line.startswith("description:"):
-                continue
-            for other in sorted(fleet - {own}):
-                if re.search(rf"(?<![\w:-]){re.escape(other)}(?![\w-])", line):
-                    issues.append(
-                        f"{path}: description names {other!r} without the plugin namespace. Every "
-                        f"component a plugin ships is namespaced, so the real name is "
-                        f"{plugin_name}:{other} — a bare reference points at nothing and degrades "
-                        f"the routing this description exists to drive."
-                    )
+        description = (parse_frontmatter(path) or {}).get("description", "")
+        for other in sorted(fleet - {own}):
+            if re.search(rf"(?<![\w:-]){re.escape(other)}(?![\w-])", description):
+                issues.append(
+                    f"{path}: description names {other!r} without the plugin namespace. Every "
+                    f"component a plugin ships is namespaced, so the real name is "
+                    f"{plugin_name}:{other} — a bare reference points at nothing and degrades "
+                    f"the routing this description exists to drive."
+                )
         # `~/.claude/agents|skills/` does NOT contain this fleet once it ships as a plugin; its files
         # live under ${CLAUDE_PLUGIN_ROOT}. The `(?!\*)` spares the doc-reference form
         # (`~/.claude/agents/*.md`, which correctly describes where USER-level agents live) and

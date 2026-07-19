@@ -1,0 +1,45 @@
+# Interface copy — voice and wording
+
+Read this when writing or changing user-facing text — labels, buttons, headings, descriptions,
+empty states, errors, toasts.
+
+The universal frontend rules live in `skills/frontend-craft/SKILL.md`. On any conflict, SKILL.md
+wins. This file owns the *wording*; the mechanics of the states it fills (loading/error/empty,
+toasts, validation) stay in SKILL.md and `references/forms.md`.
+
+## Name things from the user's side
+
+- Name by what people control and recognize, never by how the system is built: "Notifications,"
+  not "webhook config"; "Sign in," not "authenticate."
+- Describe what something does in plain terms rather than selling it. Specific always beats
+  clever: "Export as CSV," not "Get your data."
+- Before writing anything, ask what this element needs to say for the person to know where they
+  are and what happens next — words are navigation, not narration.
+
+## One name per action, everywhere
+
+- A control says exactly what happens when it's used: "Save changes," not "Submit"; "Delete
+  3 files," not "OK."
+- An action keeps the same name through its whole flow — the button that says **Publish**
+  produces the toast **Published** and the history entry "Published." Never rename mid-flow.
+- One term per concept across every view (pick "target" *or* "endpoint" — not both). The
+  interface's vocabulary is signposting; cohesion is how people learn their way around.
+
+## Voice
+
+- Active voice, plain verbs, sentence case, no filler. Register conversational, tuned to the
+  brand and audience.
+- Each element does exactly one job: a label labels, an example demonstrates, a placeholder hints
+  at format — nothing quietly does double duty (a placeholder is not a label; it vanishes on
+  focus).
+- Write in the interface's voice, not a person's: no "we," no "oops," no apology theater.
+
+## Failure and emptiness are direction, not mood
+
+- Errors say what happened and how to fix it, concretely: "Couldn't reach prometheus:9090 — check
+  the target address and retry," never "Something went wrong." Errors don't apologize and are
+  never vague.
+- An empty screen is an invitation to act: state the one next step ("No targets configured yet —
+  add one"), never a mood ("Nothing here!").
+- Confirmations match the action's name and carry the next step when there is one ("Deleted
+  3 files · Undo").
