@@ -10,6 +10,14 @@ The universal frontend rules live in `skills/frontend-craft/SKILL.md`. On any co
 The bar: at home next to Linear or Vercel's dashboard with the color courage turned up — never
 mistakable for an unstyled admin template. Organized and uncluttered is the floor, not the ceiling.
 
+## Before styling: commit a mini design plan
+
+Three lines before the first class name — stated in your response or a design-tokens comment:
+**palette** (named hex values: page, surface, accent, status), **type roles** (display / body /
+mono and their faces), **signature** (the one element this app will be remembered by). Build from
+the plan — every color and type decision derives from it. If a line reads like what you'd produce
+for any similar app, change it before building.
+
 ## App shell
 
 - **Default to a sidebar rail.** Any app with more than ~5 destinations gets a persistent left
@@ -36,7 +44,9 @@ mistakable for an unstyled admin template. Organized and uncluttered is the floo
   rainbow.
 - **Typography with character.** A quality UI font (Inter or similar, self-hosted — no CDN
   dependency), tight letter-spacing on large headings, `tabular-nums` for data, big confident
-  numbers on stat tiles.
+  numbers on stat tiles. Brand-forward surfaces — login, landing, a big empty state — may carry
+  a characterful display face, paired deliberately with the body face; where data lives, the
+  utility face and tabular-nums stay.
 - **Depth cues, spent sparingly.** Rounded-xl cards, soft elevation shadows, hover lift (small
   translate + shadow), accent-colored focus rings. If every surface is elevated, nothing is.
 - **Designed states.** Skeleton shimmer instead of spinners for content areas; empty states get an
@@ -46,6 +56,18 @@ mistakable for an unstyled admin template. Organized and uncluttered is the floo
   time — whatever the data honestly supports) or constrain the canvas to fit the content. Never
   ship a screen that is mostly empty page.
 
+## One language, many apps
+
+This language is a system, not a stamp — and its dark-plus-vivid-accent territory is also where
+generated UIs cluster, so sameness is the failure mode to watch. What keeps it a decision:
+
+- **Each app claims its own accent** — a distinct primary hue (and glow) per app, never the last
+  project's by reflex, so sibling tools share one language yet are instantly tellable apart.
+- **Each app gets its own signature** — the mini-plan's signature element comes from this app's
+  subject matter, not from this file.
+- Execution differentiates: one hero moment, orchestrated motion, restraint everywhere else. The
+  palette being dark-plus-accent is fine; every view leaning on the same glow is not.
+
 ## Motion
 
 - Transitions 150–250 ms, ease-out.
@@ -54,3 +76,6 @@ mistakable for an unstyled admin template. Organized and uncluttered is the floo
   expand/collapse.
 - Motion serves state change and perceived quality — but stays fast and interruptible; if an
   animation makes the user wait, cut it.
+- One orchestrated moment lands harder than scattered effects: per view, pick the moment that
+  serves the state change — hover lifts, staggered entrances, *and* animated numbers all at once
+  read as generated, not designed. When in doubt, less.

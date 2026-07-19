@@ -26,6 +26,8 @@ This skill is general-purpose — any web UI, not just operator tooling — held
 
 Organized and uncluttered is the floor, not the ceiling: keep the color courage turned up — never ship something mistakable for an unstyled admin template. The default design language — app shell, dark-first surfaces, the accent-and-glow palette, motion timings — lives in [`references/design-language.md`](references/design-language.md); read it **before** styling greenfield or unbranded work (in a branded repo, the existing design system wins — see above). Two rules are universal regardless of design system: animate `opacity` and `transform` only (compositor-friendly — no layout thrash), and respect `prefers-reduced-motion`.
 
+**Self-critique as you build** — screenshot what you made and look at it: would a stranger read it as a templated default? Generated UIs cluster around a few stock looks (cream page + serif display + terracotta accent; near-black + one acid accent; hairline-rule broadsheet) — a look you fell into is not a decision you made; change one real thing. Spend your boldness in one place: one deliberate risk you can justify, everything around it quiet. Bespoke or branded work sources its distinctive choices from the subject's own world — its materials, instruments, vernacular — never a house style carried from the last project. (A brief or design system that *asks* for a stock look wins, as always.)
+
 ## State and data
 
 - **Never import `@mantine/core`** or any styled Mantine component into a Tailwind codebase — its CSS reset fights Tailwind's, and that mix is the one incoherent hybrid. Mantine's *hooks* and `@mantine/form` ship no CSS and mix freely; its *components* do not. (A repo already built on Mantine keeps its stack — the rule is about mixing resets, not about Mantine.) This is the rule's one authoritative statement; the references point here.
@@ -48,6 +50,13 @@ The SRE lens is just good engineering pointed at the screen: assume every call c
 - Buttons disable while pending (no double-submits); no infinite spinners — every wait times out into an actionable error state.
 - Optimistic updates only with visible rollback on failure.
 - **Toasts** confirm actions (saved / deleted / failed) and carry the retry for a failed background action; they never replace inline validation.
+
+## Interface copy — words are design material
+
+- Words exist to make the UI easier to understand and use, never to decorate — same intent as spacing and color. Write from the user's side of the screen: name things by what people control and recognize, never by system architecture ("Notifications," not "webhook config"). Specific beats clever.
+- A control says exactly what happens when used ("Save changes," not "Submit"), and an action keeps one name through its whole flow — the button that says **Publish** produces the toast that says **Published**. One term per concept everywhere; consistent vocabulary is how people learn the product.
+- **Real content only** — never lorem or placeholder filler. If the content doesn't exist yet, writing it is part of the job.
+- The *mechanics* of loading/error/empty states live in Resilience UX above; their *wording* lives in `references/ux-writing.md` (see the table below).
 
 ## Accessibility (baseline, not optional)
 
@@ -80,6 +89,7 @@ packet.
 | a table, list, or grid of records | `references/data-views.md` |
 | a chart, graph, or metric visualization | `references/data-viz.md` |
 | a form or any user input to submit | `references/forms.md` |
+| writing or changing user-facing text — labels, buttons, headings, empty/error copy | `references/ux-writing.md` |
 | login, tokens, or route guarding | `references/auth.md` |
 
 Trips two predicates? Read both. Trips none? The core above is the whole job.
