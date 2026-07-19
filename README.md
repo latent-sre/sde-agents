@@ -68,6 +68,9 @@ recommend the import over a symlink — or Claude Code never sees it. Record the
 mission block in whichever file Claude Code will actually load, and don't create a competing file
 next to an existing one.
 
+This repository follows its own convention: guidance for working on the fleet lives in a portable
+root `AGENTS.md`, bridged by a `CLAUDE.md` containing that single import.
+
 Long-running work should use the progress file declared by that project context. When none is declared,
 use `.agents/PROGRESS.md` — and in a parallel batch, one shard per builder
 (`.agents/progress/<component>.md`), one writer per file, with the orchestrator's plan file
