@@ -185,7 +185,7 @@ DENIED = [
     "git reflog delete HEAD@{0}",
     "git reflog drop refs/heads/main",
     "git reflog",
-    # Readers that can write or execute without shell syntax must not be allowlisted.
+    # `sort`, `tree`, and `less` write via `-o`; `less` and `rg --pre` can also execute programs.
     "sort -o /tmp/sorted.txt agents/code-reviewer.md",
     "tree -o /tmp/tree.txt",
     "less -o /tmp/less.log agents/code-reviewer.md",

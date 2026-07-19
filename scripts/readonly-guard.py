@@ -111,14 +111,16 @@ _SEPARATORS = {"|", "||", "&&", ";", "\n"}
 # Plain readers and filters: they consume input and print. None can write a file on their own (a
 # redirect would be needed, and redirects are refused above). `sed` and `awk` are deliberately ABSENT
 # — both can write files without any redirect (`sed -i`, awk's `print > "f"` and `system()`).
+# `sort`, `tree`, and `less` are likewise absent: their `-o` options write files, and `less` also
+# supports interactive command execution.
 _SIMPLE_READERS = frozenset({
     "cat", "head", "tail", "nl", "wc", "uniq", "cut", "tr", "column",
     "grep", "egrep", "fgrep", "ag",
     "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
     "echo", "diff", "cmp", "jq", "true", "false",
 })
-# `rg --pre COMMAND` runs COMMAND on every searched file. It is useful enough as a reviewer reader
-# to retain, but that flag would turn it into arbitrary code execution, so it needs its own gate.
+# `rg --pre COMMAND` runs COMMAND on every searched file, turning a reader into arbitrary code
+# execution. `rg` is useful enough for review to retain with this narrow gate.
 _RG_EXECUTION_FLAGS = frozenset({"--pre"})
 
 # `git` subcommands that have no write SUBCOMMAND (per `git-<name>(1)` synopsis). Several still
