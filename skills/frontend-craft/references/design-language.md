@@ -12,11 +12,16 @@ mistakable for an unstyled admin template. Organized and uncluttered is the floo
 
 ## Before styling: commit a mini design plan
 
-Three lines before the first class name — stated in your response or a design-tokens comment:
-**palette** (named hex values: page, surface, accent, status), **type roles** (display / body /
-mono and their faces), **signature** (the one element this app will be remembered by). Build from
-the plan — every color and type decision derives from it. If a line reads like what you'd produce
-for any similar app, change it before building.
+Open the style block (or tokens file) with this plan comment, filled in:
+
+```css
+/* palette: page #… · surface #… · accent #… · status #…
+   type: display <face> · body <face> · mono <face>
+   signature: <the one element this app will be remembered by> */
+```
+
+Build from the plan — every color and type decision derives from it. If a line reads like what
+you'd produce for any similar app, change it before building.
 
 ## App shell
 
