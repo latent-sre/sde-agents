@@ -177,6 +177,17 @@ EVIDENCE_LABEL_RE = re.compile(r"\*\*\[(?:un)?(?:verified|sourced)\]\*\*")
 PACKET_HEADING_RE = re.compile(
     r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
 )
+# AGENTS.md drift tripwires. The guide paraphrases the validator and the repo layout, and prose has
+# no runtime: Claude Code loads CLAUDE.md (not AGENTS.md), so a lost `@AGENTS.md` import orphans the
+# guide without an error; a renamed script leaves it pointing at nothing; an alias change leaves it
+# teaching a stale policy. Same doctrine as EVIDENCE_LABEL_STEMS — pin the paraphrase to its source
+# and fail loudly when they part.
+GUIDE_IMPORT = "@AGENTS.md"
+INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
+# A path-shaped token inside an inline code span. Deliberately excludes glob/placeholder characters
+# (`*`, `<`, `>`, `$`, `{`) so illustrative forms like `agents/*.md` and `skills/<name>/SKILL.md`
+# self-exclude and only concrete, resolvable paths are asserted.
+GUIDE_PATH_TOKEN_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_./-]*")
 
 
 def read_text(path: Path) -> str:
@@ -534,6 +545,62 @@ def validate_inventory(root: Path, expected: str) -> list[str]:
     return []
 
 
+def validate_agent_guide(root: Path) -> list[str]:
+    """Drift tripwires for the repo's own agent guide (AGENTS.md plus the CLAUDE.md bridge).
+
+    Self-gating: a repo with no AGENTS.md (the synthetic fixtures under tests/) is not making any
+    guide claims, so there is nothing to check and this returns [].
+    """
+    issues: list[str] = []
+    guide = root / "AGENTS.md"
+    bridge = root / "CLAUDE.md"
+
+    def has_import(path: Path) -> bool:
+        return path.is_file() and any(
+            line.strip() == GUIDE_IMPORT for line in read_text(path).splitlines()
+        )
+
+    if not guide.is_file():
+        if has_import(bridge):
+            issues.append(
+                f"{bridge}: imports {GUIDE_IMPORT} but AGENTS.md does not exist — the import "
+                f"resolves to nothing and the project context silently loads empty."
+            )
+        return issues
+
+    if not has_import(bridge):
+        issues.append(
+            f"{guide}: exists but {root / 'CLAUDE.md'} does not carry a line reading "
+            f"{GUIDE_IMPORT!r}. Claude Code reads CLAUDE.md, not AGENTS.md (the README's own "
+            f"bridge convention), so without the import this guide is never loaded by the tool "
+            f"it is written for."
+        )
+
+    text = read_text(guide)
+    for span in INLINE_CODE_RE.findall(text):
+        for token in GUIDE_PATH_TOKEN_RE.findall(span):
+            token = token.rstrip(".,;:")
+            # Bare filenames and lone directory mentions (`references/`) are prose, not resolvable
+            # claims; only a multi-segment path asserts a location worth checking.
+            if len([part for part in token.split("/") if part]) < 2:
+                continue
+            if not (root / token.rstrip("/")).exists():
+                issues.append(
+                    f"{guide}: names '{token}', which does not exist in this repository. A stale "
+                    f"path in the guide fails nowhere at runtime — it just misleads every future "
+                    f"session that loads it."
+                )
+
+    for alias in sorted(ALIAS_MODELS):
+        if f"`{alias}`" not in text:
+            issues.append(
+                f"{guide}: the model-alias paraphrase omits `{alias}`; ALIAS_MODELS in "
+                f"scripts/validate_fleet.py is the source of truth — fix the paraphrase, never "
+                f"the source."
+            )
+    return issues
+
+
 def load_guard(root: Path):
     """Import scripts/readonly-guard.py by path — the hyphen makes it un-importable by name."""
     source = root / "scripts" / "readonly-guard.py"
@@ -699,6 +766,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
     issues.extend(validate_plugin(root, agent_names, skill_names))
+    issues.extend(validate_agent_guide(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

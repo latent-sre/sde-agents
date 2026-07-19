@@ -7,7 +7,9 @@ second source of truth — edit those files directly, and never resolve a fleet 
 
 This file is the fleet's own instance of the project context convention that `README.md` defines
 for target repositories. Where it paraphrases the README or a script's docstring, that source wins
-on conflict — fix the paraphrase here, never the source.
+on conflict — fix the paraphrase here, never the source. The validator holds this file to that
+rule: the `@AGENTS.md` bridge in `CLAUDE.md`, every concrete multi-segment repo path named here,
+and the model-alias list are checked against the source and fail on drift.
 
 ## Map
 
@@ -111,7 +113,9 @@ everyone else; and the 42/43 exit-code contract between guard and hook shell str
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
-rule you are adding, plus a test that fails without your change. Match the existing error-message
+rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
+`tests/test_validate_fleet.py` that copies the repo and breaks the one link — plus a test that
+fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
 
 ## Hard rules with no playbook exceptions

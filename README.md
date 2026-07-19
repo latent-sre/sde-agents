@@ -145,7 +145,8 @@ claude plugin validate . --strict
 
 The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a known
 tool vocabulary), models, bundled skill references, the canonical evidence-label phrasing, the required
-end-of-task packet heading, and README inventory drift. It is intentionally runtime-neutral and uses
+end-of-task packet heading, README inventory drift, and drift in the repo's own agent guide — the
+`@AGENTS.md` bridge in `CLAUDE.md`, the paths `AGENTS.md` names, and its model-alias paraphrase. It is intentionally runtime-neutral and uses
 only the Python standard library.
 
 It also enforces the plugin invariants that fail *silently* at runtime: no agent may declare a field a
