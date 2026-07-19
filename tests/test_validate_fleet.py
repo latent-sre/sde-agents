@@ -471,6 +471,22 @@ class PluginWiringTests(unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(any("without the plugin namespace" in i for i in issues), issues)
 
+    def test_bare_cross_reference_in_a_folded_description_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "code-reviewer.md"
+            text = path.read_text(encoding="utf-8")
+            start = text.index("description:")
+            end = text.index("\ntools:", start)
+            path.write_text(
+                text[:start]
+                + "description: >\n  Use lab-audit for a whole home-lab.\n"
+                + text[end + 1:],
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("without the plugin namespace" in i for i in issues), issues)
+
     def test_home_claude_skill_path_is_reported(self) -> None:
         # The fleet-breaker: ~/.claude/skills does NOT hold this fleet once it ships as a plugin,
         # and `service-onboard` (model-invocation-disabled) is reachable ONLY by path -- so a stale

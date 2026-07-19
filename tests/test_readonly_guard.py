@@ -129,7 +129,7 @@ ALLOWED = [
     "cat deploy.sh | grep -c foo",
     "cat notes.py | grep -e todo",
     "git diff | head -100",
-    "rg -l TODO | sort | uniq",
+    "rg -l TODO | uniq",
     # gh reads
     "gh pr view 12",
     "gh pr diff 12",
@@ -185,6 +185,12 @@ DENIED = [
     "git reflog delete HEAD@{0}",
     "git reflog drop refs/heads/main",
     "git reflog",
+    # Readers that can write or execute without shell syntax must not be allowlisted.
+    "sort -o /tmp/sorted.txt agents/code-reviewer.md",
+    "tree -o /tmp/tree.txt",
+    "less -o /tmp/less.log agents/code-reviewer.md",
+    "rg --pre /bin/sh pattern .",
+    "rg --pre=/bin/sh pattern .",
     # REGRESSION (reviewer-reported, reproduced): every one of these WROTE and the old denylist
     # allowed it. They are gone now not because each was listed, but because none is a reader.
     "git clone https://github.com/x/y.git",

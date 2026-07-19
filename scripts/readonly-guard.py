@@ -112,11 +112,14 @@ _SEPARATORS = {"|", "||", "&&", ";", "\n"}
 # redirect would be needed, and redirects are refused above). `sed` and `awk` are deliberately ABSENT
 # — both can write files without any redirect (`sed -i`, awk's `print > "f"` and `system()`).
 _SIMPLE_READERS = frozenset({
-    "cat", "head", "tail", "less", "nl", "wc", "sort", "uniq", "cut", "tr", "column",
-    "grep", "egrep", "fgrep", "rg", "ag",
-    "ls", "tree", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
+    "cat", "head", "tail", "nl", "wc", "uniq", "cut", "tr", "column",
+    "grep", "egrep", "fgrep", "ag",
+    "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
     "echo", "diff", "cmp", "jq", "true", "false",
 })
+# `rg --pre COMMAND` runs COMMAND on every searched file. It is useful enough as a reviewer reader
+# to retain, but that flag would turn it into arbitrary code execution, so it needs its own gate.
+_RG_EXECUTION_FLAGS = frozenset({"--pre"})
 
 # `git` subcommands that have no write SUBCOMMAND (per `git-<name>(1)` synopsis). Several still
 # accept `--output=<file>`/`-o <file>` to write a report to disk (diff, log, show, diff-tree,
@@ -293,6 +296,10 @@ def _gh_allowed(args: list[str]) -> bool:
     return verb in _GH_READ.get(group, frozenset())
 
 
+def _rg_allowed(args: list[str]) -> bool:
+    return not any(arg.split("=", 1)[0] in _RG_EXECUTION_FLAGS for arg in args)
+
+
 def _segment_allowed(segment: list[str]) -> bool:
     command, args = segment[0], segment[1:]
     # A path to a binary (`/bin/cat`, `./deploy.sh`, `scripts/setup.sh`) is never allowed: the
@@ -303,6 +310,8 @@ def _segment_allowed(segment: list[str]) -> bool:
         return _git_allowed(args)
     if command == "gh":
         return _gh_allowed(args)
+    if command == "rg":
+        return _rg_allowed(args)
     if command == "find":
         return not any(arg.startswith(_FIND_ACTIONS) for arg in args)
     return command in _SIMPLE_READERS
