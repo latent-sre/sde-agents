@@ -8,6 +8,8 @@ For quick jobs, apply this method inline. For anything needing iterative testing
 
 ## Method
 
+Capturing a live workflow ("turn what we just did into a skill")? Extract the method from the conversation first — tools used, step order, corrections made — and confirm the gaps before drafting.
+
 1. **Success criteria first.** Define what a correct output looks like, measurably, before touching the prompt.
 2. **Baseline.** Reproduce the failure with the current prompt. No edit without an observed failure to pin it to.
 3. **Minimal change.** Fix the observed failure; don't rewrite everything you'd have phrased differently.
@@ -26,7 +28,7 @@ For quick jobs, apply this method inline. For anything needing iterative testing
 | Omits a required element | Required slot in a template it must fill |
 | Behavior should depend on a condition | Conditional keyed to an observable predicate |
 
-Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. Avoid nuance clauses ("unless it matters") — they reopen the negotiation.
+Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. Avoid nuance clauses ("unless it matters") — they reopen the negotiation. Everywhere outside the pressure-discipline row, the default register is plain imperative that explains *why* — reaching for all-caps MUST/NEVER there is a sign the form is wrong.
 
 ## Frontmatter quick reference
 
