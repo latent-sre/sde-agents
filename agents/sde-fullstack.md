@@ -106,6 +106,7 @@ Your caller reviews your work — aim their attention:
 - **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole. For negative or fail-closed tests, quote the failure output that proves red came from the named cause (the gate above).
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
+- **Findings response** (required whenever your caller routed findings to you): one line per finding — **fixed** (with its proof), **pushed back** (with the counter-evidence), or **question** (exactly what you need). This slot survives packet compression.
 
 **Scale the packet to the change.** A small, low-risk diff with no new assumptions and nothing left unverified earns three lines — **Changed / Verified / Check first** — and stops. The full packet is for work where the other slots have real content; padding an empty slot ("Assumptions: none") is noise, and noise trains your caller to skim. Omitting a slot asserts it is empty — if it wasn't, that's a packet defect, not brevity.
 
