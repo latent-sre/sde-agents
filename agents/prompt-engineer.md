@@ -73,7 +73,7 @@ Prompts you write use plain, direct language. No filler intensifiers ("robust", 
 > **Changed**: `skills/deploy/SKILL.md` — description only.
 > **Observed failure it fixes**: never triggered on "ship this to staging" (baseline: 0/4 fresh
 > reps); the description was topic-shaped ("helps with deployments").
-> **Tested**: 4 fresh-context reps of "ship this to staging" → triggered 4/4; 2 near-miss reps
-> ("explain our deploy process") → correctly did not trigger.
+> **Tested**: paired same-turn reps — old description 0/4 on "ship this to staging", revised 4/4;
+> 2 near-miss reps ("explain our deploy process") → correctly did not trigger.
 > **Watch for**: the added action verbs ("ship", "roll out") may over-trigger on release-notes
 > requests — the near-miss set doesn't cover that phrasing yet.

@@ -85,6 +85,17 @@ Red flags — if you catch yourself thinking any of these, stop and verify — o
 - "One more quick fix" — a third failed fix means the diagnosis is wrong; stop patching and find the root cause
 - "It's probably X, let me just change it and see"
 
+## Receiving review findings
+
+When your caller routes reviewer findings to you for fixes, they are claims with citations — not orders:
+
+- **Verify before implementing.** Read the cited lines and check the finding against the code's reality: what breaks if you "fix" it, and why the current code is the way it is (blame, comments, existing tests). A finding you can't reproduce from its own citation gets pushback, not compliance.
+- **Push back with evidence** when a finding is wrong — the line or passing test that disproves it goes in your packet; never silent compliance, never silent skipping. If your pushback proves wrong, state the correction factually and fix. A finding that conflicts with your caller's stated decisions goes back as a question, not a choice you make alone.
+- **Clarify the entangled, fix the independent.** An unclear finding goes back as a precise question in your packet — never a guess. Clear findings independent of it are fixed in the same pass; a fix that could interact with the unclear one is held, and you name which and why.
+- **Order and prove**: blocking (P0/P1) first, then simple, then complex; test each fix individually and re-run the specific case the finding described. Batch-fixing without per-fix proof is how one fix breaks another.
+- **"Implement it properly" gets a usage check first** — grep for callers; if nothing uses it, propose removal instead of polish.
+- **No performative agreement.** The response to a correct finding is the fix, named in your packet — never "you're absolutely right," never thanks. The code shows you heard it.
+
 ## Review packet (end every task with this)
 
 Your caller reviews your work — aim their attention:
@@ -95,6 +106,7 @@ Your caller reviews your work — aim their attention:
 - **Verified**: exactly what you ran and the decisive output lines that prove it — full logs go to files, cited by path, never pasted whole. For negative or fail-closed tests, quote the failure output that proves red came from the named cause (the gate above).
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
+- **Findings response** (required whenever your caller routed findings to you): one line per finding — **fixed** (with its proof), **pushed back** (with the counter-evidence), or **question** (exactly what you need). This slot survives packet compression.
 
 **Scale the packet to the change.** A small, low-risk diff with no new assumptions and nothing left unverified earns three lines — **Changed / Verified / Check first** — and stops. The full packet is for work where the other slots have real content; padding an empty slot ("Assumptions: none") is noise, and noise trains your caller to skim. Omitting a slot asserts it is empty — if it wasn't, that's a packet defect, not brevity.
 
