@@ -68,6 +68,9 @@ recommend the import over a symlink — or Claude Code never sees it. Record the
 mission block in whichever file Claude Code will actually load, and don't create a competing file
 next to an existing one.
 
+This repository follows its own convention: guidance for working on the fleet lives in a portable
+root `AGENTS.md`, bridged by a `CLAUDE.md` containing that single import.
+
 Long-running work should use the progress file declared by that project context. When none is declared,
 use `.agents/PROGRESS.md` — and in a parallel batch, one shard per builder
 (`.agents/progress/<component>.md`), one writer per file, with the orchestrator's plan file
@@ -142,7 +145,8 @@ claude plugin validate . --strict
 
 The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a known
 tool vocabulary), models, bundled skill references, the canonical evidence-label phrasing, the required
-end-of-task packet heading, and README inventory drift. It is intentionally runtime-neutral and uses
+end-of-task packet heading, README inventory drift, and drift in the repo's own agent guide — the
+`@AGENTS.md` bridge in `CLAUDE.md`, the paths `AGENTS.md` names, and its model-alias paraphrase. It is intentionally runtime-neutral and uses
 only the Python standard library.
 
 It also enforces the plugin invariants that fail *silently* at runtime: no agent may declare a field a

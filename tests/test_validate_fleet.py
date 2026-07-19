@@ -385,8 +385,10 @@ class PluginWiringTests(unittest.TestCase):
     def _issues_after(self, mutate) -> list[str]:
         with tempfile.TemporaryDirectory() as tmp:
             dst = Path(tmp) / "repo"
+            # tests/ stays in the copy: AGENTS.md names `tests/fixtures/`, and the guide drift
+            # check resolves every multi-segment path it asserts.
             shutil.copytree(
-                REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__", "tests")
+                REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__")
             )
             mutate(dst)
             issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
@@ -547,6 +549,62 @@ class PluginWiringTests(unittest.TestCase):
         # The positive control for the orphan check, mirroring test_the_real_repo_is_a_valid_plugin.
         issues = self._issues_after(lambda _: None)
         self.assertEqual([], [i for i in issues if "orphaned" in i])
+
+    # --- AGENTS.md drift tripwires: the guide paraphrases the validator and the layout, and prose
+    # has no runtime -- every failure mode below is silent without these. ---
+
+    def test_claude_md_without_the_import_is_reported(self) -> None:
+        # Claude Code reads CLAUDE.md, not AGENTS.md. Lose the one-line import and the guide is
+        # orphaned -- still in the repo, never in any session, and nothing errors.
+        def mutate(repo: Path) -> None:
+            (repo / "CLAUDE.md").write_text("# project notes, no import\n", encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("never loaded" in i for i in issues), issues)
+
+    def test_missing_claude_md_bridge_is_reported(self) -> None:
+        issues = self._issues_after(lambda r: (r / "CLAUDE.md").unlink())
+        self.assertTrue(any("never loaded" in i for i in issues), issues)
+
+    def test_dangling_import_without_agents_md_is_reported(self) -> None:
+        issues = self._issues_after(lambda r: (r / "AGENTS.md").unlink())
+        self.assertTrue(any("resolves to nothing" in i for i in issues), issues)
+
+    def test_stale_path_in_the_guide_is_reported(self) -> None:
+        # The rename-a-script case: the guide keeps naming the old path, and only a reader who
+        # tries the command ever finds out.
+        def mutate(repo: Path) -> None:
+            path = repo / "AGENTS.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "scripts/probe_plugin.py", "scripts/probe_plugins.py"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("'scripts/probe_plugins.py'" in i for i in issues), issues)
+
+    def test_alias_drift_in_the_guide_is_reported(self) -> None:
+        # Add an alias to ALIAS_MODELS (or drop one) and the guide's paraphrase must follow.
+        def mutate(repo: Path) -> None:
+            path = repo / "AGENTS.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("`fable`", "`fable-classic`"),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("omits `fable`" in i for i in issues), issues)
+
+    def test_repo_with_no_guide_at_all_is_valid(self) -> None:
+        # The check is self-gating: a repo that makes no guide claims has nothing to drift.
+        def mutate(repo: Path) -> None:
+            (repo / "AGENTS.md").unlink()
+            (repo / "CLAUDE.md").unlink()
+
+        issues = self._issues_after(mutate)
+        self.assertEqual([], issues)
 
 
 if __name__ == "__main__":
