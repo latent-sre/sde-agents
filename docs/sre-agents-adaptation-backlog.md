@@ -246,6 +246,22 @@ From `docs/skills-modernization-plan.md` and the July 2026 best-practices re-che
 - `eng-ladder`: infra-that-is-also-architecture exception clause on the homelab routing line;
   H1-title convention sweep across skills.
 
+From `docs/ecc-skills-agents-review.md` (July 2026; that file owns the adjudication detail —
+its Tier 1/2 imports are landed, these are what remains):
+
+- **Packet-lint assert helper** (ECC review item 3a) — stdlib script asserting packet-slot
+  presence and flagging hedge-claims that carry no evidence label; missing evidence fails, never
+  "assumes correctness" (the inversion of ECC's `evaluate.py`, whose smell regexes seed the
+  vocabulary). Deliberately sequenced *inside* the behavioral-eval work (quality review
+  finding 7b) as its deterministic assert — do not build it standalone before that consumer
+  exists, and never wire it as a live hook (it would train packet-shaped evasion).
+- **Behavioral verification of the landed a11y imports** — the ECC imports shipped `[unverified]`
+  on impact: no descriptions changed (so routing evals didn't apply), and no behavioral eval
+  asserts reference compliance yet. On the next real UI task involving a modal, toast, or form,
+  check the packet names `interaction-a11y.md` (or `forms.md`'s wiring bullets) and carries
+  keyboard-pass evidence. Two misses trigger the `self-improve-loop` micro-retro: fix the
+  definition, not the workflow. A durable assert belongs in the same finding-7b eval set.
+
 ## Sequencing
 
 1. Tier 1 in order (1.1 → 1.5), validator + tests + `--strict` at each step; seed/extend routing
