@@ -19,6 +19,7 @@ This skill is general-purpose — any web UI, not just operator tooling — held
 - **Hierarchy first**: one primary action per view; group related controls; the eye should land on what matters without hunting.
 - **Spacing grid**: consistent scale (4/8px steps), generous whitespace at decision points, higher density where data lives — tables and lists earn compactness, forms and actions earn air.
 - **Constrain line lengths**: max content width; multi-column only when content genuinely parallels.
+- **Stable under state change**: reserve space for the longest content a slot can hold — labels, counts, badges, hover affordances — so interaction and data updates never shift neighboring layout; verify text fit at narrow widths (long labels wrap or truncate by design, never overflow).
 - **Typography**: 4–5 sizes total; hierarchy through size and weight, never color alone.
 - **Color & theme**: all color through theme tokens, both themes from day one. Ship a manual light/dark/system toggle, persisted and defaulting to the OS setting — and set the theme class in an inline `<head>` script *before first paint* so there's no flash of the wrong theme on load.
 
@@ -60,7 +61,7 @@ The SRE lens is just good engineering pointed at the screen: assume every call c
 
 ## Accessibility (baseline, not optional)
 
-Semantic HTML first; every input labeled; keyboard reachable with visible focus; contrast at AA. If a div has an onClick, it wanted to be a button. On route change, move focus to the main heading and scroll to top — SPA navigation is silent to a screen reader otherwise. Responsive by default: the sidebar collapses to a drawer on narrow viewports, touch targets are ≥44px, and data tables reflow or scroll rather than overflow the page.
+Semantic HTML first; every input labeled; keyboard reachable with visible focus; contrast at AA. If a div has an onClick, it wanted to be a button. On route change, move focus to the main heading and scroll to top — SPA navigation is silent to a screen reader otherwise. Async status is announced, not just rendered — a toast a screen reader never hears is an undesigned state (wiring in `references/interaction-a11y.md`, per the table below). Responsive by default: the sidebar collapses to a drawer on narrow viewports, touch targets are ≥44px, and data tables reflow or scroll rather than overflow the page.
 
 ## Performance
 
@@ -72,7 +73,7 @@ Semantic HTML first; every input labeled; keyboard reachable with visible focus;
 
 - Component/logic units in the repo's test runner (Vitest + React Testing Library in the default stack) — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
 - **Playwright** (or the repo's E2E runner) for the few end-to-end flows whose breakage would page someone.
-- Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render** — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
+- Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render**, including a keyboard-only pass — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
 
 The **review packet** is the end-of-task report defined by the calling agent (`sde-agents:sde-fullstack`, which preloads this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.
 
@@ -89,6 +90,7 @@ packet.
 | a table, list, or grid of records | `references/data-views.md` |
 | a chart, graph, or metric visualization | `references/data-viz.md` |
 | a form or any user input to submit | `references/forms.md` |
+| a modal, drawer, menu, tooltip, or tabs — any custom interactive widget — or announcing async status | `references/interaction-a11y.md` |
 | writing or changing user-facing text — labels, buttons, headings, empty/error copy | `references/ux-writing.md` |
 | login, tokens, or route guarding | `references/auth.md` |
 

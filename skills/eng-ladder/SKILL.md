@@ -26,7 +26,7 @@ Infrastructure and service-operation work (deploying, configuring, or troublesho
 
 ## Mode 2 — Assess work at a bar
 
-The table above routes; it is not the bar. The full bar for each rung is that agent's definition file — `agents/<name>.md` in this repo, or `${CLAUDE_PLUGIN_ROOT}/agents/<name>.md` once the plugin is installed (`sde-fullstack`, `principal-engineer`, `distinguished-architect`). Read the relevant one before scoring. Score the artifact against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."
+The table above routes; it is not the bar. The full bar for each rung is that agent's definition file — `agents/<name>.md` in this repo, or `${CLAUDE_PLUGIN_ROOT}/agents/<name>.md` once the plugin is installed (`sde-fullstack`, `principal-engineer`, `distinguished-architect`). Read the relevant one before scoring. Score the artifact against its current-level bar: **meets**, or **gaps** with cited evidence (specific lines or sections — no generic feedback). Score against the artifact's own remit: absence of work nobody asked for is not a gap, and a simple artifact done cleanly meets the bar — never invent gaps to make the assessment look rigorous. Then state the next-level delta: the two or three concrete things that would make this artifact next-rung work. Example: "The code works and is tested — the principal version would name the migration rollback plan and cut the config surface in half."
 
 ## Mode 3 — Growth feedback
 

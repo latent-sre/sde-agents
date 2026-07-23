@@ -15,13 +15,17 @@ mistakable for an unstyled admin template. Organized and uncluttered is the floo
 Open the style block (or tokens file) with this plan comment, filled in:
 
 ```css
-/* palette: page #… · surface #… · accent #… · status #…
+/* audience: <who repeats this workflow> · tone: <dense-and-calm | expressive>
+   palette: page #… · surface #… · accent #… · status #…
    type: display <face> · body <face> · mono <face>
    signature: <the one element this app will be remembered by> */
 ```
 
-Build from the plan — every color and type decision derives from it. If a line reads like what
-you'd produce for any similar app, change it before building.
+Build from the plan — every color and type decision derives from it. Tone follows the domain: a
+tool someone works *in* daily is dense, quiet, and scannable; expressiveness belongs to surfaces
+visited once — login, landing, a big empty state. Never force a landing-page composition onto a
+daily-use tool. If a line reads like what you'd produce for any similar app, change it before
+building.
 
 ## App shell
 
