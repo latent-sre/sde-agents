@@ -40,7 +40,7 @@ messages (same convention as `docs/sre-agents-adaptation-backlog.md`).
 
 ---
 
-## 1. `frontend-a11y` → `frontend-craft` — adopt the content, not the form (Tier 1)
+## 1. `frontend-a11y` → `frontend-craft` — adopt the content, not the form (Tier 1) — **done**
 
 **What it is:** 446 lines, 16 TSX blocks — form labeling (`SKILL.md:29-75`), semantic-element
 rules, ARIA usage (`aria-label`/`labelledby`/`describedby`, `aria-live` at `:212-226`,
@@ -106,7 +106,7 @@ one verified example is the sturdier form. (Their modal example is honest about 
 No description changes anywhere in this item → no routing-eval surface; validator + tests +
 orphan/link checks cover it.
 
-## 2. `frontend-design-direction` → `frontend-craft` — two surgical adds (Tier 2)
+## 2. `frontend-design-direction` → `frontend-craft` — two surgical adds (Tier 2) — **done**
 
 A 93-line direction-setting skill (salvaged from an upstream PR; ECC deliberately doesn't rebundle
 Anthropic's `frontend-design` — honest provenance, noted). Most of it this fleet already owns in
@@ -177,7 +177,7 @@ read; adjudicated against fleet doctrine.
   danger-phrase list is nearly our `sde-fullstack.md:82-86` red-flags — independently derived,
   placed upstream (before claiming) in ours, downstream (after output) in theirs. Keep ours
   upstream; add the mechanical check at eval time.
-- **One rubric-hygiene clause for `eng-ladder` Mode 2.** Their anti-patterns include two
+- **One rubric-hygiene clause for `eng-ladder` Mode 2** — **done**. Their anti-patterns include two
   assessor-failure rules with no equivalent in our assess-at-a-bar mode: score against what was
   asked (absence of unrequested work is not a gap), and a simple artifact done perfectly meets the
   bar — don't invent gaps to appear rigorous. `code-reviewer` has its version (the false-positive
@@ -191,7 +191,7 @@ every session — their own reference concedes manual invocation is the reliable
 `references/hook-integration.md:62-65`); the report template and numeric anchors (fall with the
 rubric).
 
-## 4. `agents/homelab-architect` → `homelab-platform` — two invariants (Tier 2)
+## 4. `agents/homelab-architect` → `homelab-platform` — two invariants (Tier 2) — **done**
 
 A planning-only advisor (`tools: ["Read", "Grep"]`, `model: sonnet`): inventory → goals →
 capability check → smallest-topology-first plan → staged phases with rollback. As a *product* it
@@ -263,11 +263,12 @@ changes).
 ## Sequencing
 
 1. **Item 1** (frontend-craft a11y: forms block, `interaction-a11y.md` + table row, core clause,
-   keyboard-pass gate) — coordinate with quality-review finding 1's stack-neutrality edit so
-   `frontend-craft` changes once, not twice.
+   keyboard-pass gate) — **landed**. The new reference is written stack-neutral so quality-review
+   finding 1's stack-neutrality edit composes with it rather than reworking it.
 2. **Item 4** (homelab-platform network invariants) and **item 2** (design-plan tone slot, layout
-   stability) — small body edits, independent.
-3. **Item 3a** (packet-lint assert) — folds into quality-review finding 7's behavioral-eval work
-   when that lands; **3b** (eng-ladder Mode 2 clause) anytime.
+   stability) — **landed**; small body edits, independent.
+3. **Item 3a** (packet-lint assert) — **still open, deliberately**: it folds into quality-review
+   finding 7's behavioral-eval work when that lands (no consumer exists yet); **3b** (eng-ladder
+   Mode 2 clause) — **landed**.
 
 Source snapshot: `affaan-m/ECC` @ `a3130f9ebfae` (2026-07-23 clone).
