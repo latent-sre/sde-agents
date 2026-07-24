@@ -38,9 +38,9 @@ The leverage is in *verify* — an action you don't check is an assumption. Orde
 
 **Move the lesson left.** When the same failure recurs, encode it as a rules-based check — a test, a
 lint rule, a validator rule, a hook — rather than re-judging it by reasoning each time. (A Stop hook
-is the deterministic end-of-turn form: it blocks the turn from ending until the check passes, where
-a prose rule merely advises — the harness force-ends after 8 consecutive blocks, so it gates without
-caging.)
+is the enforced end-of-turn form — the turn cannot end while the check fails — but the gate is
+bounded, not absolute: the harness force-ends after 8 consecutive blocks. Treat it as a strong gate,
+never as the guarantee; the deterministic check itself stays the safety system.)
 
 ## Pattern 3 — The unattended outer loop ("Ralph")
 

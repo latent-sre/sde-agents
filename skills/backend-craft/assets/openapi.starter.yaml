@@ -153,8 +153,11 @@ components:
           description: The request path (or a URI for this occurrence).
         request_id:
           type: string
-          description: Extension member — the request ID also present in the structured logs.
-      required: [title, status]
+          description: >-
+            Extension member — the request ID also present in the structured logs. Required by
+            this API's convention (not by RFC 9457) so the greppability promise is enforced by
+            contract tests, not hoped for.
+      required: [title, status, request_id]
       additionalProperties: true
 
     ValidationProblem:

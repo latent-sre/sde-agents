@@ -20,9 +20,14 @@ discipline is the point — adapt names, keep the shape.
     in progress → wait for `pg_isready`; do not restart again mid-recovery.
   - `No space left on device` in db log → `/srv` full (usually WAL growth) → free space, restart,
     then check what grew.
-- Recovery: `cd /srv/stacks/paperless && docker compose down`, then restore the newest dump:
-  `gunzip -c /srv/backups/paperless/db-2026-07-20.sql.gz | docker compose run --rm -T db psql -U paperless paperless`
-  — `unverified`: this restore has not been drilled on this host; drill it and update this line.
+- Recovery: the restore needs a RUNNING database — stop the writers, keep `db` up:
+  `cd /srv/stacks/paperless && docker compose stop webserver consumer`
+  `gunzip -c /srv/backups/paperless/db-2026-07-20.sql.gz | docker compose exec -T db psql -U paperless paperless`
+  `docker compose up -d`
+  If pgdata itself is corrupt (startup loops), recreate it first: `docker compose down`, move
+  `/srv/appdata/paperless/pgdata` aside, `docker compose up -d db`, wait until Health passes, then
+  run the exec restore above and `docker compose up -d`.
+  `unverified` — this restore has not been drilled on this host; drill it and update this line.
   Stop repairing and restore when pgdata won't complete startup twice in a row, or repair passes
   30 minutes.
 - Dependencies: needs the `paperless` compose network and `/srv` mounted; the Paperless webserver

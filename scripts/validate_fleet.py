@@ -83,6 +83,7 @@ KNOWN_SKILL_FIELDS = {
     "effort",
     "context",
     "agent",
+    "background",
     "hooks",
     "paths",
     "shell",
