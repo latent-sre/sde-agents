@@ -8,3 +8,5 @@ The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conf
 - **Migrations** versioned and reversible, expand → migrate → contract (Alembic for Python). Never edit a shipped migration — add a new one.
 - **Explicit, short transaction boundaries** wherever an invariant spans more than one write — and never hold a transaction open across an outbound API call.
 - Size the pool to the DB's real connection limit; kill N+1 (fetch related rows in one query, not per row). Parameterized queries only — never string-built SQL.
+
+Operating a database that already holds data — running a migration without locking the table, diagnosing a slow query, contended locks and pools, and backups you have actually restored — lives in [`database-reliability.md`](database-reliability.md).

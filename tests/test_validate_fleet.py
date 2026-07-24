@@ -369,6 +369,20 @@ class FleetValidatorTests(unittest.TestCase):
 
 REPO = Path(__file__).resolve().parents[1]
 
+
+def _add_guarded_name(repo: Path, name: str) -> None:
+    """Add one name to a repo COPY's GUARDED_AGENT_NAMES, whatever formatting the literal uses.
+
+    The mutation tests below used to string-match the whole single-line frozenset, so extending the
+    real roster broke them by silently mutating nothing — a green test that no longer tested
+    anything. Anchoring on the first member instead survives reformatting.
+    """
+    path = repo / "scripts" / "readonly-guard.py"
+    source = path.read_text(encoding="utf-8")
+    anchor = '"code-reviewer"'
+    assert anchor in source, "GUARDED_AGENT_NAMES no longer contains the expected anchor"
+    path.write_text(source.replace(anchor, f'{anchor}, "{name}"', 1), encoding="utf-8")
+
 READONLY_BASH_AGENT = (
     "---\n"
     "name: auditor\n"
@@ -428,22 +442,15 @@ class PluginWiringTests(unittest.TestCase):
 
     def test_guarded_agent_missing_from_the_hook_string_is_reported(self) -> None:
         # The hook filters on the agent name before it ever runs the guard, so the roster lives in
-        # TWO places. Simulate adding a second guarded agent to the guard alone: the hook's
+        # TWO places. Simulate adding another guarded agent to the guard alone: the hook's
         # fast-path would exit 0 for it, leaving it unguarded while every file claims otherwise.
+        # `sde-fullstack` is a real agent, so this isolates the hook-sync rule from the
+        # does-this-agent-exist rule above.
         def mutate(repo: Path) -> None:
-            path = repo / "scripts" / "readonly-guard.py"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})',
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer", "principal-engineer"})',
-                ),
-                encoding="utf-8",
-            )
+            _add_guarded_name(repo, "sde-fullstack")
 
         issues = self._issues_after(mutate)
-        self.assertTrue(
-            any("never names 'principal-engineer'" in i for i in issues), issues
-        )
+        self.assertTrue(any("never names 'sde-fullstack'" in i for i in issues), issues)
 
     def test_plugin_name_mismatch_is_reported(self) -> None:
         # The guard matches a NAMESPACED agent_type. Rename the plugin and it matches nobody.
@@ -479,13 +486,7 @@ class PluginWiringTests(unittest.TestCase):
     def test_guarding_an_agent_that_does_not_exist_is_reported(self) -> None:
         def mutate(repo: Path) -> None:
             path = repo / "scripts" / "readonly-guard.py"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})',
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer", "ghost"})',
-                ),
-                encoding="utf-8",
-            )
+            _add_guarded_name(repo, "ghost")
 
         issues = self._issues_after(mutate)
         self.assertTrue(any("'ghost'" in i and "not an agent" in i for i in issues), issues)

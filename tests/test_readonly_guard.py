@@ -24,6 +24,9 @@ import unittest
 from pathlib import Path
 
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
+# Guarded by choice rather than by the validator's rule: both hold Write (for documents) and both
+# promise an inspection-only Bash, which is the half a command allowlist can actually enforce.
+DESIGN_AGENTS = frozenset({"principal-engineer", "distinguished-architect"})
 
 # Must match scripts/readonly-guard.py.
 EXIT_ALLOW = 42
@@ -407,6 +410,18 @@ class GuardScopingTest(unittest.TestCase):
         # hand-installing the agent at a different scope.
         proc = run_guard(bash_call("git push origin main", agent_type="code-reviewer"))
         self.assertEqual(decision(proc), "deny")
+
+    def test_every_guarded_agent_is_guarded_in_both_name_forms(self) -> None:
+        # The roster grew past the reviewer: the design agents' "inspection only" Bash is enforced
+        # too. Each name must be guarded under BOTH the namespaced and the bare agent_type, and a
+        # design agent must still be allowed the reads its own file promises it.
+        for name in DESIGN_AGENTS | {"code-reviewer"}:
+            for agent_type in (name, f"sde-agents:{name}"):
+                with self.subTest(agent_type=agent_type):
+                    denied = run_guard(bash_call("pytest -q", agent_type=agent_type))
+                    self.assertEqual(decision(denied), "deny")
+                    allowed = run_guard(bash_call("git log --oneline -5", agent_type=agent_type))
+                    self.assertEqual(decision(allowed), "allow")
 
     def test_main_loop_command_that_merely_names_the_reviewer_is_allowed(self) -> None:
         # `tool_input.command` is user-controlled text. A guard that scanned it for the agent name

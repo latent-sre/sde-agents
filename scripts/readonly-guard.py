@@ -88,7 +88,18 @@ PLUGIN_NAME = "sde-agents"
 # form (how a plugin agent identifies itself) and the bare form (project/user scope) are guarded, so
 # the guard cannot be sidestepped by installing the agent a different way.
 # validate_fleet.py cross-checks this against agents/: hold Bash and you must be listed here.
-GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})
+#
+# `principal-engineer` and `distinguished-architect` are here despite holding Write: their files
+# promise "your Bash is inspection only" while their Write grant is legitimately for documents, and
+# no tool boundary can split a doc from a source file. The Bash half, though, is exactly what this
+# guard enforces, and their stated needs (git history, search, reading the current system) are
+# already on the allowlist below — so the half that CAN be enforced now is. Their Write grant stays
+# cooperative, and both files say so. Note validate_fleet.py only COMPELS guarding for a Bash-holder
+# with no write tool; these two are here by choice, and the hook's own agent list is kept in sync by
+# a validator rule (adding a name here without the hook would silently guard nothing).
+GUARDED_AGENT_NAMES = frozenset({
+    "code-reviewer", "principal-engineer", "distinguished-architect",
+})
 GUARDED_AGENTS = frozenset(
     set(GUARDED_AGENT_NAMES) | {f"{PLUGIN_NAME}:{name}" for name in GUARDED_AGENT_NAMES}
 )

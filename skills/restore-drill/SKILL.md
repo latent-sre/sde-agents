@@ -1,0 +1,81 @@
+---
+name: restore-drill
+description: Rehearses restoring a service from its backup and records the measured result — proving the backup is real before you need it. Use for "test my backups", "can I actually restore this", "practice a recovery", or a scheduled restore rehearsal. Not for restoring during a live outage (that is sde-agents:lab-incident's mitigation, working the service's recovery doc) and not for designing the backup itself (sde-agents:backend-craft's database-reliability reference, or sde-agents:service-onboard step 3).
+argument-hint: [the service whose restore to rehearse]
+---
+
+# Restore drill
+
+**A backup you have never restored is a hope with a cron job.** The drill converts it into a number:
+this service, restored in this long, verified this way, on this date. That number is the only honest
+input to an RTO, and finding out it's wrong today costs an afternoon instead of the data.
+
+Every apply here is under `sde-agents:homelab-platform`'s change tiers. A drill that touches the live
+service is Tier 3 — but the whole point is that it usually doesn't need to.
+
+## Rule one: drill into a scratch target, never over the live service
+
+Restore into a throwaway container, a scratch database name, or a temporary path. You are testing the
+*backup*, not testing your nerve. A drill that overwrites production state has converted a rehearsal
+into an incident, and the failure mode is the one you were trying to prevent.
+
+The exception is deliberate and rare: verifying an in-place restore path that has no scratch
+equivalent. That is Tier 3, planned, with the operator present and a second copy of the data taken
+first.
+
+## The drill
+
+1. **State what you're proving.** Which service, which backup (the specific file or snapshot, by
+   name), and what "restored" means for it — the database answers a query, the documents are
+   searchable, the config loads. Vague success criteria produce drills that pass while the real
+   restore fails.
+2. **Start the clock.** Wall-clock time from "decide to restore" to "verified working" *is* the RTO.
+   Include the parts nobody counts: finding the backup, reading the runbook, fetching from the
+   off-site copy.
+3. **Use the runbook, exactly as written.** This is the second thing being tested. If you deviate,
+   improvise, or already know a step is wrong — that is the finding, and the runbook edit is part of
+   the drill's output. A restore performed from memory by the person who set it up proves nothing
+   about the 3 a.m. version.
+4. **Restore into the scratch target.** Take the *newest* backup, not a hand-picked one. If the
+   restore needs an empty target (most do — a plain SQL dump over an existing schema fails), the
+   runbook must say so and say how.
+5. **Verify against the criteria from step 1**, with a real query or a real page load. "The command
+   exited 0" is not verification: a partially-restored database often exits 0, and `psql` without
+   `ON_ERROR_STOP=1` prints errors and returns success.
+6. **Check what the backup did *not* contain.** The gap between "restored" and "working" is where the
+   surprises live: secrets and env files, the reverse-proxy route, DNS records, TLS certificates,
+   volume permissions and ownership, cron jobs, the search index that has to be rebuilt. Anything
+   found here is a backup-scope finding, not a restore failure.
+7. **Record the result in the runbook**: the date, the measured duration, the backup used, and any
+   step that had to change. Update the Recovery slot's `unverified` marker and the Last-verified line
+   (`sde-agents:runbook`). An unrecorded drill has to be repeated to be useful.
+8. **Tear down the scratch target** so the next drill starts clean and the leftovers don't get
+   mistaken for something live.
+
+## What a drill is allowed to conclude
+
+- **Pass** — restored within the expected time and verified. Record the number.
+- **Pass with findings** — it worked, but the runbook was wrong, a step was missing, or something
+  outside the backup had to be recreated. This is the most common and most valuable outcome; each
+  finding is a runbook edit.
+- **Fail** — the backup is unusable, incomplete, or unreadable. This is an urgent finding, not a
+  scheduling problem: right now, the service has no recovery path. Fix the backup, then re-drill,
+  and treat the interval since the last good backup as data you would have lost.
+
+Never conclude "probably fine" from a partial drill. State what you verified and what you didn't,
+labelled `[verified]` / `[unverified]` per the fleet convention.
+
+## Cadence and what to drill
+
+Drill the services whose loss would actually hurt — the ones holding data you can't recreate — and
+drill after anything that changes the restore path: a major version upgrade (the classic moment a
+physical backup stops being restorable), a storage migration, a change of backup tool or destination.
+A quarterly rehearsal of one important service beats an annual plan for all of them.
+
+## Output
+
+- **Service and backup** used, by name.
+- **Measured duration**, broken into locate → restore → verify.
+- **Verified**: the criteria and the evidence (the query, the output, the page).
+- **Findings**: runbook edits made, backup-scope gaps, anything outside the backup.
+- **Verdict**: pass / pass with findings / fail, and the runbook lines updated.

@@ -1,0 +1,114 @@
+---
+name: observability
+description: Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, and collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Applying any of it to the live lab routes through sde-agents:homelab-platform's change tiers. Not for responding to a live outage (sde-agents:lab-incident) and not for the fleet's own routing evals.
+argument-hint: [what to instrument, query, or alert on]
+---
+
+# Observability
+
+Monitoring exists to answer one question at 3 a.m.: **is this broken, and where?** Everything below
+serves that. A dashboard nobody reads during an incident and an alert nobody can act on are both
+cost without coverage.
+
+Three fleet components *demand* monitoring — `sde-agents:homelab-platform` (Prime directives),
+`sde-agents:service-onboard` (step 6), `sde-agents:lab-audit` (findings) — and this skill is where
+the how lives. The lab's stack is Prometheus, Grafana, Loki, and Alloy; the rules are
+stack-neutral, and those are the worked examples.
+
+**Applies are not yours.** Writing a rule file, dashboard JSON, or scrape config is authoring;
+reloading Prometheus, importing to Grafana, or restarting Alloy is an apply under
+`sde-agents:homelab-platform`'s tiers. Hand it over with the exact command and the rollback.
+
+## Instrument for the questions you'll ask
+
+- **RED for request-driven work** (rate, errors, duration) and **USE for resources** (utilization,
+  saturation, errors). Between them they answer "is it serving?" and "is it running out?".
+- **Cardinality is the budget.** A label whose values are unbounded — user id, request id, path with
+  ids in it, container id — multiplies series until the database is the outage. Bounded labels only
+  (service, route *template*, method, status class, host). One high-cardinality label added
+  thoughtlessly is the most common self-inflicted monitoring failure.
+- **Names carry units and stay stable**: `http_request_duration_seconds`, `queue_depth`,
+  `backup_last_success_timestamp_seconds`. Seconds and bytes, never milliseconds and megabytes.
+- **Histograms for latency, never averages.** An average hides the tail that users feel; p99 is the
+  number that corresponds to somebody's bad experience.
+- **The most valuable metric in a home lab is a timestamp**: `*_last_success_timestamp_seconds` for
+  every backup, sync, and scheduled job. Alerting on "hasn't succeeded in N hours" catches the
+  silent failures that no error rate ever shows, because a job that never ran emits no errors.
+- Every service exposes `/healthz` and `/readyz` distinctly (see `sde-agents:backend-craft`) and a
+  metrics endpoint the scraper can reach.
+
+## Logs
+
+- **Structured, one event per line**, with the request id that `sde-agents:backend-craft` requires
+  on every entry — that id is what makes a user report greppable across services.
+- Log at boundaries and decisions, not inside loops. A log line per iteration is how you fill a disk
+  and cause the next outage.
+- **Never log secrets, tokens, or personal data** — logs are the least-protected copy of your data,
+  and they get shipped, indexed, and shared in screenshots.
+- Keep labels/streams low-cardinality for the same reason as metrics; put the varying detail in the
+  message body, not in the stream identity.
+- Retention is a decision, not a default: how far back you can look, and what it costs on disk.
+
+## Alerts — page on symptoms, not causes
+
+- **Alert on what a user would notice**: the site is erroring, the page is slow, the backup hasn't
+  succeeded, the certificate expires in days. Not on CPU being high — CPU being high while
+  everything works is not an incident.
+- **Every alert answers three things**: what's broken, how bad, what to do. That third one is a link
+  to the service's runbook (`sde-agents:runbook`), so the alert and the recovery path are the same
+  artifact.
+- **If an alert isn't actionable, delete it.** Alert fatigue is not a discipline problem; it is a
+  design defect, and the fix is fewer alerts, not more willpower.
+- **Symptom alerts page; cause alerts inform.** Saturation and capacity trends belong on a
+  dashboard or a daily digest, not on a pager at 3 a.m.
+- Alerts need `for:` durations long enough to survive a scrape blip, and thresholds you can defend.
+  A threshold nobody can explain gets silenced the first time it's noisy, and then it's decoration.
+- **Household scale, honestly**: multi-window burn-rate SLO machinery is designed for services with
+  a paging rotation. In a one-operator lab, "the thing is down" plus "the backup is stale" plus
+  "the certificate expires soon" covers most real risk. Reach for burn-rate rules when a service
+  genuinely has a target you're managing to, not because the pattern exists.
+
+## Dashboards
+
+- **One dashboard per service, answering the incident questions in reading order**: is it up, is it
+  erroring, is it slow, is it saturated. A dashboard that requires knowing where to look has failed
+  its purpose.
+- Overview at the top (a few big numbers), detail below. Time range and interval as variables so
+  the same panel works at 5 minutes and 7 days.
+- **Dashboards as code**, provisioned from the repo — a dashboard edited only in the UI is lost with
+  the container and cannot be reviewed.
+- Label every axis with its unit, and set thresholds where the color means something specific.
+- A panel per *question*, not per available metric. The temptation is to plot everything the
+  exporter offers; that dashboard is unreadable exactly when it matters.
+
+## Verify it before calling it done
+
+An alert that has never fired and a dashboard that has never been read during a real problem are
+both unverified. Before "done":
+
+- The query returns what you expect against **real data** — paste the query and its result.
+- The alert rule **fires** when you force its condition (a deliberately failing check, a test rule
+  with an always-true expression, or `promtool test rules` for the arithmetic) and resolves after.
+  A rule that only ever evaluated to zero is written, not verified.
+- Reloads were validated first: `promtool check rules` / `promtool check config`, `alloy fmt`, the
+  dashboard JSON imports cleanly.
+- The runbook link in the alert resolves to a runbook that exists.
+
+## Before you write it — load the reference for what you're building
+
+| If the task involves… | Read first |
+|---|---|
+| a PromQL query, a recording rule, or metric math | [`references/promql.md`](references/promql.md) |
+| a LogQL query, log-derived metrics, or Loki labels | [`references/logql.md`](references/logql.md) |
+| an alert rule, thresholds, routing, or SLO burn rates | [`references/alerting.md`](references/alerting.md) |
+| a Grafana dashboard, panels, or provisioning | [`references/dashboards.md`](references/dashboards.md) |
+| collection — scrape configs, Alloy/OTel pipelines, exporters | [`references/pipeline.md`](references/pipeline.md) |
+
+Computing an error budget from a target and an observed success rate?
+[`scripts/error_budget.py`](scripts/error_budget.py) does the arithmetic (pure stdlib, no network).
+
+Trips two predicates? Read both. Trips none? The core above is the whole job.
+
+The **review packet** is the end-of-task report defined by the calling agent. Invoked standalone
+with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified —
+and label load-bearing claims `[verified]`, `[sourced]`, or `[unverified]`.

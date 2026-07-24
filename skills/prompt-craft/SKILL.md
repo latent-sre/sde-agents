@@ -30,6 +30,17 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 
 Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. Avoid nuance clauses ("unless it matters") — they reopen the negotiation. Everywhere outside the pressure-discipline row, the default register is plain imperative that explains *why* — reaching for all-caps MUST/NEVER there is a sign the form is wrong.
 
+## Load the reference for what you're working on
+
+The method above applies to every prompt task. These apply when the task involves the thing named —
+read before writing, and name what you read.
+
+| If the work involves… | Read first |
+|---|---|
+| an agent that touches untrusted content, private data, or the ability to act | [`references/agent-security.md`](references/agent-security.md) |
+| choosing an agent's tools, or designing tools for a model to call | [`references/tools.md`](references/tools.md) |
+| what an agent knows, when it loads it, or degradation over a long run | [`references/context.md`](references/context.md) |
+
 ## Frontmatter quick reference
 
 Authority lives in frontmatter, not in prose. Before writing or editing any agent or skill

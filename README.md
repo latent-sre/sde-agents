@@ -8,8 +8,8 @@ generated copy and no second source of truth.
 ## Fleet
 
 <!-- fleet-inventory:start -->
-- **Agents (7):** `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `sde-fullstack`
-- **Skills (11):** `backend-craft`, `eng-ladder`, `frontend-craft`, `lab-audit`, `postmortem`, `prompt-craft`, `root-cause`, `runbook`, `self-improve-loop`, `service-onboard`, `sre-tool`
+- **Agents (8):** `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `researcher`, `sde-fullstack`
+- **Skills (17):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
 Refresh the generated block after adding, renaming, or removing an agent or skill:
