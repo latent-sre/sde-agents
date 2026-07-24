@@ -19,9 +19,15 @@ Investigate before writing: read the actual config, compose/unit files, and any 
 - Common failures: symptom → likely cause → fix, one line each.
 - Recovery: the restore-from-backup path with exact commands; when to stop repairing and restore.
 - Dependencies: what it needs (DNS, DB, proxy) and what depends on it.
+- Alerts: what notifies you when it breaks, and where to look. "n/a — nothing alerts on this yet" is honest, and a finding.
+- Last verified: <date> — the Health and Restart steps were actually run, not just written.
 ```
 
 Rules:
 - Every command copy-pasteable as written — real paths and real names. A `<placeholder>` is allowed only for truly variable values, and then say where to find the value.
 - "Common failures" lists only what has been observed or is clearly plausible for this service — no padding to make the section look complete.
 - If you couldn't verify a command works (service not running, no access), mark it `unverified` rather than presenting it as tested.
+- Rehearse or it rots: re-run Health and Restart after any meaningful change to the service, and drill the Recovery path *before* you need it — a restore that has never been rehearsed is a hope, not a path. Update "Last verified" when you do.
+- Know which doc you're writing: this template operates ONE service (check, restart, recover). A repeating procedure that spans services (cert renewal, backup rotation) is a playbook — same rules, adapt the slots. What happened during an incident is a postmortem (`sde-agents:postmortem`); its distilled symptom → cause → fix line lands *here*, under Common failures.
+
+A complete filled example — including an honest "n/a" and an honest `unverified`: [references/example.md](references/example.md).

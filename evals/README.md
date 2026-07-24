@@ -87,7 +87,7 @@ Four clusters are seeded — every overlap this README names:
 | Cluster file | Members | Guards |
 |---|---|---|
 | `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
-| `homelab-ops.json` | homelab-platform, service-onboard, lab-audit, runbook | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `homelab-ops.json` | homelab-platform, service-onboard, lab-audit, runbook, postmortem | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
