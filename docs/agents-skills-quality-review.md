@@ -1,5 +1,16 @@
 # Agents & Skills Quality Review — July 2026
 
+> **Status: snapshot of 2026-07-16, partly superseded — do not read as the live to-do list.**
+> `docs/sre-agents-adaptation-backlog.md` owns what is currently open; this file is kept for its
+> adjudication detail. Landed since it was written, verified against the tree 2026-07-24:
+> **2** (the stale `allowed-tools` line is gone; the corrected fact lives in
+> `skills/prompt-craft/references/claude-code-frontmatter.md`), **3** (that shared reference file
+> is the single source of truth now), **4** (the fetched-content sentence is in all seven agents),
+> **5** (`homelab-platform`'s description routes service additions to itself), **6** (`lab-audit`
+> carries `disallowed-tools: Write, Edit`), **7a** (five clusters seeded, four baselined; 7b's
+> behavioral evals remain open), **19** (the `Skill` grant is documented). Finding **1**
+> (stack-neutrality) and the P3 polish items are still open unless the backlog says otherwise.
+
 Scope: the 7 agent definitions in `agents/` and 9 skills in `skills/` (including all reference
 files). Tests, scripts, and hooks were read only as context for verifying claims. Method: three
 passes — (1) structural/spec compliance, (2) independent fresh-eyes content audit, (3) adversarial

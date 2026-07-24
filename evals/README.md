@@ -40,15 +40,22 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 
 ## Running
 
+The runner takes **one cluster file per invocation**, and defaults to `prompt-tooling.json` when
+given none — there is no all-clusters mode, so "I ran the evals" without naming a file means one
+cluster of five was measured:
+
 ```bash
-# full suite, 3 runs per case (the methodology's default), ~4 parallel
+# one cluster, 3 runs per case (the methodology's default), ~4 parallel
 python3 scripts/eval_routing.py evals/routing/prompt-tooling.json --runs 3
 
-# cheap smoke check: one run each
+# every cluster — what "the full suite" actually takes
+for f in evals/routing/*.json; do python3 scripts/eval_routing.py "$f" --runs 3; done
+
+# cheap smoke check of ONE cluster (prompt-tooling, the default)
 python3 scripts/eval_routing.py --runs 1
 
-# just the negatives
-python3 scripts/eval_routing.py --case 'neg-*'
+# just the negatives, still one cluster at a time
+python3 scripts/eval_routing.py evals/routing/homelab-ops.json --case 'neg-*'
 ```
 
 Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
@@ -82,7 +89,8 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Four clusters are seeded — every overlap this README names:
+Five clusters are seeded — every overlap this README names, plus the altitude and
+simple-stays-simple seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
@@ -92,9 +100,12 @@ Four clusters are seeded — every overlap this README names:
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
 
-`homelab-ops` is a **baseline of the current members**, to be re-run and diffed after the planned
-`incident` / `restore-drill` / `upgrade-campaign` skills land (see
-`docs/skills-modernization-plan.md`). A captured baseline lives under `baselines/`.
+`homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
+`baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
+there, 5 / 18 now), so it is a *historical* anchor, not a like-for-like comparison — a fresh
+capture lives in `baselines/2026-07-24/`. Re-baseline again when the planned `lab-incident`
+(backlog 1.5; the `incident` half named in `docs/skills-modernization-plan.md` shipped as
+`postmortem`), `restore-drill`, or `upgrade-campaign` skills land.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 
