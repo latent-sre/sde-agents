@@ -119,9 +119,13 @@ _SIMPLE_READERS = frozenset({
     "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
     "echo", "diff", "cmp", "jq", "true", "false",
 })
-# `rg --pre COMMAND` runs COMMAND on every searched file, turning a reader into arbitrary code
-# execution. `rg` is useful enough for review to retain with this narrow gate.
-_RG_EXECUTION_FLAGS = frozenset({"--pre"})
+# ripgrep flags that run an external program (or a PATH-resolved helper) mid-search, turning a
+# reader into code execution. `--pre COMMAND` runs COMMAND on every file; `--hostname-bin COMMAND`
+# runs COMMAND to resolve the hostname for hyperlinks (rg 14+); `--search-zip`/`-z` shells out to
+# decompressors found on PATH, which a planted `gzip` subverts. `rg` is useful enough for review to
+# retain with this gate — enumerate EVERY exec-capable flag, since one unlisted flag reopens the
+# hole (proven: `--hostname-bin=/bin/sh` executed before this list grew past `--pre`).
+_RG_EXECUTION_FLAGS = frozenset({"--pre", "--hostname-bin", "--search-zip", "-z"})
 
 # `git` subcommands that have no write SUBCOMMAND (per `git-<name>(1)` synopsis). Several still
 # accept `--output=<file>`/`-o <file>` to write a report to disk (diff, log, show, diff-tree,
@@ -137,6 +141,14 @@ _GIT_READ = frozenset({
 # share the diff plumbing) and write to the named path with no shell redirect involved, so
 # _STRUCTURE_DENY never sees them. Any occurrence is disqualifying.
 _GIT_READ_WRITE_FLAGS = frozenset({"-o", "--output"})
+# Flags on _GIT_READ subcommands that EXECUTE a program — the git twin of `rg --pre`. `git grep`
+# opens matching files in a pager named by `--open-files-in-pager[=CMD]` or its attached short form
+# `-O<CMD>`, and runs CMD even with no TTY (proven: `git grep -O/bin/sh` executed the pager). The
+# `-O` short form can't be caught by the `split("=")` membership test the write-flags use, so
+# _git_allowed rejects any `-O`-prefixed arg explicitly. That also denies `git diff -O<orderfile>`
+# (a benign order file that shares the branch) — a false positive we accept, per this guard's
+# fail-loud-not-silent rule.
+_GIT_READ_EXEC_FLAGS = frozenset({"--open-files-in-pager"})
 # Subcommands whose FIRST POSITIONAL decides read vs write (`git stash list` reads, a bare
 # `git stash` pushes; `git submodule status` reads, `git submodule update` writes;
 # `git reflog show` reads, `git reflog expire` prunes reflog entries).
@@ -266,9 +278,17 @@ def _git_allowed(args: list[str]) -> bool:
     subcommand, rest = args[index], args[index + 1:]
 
     if subcommand in _GIT_READ:
-        # Even for a read subcommand, `--output=<file>` / `-o <file>` writes to disk without any
-        # shell redirect. Reject the flag in every form (`--output=x`, `--output x`, `-o x`).
-        return not any(arg.split("=", 1)[0] in _GIT_READ_WRITE_FLAGS for arg in rest)
+        # Even a read subcommand can escape read-only WITHOUT a shell redirect: `--output=<file>` /
+        # `-o <file>` writes a report to disk, and `git grep --open-files-in-pager[=CMD]` / `-O<CMD>`
+        # executes CMD. Reject every spelling — `--flag`, `--flag=x`, `-o x`, and the attached short
+        # form `-O<CMD>` that the `split("=")` test alone would miss.
+        for arg in rest:
+            base = arg.split("=", 1)[0]
+            if base in _GIT_READ_WRITE_FLAGS or base in _GIT_READ_EXEC_FLAGS:
+                return False
+            if arg.startswith("-O"):  # `-O`, `-O/bin/sh` (git grep pager exec)
+                return False
+        return True
 
     if subcommand in _GIT_READ_VERBS:
         verbs = _positionals(rest)

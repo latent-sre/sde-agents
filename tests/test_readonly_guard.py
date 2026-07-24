@@ -113,7 +113,10 @@ ALLOWED = [
     "git branch --show-current",
     # searching and reading the tree
     "grep -rn 'def main' scripts/",
+    "git grep -n TODO",
+    "git grep -i -E 'foo|bar' -- scripts/",
     "rg 'git push' docs/",
+    "rg --hidden -n pattern",
     "ls -la agents/",
     "cat skills/eng-ladder/SKILL.md",
     "head -50 agents/code-reviewer.md",
@@ -191,6 +194,18 @@ DENIED = [
     "less -o /tmp/less.log agents/code-reviewer.md",
     "rg --pre /bin/sh pattern .",
     "rg --pre=/bin/sh pattern .",
+    # REGRESSION (reviewer-reported, reproduced against the live guard): flags that EXECUTE a
+    # program mid-search — the same arbitrary-code-execution class as `rg --pre`, once allowed
+    # because each was one unlisted flag. `git grep -O/--open-files-in-pager` runs the pager even
+    # with no TTY; `rg --hostname-bin` runs a hostname helper; `rg -z/--search-zip` shells out to
+    # PATH decompressors.
+    "git grep --open-files-in-pager=/bin/sh TODO",
+    "git grep -O/bin/sh TODO",
+    "git grep -O /bin/sh TODO",
+    "rg --hostname-bin=/bin/sh TODO .",
+    "rg --hostname-bin /bin/sh TODO .",
+    "rg --search-zip TODO .",
+    "rg -z TODO .",
     # REGRESSION (reviewer-reported, reproduced): every one of these WROTE and the old denylist
     # allowed it. They are gone now not because each was listed, but because none is a reader.
     "git clone https://github.com/x/y.git",

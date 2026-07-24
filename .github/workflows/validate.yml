@@ -11,12 +11,14 @@ permissions:
 
 jobs:
   validate:
-    # The guard and hook carry Windows-specific code (a PowerShell mutation-verb
-    # denylist and an interpreter-probe that exists because the Microsoft Store
-    # python3 stub wins `command -v` on Windows). Run the matrix so those paths
-    # are actually exercised, not just the Linux happy path. `py` is the working
-    # interpreter per OS (GitHub's Windows runner ships real Python on PATH as
-    # `python`, so we avoid the `python3` Store stub there).
+    # The guard and hook carry Windows-specific code: the hook's interpreter-probe
+    # exists because the Microsoft Store python3 stub wins `command -v` on Windows,
+    # and the guard's allowlist default must hold across OSes (a PowerShell cmdlet is
+    # denied by not being a listed reader, not by any denylist — the guard was
+    # inverted to a pure allowlist). Run the matrix so those paths are actually
+    # exercised, not just the Linux happy path. `py` is the working interpreter per
+    # OS (GitHub's Windows runner ships real Python on PATH as `python`, so we avoid
+    # the `python3` Store stub there).
     strategy:
       fail-fast: false
       matrix:
