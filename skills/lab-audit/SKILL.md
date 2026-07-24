@@ -2,14 +2,14 @@
 name: lab-audit
 description: A read-only home-lab health and hygiene sweep that reports severity-ranked, evidence-cited findings. Use for a periodic audit, when asked "what's wrong with my lab" or "audit my setup", or after a long gap in maintenance. Surveys and reports; for the fixes themselves, use sde-agents:homelab-platform.
 argument-hint: [scope - a host, a stack, or the whole lab]
-disallowed-tools: Write, Edit
+disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 Audit the lab against its own standards and report like a code review of the infrastructure: severity-ranked, evidence-cited, no finding without the command output that proves it.
 
 ## Checks (run what's applicable; list what you couldn't run and why)
 
-All checks are read-only. `disallowed-tools` removes Write and Edit while this skill is active, but Bash can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `sde-agents:homelab-platform`. Whether you were invoked directly from the main session or under `homelab-platform`, the reviewer's Bash guard does not cover this skill (that hook keys on the `code-reviewer` agent_type, and the main loop carries none at all) — the read-only-ness here is cooperative, not enforced. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
+All checks are read-only. `disallowed-tools` removes Write and Edit while this skill is active, but Bash can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `sde-agents:homelab-platform`. Whether you were invoked directly from the main session or under `homelab-platform`, the reviewer's Bash guard does not cover this skill (that hook keys on guarded *agent* identities, and the main loop carries none at all) — the read-only-ness here is cooperative, not enforced. `NotebookEdit` is in `disallowed-tools` for the same reason as Write and Edit: it is a write tool, and a denylist that names only the obvious two leaves the third. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
 
 - **Exposure** — listening ports vs. what the reverse proxy should be fronting; anything WAN-reachable; services without auth in front.
 - **Container hygiene** — `latest` tags, missing restart policies, missing health checks, no resource limits, containers in exited/restarting loops.
