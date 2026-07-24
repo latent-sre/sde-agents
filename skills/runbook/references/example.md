@@ -11,8 +11,10 @@ discipline is the point — adapt names, keep the shape.
 - What/why: database for Paperless-ngx; document loads start failing within a minute if it's down.
 - Where: host `nas-1`; compose file `/srv/stacks/paperless/compose.yaml`; data volume
   `/srv/appdata/paperless/pgdata`; no web UI.
-- Health: `docker exec paperless-db pg_isready -U paperless` → `accepting connections`, and
-  `docker inspect -f '{{.State.Health.Status}}' paperless-db` → `healthy`.
+- Health: `cd /srv/stacks/paperless && docker compose exec db pg_isready -U paperless` →
+  `accepting connections`, and `docker compose ps db` → `running (healthy)`. (Address containers by
+  compose *service* name throughout — the generated container name is `<project>-db-1`, not `db`,
+  so `docker exec db …` fails unless the compose file pins `container_name:`.)
 - Restart: `cd /srv/stacks/paperless && docker compose restart db`, wait until `pg_isready`
   returns `accepting connections` (typically under 10 s), then `docker compose restart webserver`.
 - Common failures:
@@ -20,13 +22,17 @@ discipline is the point — adapt names, keep the shape.
     in progress → wait for `pg_isready`; do not restart again mid-recovery.
   - `No space left on device` in db log → `/srv` full (usually WAL growth) → free space, restart,
     then check what grew.
-- Recovery: the restore needs a RUNNING database — stop the writers, keep `db` up:
-  `cd /srv/stacks/paperless && docker compose stop webserver consumer`
-  `gunzip -c /srv/backups/paperless/db-2026-07-20.sql.gz | docker compose exec -T db psql -U paperless paperless`
+- Recovery: the restore needs a RUNNING database and an EMPTY target — a plain `pg_dump` file is
+  `CREATE`-heavy and fails with `relation already exists` if restored over the live schema:
+  `cd /srv/stacks/paperless && docker compose stop webserver consumer` (drops the open connections)
+  `docker compose exec -T db psql -U paperless -d paperless -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'`
+  `gunzip -c /srv/backups/paperless/db-2026-07-20.sql.gz | docker compose exec -T db psql -U paperless -d paperless -v ON_ERROR_STOP=1`
   `docker compose up -d`
-  If pgdata itself is corrupt (startup loops), recreate it first: `docker compose down`, move
+  (`ON_ERROR_STOP=1` matters: without it psql prints errors, exits 0, and a half-restored database
+  looks like a successful restore.)
+  If pgdata itself is corrupt (startup loops), recreate it instead: `docker compose down`, move
   `/srv/appdata/paperless/pgdata` aside, `docker compose up -d db`, wait until Health passes, then
-  run the exec restore above and `docker compose up -d`.
+  run the restore above — the schema drop is unnecessary on a fresh volume — and `docker compose up -d`.
   `unverified` — this restore has not been drilled on this host; drill it and update this line.
   Stop repairing and restore when pgdata won't complete startup twice in a row, or repair passes
   30 minutes.

@@ -9,7 +9,7 @@ Audit the lab against its own standards and report like a code review of the inf
 
 ## Checks (run what's applicable; list what you couldn't run and why)
 
-All checks are read-only. `disallowed-tools` removes Write and Edit while this skill is active, but Bash can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `sde-agents:homelab-platform`. This runs under `homelab-platform`, so the reviewer's Bash guard does not cover it (that hook keys on the `code-reviewer` agent_type) — the read-only-ness here is cooperative, not enforced. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
+All checks are read-only. `disallowed-tools` removes Write and Edit while this skill is active, but Bash can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `sde-agents:homelab-platform`. Whether you were invoked directly from the main session or under `homelab-platform`, the reviewer's Bash guard does not cover this skill (that hook keys on the `code-reviewer` agent_type, and the main loop carries none at all) — the read-only-ness here is cooperative, not enforced. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
 
 - **Exposure** — listening ports vs. what the reverse proxy should be fronting; anything WAN-reachable; services without auth in front.
 - **Container hygiene** — `latest` tags, missing restart policies, missing health checks, no resource limits, containers in exited/restarting loops.

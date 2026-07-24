@@ -45,6 +45,8 @@ for:
   radius, a rehearsed recovery) from **preventative** (stops the recurrence: the config fix, the
   guardrail). Every action names the **artifact** it becomes — a runbook line, an alert, a drill,
   a validator rule — and a **proof-of-done** check. An action with no artifact will not happen.
+- **Runbook updated** — which runbook gained the symptom → cause → fix line, or "n/a — why". Last
+  slot in the template because it is the one that most often goes unwritten; see Feed it forward.
 
 Label load-bearing claims `[verified]`, `[sourced]`, or `[unverified]` per the fleet evidence
 convention — a timeline entry you reconstructed rather than read is `[unverified]` and says so.
