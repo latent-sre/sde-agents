@@ -705,6 +705,21 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
                 f"${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy. Resolving it any other "
                 f"way risks executing a guard supplied by the repository under review."
             )
+        # The hook string carries its OWN copy of the roster: a `case` fast-path that exits 0 for
+        # any payload not naming a guarded agent, plus the no-interpreter fallback deny patterns.
+        # So GUARDED_AGENT_NAMES and hooks.json must agree, and nothing but this check makes them.
+        # Add an agent to the guard alone and the hook returns 0 before the guard ever runs — the
+        # new agent is unguarded while every file still says it is guarded, and no command fails to
+        # announce it. That is the silent-disarm shape this validator exists to make loud.
+        for name in sorted(guard.GUARDED_AGENT_NAMES):
+            if name not in command:
+                issues.append(
+                    f"{root / 'hooks' / 'hooks.json'}: the PreToolUse/Bash hook command never names "
+                    f"{name!r}, but scripts/readonly-guard.py lists it in GUARDED_AGENT_NAMES. The "
+                    f"hook filters on the agent name BEFORE invoking the guard, so that agent's Bash "
+                    f"never reaches it — its 'read-only' would be a promise with no control behind "
+                    f"it, and the failure is silent because the hook still exits 0."
+                )
 
     # The guard's subject list and the agent roster must agree, in both directions.
     guarded = set(guard.GUARDED_AGENT_NAMES)

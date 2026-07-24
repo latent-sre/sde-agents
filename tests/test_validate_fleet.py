@@ -193,12 +193,17 @@ class FleetValidatorTests(unittest.TestCase):
         )
 
     def test_documented_skill_frontmatter_keys_are_accepted(self) -> None:
-        # The full documented set must pass, or the allowlist is a false tripwire.
-        extra = "when_to_use: x\nallowed-tools: Read\nmodel: inherit\neffort: high\ncontext: fresh\n"
+        # The full documented set must pass, or the allowlist is a false tripwire. "Full" is meant
+        # literally: this asserts EVERY key in KNOWN_SKILL_FIELDS, because a typo'd allowlist entry
+        # (`backgroud`) rejects the very field it was added to permit, and a test that exercised
+        # only a hand-picked five would not notice.
+        documented = sorted(validate_fleet.KNOWN_SKILL_FIELDS - {"name", "description"})
+        extra = "".join(f"{key}: x\n" for key in documented)
         issues = self._skill_issues(
             "craft", "name: craft\ndescription: Use when building.\n" + extra
         )
         self.assertEqual([], [i for i in issues if "frontmatter key" in i])
+        self.assertIn("background", documented)  # the field added 2026-07-24, now covered
 
     def test_agent_name_must_match_filename(self) -> None:
         body = VALID_AGENT.replace("name: builder", "name: other")
@@ -228,6 +233,14 @@ class FleetValidatorTests(unittest.TestCase):
         body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(code-reviewer)")
         issues = self._agent_issues(("builder.md", body))
         self.assertTrue(any("does not restrict anything here" in i for i in issues), issues)
+
+    def test_scoped_bash_grant_is_reported_as_a_false_restriction(self) -> None:
+        # The Agent(type) branch above had a test; this sibling branch — the one guarding the
+        # `Bash(git diff:*)` footgun the read-only guard exists because of — had none, so a
+        # refactor could have disarmed it silently.
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Bash(git diff:*)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("SILENTLY IGNORES" in i for i in issues), issues)
 
     def test_scoped_grant_survives_the_comma_split(self) -> None:
         # A naive split(",") shreds `Agent(worker, researcher)` into `Agent(worker` and `researcher)`,
@@ -412,6 +425,25 @@ class PluginWiringTests(unittest.TestCase):
 
         issues = self._issues_after(mutate)
         self.assertTrue(any("CLAUDE_PLUGIN_ROOT" in i for i in issues), issues)
+
+    def test_guarded_agent_missing_from_the_hook_string_is_reported(self) -> None:
+        # The hook filters on the agent name before it ever runs the guard, so the roster lives in
+        # TWO places. Simulate adding a second guarded agent to the guard alone: the hook's
+        # fast-path would exit 0 for it, leaving it unguarded while every file claims otherwise.
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "readonly-guard.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})',
+                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer", "principal-engineer"})',
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("never names 'principal-engineer'" in i for i in issues), issues
+        )
 
     def test_plugin_name_mismatch_is_reported(self) -> None:
         # The guard matches a NAMESPACED agent_type. Rename the plugin and it matches nobody.
