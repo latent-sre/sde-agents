@@ -23,7 +23,7 @@ This skill is general-purpose — any backend or API, not just ops tooling — h
 
   Same envelope for validation errors (each field issue as a `details` entry), 404s, and 500s — and `request_id` in every one, so a user-reported error is greppable in the logs.
 - **Serialize through explicit response models** — never return ORM objects or internal dicts directly. A response model is an allowlist: anything not declared in it (password hash, internal flag) *cannot* leak.
-- `/v1` in the path from day one; breaking changes mean a new version, not a mutation.
+- `/v1` in the path from day one; breaking changes mean a new version, not a mutation. Breaking = removing or renaming a field, changing a type, or changing auth; adding fields or optional params is not. Run at most two live versions: announce the sunset (`Sunset` header with a date), then `410 Gone` after it — an undated deprecation never completes.
 - Every list endpoint paginates from the start — cursor-based by default (offset is fine for small, bounded admin lists); retrofitting pagination is a breaking change.
 
 ## Resiliency (the core focus)
@@ -48,7 +48,7 @@ These are the system-wide principles. The client-side mechanics for *calling oth
 ## Security
 
 - Secrets from env or a secret store — never in code, images, or logs.
-- Explicit CORS allowlist (never `*` with credentials); rate limiting on anything exposed (token bucket, return `Retry-After`).
+- Explicit CORS allowlist (never `*` with credentials); rate limiting on anything exposed (token bucket; on limit return `429` + `Retry-After`, and publish the budget in `X-RateLimit-Limit`/`-Remaining`/`-Reset` so well-behaved clients can self-throttle).
 - **Bound what you accept**: request-body size caps, server-side request timeouts, and bounded query params (max page size, max array length). Inbound requests can do unbounded damage exactly like unbounded outbound calls — input *validation* itself lives under Resiliency.
 
 ## Testing & quality gate
