@@ -40,7 +40,17 @@ from pathlib import Path
 # headings that MUST appear; matching is case-insensitive and ignores markdown emphasis, because a
 # packet is prose and "**Changed**:" / "Changed —" / "### Changed" are all the same slot.
 SHAPES: dict[str, tuple[str, ...]] = {
+    # The craft skills' STANDALONE fallback, for a skill invoked with no packet convention in
+    # context. Four slots, all unconditional.
     "review-packet": ("changed", "assumptions", "verified", "not verified"),
+    # sde-fullstack's own packet is different and must not be conflated with the above: it declares
+    # seven slots but explicitly SCALES — "a small, low-risk diff with no new assumptions and
+    # nothing left unverified earns three lines: Changed / Verified / Check first", and omitting a
+    # slot asserts it is empty. So only those three are guaranteed. Requiring `assumptions` and
+    # `not verified` here produced a false RED against an agent that was correctly compressing
+    # (observed on this suite's third real run) — the mirror of a false green, and just as harmful:
+    # it would train someone to "fix" a component that was following its own contract.
+    "sde-fullstack-packet": ("changed", "verified", "check first"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),

@@ -79,6 +79,21 @@ class RequiredSlots(unittest.TestCase):
             f"prose with no headings must fail most slots: {findings}",
         )
 
+    def test_sde_fullstack_shape_requires_only_that_agent_s_guaranteed_slots(self) -> None:
+        # The agent's packet SCALES: a small change legitimately ships Changed / Verified /
+        # Check first and stops. A shape demanding the conditional slots would fail a compliant
+        # agent, so the required set is pinned to the declared minimum — and to the agent file, so
+        # a future edit to either surfaces here rather than as a mystery eval failure.
+        packet_section = (REPO / "agents" / "sde-fullstack.md").read_text()
+        for slot in packet_lint.SHAPES["sde-fullstack-packet"]:
+            self.assertIn(slot, packet_section.lower(), f"{slot!r} is no longer a declared slot")
+        compressed = (
+            "**Changed**: duration.py:1-20, test_duration.py:1-30\n"
+            "**Verified**: `pytest -q` -> 6 passed\n"
+            "**Check first**: the 2h boundary case\n"
+        )
+        self.assertEqual([], packet_lint.lint_packet(compressed, "sde-fullstack-packet"))
+
     def test_postmortem_shape_matches_the_shipped_template(self) -> None:
         # The shape's slots are the headings the asset actually emits; drift between them would
         # make the linter reject a compliant postmortem.

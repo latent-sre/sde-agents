@@ -63,6 +63,7 @@ _routing_spec.loader.exec_module(eval_routing)
 
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, disallowed_tools: list[str] | None = None,
+    agent: str | None = None, permission_mode: str | None = None,
 ) -> tuple[str, set[str], str | None]:
     """Drive one headless session to completion; return (final text, components fired, note).
 
@@ -83,6 +84,22 @@ def run_session(
         "--plugin-dir", str(plugin_dir),
         "--output-format", "stream-json", "--verbose",
     ]
+    # `--agent` runs the session AS the component, which is the only deterministic way to measure
+    # an agent's contract. Asking a headless session to delegate does not work reliably: probed
+    # directly, "Use the sde-agents:code-reviewer subagent to review this" produced ZERO tool calls
+    # and answered inline, and across runs of this suite the same three cases went 3/3 fired then
+    # 0/3. That flakiness is a property of one-shot headless mode, not of the components — so
+    # whether a bare request reaches a component is left to evals/routing/, and this suite pins the
+    # component and asks only whether its contract holds.
+    if agent:
+        command += ["--agent", agent]
+    # A case whose contract only appears AFTER the component does work (a builder's packet is
+    # written once the code and tests exist) needs its writes to succeed. The session already runs
+    # in a throwaway temp cwd, so accepting edits there is scoped, not broad -- and without it the
+    # case measures the sandbox's permission prompt rather than the packet, which is what the first
+    # runs were actually doing.
+    if permission_mode:
+        command += ["--permission-mode", permission_mode]
     if disallowed_tools:
         command += ["--disallowed-tools", *disallowed_tools]
     try:
@@ -98,7 +115,15 @@ def run_session(
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
     # text blocks if the shape ever changes, so a stream-format tweak degrades rather than breaks.
+    #
+    # A SUMMONED SUBAGENT'S ANSWER IS NOT IN THE FINAL TEXT. Its packet is returned as the Agent
+    # tool's result and the main session then paraphrases it — so grading the final text alone
+    # marked a conforming packet as missing all four slots (observed on this suite's second real
+    # run). The contract under test belongs to the component, so the component's own output is
+    # graded too: collect every Agent/Task tool_result and append it to the corpus.
     final, assistant_text = "", []
+    agent_calls: set[str] = set()
+    agent_outputs: list[str] = []
     for line in (proc.stdout or "").splitlines():
         try:
             event = json.loads(line)
@@ -108,9 +133,27 @@ def run_session(
             final = event["result"]
         elif event.get("type") == "assistant":
             for block in event.get("message", {}).get("content", []):
-                if isinstance(block, dict) and block.get("type") == "text":
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "text":
                     assistant_text.append(block.get("text", ""))
-    text = final or "\n".join(assistant_text)
+                elif block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
+                    agent_calls.add(block.get("id", ""))
+        elif event.get("type") == "user":
+            for block in event.get("message", {}).get("content", []):
+                if not isinstance(block, dict) or block.get("type") != "tool_result":
+                    continue
+                if block.get("tool_use_id") not in agent_calls:
+                    continue
+                content = block.get("content")
+                if isinstance(content, str):
+                    agent_outputs.append(content)
+                elif isinstance(content, list):
+                    agent_outputs.extend(
+                        part.get("text", "") for part in content
+                        if isinstance(part, dict) and part.get("type") == "text"
+                    )
+    text = "\n\n".join(filter(None, [final or "\n".join(assistant_text), *agent_outputs]))
     fired = eval_routing.components_fired(proc.stdout or "")
     note = None if text else f"no output captured (exit {proc.returncode})"
     return text, fired, note
@@ -193,7 +236,12 @@ def main(argv: list[str] | None = None) -> int:
         case, _ = job
         text, fired, note = run_session(
             case["prompt"], args.plugin_dir, args.timeout, case.get("disallowed_tools"),
+            case.get("agent"), case.get("permission_mode"),
         )
+        # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
+        # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
+        if case.get("agent"):
+            fired = fired | {case["agent"].split(":")[-1]}
         if note and not text:
             return case["id"], [f"session produced nothing: {note}"], note
         return case["id"], assert_case(text, case, fired), note
