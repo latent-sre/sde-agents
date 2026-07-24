@@ -48,31 +48,53 @@ packet_lint = importlib.util.module_from_spec(_spec)
 assert _spec.loader is not None
 _spec.loader.exec_module(packet_lint)
 
+# Reuse the routing runner's transcript reader rather than re-deriving it. Grading a behavioral
+# case on its final text ALONE proves only that some text arrived: the main session can satisfy a
+# packet shape or a keyword without the component whose contract is being measured ever running
+# (found in review). `expect_fires` closes that, and `components_fired` is the same
+# correlate-by-tool_use_id detection the routing suite is already trusted for.
+_routing_spec = importlib.util.spec_from_file_location(
+    "eval_routing", REPO / "scripts" / "eval_routing.py"
+)
+eval_routing = importlib.util.module_from_spec(_routing_spec)
+assert _routing_spec.loader is not None
+_routing_spec.loader.exec_module(eval_routing)
 
-def run_session(prompt: str, plugin_dir: Path, timeout: int) -> tuple[str, str | None]:
-    """Drive one headless session to completion and return (final assistant text, note).
+
+def run_session(
+    prompt: str, plugin_dir: Path, timeout: int, disallowed_tools: list[str] | None = None,
+) -> tuple[str, set[str], str | None]:
+    """Drive one headless session to completion; return (final text, components fired, note).
 
     Unlike the routing runner — which grades the FIRST routing decision and is happy with a partial
     transcript — a behavioral eval needs the session's CONCLUSION, so a timeout is a real failure
     here rather than an expected outcome. It is still never raised: one bad case must not take the
     suite down.
+
+    `disallowed_tools` is passed straight to the CLI. It matters for cases that describe a
+    destructive action: this suite exists to prove a safety gate HOLDS, and a case that could
+    perform the very apply it is testing for would, on a regression, become the incident it was
+    meant to detect.
     """
     if CLAUDE is None:
-        return "", "the `claude` CLI is not on PATH"
+        return "", set(), "the `claude` CLI is not on PATH"
+    command = [
+        CLAUDE, "-p", prompt,
+        "--plugin-dir", str(plugin_dir),
+        "--output-format", "stream-json", "--verbose",
+    ]
+    if disallowed_tools:
+        command += ["--disallowed-tools", *disallowed_tools]
     try:
         with tempfile.TemporaryDirectory() as cwd:
             proc = subprocess.run(
-                [
-                    CLAUDE, "-p", prompt,
-                    "--plugin-dir", str(plugin_dir),
-                    "--output-format", "stream-json", "--verbose",
-                ],
+                command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
             )
     except subprocess.TimeoutExpired:
-        return "", f"timed out after {timeout}s before the session concluded"
+        return "", set(), f"timed out after {timeout}s before the session concluded"
     except Exception as exc:
-        return "", f"run failed: {exc}"
+        return "", set(), f"run failed: {exc}"
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
     # text blocks if the shape ever changes, so a stream-format tweak degrades rather than breaks.
@@ -89,13 +111,25 @@ def run_session(prompt: str, plugin_dir: Path, timeout: int) -> tuple[str, str |
                 if isinstance(block, dict) and block.get("type") == "text":
                     assistant_text.append(block.get("text", ""))
     text = final or "\n".join(assistant_text)
+    fired = eval_routing.components_fired(proc.stdout or "")
     note = None if text else f"no output captured (exit {proc.returncode})"
-    return text, note
+    return text, fired, note
 
 
-def assert_case(text: str, case: dict) -> list[str]:
+def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[str]:
     """Apply a case's deterministic assertions; return failure strings (empty = pass)."""
     failures: list[str] = []
+
+    # Did the component whose contract this measures actually run? Without this, a passing result
+    # says only that the main session produced conforming text.
+    if expected := case.get("expect_fires"):
+        if fired is None:
+            failures.append("expect_fires declared but no transcript was captured to check it")
+        elif not set(expected) & fired:
+            failures.append(
+                f"none of {sorted(expected)} fired (fired: {sorted(fired) or 'nothing'}) — the "
+                f"output may conform without the component under test ever running"
+            )
 
     if shape := case.get("packet_shape"):
         failures += [f"packet: {finding}" for finding in packet_lint.lint_packet(text, shape)]
@@ -136,6 +170,13 @@ def main(argv: list[str] | None = None) -> int:
     if not cases:
         print("no cases matched", file=sys.stderr)
         return 2
+    # `--runs 0` used to schedule no jobs, leaving every case with an empty result list — and
+    # `passes == len(runs)` is trivially true for 0 == 0, so the suite reported every contract
+    # green having started no sessions at all (found in review). A green that proves nothing is
+    # the worst output this tool can produce, so the count is bounded before any work is planned.
+    if args.runs < 1:
+        print("error: --runs must be at least 1", file=sys.stderr)
+        return 2
     if CLAUDE is None:
         print("error: the `claude` CLI is not on PATH", file=sys.stderr)
         return 2
@@ -150,10 +191,12 @@ def main(argv: list[str] | None = None) -> int:
 
     def execute(job: tuple[dict, int]) -> tuple[str, list[str], str | None]:
         case, _ = job
-        text, note = run_session(case["prompt"], args.plugin_dir, args.timeout)
+        text, fired, note = run_session(
+            case["prompt"], args.plugin_dir, args.timeout, case.get("disallowed_tools"),
+        )
         if note and not text:
             return case["id"], [f"session produced nothing: {note}"], note
-        return case["id"], assert_case(text, case), note
+        return case["id"], assert_case(text, case, fired), note
 
     done = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
@@ -173,7 +216,10 @@ def main(argv: list[str] | None = None) -> int:
         runs = results[case["id"]]
         passes = sum(1 for failures in runs if not failures)
         rate = passes / len(runs) if runs else 0.0
-        ok = passes == len(runs)          # every run must satisfy the contract
+        # Every run must satisfy the contract -- AND at least one run must exist. Without the
+        # second clause an empty result list passes vacuously, which is how a suite reports success
+        # for work it never did.
+        ok = bool(runs) and passes == len(runs)
         passed_cases += ok
         first_failure = next((f for failures in runs if failures for f in failures), "")
         detail = "all assertions held" if ok else first_failure[:60]

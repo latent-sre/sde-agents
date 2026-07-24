@@ -17,6 +17,11 @@
 #
 # A commit SHA on a `docker://` line is an image reference that does not exist, so the job never
 # starts. Keep the trailing `# v4.2.2` comment either way, so the next reader knows what is pinned.
+#
+#   REPLACE_WITH_VERSION       — a tool fetched at run time (`pipx run zizmor==1.2.3`). Not a pin
+#                                by SHA, but a pin: an unpinned `pipx run` fetches whatever PyPI
+#                                serves that morning, inside the job that exists to catch exactly
+#                                that. Pick a reviewed version.
 name: CI
 
 on:
@@ -93,5 +98,8 @@ jobs:
       - name: actionlint
         uses: docker://rhysd/actionlint@REPLACE_WITH_IMAGE_DIGEST # v1.7.4, as sha256:...
       # zizmor audits for the pwn-request, script-injection, and unpinned-action classes.
+      # PIN IT: a bare `pipx run zizmor` resolves the newest PyPI release on every run, which is an
+      # unpinned third-party executable in the job whose whole purpose is catching unpinned
+      # dependencies. Choose a reviewed version and put it here.
       - name: zizmor
-        run: pipx run zizmor .github/workflows/
+        run: pipx run zizmor==REPLACE_WITH_VERSION .github/workflows/

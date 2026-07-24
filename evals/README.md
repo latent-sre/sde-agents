@@ -105,8 +105,20 @@ It is also deliberately **not** wired as a live hook — an output linter firing
 trains packet-shaped evasion.
 
 Unlike routing, a behavioral case must pass **every** run: a contract that holds only sometimes does
-not hold. Same manual-and-on-demand posture, and same reason — real sessions, real cost, real
-variance.
+not hold (and a case with *no* runs fails rather than passing vacuously — `--runs 0` used to report
+every contract green having started nothing). Same manual-and-on-demand posture, and same reason —
+real sessions, real cost, real variance.
+
+Two case fields keep the measurement honest, both added after review found the suite could pass
+without measuring what it claimed:
+
+- **`expect_fires`** — the component whose contract is under test must actually have been invoked,
+  read off the transcript with the same detection the routing suite uses. Without it, the main
+  session can satisfy a packet shape or a keyword while the component never runs.
+- **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a
+  destructive action. The tier-gate case is the reason: it must never be able to perform the apply
+  it exists to prove was refused, so it names a non-existent path and is denied write and shell
+  tools. An eval that can cause the incident it tests for is not a test.
 
 ## Relationship to `claude plugin eval`
 
