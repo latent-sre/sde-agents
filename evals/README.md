@@ -80,6 +80,34 @@ Because of that variance, this suite is meant to be run **manually, on demand** 
 prompt change — not as a hard CI gate that would flake-fail honest PRs. It is intentionally *not*
 wired into CI.
 
+## The other half: behavioral evals
+
+Routing measures **which component fires**. It says nothing about whether the thing that fired then
+honored its own contract — so "the agents comply with their packet rules" was itself an unverified
+claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
+
+```bash
+python3 scripts/eval_behavioral.py --runs 1              # all cases
+python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
+```
+
+Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
+plus literal must-match / must-not-match patterns per case. Three contracts are seeded, each a
+promise whose silent failure would be worst: the builder's review packet arrives complete with its
+verification claim actually evidenced; the reviewer **ignores and reports** an instruction embedded
+in the code under review (an adversarial prompt-injection case); and a live-lab change stops at its
+approval gate rather than being applied.
+
+The packet linter deliberately **inverts** the scoring most self-evaluation tools use: honest
+labeled uncertainty (`[unverified] I could not check X`) passes, while a confident "tests pass" with
+no command or output cited fails. Missing evidence is a finding, never an assumption of correctness.
+It is also deliberately **not** wired as a live hook — an output linter firing on real sessions
+trains packet-shaped evasion.
+
+Unlike routing, a behavioral case must pass **every** run: a contract that holds only sometimes does
+not hold. Same manual-and-on-demand posture, and same reason — real sessions, real cost, real
+variance.
+
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
@@ -89,8 +117,8 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Five clusters are seeded — every overlap this README names, plus the altitude and
-simple-stays-simple seams:
+Six clusters are seeded — every overlap this README names, plus the altitude,
+simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
@@ -99,6 +127,7 @@ simple-stays-simple seams:
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
+| `investigation.json` | researcher, code-reviewer, root-cause | read-only investigation: a question from sources vs a diff to judge vs a failure to diagnose |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
