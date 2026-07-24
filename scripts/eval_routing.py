@@ -112,8 +112,8 @@ def _string_values(obj) -> list[str]:
     return []
 
 
-def run_once(prompt: str, plugin_dir: Path, timeout: int = 180) -> dict:
-    """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, error}.
+def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None) -> dict:
+    """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error}.
 
     Never raises: this drives a flaky, sometimes long-running subprocess, and a routing eval only
     needs the FIRST routing decision, not a completed session. A timeout is therefore expected, not
@@ -131,6 +131,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180) -> dict:
                     CLAUDE, "-p", prompt,
                     "--plugin-dir", str(plugin_dir),
                     "--output-format", "stream-json", "--verbose",
+                    *(("--model", model) if model else ()),
                 ],
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
             )
@@ -243,6 +244,14 @@ def main() -> int:
                         help="per-run seconds before the session is cut and its partial transcript graded (default 180)")
     parser.add_argument("--threshold", type=float, default=0.5, help="positive passes at this fire rate (default 0.5)")
     parser.add_argument("--output-dir", type=Path, default=None, help="write benchmark.json here")
+    # Without this the subprocesses take whatever model the CLI defaults to, which is NOT the model
+    # of the session that launched them: a `/model` change in an interactive session does not
+    # propagate to `claude -p` children. That silently invalidated a comparison here — two runs
+    # believed to differ by model tier were both sonnet, which the new conditions block exposed.
+    # Pin it explicitly for any run whose numbers are meant to be compared to another's.
+    parser.add_argument("--model", default=None,
+                        help="model for the eval sessions (alias or id). Default: the CLI's own "
+                             "default, which is NOT inherited from the launching session")
     args = parser.parse_args()
 
     if args.runs < 1:
@@ -268,7 +277,10 @@ def main() -> int:
 
     results_by_case: dict[str, list[dict]] = {c["id"]: [] for c in cases}
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        futures = {pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout): c["id"] for c, _ in work}
+        futures = {
+            pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model): c["id"]
+            for c, _ in work
+        }
         done = 0
         for future in concurrent.futures.as_completed(futures):
             results_by_case[futures[future]].append(future.result())
@@ -303,7 +315,8 @@ def main() -> int:
     models = sorted({r["model"] for runs in results_by_case.values() for r in runs if r.get("model")})
     conditions = {
         "cli_version": cli_version(),
-        "models_observed": models,
+        "model_requested": args.model,      # None means "whatever the CLI defaulted to"
+        "models_observed": models,          # what actually ran, per the transcripts
         "plugin_dir": str(args.plugin_dir),
         "threshold": args.threshold,
     }
