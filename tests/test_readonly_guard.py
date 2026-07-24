@@ -206,6 +206,18 @@ DENIED = [
     "rg --hostname-bin /bin/sh TODO .",
     "rg --search-zip TODO .",
     "rg -z TODO .",
+    # Same sweep: whole surfaces removed rather than flag-gated, because removing the tool or
+    # subcommand closes every spelling at once. `ag` documents `--pager COMMAND` and is redundant
+    # with rg/grep; `git help -w/-i` hands off to a config-named browser or info reader.
+    "ag --pager /bin/sh TODO",
+    "ag TODO",
+    "git help -w git-log",
+    "git help git-log",
+    "git help",
+    # `gh ... --web` launches $BROWSER instead of printing.
+    "gh pr view 12 --web",
+    "gh repo view --web",
+    "gh issue view 3 -w",
     # REGRESSION (reviewer-reported, reproduced): every one of these WROTE and the old denylist
     # allowed it. They are gone now not because each was listed, but because none is a reader.
     "git clone https://github.com/x/y.git",

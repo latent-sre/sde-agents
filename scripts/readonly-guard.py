@@ -49,6 +49,19 @@ secrets. The LOAD-BEARING control remains OS-level least privilege. What this no
 narrower and far more defensible than before: nothing outside a short, reviewed list of readers ever
 runs.
 
+GIT IS AN INTERPRETER WHEN ITS CONFIG SAYS SO — the one hole no flag list can close. Probed on git
+2.43: with `diff.<driver>.command` (or `.textconv`) in a repo's LOCAL `.git/config` and a
+`.gitattributes` line selecting that driver, a BARE `git diff` — no flags at all — executes the
+named program. So `--ext-diff`/`--textconv` are deliberately NOT denied here: denying them would
+close nothing while reading as armor, which is the failure mode this file exists to avoid. The
+mitigating fact is that the vector needs local config: `git clone` does not carry the remote's
+config, so a hostile repo you cloned yourself cannot set the driver, and `.gitattributes` alone
+falls back to git's internal diff. It bites when a repo ARRIVES as a directory or archive
+(mounted volume, tarball, handover) with its `.git/config` already written. Treat "review a repo
+directory you did not clone" as running its code, and let OS-level least privilege — not this
+guard — be what holds. (`core.pager` is NOT part of this: probed on the same version, git skips
+the pager entirely when stdout is not a TTY, which it never is under a hook.)
+
 SCOPING CONTRACT (probed, not assumed): the stdin payload carries `agent_type` — namespaced for a
 plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. THE MAIN LOOP CARRIES
 NO `agent_type` KEY AT ALL, which is what makes a session-wide hook safe: the user's own Bash can
@@ -115,10 +128,17 @@ _SEPARATORS = {"|", "||", "&&", ";", "\n"}
 # supports interactive command execution.
 _SIMPLE_READERS = frozenset({
     "cat", "head", "tail", "nl", "wc", "uniq", "cut", "tr", "column",
-    "grep", "egrep", "fgrep", "ag",
+    "grep", "egrep", "fgrep",
     "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
     "echo", "diff", "cmp", "jq", "true", "false",
 })
+# `ag` (the silver searcher) was here and is deliberately GONE: it documents `--pager COMMAND`,
+# the same execute-a-program lever gated on `rg` and `less`, and it is not installed on the
+# machines this fleet was probed on — so its exec-flag surface cannot be enumerated the way `rg`'s
+# was. It is also fully redundant: `rg` and `grep` are both allowlisted. Per this file's own rule,
+# the allowlist carries what a reviewer NEEDS, and an un-enumerable tool that nothing needs is the
+# easiest kind to leave off. Restoring it means adding a flag gate like `_RG_EXECUTION_FLAGS`,
+# verified against the installed binary — not just putting the name back.
 # ripgrep flags that run an external program (or a PATH-resolved helper) mid-search, turning a
 # reader into code execution. `--pre COMMAND` runs COMMAND on every file; `--hostname-bin COMMAND`
 # runs COMMAND to resolve the hostname for hyperlinks (rg 14+); `--search-zip`/`-z` shells out to
@@ -134,8 +154,13 @@ _RG_EXECUTION_FLAGS = frozenset({"--pre", "--hostname-bin", "--search-zip", "-z"
 _GIT_READ = frozenset({
     "diff", "log", "show", "blame", "status", "shortlog", "describe", "rev-parse", "rev-list",
     "ls-files", "ls-tree", "cat-file", "show-ref", "grep", "whatchanged", "diff-tree",
-    "merge-base", "name-rev", "version", "help",
+    "merge-base", "name-rev", "version",
 })
+# `help` was here and is deliberately GONE: `git help -w/--web` hands off to `git web--browse`,
+# which runs the command named by the `web.browser`/`browser.<tool>.cmd` config, and `-i` shells
+# out to an info reader. Removing the SUBCOMMAND closes every spelling at once, where denying the
+# flags would leave the next viewer flag to be discovered. Nothing about reviewing a diff needs
+# git's own manual.
 # Flags on _GIT_READ subcommands that redirect output into a file. `--output=<file>` and its
 # separate-argument form `-o <file>` are accepted by diff/log/show/diff-tree/whatchanged (they
 # share the diff plumbing) and write to the named path with no shell redirect involved, so
@@ -203,6 +228,7 @@ _GIT_GLOBAL_BARE = frozenset({"--no-pager", "-P", "--no-replace-objects", "--lit
 
 # `gh` read-only subcommand pairs. `gh api` is absent by design: it silently switches to POST when
 # given `-f`/`-F` fields, so "read-only gh api" is a shape too easy to get wrong.
+_GH_EXECUTION_FLAGS = frozenset({"--web", "-w"})  # `gh ... --web` launches $BROWSER — an app, not a read.
 _GH_READ = {
     "pr": frozenset({"view", "diff", "list", "checks", "status"}),
     "issue": frozenset({"view", "list", "status"}),
@@ -311,6 +337,8 @@ def _git_allowed(args: list[str]) -> bool:
 
 
 def _gh_allowed(args: list[str]) -> bool:
+    if any(arg.split("=", 1)[0] in _GH_EXECUTION_FLAGS for arg in args):
+        return False
     positionals = _positionals(args)
     if len(positionals) < 2:
         return False
