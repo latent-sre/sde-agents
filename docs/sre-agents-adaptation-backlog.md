@@ -81,7 +81,7 @@ schema, Idempotency-Key, cursor pagination worked concretely) after scrubbing tw
 probe, corp SSO/UAA); link it from the contract-first section. Consider the donor's
 breaking-change-is-principal-altitude compatibility rule in the same pass.
 
-### 1.4 New skill: `postmortem`
+### 1.4 New skill: `postmortem` — **landed 2026-07-24**
 
 No component owns learning-after-failure. Near drop-in from donor `postmortem/SKILL.md`: blameless
 structure, trigger-vs-cause separation, the mitigative-vs-preventative action table, and "where we
@@ -89,6 +89,12 @@ got lucky" ("luck is a preventative action item waiting to be written").
 **Adapt:** strip SEV header, IC-log seed, typed-agent handoffs; reframe blameless for one operator
 ("what made the mistake easy"); pair with `sde-agents:root-cause` and `sde-agents:lab-incident`.
 Converges with the modernization plan's `incident` postmortem half.
+**Landed:** authored to house conventions from this item's adaptation notes (the donor repo was
+out of session scope — everything this item lists to keep is in, everything it lists to strip is
+out), plus feed-forward wiring into `sde-agents:runbook` Common failures, `sde-agents:lab-audit`
+checks, and the `sde-agents:self-improve-loop` micro-retro for fleet-caused findings. Routing
+cases seeded in `evals/routing/homelab-ops.json` (two positives, one tight negative; members
+extended — next full run re-baselines). The `sde-agents:lab-incident` pairing lands with 1.5.
 
 ### 1.5 New skill: `lab-incident` (+ root-cause deferral clause)
 
@@ -167,7 +173,11 @@ the triage bullet defers to `lab-incident`.
   required structure): machine-linkable frontmatter (`alert_names`, `last_verified`) that pairs
   with the obs pack's `runbook_url` linking; the runbook/playbook/SOP distinction; the
   rehearse-or-it-rots rule (game days = the restore drill). If an asset is wanted, generate it
-  from this fleet's own 7-slot structure.
+  from this fleet's own 7-slot structure. — **Landed 2026-07-24**: Alerts + Last-verified slots
+  in the template (lightweight prose lines, not machine frontmatter — the obs pack that would
+  consume machine keys hasn't landed; revisit with 1.2), rehearse-or-it-rots, the
+  runbook/playbook/postmortem distinction, and the worked example at
+  `skills/runbook/references/example.md` generated from the fleet's own template.
 - **3.2 Worked hypothesis table → `root-cause`** (likelihood × cheapness-to-test, Result column) —
   matches the fleet's house "worked example" style; append without disturbing the three-strikes
   ownership sentence.
@@ -242,9 +252,19 @@ From `docs/skills-modernization-plan.md` and the July 2026 best-practices re-che
   verbs; `references/checks.md` + findings ledger (modernization Tier 2 item 6).
 - `prompt-craft`: eval-wiring line in Method step 4 (repo has routing evals → run the harness
   before/after).
-- `runbook`: worked example reference (merges with 3.1).
+- `runbook`: worked example reference (merges with 3.1) — **landed with 3.1, 2026-07-24**.
 - `eng-ladder`: infra-that-is-also-architecture exception clause on the homelab routing line;
   H1-title convention sweep across skills.
+
+**2026-07-24 best-practices re-check** (live doc fetch: code.claude.com `best-practices` +
+`skills` pages; landed alongside 1.4/3.1): fleet doctrine confirmed current — verify-first with
+evidence shown, fresh-context adversarial review, trigger-led descriptions, CLAUDE.md
+conciseness, subagent isolation for investigation. Deltas landed: `background` added to the
+frontmatter reference's skill-field list; the v2.1.196 scheduled-task clause added to the
+`disable-model-invocation` caveat (doc-checked only — the #22345 stamp deliberately not advanced
+without running the probe); the Stop-hook deterministic-gate fact in `self-improve-loop`. Noted
+but not adopted (no consumer yet; `KNOWN_SKILL_FIELDS` gates the second by design): `/goal`
+conditions as session-level verify gates, and skill-scoped `hooks:` frontmatter.
 
 From `docs/ecc-skills-agents-review.md` (July 2026; that file owns the adjudication detail —
 its Tier 1/2 imports are landed, these are what remains):
