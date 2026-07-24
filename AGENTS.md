@@ -118,6 +118,21 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
 
+## Opening a pull request
+
+`.github/pull_request_template.md` is the shape. Two things about it are load-bearing:
+
+- **Claim plus consequence.** Every line says what changed *and* what it means — "removed `ag`,
+  whose exec-flag surface cannot be enumerated without the binary" rather than "removed `ag`". Same
+  register as the comments in `scripts/` and the validator's error messages, for the same reason: a
+  reviewer can only disagree with a decision they can see.
+- **The conditional gates table is the part that catches things.** The expensive checks here are
+  situational — a description edit owes a before/after routing run, a guard or hook edit owes the
+  probe, a validator rule owes a test proven to fail without it. Fill the rows you tripped.
+
+Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
+enough to skim past stops working, and each section in it was added for an observed failure.
+
 ## Hard rules with no playbook exceptions
 
 - **Standard library only.** The validator, guard, hook, and tests use only the Python standard
