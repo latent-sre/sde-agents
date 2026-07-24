@@ -1,0 +1,210 @@
+# Contract-first starter — the backend-craft conventions already worked in:
+# RFC 9457 problem+json on every error, cursor pagination on the list endpoint,
+# Idempotency-Key on the unsafe-to-retry create. Copy it, rename `widget` to your
+# resource, keep the components. Auth is deliberately absent here — decide it with
+# references/auth.md and add the securitySchemes before anything ships.
+openapi: 3.1.0
+info:
+  title: Service API starter
+  version: 1.0.0
+  description: >-
+    Starter contract. Every error is RFC 9457 application/problem+json at the top level
+    (never a nested error envelope), every list paginates by cursor from day one, and
+    the create is safe to retry via Idempotency-Key.
+servers:
+  - url: /api/v1
+
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      summary: List widgets (cursor pagination)
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque cursor from the previous page's `next_cursor`. Omit for the first page.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: One page of widgets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WidgetPage"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      operationId: createWidget
+      summary: Create a widget (retry-safe via Idempotency-Key)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WidgetCreate"
+      responses:
+        "201":
+          description: >-
+            Created. A replay with the same Idempotency-Key returns this original result
+            instead of creating a duplicate.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL of the created widget.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+        "422":
+          description: Validation failed — field issues in the `errors` extension member.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ValidationProblem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /widgets/{id}:
+    get:
+      operationId: getWidget
+      summary: Fetch one widget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The widget.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+        "404":
+          description: No such widget.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        maxLength: 255
+      description: >-
+        Client-generated key (a UUID is fine) that makes this mutation safe to retry: the
+        server stores the first outcome per key and replays it for duplicates. Retain keys
+        at least 24h; a reused key with a different body is a 409.
+
+  responses:
+    Problem:
+      description: >-
+        Any error. RFC 9457 problem details at the top level of the body — never a nested
+        error envelope — with request_id present so the log line is greppable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 9457 problem details plus this API's extension members.
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: "about:blank"
+          description: URI naming the problem class; about:blank when the status code says it all.
+        title:
+          type: string
+          description: Short summary of the problem class — stable per type, not per occurrence.
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: What went wrong in this occurrence, human-readable, no stack traces.
+        instance:
+          type: string
+          format: uri-reference
+          description: The request path (or a URI for this occurrence).
+        request_id:
+          type: string
+          description: Extension member — the request ID also present in the structured logs.
+      required: [title, status]
+      additionalProperties: true
+
+    ValidationProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          properties:
+            errors:
+              type: array
+              description: Extension member — one entry per failing field.
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  detail:
+                    type: string
+                required: [field, detail]
+          required: [errors]
+
+    Widget:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id, name, created_at]
+
+    WidgetCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [name]
+      additionalProperties: false
+
+    WidgetPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Widget"
+        next_cursor:
+          type: [string, "null"]
+          description: Pass as `cursor` for the next page; null means this is the last page.
+      required: [items, next_cursor]

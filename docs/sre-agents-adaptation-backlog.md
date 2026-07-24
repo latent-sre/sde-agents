@@ -70,7 +70,7 @@ six new routing descriptions.
   `sde-agents:homelab-platform`'s tiers (the `lab-audit` precedent). Soften multi-window burn-rate
   ceremony to lab scale. Name the skill in `service-onboard` step 6.
 
-### 1.3 RFC 9457 error-shape correction + OpenAPI starter → `skills/backend-craft`
+### 1.3 RFC 9457 error-shape correction + OpenAPI starter → `skills/backend-craft` — **landed 2026-07-24**
 
 Verified defect in a shipped skill: `backend-craft/SKILL.md:16-24` teaches a **nested**
 `{"error":{...}}` envelope and mislabels it "problem+json style". The donor's version teaches
@@ -80,6 +80,12 @@ Adopt the donor's error section; port `backend-craft/assets/openapi.starter.yaml
 schema, Idempotency-Key, cursor pagination worked concretely) after scrubbing two comments (PCF
 probe, corp SSO/UAA); link it from the contract-first section. Consider the donor's
 breaking-change-is-principal-altitude compatibility rule in the same pass.
+**Landed:** SKILL error section rewritten to top-level RFC 9457 (standard members + extension
+members, `errors` array for validation, framework-native support named); the starter authored
+natively to this item's spec (donor out of session scope — nothing to scrub) and linked from the
+contract-first bullet; the breaking-change altitude rule added beside the version-lifecycle line;
+the `sre-tool` contract template's "one error envelope" paraphrase fixed toward the source per
+the owned-conventions rule. Body-only — no routing surface.
 
 ### 1.4 New skill: `postmortem` — **landed 2026-07-24**
 
@@ -292,6 +298,7 @@ body-only imports are landed, these are what remains):
 - **RFC 9457 priority raised** (batch-2 item 9 hazard) — ECC `api-design` teaches the same nested
   `{"error":{...}}` envelope item 1.3 flags as a defect in `backend-craft/SKILL.md`; our copy
   currently agrees with a wrong external source. Land 1.3 before any further error-shape edits.
+  — **Resolved 2026-07-24**: 1.3 landed; the fleet no longer carries the nested shape anywhere.
 - **Optional: `principal-engineer` agent-legibility clause** (batch-2 item 7) — one line naming
   AI agents as a maintainer class whose legibility needs (greppability, explicit boundaries,
   deterministic tests over hidden conventions) are stricter than humans'. Adjudicate against
