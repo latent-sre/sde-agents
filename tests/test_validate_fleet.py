@@ -193,12 +193,17 @@ class FleetValidatorTests(unittest.TestCase):
         )
 
     def test_documented_skill_frontmatter_keys_are_accepted(self) -> None:
-        # The full documented set must pass, or the allowlist is a false tripwire.
-        extra = "when_to_use: x\nallowed-tools: Read\nmodel: inherit\neffort: high\ncontext: fresh\n"
+        # The full documented set must pass, or the allowlist is a false tripwire. "Full" is meant
+        # literally: this asserts EVERY key in KNOWN_SKILL_FIELDS, because a typo'd allowlist entry
+        # (`backgroud`) rejects the very field it was added to permit, and a test that exercised
+        # only a hand-picked five would not notice.
+        documented = sorted(validate_fleet.KNOWN_SKILL_FIELDS - {"name", "description"})
+        extra = "".join(f"{key}: x\n" for key in documented)
         issues = self._skill_issues(
             "craft", "name: craft\ndescription: Use when building.\n" + extra
         )
         self.assertEqual([], [i for i in issues if "frontmatter key" in i])
+        self.assertIn("background", documented)  # the field added 2026-07-24, now covered
 
     def test_agent_name_must_match_filename(self) -> None:
         body = VALID_AGENT.replace("name: builder", "name: other")
@@ -228,6 +233,14 @@ class FleetValidatorTests(unittest.TestCase):
         body = VALID_AGENT.replace("tools: Read", "tools: Read, Agent(code-reviewer)")
         issues = self._agent_issues(("builder.md", body))
         self.assertTrue(any("does not restrict anything here" in i for i in issues), issues)
+
+    def test_scoped_bash_grant_is_reported_as_a_false_restriction(self) -> None:
+        # The Agent(type) branch above had a test; this sibling branch — the one guarding the
+        # `Bash(git diff:*)` footgun the read-only guard exists because of — had none, so a
+        # refactor could have disarmed it silently.
+        body = VALID_AGENT.replace("tools: Read", "tools: Read, Bash(git diff:*)")
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("SILENTLY IGNORES" in i for i in issues), issues)
 
     def test_scoped_grant_survives_the_comma_split(self) -> None:
         # A naive split(",") shreds `Agent(worker, researcher)` into `Agent(worker` and `researcher)`,
@@ -356,6 +369,20 @@ class FleetValidatorTests(unittest.TestCase):
 
 REPO = Path(__file__).resolve().parents[1]
 
+
+def _add_guarded_name(repo: Path, name: str) -> None:
+    """Add one name to a repo COPY's GUARDED_AGENT_NAMES, whatever formatting the literal uses.
+
+    The mutation tests below used to string-match the whole single-line frozenset, so extending the
+    real roster broke them by silently mutating nothing — a green test that no longer tested
+    anything. Anchoring on the first member instead survives reformatting.
+    """
+    path = repo / "scripts" / "readonly-guard.py"
+    source = path.read_text(encoding="utf-8")
+    anchor = '"code-reviewer"'
+    assert anchor in source, "GUARDED_AGENT_NAMES no longer contains the expected anchor"
+    path.write_text(source.replace(anchor, f'{anchor}, "{name}"', 1), encoding="utf-8")
+
 READONLY_BASH_AGENT = (
     "---\n"
     "name: auditor\n"
@@ -413,6 +440,66 @@ class PluginWiringTests(unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(any("CLAUDE_PLUGIN_ROOT" in i for i in issues), issues)
 
+    def test_guarded_agent_missing_from_the_hook_string_is_reported(self) -> None:
+        # The hook filters on the agent name before it ever runs the guard, so the roster lives in
+        # TWO places. Simulate adding another guarded agent to the guard alone: the hook's
+        # fast-path would exit 0 for it, leaving it unguarded while every file claims otherwise.
+        # `sde-fullstack` is a real agent, so this isolates the hook-sync rule from the
+        # does-this-agent-exist rule above.
+        def mutate(repo: Path) -> None:
+            _add_guarded_name(repo, "sde-fullstack")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("never names 'sde-fullstack'" in i for i in issues), issues)
+
+    def test_name_present_in_only_one_hook_roster_is_reported(self) -> None:
+        # REGRESSION (review-reported, reproduced): the hook holds TWO rosters — the `case`
+        # fast-path that decides whether the guard runs at all, and the no-interpreter fallback
+        # that fails closed. Searching the whole command string passed when a name sat in one
+        # block and was missing from the other, which is the silent-disarm this rule exists to
+        # prevent. Each direction is pinned separately.
+        def drop_from_fast_path(repo: Path) -> None:
+            path = repo / "hooks" / "hooks.json"
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            hook = doc["hooks"]["PreToolUse"][0]["hooks"][0]
+            hook["command"] = hook["command"].replace("|*principal-engineer*", "", 1)
+            path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+
+        issues = self._issues_after(drop_from_fast_path)
+        self.assertTrue(
+            any("fast-path filter" in i and "principal-engineer" in i for i in issues), issues
+        )
+
+        def drop_from_fallback(repo: Path) -> None:
+            path = repo / "hooks" / "hooks.json"
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            hook = doc["hooks"]["PreToolUse"][0]["hooks"][0]
+            command = hook["command"]
+            # Remove only the fallback's agent_type patterns for this agent, leaving the fast-path.
+            for form in ("sde-agents:principal-engineer", "principal-engineer"):
+                command = command.replace(f"""|*'"agent_type":"{form}"'*""", "")
+                command = command.replace(f"""|*'"agent_type": "{form}"'*""", "")
+            hook["command"] = command
+            path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+
+        issues = self._issues_after(drop_from_fallback)
+        self.assertTrue(
+            any("no-interpreter fallback" in i and "principal-engineer" in i for i in issues), issues
+        )
+
+    def test_unrecognized_hook_shape_fails_rather_than_passing(self) -> None:
+        # If the hook is ever restructured away from two `case` blocks, the roster cross-check
+        # cannot verify it — and must say so instead of quietly reporting no issues.
+        def mutate(repo: Path) -> None:
+            path = repo / "hooks" / "hooks.json"
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            hook = doc["hooks"]["PreToolUse"][0]["hooks"][0]
+            hook["command"] = hook["command"].replace('case "$IN" in', "if false; then", 1)
+            path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("does not recognize" in i for i in issues), issues)
+
     def test_plugin_name_mismatch_is_reported(self) -> None:
         # The guard matches a NAMESPACED agent_type. Rename the plugin and it matches nobody.
         def mutate(repo: Path) -> None:
@@ -447,13 +534,7 @@ class PluginWiringTests(unittest.TestCase):
     def test_guarding_an_agent_that_does_not_exist_is_reported(self) -> None:
         def mutate(repo: Path) -> None:
             path = repo / "scripts" / "readonly-guard.py"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})',
-                    'GUARDED_AGENT_NAMES = frozenset({"code-reviewer", "ghost"})',
-                ),
-                encoding="utf-8",
-            )
+            _add_guarded_name(repo, "ghost")
 
         issues = self._issues_after(mutate)
         self.assertTrue(any("'ghost'" in i and "not an agent" in i for i in issues), issues)

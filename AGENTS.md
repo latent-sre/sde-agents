@@ -23,7 +23,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
-| `docs/` | Working documents — the quality review and the skills modernization plan; pending work lives there. |
+| `docs/` | Working documents — reviews, plans, and the adaptation backlog. `sre-agents-adaptation-backlog.md` is the one that tracks what is still **open**; the reviews and the modernization plan are dated snapshots that carry adjudication detail and are partly superseded. Check the backlog before acting on any of the others. |
 | `.claude-plugin/` | Plugin and marketplace manifests. The manifest `name` is the namespace; the guard cross-checks it. |
 
 ## Validate before you push
@@ -56,9 +56,12 @@ claude --plugin-dir .
 Two checks are manual and on demand, deliberately not CI gates (both drive real API sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
-  and the guard fires for the reviewer and only the reviewer. Re-run after upgrading the Claude
+  and the guard fires for the guarded agents and only them. Re-run after upgrading the Claude
   Code CLI: the guard rests on the undocumented `agent_type` payload field, and the probe is what
   turns a silent upstream rename into a loud failure instead of a quietly disarmed guard.
+  **CI's `plugin-contract` job pins the CLI version**, so bumping that pin is the upgrade — and the
+  moment this probe is owed. The pin buys a deterministic gate; this probe is what keeps the pin
+  from meaning the platform contract stopped being tested.
 - `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals. Run
   before **and** after any description edit and diff the rates. Results are rates over runs, not
   booleans; a negative (near-miss) case firing at all is a defect regardless of variance. Agent
@@ -117,6 +120,21 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 `tests/test_validate_fleet.py` that copies the repo and breaks the one link — plus a test that
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
+
+## Opening a pull request
+
+`.github/pull_request_template.md` is the shape. Two things about it are load-bearing:
+
+- **Claim plus consequence.** Every line says what changed *and* what it means — "removed `ag`,
+  whose exec-flag surface cannot be enumerated without the binary" rather than "removed `ag`". Same
+  register as the comments in `scripts/` and the validator's error messages, for the same reason: a
+  reviewer can only disagree with a decision they can see.
+- **The conditional gates table is the part that catches things.** The expensive checks here are
+  situational — a description edit owes a before/after routing run, a guard or hook edit owes the
+  probe, a validator rule owes a test proven to fail without it. Fill the rows you tripped.
+
+Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
+enough to skim past stops working, and each section in it was added for an observed failure.
 
 ## Hard rules with no playbook exceptions
 

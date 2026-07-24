@@ -11,12 +11,14 @@ permissions:
 
 jobs:
   validate:
-    # The guard and hook carry Windows-specific code (a PowerShell mutation-verb
-    # denylist and an interpreter-probe that exists because the Microsoft Store
-    # python3 stub wins `command -v` on Windows). Run the matrix so those paths
-    # are actually exercised, not just the Linux happy path. `py` is the working
-    # interpreter per OS (GitHub's Windows runner ships real Python on PATH as
-    # `python`, so we avoid the `python3` Store stub there).
+    # The guard and hook carry Windows-specific code: the hook's interpreter-probe
+    # exists because the Microsoft Store python3 stub wins `command -v` on Windows,
+    # and the guard's allowlist default must hold across OSes (a PowerShell cmdlet is
+    # denied by not being a listed reader, not by any denylist — the guard was
+    # inverted to a pure allowlist). Run the matrix so those paths are actually
+    # exercised, not just the Linux happy path. `py` is the working interpreter per
+    # OS (GitHub's Windows runner ships real Python on PATH as `python`, so we avoid
+    # the `python3` Store stub there).
     strategy:
       fail-fast: false
       matrix:
@@ -50,8 +52,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # PINNED, deliberately, and this repo would be hypocritical otherwise: it ships a skill whose
+      # first rule is that an unpinned dependency lets someone else decide what your CI runs.
+      # The obvious objection is that a pin stops this job noticing NEW platform requirements — but
+      # catching upstream drift was never this job's role. `scripts/probe_plugin.py` is the fleet's
+      # drift detector (AGENTS.md: it "turns a silent upstream rename into a loud failure"), and it
+      # is manual on purpose because it drives real API sessions. So: bumping this pin is exactly
+      # the moment to re-run the probe, and the two are a pair — deliberate upgrade, deliberate
+      # re-verification, rather than a silent change arriving mid-PR on someone else's release day.
       - name: Install the Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.219
 
       - name: Validate the plugin manifest, frontmatter, and hooks
         run: claude plugin validate . --strict

@@ -1,0 +1,67 @@
+# Managing an agent's context
+
+Read when an agent's problem is what it knows, when to load it, or that long runs degrade. The
+universal method lives in `skills/prompt-craft/SKILL.md`. On any conflict, SKILL.md wins.
+
+Context is the scarce resource, and quality degrades as it fills — earlier instructions get
+"forgotten", mistakes increase. Most agent failures that look like reasoning failures are context
+failures.
+
+## Just-in-time beats up-front
+
+Load what the current step needs, when it needs it — not everything that might be relevant.
+
+- **Pointers over payloads.** A path, a query, or an identifier the agent can resolve costs a few
+  tokens; the resolved content costs thousands and sits there for the rest of the run.
+- **Predicate-keyed references** are the fleet's working form of this: a table that says "if the task
+  involves X, read Y first". The router is always loaded and cheap; the depth loads only when its
+  predicate trips. That is why the craft skills are structured the way they are.
+- **What must be up front** is what changes behavior on *every* step: the mandate, the output
+  contract, the hard prohibitions. Anything conditional belongs behind a predicate.
+- Beware the opposite failure: an agent that must fetch three files before it can start has traded
+  tokens for latency and for the chance it fetches the wrong ones. Preload the two things it always
+  needs.
+
+## Where context comes from, and what a subagent does not get
+
+A spawned agent receives its definition, the project context, its preloaded skills, and the prompt
+you wrote — **not** the parent's conversation. Everything the worker needs must be in that prompt:
+the goal, the constraints, the paths, the acceptance criteria, and what is out of scope.
+Underspecified handoffs are the most common multi-agent bug, and they present as the worker
+confidently doing a slightly different job.
+
+Corollary: the worker's *return message is the entire interface*. Specify its shape. Free prose loses
+constraints at every hop; a schema (or a required slot list) survives.
+
+## Long runs: compaction, and why rewind beats correction
+
+- **Compaction** summarizes history to free space. It is lossy in a specific way: the summary keeps
+  what looked important and drops the rest, so anything load-bearing must be written **outside** the
+  context — a progress file, the repo, a commit — or it is gone after the next compaction. Facts that
+  must survive: the plan, decisions and their reasons, counts and caps, file paths in flight.
+- **Compact at a boundary, never mid-debug.** A summary taken halfway through an investigation keeps
+  the conclusions and loses the evidence, which is exactly backwards.
+- **Rewind beats correcting.** Two failed corrections on the same point means the context now holds
+  the failed approaches, and every further attempt is reasoning against that noise. Start clean with
+  a better prompt that incorporates what you learned. A fresh context with a good prompt reliably
+  beats a long one full of corrections — this is also why a fresh-context reviewer catches more than
+  self-critique in the same context.
+- **Isolate exploration.** Reading twenty files to answer one question should happen in a subagent
+  whose context you can throw away; the parent keeps the answer, not the twenty files.
+
+## Durable state lives in files
+
+For anything that spans sessions or agents: the spec, the backlog, the progress notes, and the
+decisions belong in the repository. A context window is working memory; the repo is storage. An
+unattended loop that keeps its state in files can be restarted at any point, and one that keeps it in
+context cannot be restarted at all.
+
+## Diagnosing a context problem
+
+| Symptom | Likely cause |
+|---|---|
+| Ignores an instruction it followed earlier | Context filled; the instruction is far back and diluted. Move it into the output contract, or shorten the run. |
+| Re-reads the same file repeatedly | No durable notes; it is rediscovering. Write findings to a file. |
+| Confidently wrong about a fact that changed | A stale early read is still in context. Re-read explicitly, or rewind. |
+| Worker does a subtly different job | The handoff prompt, not the worker's definition. |
+| Degrades only in long sessions | Compaction dropped something load-bearing. Move it to a file. |

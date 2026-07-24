@@ -40,15 +40,22 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 
 ## Running
 
+The runner takes **one cluster file per invocation**, and defaults to `prompt-tooling.json` when
+given none — there is no all-clusters mode, so "I ran the evals" without naming a file means one
+cluster of five was measured:
+
 ```bash
-# full suite, 3 runs per case (the methodology's default), ~4 parallel
+# one cluster, 3 runs per case (the methodology's default), ~4 parallel
 python3 scripts/eval_routing.py evals/routing/prompt-tooling.json --runs 3
 
-# cheap smoke check: one run each
+# every cluster — what "the full suite" actually takes
+for f in evals/routing/*.json; do python3 scripts/eval_routing.py "$f" --runs 3; done
+
+# cheap smoke check of ONE cluster (prompt-tooling, the default)
 python3 scripts/eval_routing.py --runs 1
 
-# just the negatives
-python3 scripts/eval_routing.py --case 'neg-*'
+# just the negatives, still one cluster at a time
+python3 scripts/eval_routing.py evals/routing/homelab-ops.json --case 'neg-*'
 ```
 
 Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
@@ -73,6 +80,46 @@ Because of that variance, this suite is meant to be run **manually, on demand** 
 prompt change — not as a hard CI gate that would flake-fail honest PRs. It is intentionally *not*
 wired into CI.
 
+## The other half: behavioral evals
+
+Routing measures **which component fires**. It says nothing about whether the thing that fired then
+honored its own contract — so "the agents comply with their packet rules" was itself an unverified
+claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
+
+```bash
+python3 scripts/eval_behavioral.py --runs 1              # all cases
+python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
+```
+
+Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
+plus literal must-match / must-not-match patterns per case. Three contracts are seeded, each a
+promise whose silent failure would be worst: the builder's review packet arrives complete with its
+verification claim actually evidenced; the reviewer **ignores and reports** an instruction embedded
+in the code under review (an adversarial prompt-injection case); and a live-lab change stops at its
+approval gate rather than being applied.
+
+The packet linter deliberately **inverts** the scoring most self-evaluation tools use: honest
+labeled uncertainty (`[unverified] I could not check X`) passes, while a confident "tests pass" with
+no command or output cited fails. Missing evidence is a finding, never an assumption of correctness.
+It is also deliberately **not** wired as a live hook — an output linter firing on real sessions
+trains packet-shaped evasion.
+
+Unlike routing, a behavioral case must pass **every** run: a contract that holds only sometimes does
+not hold (and a case with *no* runs fails rather than passing vacuously — `--runs 0` used to report
+every contract green having started nothing). Same manual-and-on-demand posture, and same reason —
+real sessions, real cost, real variance.
+
+Two case fields keep the measurement honest, both added after review found the suite could pass
+without measuring what it claimed:
+
+- **`expect_fires`** — the component whose contract is under test must actually have been invoked,
+  read off the transcript with the same detection the routing suite uses. Without it, the main
+  session can satisfy a packet shape or a keyword while the component never runs.
+- **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a
+  destructive action. The tier-gate case is the reason: it must never be able to perform the apply
+  it exists to prove was refused, so it names a non-existent path and is denied write and shell
+  tools. An eval that can cause the incident it tests for is not a test.
+
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
@@ -82,7 +129,8 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Four clusters are seeded — every overlap this README names:
+Six clusters are seeded — every overlap this README names, plus the altitude,
+simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
@@ -91,10 +139,14 @@ Four clusters are seeded — every overlap this README names:
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
+| `investigation.json` | researcher, code-reviewer, root-cause | read-only investigation: a question from sources vs a diff to judge vs a failure to diagnose |
 
-`homelab-ops` is a **baseline of the current members**, to be re-run and diffed after the planned
-`incident` / `restore-drill` / `upgrade-campaign` skills land (see
-`docs/skills-modernization-plan.md`). A captured baseline lives under `baselines/`.
+`homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
+`baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
+there, 5 / 18 now), so it is a *historical* anchor, not a like-for-like comparison — a fresh
+capture lives in `baselines/2026-07-24/`. Re-baseline again when the planned `lab-incident`
+(backlog 1.5; the `incident` half named in `docs/skills-modernization-plan.md` shipped as
+`postmortem`), `restore-drill`, or `upgrade-campaign` skills land.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 

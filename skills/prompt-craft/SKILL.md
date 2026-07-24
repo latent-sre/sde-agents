@@ -13,7 +13,7 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 1. **Success criteria first.** Define what a correct output looks like, measurably, before touching the prompt.
 2. **Baseline.** Reproduce the failure with the current prompt. No edit without an observed failure to pin it to.
 3. **Minimal change.** Fix the observed failure; don't rewrite everything you'd have phrased differently.
-4. **Retest fresh.** Spawn a clean-context subagent with a realistic task; check it triggers and complies. Multiple reps — variance is a metric.
+4. **Retest fresh.** Spawn a clean-context subagent with a realistic task; check it triggers and complies. Multiple reps — variance is a metric. **If the repo ships an eval harness, run it instead of eyeballing** — in this fleet that is `scripts/eval_routing.py` for a description change (run the overlapping cluster before *and* after and diff the rates; a near-miss that starts firing is a defect at any rate) and `scripts/eval_behavioral.py` for a change to what an agent must actually do. Measuring after only tells you the current number; the diff is the finding.
 
 ## The two rules that fix most agent/skill failures
 
@@ -29,6 +29,17 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 | Behavior should depend on a condition | Conditional keyed to an observable predicate |
 
 Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. Avoid nuance clauses ("unless it matters") — they reopen the negotiation. Everywhere outside the pressure-discipline row, the default register is plain imperative that explains *why* — reaching for all-caps MUST/NEVER there is a sign the form is wrong.
+
+## Load the reference for what you're working on
+
+The method above applies to every prompt task. These apply when the task involves the thing named —
+read before writing, and name what you read.
+
+| If the work involves… | Read first |
+|---|---|
+| an agent that touches untrusted content, private data, or the ability to act | [`references/agent-security.md`](references/agent-security.md) |
+| choosing an agent's tools, or designing tools for a model to call | [`references/tools.md`](references/tools.md) |
+| what an agent knows, when it loads it, or degradation over a long run | [`references/context.md`](references/context.md) |
 
 ## Frontmatter quick reference
 

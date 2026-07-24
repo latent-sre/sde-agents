@@ -5,8 +5,18 @@ First measured routing baseline for the three clusters seeded this cycle (`homel
 description was rewritten this cycle, none had been measured. Run with `scripts/eval_routing.py`
 `--runs 3`, headless `claude -p … --plugin-dir .` per case, deterministic transcript grading. The
 machine anchors are the per-cluster `benchmark.json` files beside this note; re-run and diff against
-them after a description edit or after the planned `incident` / `restore-drill` / `upgrade-campaign`
-skills land (`docs/skills-modernization-plan.md`).
+them after a description edit or after the planned `lab-incident` (backlog 1.5), `restore-drill`,
+or `upgrade-campaign` skills land.
+
+**Two corrections to this note, added 2026-07-24** (it was written before both):
+
+- A **fourth** cluster, `proportionality`, was baselined right after this note and its
+  `benchmark.json` sits beside the other three. It is negative-only and came back **6/6 clean**, so
+  the cycle's true negative tally is **23/23**, not the 17/17 below, and the raw pass count is not
+  24/40 either. The headline conclusion is unchanged and slightly stronger.
+- The `homelab-ops` numbers here are **superseded**: `postmortem` joined that cluster on
+  2026-07-24 (4 members / 15 cases here → 5 / 18), so this capture is a historical anchor, not a
+  like-for-like diff target. The current capture is `../2026-07-24/`.
 
 ## Headline
 

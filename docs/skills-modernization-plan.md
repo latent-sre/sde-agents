@@ -1,5 +1,16 @@
 # Skills modernization & portfolio plan — July 2026
 
+> **Status: partly landed / partly superseded — verified against the tree 2026-07-24.**
+> `docs/sre-agents-adaptation-backlog.md` owns the live status. Landed since this plan was
+> written: **item 2** (routing evals — five clusters seeded and four baselined, shipped as
+> `evals/routing/homelab-ops.json`, not the `homelab.json` this plan names) and **Tier 3 item 10**
+> (`skills/runbook/references/example.md`). **Superseded: item 3** — `incident` was split by
+> backlog 1.4/1.5, and its postmortem half already shipped as the standalone `skills/postmortem`;
+> do not rebuild it here. Also stale below: the "7 agents + 13 skills" arithmetic (the tree has 11
+> skills), and two references to "backend-craft's envelope" — backend-craft now mandates top-level
+> RFC 9457 problem+json and explicitly *bans* the nested envelope (backlog 1.3, landed 2026-07-24),
+> so read those as "backend-craft's error shape".
+
 Synthesis of four reviews (two expert: skill anatomy, fleet portfolio; two independent: spec
 structure, user journeys) answering one question: **improve existing skills, add new ones, or
 both — and where does the modern skill anatomy (references/, scripts/, assets/, schemas) actually

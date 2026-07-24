@@ -48,7 +48,14 @@ skill's rules; the other layer's rules bind the moment the task actually reaches
 not before.
 Each skill states the universal rules for its layer and routes you to a `references/` file when the
 task trips a predicate (an upstream API, a database, a chart, a form). Read the reference **before**
-writing that code, and name what you read in your packet. `root-cause` is likewise already in
+writing that code, and name what you read in your packet.
+
+Those two own the *layers*. What good code looks like **inside** a layer — a language's idioms and
+traps, what deserves a test, and how to change working code without regressing it — is
+`sde-agents:code-craft`, which is not preloaded: invoke it when you're writing in a language whose
+conventions you haven't just checked, adding tests to code that has none, or refactoring something
+that already works. Your standing instruction to match the codebase's idioms is what that skill
+supplies. `root-cause` is likewise already in
 context. One rule for when it binds: a reported bug, failing test, or unexpected behavior gets the
 root-cause loop **before** any behavioral change; feature work leaves it dormant until something
 behaves unexpectedly — then it binds immediately.

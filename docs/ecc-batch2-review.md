@@ -39,7 +39,10 @@ convention.
    `{"error": {...}}` envelope that backlog item 1.3 already flags as a defect in our own
    `backend-craft/SKILL.md:18-24`. Two circulating sources now teach the wrong shape — that
    *raises* 1.3's priority (fix to top-level RFC 9457 problem+json); it must land before any
-   error-shape text is touched again.
+   error-shape text is touched again. **— Resolved 2026-07-24: 1.3 landed (commit `c88d380`);
+   `backend-craft` now teaches top-level problem+json and bans the nested envelope. The ban on
+   importing `api-design`'s error sections stands; the block on our own error-shape edits is
+   lifted.**
 
 ---
 
@@ -192,6 +195,8 @@ avoids). The hazard: its error format is the **nested** `{"error": {...}}` envel
 shape backlog 1.3 verified as a defect in our own `backend-craft/SKILL.md:18-24` and scheduled to
 fix to top-level RFC 9457 problem+json. Nothing from its response-format sections may be imported,
 and 1.3's priority rises: our SKILL currently agrees with a wrong external source.
+**— Resolved 2026-07-24: 1.3 landed; our SKILL no longer agrees with it. The import ban on
+`api-design`'s response-format sections is permanent, for the same reason.**
 
 **Adopted** (landed in `backend-craft/SKILL.md`, body-only): the **version-lifecycle mechanics**
 missing from our one-liner — what counts as breaking vs additive, at most two live versions,

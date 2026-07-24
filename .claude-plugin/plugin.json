@@ -2,7 +2,7 @@
   "name": "sde-agents",
   "displayName": "SDE Agents",
   "description": "A focused fleet of software-engineering and home-lab agents plus reusable skills.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": {
     "name": "latent-sre",
     "url": "https://github.com/latent-sre"
@@ -10,5 +10,11 @@
   "homepage": "https://github.com/latent-sre/sde-agents",
   "repository": "https://github.com/latent-sre/sde-agents",
   "license": "MIT",
-  "keywords": ["agents", "skills", "code-review", "sre", "homelab"]
+  "keywords": [
+    "agents",
+    "skills",
+    "code-review",
+    "sre",
+    "homelab"
+  ]
 }

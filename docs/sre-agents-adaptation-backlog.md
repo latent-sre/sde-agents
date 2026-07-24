@@ -25,6 +25,13 @@ fleet demands ("match the codebase's idioms") but nowhere supplies. Independent 
 two blind passes re-derived `incident` and `postmortem` — the same top gaps
 `docs/skills-modernization-plan.md` had already identified — without being allowed to read it.
 
+> **Status 2026-07-24 — Tiers 1, 2, and 3 are now fully landed.** Every numbered item below carries
+> its landing stamp; the sections are kept for their adjudication detail (what was adapted, what was
+> deliberately excluded, and why), which still governs any future import from the same donor.
+> Imports were authored natively from each item's adaptation notes — the donor repo is out of this
+> session's scope — so the notes are the specification that was implemented, not a copy source.
+> **What remains open** is listed under "Still open" at the bottom of this file.
+
 Donor paths below are relative to the sre-agents repo root (`.claude/skills/...`,
 `.claude/agents/...`).
 
@@ -32,7 +39,7 @@ Donor paths below are relative to the sre-agents repo root (`.claude/skills/...`
 
 ## Tier 1 — high value, verified clean, low collision risk
 
-### 1.1 Reviewer security lens → `agents/code-reviewer.md`
+### 1.1 Reviewer security lens → `agents/code-reviewer.md` — **landed 2026-07-24**
 
 Donor `agents/reviewer.md:76-118` carries a full security-review section this fleet's
 code-reviewer lacks despite listing security as dimension 2: per-category checklist (injection,
@@ -45,7 +52,7 @@ security-only second review pass) the checklist it currently assumes exists.
 **Adapt:** keep this fleet's categorical-confidence convention; route "active compromise" to the
 human operator with preserve-evidence framing (donor hands to its `sre` agent).
 
-### 1.2 Observability pack → one new `observability` skill
+### 1.2 Observability pack → one new `observability` skill — **landed 2026-07-24**
 
 The largest genuine capability gap: `homelab-platform`, `service-onboard` step 6, and `lab-audit`
 all *demand* monitoring; nothing teaches how — and the donor's stack-neutral column is exactly the
@@ -102,7 +109,7 @@ checks, and the `sde-agents:self-improve-loop` micro-retro for fleet-caused find
 cases seeded in `evals/routing/homelab-ops.json` (two positives, one tight negative; members
 extended — next full run re-baselines). The `sde-agents:lab-incident` pairing lands with 1.5.
 
-### 1.5 New skill: `lab-incident` (+ root-cause deferral clause)
+### 1.5 New skill: `lab-incident` (+ root-cause deferral clause) — **landed 2026-07-24**
 
 Verification found this gap worse than either pass claimed: the fleet has *zero* incident content,
 and its only debugging doctrine (`root-cause`) is diagnose-before-fix — actively wrong mid-outage.
@@ -123,7 +130,7 @@ its own line 25 places infrastructure operation outside that ladder.
 
 ## Tier 2 — solid adds, moderate adaptation
 
-### 2.1 New skill: `craft` (language idiom + TDD + safe refactor)
+### 2.1 New skill: `craft` (language idiom + TDD + safe refactor) — **landed 2026-07-24 as `code-craft`**
 
 `sde-fullstack` demands "match the codebase's idioms"; nothing supplies them. Adopt donor
 `craft/SKILL.md` (32-line router) + `references/python.md` (decision-vs-effect dry-run proven with
@@ -133,7 +140,7 @@ namespace the ownership map (`sde-agents:backend-craft` etc.); dedupe expand→m
 `eng-ladder/references/principal.md` already owns it, so safe-refactor defers with an on-conflict
 line (house convention). Wire into `sde-fullstack`'s `skills:` preload or a predicate row.
 
-### 2.2 New skill: `ci-actions`
+### 2.2 New skill: `ci-actions` — **landed 2026-07-24**
 
 No CI-authoring coverage exists. Donor content verified current and concrete: SHA-pinning with the
 tj-actions compromise, `${{ github.event.* }}` script injection, `pull_request_target` pwn
@@ -142,7 +149,7 @@ request, least-privilege `permissions`, actionlint/zizmor, attestation/SBOM.
 in the SKILL body, not the asset. **Adapt:** cut the PCF deploy half; the ephemeral self-hosted
 runner guidance ports well to homelab deploy targets — keep it, gated on the tiers.
 
-### 2.3 `ops-tooling/references/cli.md` + `assets/cli_skeleton.py` → `skills/sre-tool`
+### 2.3 `ops-tooling/references/cli.md` + `assets/cli_skeleton.py` → `skills/sre-tool` — **landed 2026-07-24**
 
 The fork kept the four coordination templates but lost the CLI contract: exit-code/streams
 discipline (stdout result, stderr logs, `| jq` stays clean), stable `--json`, flag > env > config
@@ -150,7 +157,7 @@ precedence, secrets-never-in-argv, dry-run proven with a spy — plus an 86-line
 demonstrating all of it. Near drop-in: scrub one `cf` line and one donor-`craft` ownership line;
 add the routing line in `sre-tool/SKILL.md` (orphan check requires it).
 
-### 2.4 New skill (or prompt-craft reference): `agent-security` + two authoring references
+### 2.4 New skill (or prompt-craft reference): `agent-security` + two authoring references — **landed 2026-07-24 as prompt-craft references**
 
 The fleet authors agents but has no security-review method for them — only scattered
 fetched-content one-liners. Adopt the trifecta legs, Rule of Two, delegation-is-not-isolation,
@@ -162,7 +169,7 @@ into `prompt-craft/references/` with routing lines. **Never import `agent-author
 itself** — near-verbatim duplicate of `prompt-craft` and asserts plugin-false facts
 (`Agent(type)` scoping, bare-name skill invocation).
 
-### 2.5 `database-reliability` → `skills/backend-craft/references/database-reliability.md`
+### 2.5 `database-reliability` → `skills/backend-craft/references/database-reliability.md` — **landed 2026-07-24**
 
 Adjudicated landing: a backend-craft reference, not a new skill (skills own layers; references
 load by predicate; `persistence.md` is verified write-side-only). Keep: the
@@ -184,19 +191,19 @@ the triage bullet defers to `lab-incident`.
   consume machine keys hasn't landed; revisit with 1.2), rehearse-or-it-rots, the
   runbook/playbook/postmortem distinction, and the worked example at
   `skills/runbook/references/example.md` generated from the fleet's own template.
-- **3.2 Worked hypothesis table → `root-cause`** (likelihood × cheapness-to-test, Result column) —
+- **3.2 Worked hypothesis table → `root-cause`** — **landed 2026-07-24** (likelihood × cheapness-to-test, Result column) —
   matches the fleet's house "worked example" style; append without disturbing the three-strikes
   ownership sentence.
-- **3.3 One sentence → frontmatter reference:** `Bash(...)`-style scoped specifiers are **inert on
+- **3.3 One sentence → frontmatter reference:** — **landed 2026-07-24** `Bash(...)`-style scoped specifiers are **inert on
   agent `tools:` lists** (validator already enforces; the declared single-source-of-truth file
   doesn't state it).
-- **3.4 "What a rollback does NOT reverse" → `homelab-platform` Prime directive 1**, rephrased for
+- **3.4 "What a rollback does NOT reverse" → `homelab-platform` Prime directive 1** — **landed 2026-07-24**, rephrased for
   compose/images: the migration the new version ran; changes outside the compose file; anything
   consumers already did with the new version's output.
-- **3.5 Stale-approval-SHA discipline → `code-reviewer`** (+ echoes sre-tool Phase 3.5): record
+- **3.5 Stale-approval-SHA discipline → `code-reviewer`** — **landed 2026-07-24** (+ echoes sre-tool Phase 3.5): record
   the SHA reviewed; the verdict applies to that SHA only; any later commit touching reviewed files
   re-enters review. The only survivor of donor `merge-gate`.
-- **3.6 `researcher` agent — optional adopt.** The one agent-shaped candidate that passes this
+- **3.6 `researcher` agent — optional adopt.** — **landed 2026-07-24 (adopted)** The one agent-shaped candidate that passes this
   fleet's own distinct-tool-scope test (`Read, Grep, Glob, WebSearch, WebFetch` — no Bash, no
   Write; a cheap isolation spawn target no current agent provides), with a real method
   (memory-is-a-lead-not-a-source, adversarial verification, KEV-first) and output contract.
@@ -205,7 +212,7 @@ the triage bullet defers to `lab-incident`.
   "network allowlist is the load-bearing control" claim and state egress honestly; narrow the
   description to spawn-shaped phrasing. Fallback if roster growth is unwanted: fold its output
   contract into prompt-craft as a research method.
-- **3.7 Lab-profile pattern — convention + template, never a plugin skill.** One file of lab-wide
+- **3.7 Lab-profile pattern — convention + template, never a plugin skill.** — **landed 2026-07-24** One file of lab-wide
   stack facts + a stay-in-lane rule ("do not suggest Kubernetes; hand platform-internal problems
   up"), living in the *lab repo's* project context per the environment-card convention. Land as a
   template (e.g. asset) + one read-before-proposing line in `homelab-platform`/`service-onboard`.
@@ -319,3 +326,25 @@ body-only imports are landed, these are what remains):
    change per file-owner, not two passes).
 
 Source snapshot: `latent-sre/sre-agents` @ `e2eef27` (2026-07-18 clone).
+
+## Still open (2026-07-24)
+
+Everything else in this file has landed. What genuinely remains:
+
+- **Behavioral-eval coverage beyond the three seeded contracts.** `scripts/eval_behavioral.py` and
+  `evals/behavioral/contracts.json` exist and are deterministic; three promises are pinned. More
+  contracts (the ladder's report-to-caller handoff, `lab-incident`'s mitigate-before-diagnose order,
+  `restore-drill`'s scratch-target rule) would each be a case, not new machinery.
+- **A full re-baseline of the routing suite.** `homelab-ops` is now 9 members / 24 cases and
+  `craft-vs-fullstack` 5 / 15; `investigation` has no baseline at all. The captured baselines
+  predate those changes. Smoke-checked at `--runs 1` (new lab-incident positives fired 2/2, the
+  investigation negatives 3/3 clean with the live-outage case correctly landing on `lab-incident`),
+  but the 3-run anchors are pending — that is a large session-count and deliberately deferred.
+- **Behavioral verification of the a11y imports**, unchanged: it triggers on the next real UI task
+  involving a modal, toast, or form.
+- **`references/checks.md` + findings ledger for `lab-audit`** (modernization Tier 2 item 6): the
+  tool-scoping half landed (`NotebookEdit` added to `disallowed-tools`), the reference-file split
+  did not — the Checks list is still inline, which is defensible while it stays short.
+- **`allowed-tools` pre-approvals for `lab-audit`**, deliberately not taken: pre-approving inspection
+  verbs would cut permission friction, but it is a real grant on a skill that operates a live lab,
+  and the friction is currently doing useful work.

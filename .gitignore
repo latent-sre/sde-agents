@@ -5,3 +5,9 @@ __pycache__/
 # Transient routing-eval console logs; distilled results live in the baseline summary
 # and the machine-readable benchmark.json anchors.
 evals/baselines/**/*.log
+
+# Probe leftovers. scripts/probe_plugin.py removes its workspace only when the run PASSES —
+# a failing probe deliberately keeps both of these for debugging, which is exactly when a
+# maintainer is least likely to notice them in `git status`.
+.probe-tmp/
+probe-transcript.jsonl

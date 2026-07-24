@@ -24,6 +24,9 @@ import unittest
 from pathlib import Path
 
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
+# Guarded by choice rather than by the validator's rule: both hold Write (for documents) and both
+# promise an inspection-only Bash, which is the half a command allowlist can actually enforce.
+DESIGN_AGENTS = frozenset({"principal-engineer", "distinguished-architect"})
 
 # Must match scripts/readonly-guard.py.
 EXIT_ALLOW = 42
@@ -113,7 +116,10 @@ ALLOWED = [
     "git branch --show-current",
     # searching and reading the tree
     "grep -rn 'def main' scripts/",
+    "git grep -n TODO",
+    "git grep -i -E 'foo|bar' -- scripts/",
     "rg 'git push' docs/",
+    "rg --hidden -n pattern",
     "ls -la agents/",
     "cat skills/eng-ladder/SKILL.md",
     "head -50 agents/code-reviewer.md",
@@ -191,6 +197,30 @@ DENIED = [
     "less -o /tmp/less.log agents/code-reviewer.md",
     "rg --pre /bin/sh pattern .",
     "rg --pre=/bin/sh pattern .",
+    # REGRESSION (reviewer-reported, reproduced against the live guard): flags that EXECUTE a
+    # program mid-search — the same arbitrary-code-execution class as `rg --pre`, once allowed
+    # because each was one unlisted flag. `git grep -O/--open-files-in-pager` runs the pager even
+    # with no TTY; `rg --hostname-bin` runs a hostname helper; `rg -z/--search-zip` shells out to
+    # PATH decompressors.
+    "git grep --open-files-in-pager=/bin/sh TODO",
+    "git grep -O/bin/sh TODO",
+    "git grep -O /bin/sh TODO",
+    "rg --hostname-bin=/bin/sh TODO .",
+    "rg --hostname-bin /bin/sh TODO .",
+    "rg --search-zip TODO .",
+    "rg -z TODO .",
+    # Same sweep: whole surfaces removed rather than flag-gated, because removing the tool or
+    # subcommand closes every spelling at once. `ag` documents `--pager COMMAND` and is redundant
+    # with rg/grep; `git help -w/-i` hands off to a config-named browser or info reader.
+    "ag --pager /bin/sh TODO",
+    "ag TODO",
+    "git help -w git-log",
+    "git help git-log",
+    "git help",
+    # `gh ... --web` launches $BROWSER instead of printing.
+    "gh pr view 12 --web",
+    "gh repo view --web",
+    "gh issue view 3 -w",
     # REGRESSION (reviewer-reported, reproduced): every one of these WROTE and the old denylist
     # allowed it. They are gone now not because each was listed, but because none is a reader.
     "git clone https://github.com/x/y.git",
@@ -380,6 +410,18 @@ class GuardScopingTest(unittest.TestCase):
         # hand-installing the agent at a different scope.
         proc = run_guard(bash_call("git push origin main", agent_type="code-reviewer"))
         self.assertEqual(decision(proc), "deny")
+
+    def test_every_guarded_agent_is_guarded_in_both_name_forms(self) -> None:
+        # The roster grew past the reviewer: the design agents' "inspection only" Bash is enforced
+        # too. Each name must be guarded under BOTH the namespaced and the bare agent_type, and a
+        # design agent must still be allowed the reads its own file promises it.
+        for name in DESIGN_AGENTS | {"code-reviewer"}:
+            for agent_type in (name, f"sde-agents:{name}"):
+                with self.subTest(agent_type=agent_type):
+                    denied = run_guard(bash_call("pytest -q", agent_type=agent_type))
+                    self.assertEqual(decision(denied), "deny")
+                    allowed = run_guard(bash_call("git log --oneline -5", agent_type=agent_type))
+                    self.assertEqual(decision(allowed), "allow")
 
     def test_main_loop_command_that_merely_names_the_reviewer_is_allowed(self) -> None:
         # `tool_input.command` is user-controlled text. A guard that scanned it for the agent name

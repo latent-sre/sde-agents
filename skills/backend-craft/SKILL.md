@@ -74,6 +74,7 @@ review packet.
 | a queue, a scheduled job, or an inbound webhook | `references/background-work.md` |
 | streaming to clients (SSE or WebSocket) | `references/live-data.md` |
 | a database or any persisted state | `references/persistence.md` |
+| a schema migration on a live database, a slow query, or lock/pool contention | `references/database-reliability.md` |
 | authenticating or authorizing a caller | `references/auth.md` |
 
 Trips two predicates? Read both. Trips none? The core above is the whole job.

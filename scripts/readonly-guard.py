@@ -49,6 +49,19 @@ secrets. The LOAD-BEARING control remains OS-level least privilege. What this no
 narrower and far more defensible than before: nothing outside a short, reviewed list of readers ever
 runs.
 
+GIT IS AN INTERPRETER WHEN ITS CONFIG SAYS SO — the one hole no flag list can close. Probed on git
+2.43: with `diff.<driver>.command` (or `.textconv`) in a repo's LOCAL `.git/config` and a
+`.gitattributes` line selecting that driver, a BARE `git diff` — no flags at all — executes the
+named program. So `--ext-diff`/`--textconv` are deliberately NOT denied here: denying them would
+close nothing while reading as armor, which is the failure mode this file exists to avoid. The
+mitigating fact is that the vector needs local config: `git clone` does not carry the remote's
+config, so a hostile repo you cloned yourself cannot set the driver, and `.gitattributes` alone
+falls back to git's internal diff. It bites when a repo ARRIVES as a directory or archive
+(mounted volume, tarball, handover) with its `.git/config` already written. Treat "review a repo
+directory you did not clone" as running its code, and let OS-level least privilege — not this
+guard — be what holds. (`core.pager` is NOT part of this: probed on the same version, git skips
+the pager entirely when stdout is not a TTY, which it never is under a hook.)
+
 SCOPING CONTRACT (probed, not assumed): the stdin payload carries `agent_type` — namespaced for a
 plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. THE MAIN LOOP CARRIES
 NO `agent_type` KEY AT ALL, which is what makes a session-wide hook safe: the user's own Bash can
@@ -75,7 +88,18 @@ PLUGIN_NAME = "sde-agents"
 # form (how a plugin agent identifies itself) and the bare form (project/user scope) are guarded, so
 # the guard cannot be sidestepped by installing the agent a different way.
 # validate_fleet.py cross-checks this against agents/: hold Bash and you must be listed here.
-GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})
+#
+# `principal-engineer` and `distinguished-architect` are here despite holding Write: their files
+# promise "your Bash is inspection only" while their Write grant is legitimately for documents, and
+# no tool boundary can split a doc from a source file. The Bash half, though, is exactly what this
+# guard enforces, and their stated needs (git history, search, reading the current system) are
+# already on the allowlist below — so the half that CAN be enforced now is. Their Write grant stays
+# cooperative, and both files say so. Note validate_fleet.py only COMPELS guarding for a Bash-holder
+# with no write tool; these two are here by choice, and the hook's own agent list is kept in sync by
+# a validator rule (adding a name here without the hook would silently guard nothing).
+GUARDED_AGENT_NAMES = frozenset({
+    "code-reviewer", "principal-engineer", "distinguished-architect",
+})
 GUARDED_AGENTS = frozenset(
     set(GUARDED_AGENT_NAMES) | {f"{PLUGIN_NAME}:{name}" for name in GUARDED_AGENT_NAMES}
 )
@@ -115,13 +139,24 @@ _SEPARATORS = {"|", "||", "&&", ";", "\n"}
 # supports interactive command execution.
 _SIMPLE_READERS = frozenset({
     "cat", "head", "tail", "nl", "wc", "uniq", "cut", "tr", "column",
-    "grep", "egrep", "fgrep", "ag",
+    "grep", "egrep", "fgrep",
     "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
     "echo", "diff", "cmp", "jq", "true", "false",
 })
-# `rg --pre COMMAND` runs COMMAND on every searched file, turning a reader into arbitrary code
-# execution. `rg` is useful enough for review to retain with this narrow gate.
-_RG_EXECUTION_FLAGS = frozenset({"--pre"})
+# `ag` (the silver searcher) was here and is deliberately GONE: it documents `--pager COMMAND`,
+# the same execute-a-program lever gated on `rg` and `less`, and it is not installed on the
+# machines this fleet was probed on — so its exec-flag surface cannot be enumerated the way `rg`'s
+# was. It is also fully redundant: `rg` and `grep` are both allowlisted. Per this file's own rule,
+# the allowlist carries what a reviewer NEEDS, and an un-enumerable tool that nothing needs is the
+# easiest kind to leave off. Restoring it means adding a flag gate like `_RG_EXECUTION_FLAGS`,
+# verified against the installed binary — not just putting the name back.
+# ripgrep flags that run an external program (or a PATH-resolved helper) mid-search, turning a
+# reader into code execution. `--pre COMMAND` runs COMMAND on every file; `--hostname-bin COMMAND`
+# runs COMMAND to resolve the hostname for hyperlinks (rg 14+); `--search-zip`/`-z` shells out to
+# decompressors found on PATH, which a planted `gzip` subverts. `rg` is useful enough for review to
+# retain with this gate — enumerate EVERY exec-capable flag, since one unlisted flag reopens the
+# hole (proven: `--hostname-bin=/bin/sh` executed before this list grew past `--pre`).
+_RG_EXECUTION_FLAGS = frozenset({"--pre", "--hostname-bin", "--search-zip", "-z"})
 
 # `git` subcommands that have no write SUBCOMMAND (per `git-<name>(1)` synopsis). Several still
 # accept `--output=<file>`/`-o <file>` to write a report to disk (diff, log, show, diff-tree,
@@ -130,13 +165,26 @@ _RG_EXECUTION_FLAGS = frozenset({"--pre"})
 _GIT_READ = frozenset({
     "diff", "log", "show", "blame", "status", "shortlog", "describe", "rev-parse", "rev-list",
     "ls-files", "ls-tree", "cat-file", "show-ref", "grep", "whatchanged", "diff-tree",
-    "merge-base", "name-rev", "version", "help",
+    "merge-base", "name-rev", "version",
 })
+# `help` was here and is deliberately GONE: `git help -w/--web` hands off to `git web--browse`,
+# which runs the command named by the `web.browser`/`browser.<tool>.cmd` config, and `-i` shells
+# out to an info reader. Removing the SUBCOMMAND closes every spelling at once, where denying the
+# flags would leave the next viewer flag to be discovered. Nothing about reviewing a diff needs
+# git's own manual.
 # Flags on _GIT_READ subcommands that redirect output into a file. `--output=<file>` and its
 # separate-argument form `-o <file>` are accepted by diff/log/show/diff-tree/whatchanged (they
 # share the diff plumbing) and write to the named path with no shell redirect involved, so
 # _STRUCTURE_DENY never sees them. Any occurrence is disqualifying.
 _GIT_READ_WRITE_FLAGS = frozenset({"-o", "--output"})
+# Flags on _GIT_READ subcommands that EXECUTE a program — the git twin of `rg --pre`. `git grep`
+# opens matching files in a pager named by `--open-files-in-pager[=CMD]` or its attached short form
+# `-O<CMD>`, and runs CMD even with no TTY (proven: `git grep -O/bin/sh` executed the pager). The
+# `-O` short form can't be caught by the `split("=")` membership test the write-flags use, so
+# _git_allowed rejects any `-O`-prefixed arg explicitly. That also denies `git diff -O<orderfile>`
+# (a benign order file that shares the branch) — a false positive we accept, per this guard's
+# fail-loud-not-silent rule.
+_GIT_READ_EXEC_FLAGS = frozenset({"--open-files-in-pager"})
 # Subcommands whose FIRST POSITIONAL decides read vs write (`git stash list` reads, a bare
 # `git stash` pushes; `git submodule status` reads, `git submodule update` writes;
 # `git reflog show` reads, `git reflog expire` prunes reflog entries).
@@ -191,6 +239,7 @@ _GIT_GLOBAL_BARE = frozenset({"--no-pager", "-P", "--no-replace-objects", "--lit
 
 # `gh` read-only subcommand pairs. `gh api` is absent by design: it silently switches to POST when
 # given `-f`/`-F` fields, so "read-only gh api" is a shape too easy to get wrong.
+_GH_EXECUTION_FLAGS = frozenset({"--web", "-w"})  # `gh ... --web` launches $BROWSER — an app, not a read.
 _GH_READ = {
     "pr": frozenset({"view", "diff", "list", "checks", "status"}),
     "issue": frozenset({"view", "list", "status"}),
@@ -266,9 +315,17 @@ def _git_allowed(args: list[str]) -> bool:
     subcommand, rest = args[index], args[index + 1:]
 
     if subcommand in _GIT_READ:
-        # Even for a read subcommand, `--output=<file>` / `-o <file>` writes to disk without any
-        # shell redirect. Reject the flag in every form (`--output=x`, `--output x`, `-o x`).
-        return not any(arg.split("=", 1)[0] in _GIT_READ_WRITE_FLAGS for arg in rest)
+        # Even a read subcommand can escape read-only WITHOUT a shell redirect: `--output=<file>` /
+        # `-o <file>` writes a report to disk, and `git grep --open-files-in-pager[=CMD]` / `-O<CMD>`
+        # executes CMD. Reject every spelling — `--flag`, `--flag=x`, `-o x`, and the attached short
+        # form `-O<CMD>` that the `split("=")` test alone would miss.
+        for arg in rest:
+            base = arg.split("=", 1)[0]
+            if base in _GIT_READ_WRITE_FLAGS or base in _GIT_READ_EXEC_FLAGS:
+                return False
+            if arg.startswith("-O"):  # `-O`, `-O/bin/sh` (git grep pager exec)
+                return False
+        return True
 
     if subcommand in _GIT_READ_VERBS:
         verbs = _positionals(rest)
@@ -291,6 +348,8 @@ def _git_allowed(args: list[str]) -> bool:
 
 
 def _gh_allowed(args: list[str]) -> bool:
+    if any(arg.split("=", 1)[0] in _GH_EXECUTION_FLAGS for arg in args):
+        return False
     positionals = _positionals(args)
     if len(positionals) < 2:
         return False

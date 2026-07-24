@@ -705,6 +705,37 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
                 f"${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy. Resolving it any other "
                 f"way risks executing a guard supplied by the repository under review."
             )
+        # The hook string carries TWO independent copies of the roster, and each one can disarm the
+        # guard on its own:
+        #   1. the `case` FAST-PATH, which exits 0 for any payload not naming a guarded agent --
+        #      a name missing here means the guard is never even invoked for that agent;
+        #   2. the no-interpreter FALLBACK deny patterns, which are what fails closed when no
+        #      Python answers -- a name missing there means that agent gets an open Bash exactly
+        #      when the guard is broken or absent.
+        # Searching the whole command string cannot tell them apart: a name present in only one
+        # block satisfies a substring check while the other block silently lets the agent through
+        # (caught in review of this very rule). So each block is located and asserted separately.
+        blocks = [segment.split("esac", 1)[0] for segment in command.split('case "$IN" in')[1:]]
+        if len(blocks) < 2:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: expected the PreToolUse/Bash hook to contain two "
+                f"`case \"$IN\" in` blocks (the fast-path filter and the no-interpreter fallback), "
+                f"found {len(blocks)}. The roster cross-check below cannot verify a hook it does not "
+                f"recognize, so this fails rather than passing a hook it did not actually check."
+            )
+        else:
+            for label, block in (("fast-path filter", blocks[0]), ("no-interpreter fallback", blocks[-1])):
+                for name in sorted(guard.GUARDED_AGENT_NAMES):
+                    if name not in block:
+                        issues.append(
+                            f"{root / 'hooks' / 'hooks.json'}: the hook's {label} never names "
+                            f"{name!r}, but scripts/readonly-guard.py lists it in "
+                            f"GUARDED_AGENT_NAMES. The fast-path decides whether the guard runs at "
+                            f"all and the fallback is what fails closed when no interpreter "
+                            f"answers, so a name missing from EITHER leaves that agent's 'read-only' "
+                            f"a promise with no control behind it — silently, because the hook "
+                            f"still exits 0."
+                        )
 
     # The guard's subject list and the agent roster must agree, in both directions.
     guarded = set(guard.GUARDED_AGENT_NAMES)

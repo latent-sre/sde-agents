@@ -43,9 +43,11 @@ Agents do not inherit this conversation. Pass each one full context: the Phase 0
 2. **State a checkpoint contract in every spawn prompt**, shaped by [`assets/spawn-prompt.template.md`](assets/spawn-prompt.template.md) — every slot filled or an explicit "n/a — why": the boundary to run to, the acceptance criteria the builder self-verifies against, scope in *and out*, and the leash — reversible decisions are the builder's to make and log; it returns only at the boundary or on a material fork. What the handoff omits, the agent will improvise.
 3. **Accept a builder's review packet on its evidence** (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification.
 4. **Answer status questions from the builders' progress shards** declared in the project context (solo default `.agents/PROGRESS.md`; parallel batches: one `.agents/progress/<component>.md` per builder, one writer per file) — never interrupt a running builder to ask.
-5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds — a third means the diagnosis is wrong; switch to the `sde-agents:root-cause` method. Record these counts in the plan file next to the cadence contract — like the contract, they must survive compaction, or a mid-pipeline compaction silently resets the cap.
+5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds, which — counting the build that failed review as the first failed attempt — is `sde-agents:root-cause`'s three strikes reached: the diagnosis is wrong, so switch to that skill's method rather than spending a third fix. Record these counts in the plan file next to the cadence contract — like the contract, they must survive compaction, or a mid-pipeline compaction silently resets the cap.
 
 Multi-component builds add the walking-skeleton, blast-radius-batching, and builder-fleet rules from [`references/multi-component.md`](references/multi-component.md).
+
+Building a **command-line** tool — the streams-and-exit-codes contract, `--json`, config precedence, secrets, and a dry-run whose effect is genuinely gated — follows [`references/cli.md`](references/cli.md); [`assets/cli_skeleton.py`](assets/cli_skeleton.py) is that contract, runnable.
 
 ## Phase 3 — Review
 
