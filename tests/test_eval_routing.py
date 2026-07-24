@@ -91,7 +91,10 @@ class ScoringTest(unittest.TestCase):
     MEMBERS = {"prompt-craft", "prompt-engineer"}
 
     def _runs(self, *fired_lists) -> list[dict]:
-        return [{"fired": list(f), "tokens": None, "duration_ms": None, "error": None} for f in fired_lists]
+        return [
+            {"fired": list(f), "tokens": None, "duration_ms": None, "model": None, "error": None}
+            for f in fired_lists
+        ]
 
     def test_positive_passes_when_expected_member_fires_enough(self) -> None:
         case = {"id": "p", "polarity": "positive", "expect_fires": ["prompt-craft"]}
@@ -117,6 +120,29 @@ class ScoringTest(unittest.TestCase):
         result = eval_routing.score_case(case, runs, self.MEMBERS, threshold=0.5)
         self.assertTrue(result["passed"])
         self.assertEqual(["backend-craft", "sde-fullstack"], result["also_fired"])  # diagnostic
+
+    def test_negative_grades_against_its_own_expect_not_fires(self) -> None:
+        # REGRESSION: this used to grade every negative against the WHOLE member list, ignoring the
+        # field each case declares. A disambiguation case — "the mitigation skill must not fire here,
+        # but its sibling legitimately should" — then failed for the sibling doing the right thing.
+        # Real instance: neg-resolved-not-incident forbids lab-incident on an already-resolved
+        # outage while `postmortem`, a cluster member, is the correct destination.
+        members = {"lab-incident", "postmortem", "runbook"}
+        case = {"id": "n", "polarity": "negative", "expect_not_fires": ["lab-incident"]}
+        runs = self._runs(["postmortem"], ["postmortem"], ["postmortem"])
+        result = eval_routing.score_case(case, runs, members, threshold=0.5)
+        self.assertTrue(result["passed"], result["detail"])
+        self.assertIn("lab-incident", result["detail"])  # says what was actually forbidden
+
+        # ...and the forbidden component firing still fails it.
+        runs = self._runs(["postmortem"], ["lab-incident"], ["postmortem"])
+        self.assertFalse(eval_routing.score_case(case, runs, members, threshold=0.5)["passed"])
+
+    def test_per_run_firings_are_recorded_for_audit(self) -> None:
+        # A surprising verdict must be explicable from the artifact rather than by re-running.
+        case = {"id": "n", "polarity": "negative", "expect_not_fires": list(self.MEMBERS)}
+        result = eval_routing.score_case(case, self._runs([], ["prompt-craft"]), self.MEMBERS, 0.5)
+        self.assertEqual([[], ["prompt-craft"]], result["fired_per_run"])
 
 
 class CaseFileTest(unittest.TestCase):

@@ -145,7 +145,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180) -> dict:
     except Exception as exc:  # a broken spawn must not crash the suite
         note = f"run failed: {exc}"
 
-    tokens = duration = None
+    tokens = duration = model = None
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -155,13 +155,32 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180) -> dict:
             usage = event.get("usage") or {}
             tokens = (usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0) or None
             duration = event.get("duration_ms")
+        # Record the model the session ACTUALLY ran on, read off the transcript rather than assumed.
+        # Routing behavior varies by model tier, so a benchmark that omits it cannot be validly
+        # diffed against another — a lesson from comparing two runs of this suite that had silently
+        # used different models and reading the difference as a routing regression.
+        if model is None:
+            candidate = event.get("model") or (event.get("message") or {}).get("model")
+            if isinstance(candidate, str) and candidate:
+                model = candidate
 
     fired = sorted(components_fired(stdout))
     # A timeout that captured a firing is a usable result; a timeout that captured NOTHING is an
     # error (otherwise negatives would pass vacuously on empty transcripts). Non-timeout notes are
     # always errors.
     error = note if (note and not fired) else None
-    return {"fired": fired, "tokens": tokens, "duration_ms": duration, "error": error}
+    return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": model, "error": error}
+
+
+def cli_version() -> str | None:
+    """The Claude Code version this measurement ran against, or None if it cannot be read."""
+    if CLAUDE is None:
+        return None
+    try:
+        proc = subprocess.run([CLAUDE, "--version"], capture_output=True, encoding="utf-8", timeout=30)
+        return (proc.stdout or "").strip() or None
+    except Exception:
+        return None
 
 
 def score_case(case: dict, runs: list[dict], members: set[str], threshold: float) -> dict:
@@ -178,9 +197,19 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
         passed = correct_rate >= threshold
         detail = f"expected {sorted(expected)} fired in {sum(correct)}/{n} runs"
     else:
-        correct_rate = sum(not h for h in member_hits) / n if n else 0.0  # rate of NOT firing
-        passed = fire_rate == 0.0  # a negative fails if the cluster fires even once
-        detail = f"cluster fired in {sum(member_hits)}/{n} runs (want 0)"
+        # HONOR the case's own `expect_not_fires`. Every negative declares it, and this used to grade
+        # against the whole member list regardless — so a DISAMBIGUATION case (X must not fire here,
+        # but its sibling Y legitimately should) failed for its sibling doing the right thing. That
+        # is the code ignoring what the data declares, and it produced a wrong verdict:
+        # neg-resolved-not-incident forbids the mitigation skills on an already-resolved outage while
+        # `postmortem` — a cluster member, and the correct destination — is expected to fire.
+        # Defaults to every member, so a plain near-miss case behaves exactly as before.
+        forbidden = set(case.get("expect_not_fires", members))
+        hits = [bool(set(r["fired"]) & forbidden) for r in runs]
+        correct_rate = sum(not h for h in hits) / n if n else 0.0  # rate of NOT firing
+        passed = not any(hits)  # a negative fails if a forbidden component fires even once
+        scope = "cluster" if forbidden == members else f"{sorted(forbidden)}"
+        detail = f"{scope} fired in {sum(hits)}/{n} runs (want 0)"
 
     # What else fired — diagnostic, e.g. a negative correctly landing on backend-craft/sde-fullstack.
     other = sorted({c for r in runs for c in r["fired"]} - members)
@@ -193,6 +222,10 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
         "correct_rate": round(correct_rate, 3),
         "detail": detail,
         "also_fired": other,
+        # Per-run firing sets, so a surprising verdict can be audited from the artifact instead of
+        # re-run to find out what happened. (Needed exactly once already: a negative reported
+        # "fired 1/3" and the stored aggregate could not say which component it was.)
+        "fired_per_run": [r["fired"] for r in runs],
         "errors": [r["error"] for r in runs if r["error"]],
     }
 
@@ -263,10 +296,26 @@ def main() -> int:
           f"(positives: {sum(s['passed'] for s in pos)}/{len(pos)} routed correctly, "
           f"negatives: {sum(s['passed'] for s in neg)}/{len(neg)} correctly did NOT fire)")
 
+    # The conditions the measurement was taken under. A benchmark without them is not a baseline:
+    # routing behavior varies by model tier, so diffing two runs that silently used different models
+    # reads a model difference as a routing regression. `models_observed` is read off the transcripts
+    # (what actually ran), and more than one entry means the run itself was not uniform.
+    models = sorted({r["model"] for runs in results_by_case.values() for r in runs if r.get("model")})
+    conditions = {
+        "cli_version": cli_version(),
+        "models_observed": models,
+        "plugin_dir": str(args.plugin_dir),
+        "threshold": args.threshold,
+    }
+    if len(models) > 1:
+        print(f"\n! WARNING: runs did not use one model ({', '.join(models)}) — this benchmark mixes "
+              f"conditions and should not be diffed as a single baseline")
+
     benchmark = {
         "cluster": spec["cluster"],
         "runs_per_case": args.runs,
         "members": sorted(members),
+        "conditions": conditions,
         "summary": {"passed": passed, "total": len(scored)},
         "cases": scored,
     }
