@@ -197,3 +197,88 @@ membership, link resolution, dir==name — holds across all 7 agents and 11 skil
 5. **Eval-gated, defer with budget:** C1 and P2's description halves — measured, not eyeballed.
 
 Source: four-reviewer fan-out, 2026-07-24, head `1bc536e` (pre-fix); S1/S2 landed at `31ff506`.
+
+---
+
+# Round 2 — five deep passes (same day, after the above)
+
+**Method:** five passes done directly rather than delegated: (1) red-team the guard for further
+exec holes, (2) empirical runtime verification, (3) technical accuracy of the content itself,
+(4) portfolio/platform gaps, (5) adversarial verification and landing. Everything below is
+probed, not reasoned — and everything in it is **landed**.
+
+## Pass 1 — the guard, again (it had more)
+
+A corpus of ~40 candidate bypasses run against `is_allowed()`. **The tokenizer is sound**: every
+shell-structure injection — `|&`, herestrings, subshells, brace groups, `&&` chains, escaped and
+quoted `#`, ANSI-C quoting, `env`/`command`/`exec`/`time` prefixes, empty segments — denied
+correctly, and the `#`-comment handling matches bash's. Three more exec surfaces did not:
+
+- **`ag --pager COMMAND`** — the same lever gated on `rg` and `less`. Removed the tool: its flag
+  surface can't be enumerated (not installed on any probed machine) and `rg`+`grep` cover it.
+- **`git help -w`** — hands off to a config-named browser via `git web--browse` (`-i` to an info
+  reader). Removed the subcommand, which closes every spelling at once.
+- **`gh … --web`** — launches `$BROWSER` instead of printing. Gated.
+
+**The finding that is not a fix [HIGH, probed]:** with `diff.<driver>.command` in a repo's local
+`.git/config` and a `.gitattributes` line selecting it, a **bare `git diff` — no flags — executes
+the named program.** So `--ext-diff`/`--textconv` are deliberately *not* denied: denying them
+would close nothing while reading as armor, the precise failure this guard's design rejects. It is
+now documented in the honest-boundary section with its mitigation (`git clone` does not carry the
+remote's config, so a repo you cloned yourself can't set the driver) and its real exposure (a repo
+that *arrives* as a directory or archive with `.git/config` already written). Also probed and
+cleared: `core.pager` does **not** fire without a TTY, so that vector is genuinely absent — the
+earlier dismissal of the ECC pager-hardening idea holds.
+
+## Pass 2 — empirical runtime
+
+- **The probe was run** — required by AGENTS.md after any guard change, and not run when S1 landed.
+  All checks PASS, including the two that matter here: *the guard DENIED the reviewer's command*
+  and *the guard IGNORED the main loop's identical command*. Preloading, `${CLAUDE_PLUGIN_ROOT}`
+  expansion, and namespacing all still hold.
+- **The pending re-baseline was run** (54 headless sessions): **15/18, negatives 8/8, `postmortem`
+  positives 3/3 and 3/3.** Captured at `evals/baselines/2026-07-24/homelab-ops/`.
+- **A finding was killed by measurement.** Round 1's P2 proposed negative routing on `runbook`'s
+  description to guard the runbook↔postmortem seam. The eval shows no cross-firing in either
+  direction, and the fleet's own rule is *no description edit without an observed failure to pin
+  it to*. **Not landed**, with the evidence recorded in the baseline note. A reviewer's
+  plausible suggestion losing to a measurement is the system working.
+
+## Pass 3 — technical accuracy of the content
+
+- **The runbook example's restore was wrong [MED, fixed].** It piped a plain `pg_dump` into a
+  database that still had its schema — `relation already exists` when followed. Now drops and
+  recreates the schema first, adds `ON_ERROR_STOP=1` (without it psql prints errors, exits 0, and
+  a half-restored database looks like a success), and addresses containers by compose *service*
+  name, since `docker exec paperless-db` fails unless the compose file pins `container_name`. Note
+  this file has now been corrected twice — Codex caught the missing server, this pass caught the
+  non-empty target. Worked examples earn their keep by being executed, not read.
+- **Verified clean:** the a11y reference (live-region semantics, `aria-activedescendant`, focus
+  restoration — all correct), `homelab-platform`'s compose commands, the OpenAPI starter, and the
+  RFC 9457 text.
+
+## Pass 4 — portfolio and platform gaps
+
+- **`.probe-tmp/` and `probe-transcript.jsonl` were not gitignored [LOW, fixed].** The probe
+  removes its workspace *only when the run passes* — so a failing probe leaves both in the tree,
+  exactly when a maintainer is debugging and least likely to notice.
+- **Version stamp [fixed]:** 1.1.0 → 1.2.0; 90+ commits and a new skill had shipped under one
+  version.
+- Manifests, LICENSE, `.gitattributes`, and CI job coverage are complete. The remaining gaps are
+  the known backlog ones (observability, `lab-incident`, behavioral evals).
+
+## Pass 5 — verification and landing
+
+Round 1's H1/H2/H3 landed as code, not notes:
+
+- **The guard/hook roster split-brain is now a validator rule.** `hooks.json` carries its own copy
+  of the roster in a `case` fast-path; adding an agent to `GUARDED_AGENT_NAMES` alone left it
+  unguarded while every file claimed otherwise, and the hook still exited 0. Covered by a mutation
+  test, **verified to fail without the rule**.
+- The `Bash(git diff:*)` scoped-grant branch has a test; the documented-skill-fields test now
+  asserts *every* key in `KNOWN_SKILL_FIELDS` rather than a hand-picked five, so a typo in the
+  newly-added `background` entry cannot pass unnoticed.
+- Round 1's P1/P3, L1, C2, C4, C5, C6 and D1–D6 all landed (see the commits).
+
+**Still open, deliberately:** round 1's C1 and C7 (both eval- or H1-gated by design), finding 1 of
+the July quality review (stack-neutrality), and the backlog's own Tier 1/2 items.
