@@ -50,6 +50,41 @@ class RequiredSlots(unittest.TestCase):
         with self.assertRaises(KeyError):
             packet_lint.lint_packet("anything", "no-such-shape")
 
+    def test_a_slot_is_not_satisfied_by_being_a_substring_of_another_slot(self) -> None:
+        # REGRESSION (review-reported, reproduced): the slot check searched one concatenated body,
+        # so "**Not verified**: ..." contained "verified" and satisfied the `verified` slot. A
+        # packet that never says what it DID verify then passed the contract it was meant to prove.
+        text = """
+        **Changed**: the retry wrapper.
+        **Assumptions**: none.
+        **Not verified**: everything — I could not run the suite.
+        """
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(
+            any("'verified'" in f and "missing" in f for f in findings),
+            f"the 'verified' slot must not be satisfied by 'not verified': {findings}",
+        )
+
+    def test_prose_without_headings_is_not_a_packet(self) -> None:
+        # REGRESSION (review-reported): free prose containing the slot WORDS satisfied every slot,
+        # so the behavioral eval could report contract compliance for output in which a caller
+        # cannot locate a single promised section.
+        prose = (
+            "I changed it after discussing assumptions. The work is verified by CI: 1 passed. "
+            "It is not verified in production."
+        )
+        findings = packet_lint.lint_packet(prose, "review-packet")
+        self.assertTrue(
+            sum("missing required packet slot" in f for f in findings) >= 3,
+            f"prose with no headings must fail most slots: {findings}",
+        )
+
+    def test_postmortem_shape_matches_the_shipped_template(self) -> None:
+        # The shape's slots are the headings the asset actually emits; drift between them would
+        # make the linter reject a compliant postmortem.
+        template = (REPO / "skills" / "postmortem" / "assets" / "postmortem.md").read_text()
+        self.assertEqual([], packet_lint.lint_packet(template, "postmortem"))
+
 
 class TheInversion(unittest.TestCase):
     """Labeled uncertainty passes; unbacked confidence fails. This is the whole design."""

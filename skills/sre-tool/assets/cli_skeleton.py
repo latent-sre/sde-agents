@@ -85,6 +85,18 @@ def resolve_config(args: argparse.Namespace) -> dict[str, Any]:
     if args.older_than is not None:
         config["older_than"], sources["older_than"] = args.older_than, "--older-than"
 
+    # Bound the threshold AFTER precedence resolves, so the check covers the flag, the environment,
+    # and the config file with one rule instead of three. A negative age is not a smaller cleanup —
+    # every item is "older than -1 day", so a typo (`--older-than -1`) or a malformed config value
+    # silently turns a bounded prune into delete-everything. `argparse` accepts `-1` happily, and
+    # the placeholder `delete()` below is meant to be replaced by a genuinely destructive call, so
+    # this is exactly the input-bounding a destructive CLI owes its caller.
+    if config["older_than"] < 0:
+        raise Usage(
+            f"--older-than must be zero or more; got {config['older_than']} "
+            f"(from {sources['older_than']}). A negative threshold matches EVERY item."
+        )
+
     if args.debug:
         for key, value in config.items():
             note(f"config {key}={value} (from {sources[key]})")

@@ -70,7 +70,11 @@ tiers, including the network placement.
 
 Copy [`assets/ci.reusable.yml`](assets/ci.reusable.yml) — it carries the pins, permissions,
 concurrency, timeouts, and the env-not-interpolation pattern already wired. Read its header before
-using it: the action SHAs are deliberate placeholders you must resolve.
+using it: the refs are deliberate placeholders you must resolve, and **there are two kinds**. A
+GitHub Action pins to a git commit SHA (`actions/checkout@<40-hex>`); a `docker://` step pins to an
+image manifest **digest** (`docker://image@sha256:…`), because the ref after `@` is resolved by the
+registry, not by git. Putting a commit SHA on a `docker://` line yields an image reference that
+does not exist, and the job fails to start.
 
 ## Verify
 

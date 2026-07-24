@@ -46,10 +46,13 @@ SHAPES: dict[str, tuple[str, ...]] = {
     "reviewer-verdict": ("verdict",),
     "postmortem": (
         "summary", "impact", "timeline", "trigger", "what went well",
-        "what went poorly", "lucky", "actions",
+        "what went poorly", "where we got lucky", "actions", "runbook updated",
     ),
-    "incident": ("mitigat", "verif"),
 }
+# Every slot above must match the START of a normalized line -- see _slot_present. Shapes are
+# therefore written as the heading text an agent actually emits ("where we got lucky", not
+# "lucky"). There is deliberately no shape for lab-incident: that skill declares no fixed packet,
+# and a shape that cannot match real output would fail every honest run.
 
 # The canonical evidence labels. A claim carrying any of these has declared its footing.
 LABELS = ("[verified]", "[sourced]", "[unverified]")
@@ -111,6 +114,19 @@ def _window(lines: list[str], index: int, radius: int = 3) -> str:
     return "\n".join(lines[max(0, index - radius): index + radius + 1])
 
 
+def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
+    """True when some line BEGINS with the slot -- i.e. the slot is a heading or label.
+
+    Substring-over-the-whole-document was the original check and it false-passed twice (found in
+    review): "**Not verified**: ..." contains "verified", so a packet that never reported what it
+    DID verify still satisfied the `verified` slot; and free prose ("I changed it after discussing
+    assumptions ... verified by CI") satisfied every slot of the review packet while containing no
+    packet at all. Anchoring to the start of a line is what makes the slot a locatable SECTION,
+    which is the whole promise the packet contract makes to a caller.
+    """
+    return any(line.startswith(slot) for line in normalized_lines)
+
+
 def lint_packet(text: str, shape: str) -> list[str]:
     """Return a list of findings. Empty means the packet is compliant.
 
@@ -122,12 +138,11 @@ def lint_packet(text: str, shape: str) -> list[str]:
     findings: list[str] = []
     lines = text.splitlines()
     normalized = [_normalize(line) for line in lines]
-    haystack = " \n".join(normalized)
 
-    # 1. Required slots. A missing slot is the whole point of the check: the packet contract exists
-    #    so the caller can rely on those fields being present.
+    # 1. Required slots, each matched as a HEADING (see _slot_present). A missing slot is the whole
+    #    point of the check: the packet contract exists so the caller can locate those fields.
     for slot in SHAPES[shape]:
-        if slot not in haystack:
+        if not _slot_present(slot, normalized):
             findings.append(f"missing required packet slot: {slot!r}")
 
     for index, line in enumerate(lines):

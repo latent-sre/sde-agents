@@ -91,18 +91,34 @@ def main(argv: list[str] | None = None) -> int:
 
     # Failure minutes actually spent so far, and the same figure as a share of the whole budget.
     failure_minutes = elapsed_hours * 60 * (100.0 - args.observed) / 100.0
-    consumed_fraction = failure_minutes / total_budget if total_budget else float("inf")
+
+    # A 100% target is a ZERO budget, so both ratios below are 0/0 for a perfect run. Guarding only
+    # the denominator (`x if total else inf`) made a flawless month report "BUDGET EXHAUSTED", which
+    # is the script asserting an outage that did not happen -- worse than no output. Zero failure
+    # against a zero budget is zero consumption; any failure at all against a zero budget really is
+    # unbounded, and that is the only case that should read as infinite.
+    if total_budget:
+        consumed_fraction = failure_minutes / total_budget
+    else:
+        consumed_fraction = 0.0 if failure_minutes == 0 else float("inf")
 
     # Burn rate compares the observed failure share against the target's allowance. 1x means
     # spending the budget exactly evenly across the window.
     allowed_fraction = (100.0 - args.target) / 100.0
     observed_fraction = (100.0 - args.observed) / 100.0
-    burn_rate = observed_fraction / allowed_fraction if allowed_fraction else float("inf")
+    if allowed_fraction:
+        burn_rate = observed_fraction / allowed_fraction
+    else:
+        burn_rate = 0.0 if observed_fraction == 0 else float("inf")
+
+    consumed_text = "n/a (zero budget)" if consumed_fraction == float("inf") \
+        else f"{consumed_fraction * 100:.1f}% of the window's budget"
+    burn_text = "unbounded (zero budget)" if burn_rate == float("inf") else f"{burn_rate:.2f}x"
 
     print(f"Elapsed           {elapsed_hours:g} h of {window_hours:g} h")
     print(f"Observed          {args.observed}% success -> {failure_minutes:.1f} min of failure")
-    print(f"Budget consumed   {consumed_fraction * 100:.1f}% of the window's budget")
-    print(f"Burn rate         {burn_rate:.2f}x")
+    print(f"Budget consumed   {consumed_text}")
+    print(f"Burn rate         {burn_text}")
 
     if burn_rate <= 0:
         print("Status            no failure observed — budget untouched")

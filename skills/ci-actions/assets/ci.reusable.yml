@@ -77,8 +77,13 @@ jobs:
       - uses: actions/checkout@REPLACE_WITH_SHA # v4.2.2
         with:
           persist-credentials: false
+      # A `docker://` step pins differently from a GitHub Action: the ref after `@` is an IMAGE
+      # MANIFEST DIGEST (`sha256:...`), not a git commit SHA, so the REPLACE_WITH_SHA above is the
+      # wrong kind of identifier here. Resolve it with:
+      #   docker buildx imagetools inspect rhysd/actionlint:v1.7.4 --format '{{.Manifest.Digest}}'
+      # then use `docker://rhysd/actionlint@sha256:<digest>`.
       - name: actionlint
-        uses: docker://rhysd/actionlint@REPLACE_WITH_SHA # v1.7.4
+        uses: docker://rhysd/actionlint@REPLACE_WITH_IMAGE_DIGEST # v1.7.4, as sha256:...
       # zizmor audits for the pwn-request, script-injection, and unpinned-action classes.
       - name: zizmor
         run: pipx run zizmor .github/workflows/
