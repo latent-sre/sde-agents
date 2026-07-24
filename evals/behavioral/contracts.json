@@ -7,7 +7,7 @@
       "id": "packet-slots-builder",
       "prompt": "Write a small Python function `parse_duration(text)` that turns strings like '90s', '5m', '2h' into seconds, with unit tests. Put it in duration.py with tests in test_duration.py, run the tests, and give me your review packet at the end.",
       "packet_shape": "review-packet",
-      "expected": "sde-fullstack's packet contract: Changed / Assumptions / Verified / Not verified, all present, with the verification claim backed by the actual command and output rather than asserted.",
+      "expected": "The BUILDER-SIDE review packet contract \u2014 Changed / Assumptions / Verified / Not verified, all present, with the verification claim backed by the actual command and output rather than asserted. Note what expect_fires does and does not claim: the packet shape is declared by sde-fullstack AND, as an explicit standalone fallback, by backend-craft and code-craft, so a run in which a craft skill handled the work and produced the packet is a real measurement of that contract \u2014 just of the skill's fallback clause rather than the agent's. It is deliberately NOT pinned to sde-fullstack alone: agent positives systematically under-fire in headless one-shot mode (a measured harness property \u2014 see ../README.md; homelab-platform runs 0-2/3), and because a behavioral case must pass EVERY run, an agent-pinned case would sit permanently red for harness reasons rather than contract reasons. A permanently-failing check gets ignored, which costs more than the precision it buys. What this case still closes is the false green it was added for: the main session satisfying the packet text with no component that owes the packet ever running.",
       "tags": [
         "packet",
         "sde-fullstack",

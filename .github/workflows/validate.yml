@@ -52,8 +52,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # PINNED, deliberately, and this repo would be hypocritical otherwise: it ships a skill whose
+      # first rule is that an unpinned dependency lets someone else decide what your CI runs.
+      # The obvious objection is that a pin stops this job noticing NEW platform requirements — but
+      # catching upstream drift was never this job's role. `scripts/probe_plugin.py` is the fleet's
+      # drift detector (AGENTS.md: it "turns a silent upstream rename into a loud failure"), and it
+      # is manual on purpose because it drives real API sessions. So: bumping this pin is exactly
+      # the moment to re-run the probe, and the two are a pair — deliberate upgrade, deliberate
+      # re-verification, rather than a silent change arriving mid-PR on someone else's release day.
       - name: Install the Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.219
 
       - name: Validate the plugin manifest, frontmatter, and hooks
         run: claude plugin validate . --strict
