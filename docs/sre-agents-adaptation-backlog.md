@@ -262,6 +262,27 @@ its Tier 1/2 imports are landed, these are what remains):
   keyboard-pass evidence. Two misses trigger the `self-improve-loop` micro-retro: fix the
   definition, not the workflow. A durable assert belongs in the same finding-7b eval set.
 
+From `docs/ecc-batch2-review.md` (July 2026; that file owns the adjudication detail — its three
+body-only imports are landed, these are what remains):
+
+- **Behavioral-eval doctrine** (batch-2 item 5, from ECC `agent-eval`) — fold into the finding-7b
+  work alongside the packet-lint assert, not standalone: every behavioral case carries at least
+  one deterministic assert (the routing evals are judge-free; keep that property), fixtures are
+  pinned and versioned as code, and token cost is tracked beside pass rate.
+- **RFC 9457 priority raised** (batch-2 item 9 hazard) — ECC `api-design` teaches the same nested
+  `{"error":{...}}` envelope item 1.3 flags as a defect in `backend-craft/SKILL.md`; our copy
+  currently agrees with a wrong external source. Land 1.3 before any further error-shape edits.
+- **Optional: `principal-engineer` agent-legibility clause** (batch-2 item 7) — one line naming
+  AI agents as a maintainer class whose legibility needs (greppability, explicit boundaries,
+  deterministic tests over hidden conventions) are stricter than humans'. Adjudicate against
+  nuance-bloat before landing; "boring by default" may already carry it.
+- **Optional: `multi-agent-architect` description extension** — wrapper-app phrasing ("my LLM app
+  got worse after adding a layer") to match the landed wrapper-diagnostics body content. A
+  description edit: gated on running the affected routing cluster before and after.
+- **Operator decision: `article-writing` import** (batch-2 item 10) — off-remit writing
+  capability with no fleet routing home; if wanted, needs an action-shaped description and
+  removal of its unresolvable `brand-voice` dependency.
+
 ## Sequencing
 
 1. Tier 1 in order (1.1 → 1.5), validator + tests + `--strict` at each step; seed/extend routing
