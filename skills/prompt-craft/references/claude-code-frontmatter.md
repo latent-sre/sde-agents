@@ -55,7 +55,9 @@ Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior swit
   model invocation). A plugin skill so marked still loads into context and stays model-invocable.
   Set it anyway (correct once fixed, and it documents intent), but do not treat it as an enforced
   boundary in a plugin; make the skill's own content defer authority instead. Re-verify after CLI
-  upgrades — `scripts/probe_plugin.py` is the capability test — and update this stamp.
+  upgrades — `scripts/probe_plugin.py` is the capability test — and update this stamp. (Docs also
+  state the flag stops scheduled-task firings that name the skill, as of v2.1.196 — doc-checked
+  2026-07-24, not probed.)
 - `user-invocable: false` — background-knowledge skills, hidden from the `/` menu.
 - `allowed-tools` **grants** (pre-approves, no permission prompt) while the skill is active — it
   does **not** restrict availability. Takes bare tool names or permission-rule specifiers
@@ -63,7 +65,8 @@ Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior swit
 - `disallowed-tools` **removes** tools while the skill is active (clears on the next user message) —
   this is the restricting field.
 
-Also available: `when_to_use`, `arguments`, `model`, `effort`, `context`, `agent`, `hooks`, `paths`,
+Also available: `when_to_use`, `arguments`, `model`, `effort`, `context`, `agent`, `background`
+(with `context: fork`; `false` waits for the forked result in the invoking turn), `hooks`, `paths`,
 `shell` — not exhaustive; see code.claude.com/docs/en/skills for the current table
 (`validate_fleet.py` keeps `KNOWN_SKILL_FIELDS` as the fleet's checked copy).
 
