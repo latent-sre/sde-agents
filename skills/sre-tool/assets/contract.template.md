@@ -29,8 +29,9 @@ Response (status <code>):
 
 ## Error cases
 
-<!-- every error a client can see, each in the one error envelope (backend-craft: same shape for
-     validation errors, 404s, and 500s; request_id in every one) -->
+<!-- every error a client can see, each as RFC 9457 application/problem+json (backend-craft:
+     top-level problem details, never a nested envelope; same shape for validation errors, 404s,
+     and 500s; request_id in every one) -->
 
 ## Change log
 

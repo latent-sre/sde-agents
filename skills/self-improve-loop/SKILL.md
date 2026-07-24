@@ -37,7 +37,10 @@ The leverage is in *verify* — an action you don't check is an assumption. Orde
    intent, subtle correctness. Use it *after* the cheap checks, not instead of them.
 
 **Move the lesson left.** When the same failure recurs, encode it as a rules-based check — a test, a
-lint rule, a validator rule, a hook — rather than re-judging it by reasoning each time.
+lint rule, a validator rule, a hook — rather than re-judging it by reasoning each time. (A Stop hook
+is the enforced end-of-turn form — the turn cannot end while the check fails — but the gate is
+bounded, not absolute: the harness force-ends after 8 consecutive blocks. Treat it as a strong gate,
+never as the guarantee; the deterministic check itself stays the safety system.)
 
 ## Pattern 3 — The unattended outer loop ("Ralph")
 
@@ -97,4 +100,5 @@ proposed if out of scope (or "none — no recurring failure"). Label verificatio
 
 - → `sde-agents:code-reviewer` as the evaluator lens; → `sde-agents:sde-fullstack` to apply a confirmed revision.
 - → `sde-agents:root-cause` when verification fails for an unknown reason (the loop found a bug; now find its cause).
+- → `sde-agents:postmortem` after a lab incident — an operational failure gets the full write-up, not just a micro-retro; its preventative actions are this loop's candidate lessons, and its fleet-caused findings come back here to be moved left.
 - → `sde-agents:prompt-craft` / `sde-agents:prompt-engineer` when the encoded lesson is an edit to a fleet definition.

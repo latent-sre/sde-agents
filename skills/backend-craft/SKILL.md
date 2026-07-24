@@ -12,18 +12,19 @@ This skill is general-purpose — any backend or API, not just ops tooling — h
 
 ## Contract first
 
-- The API contract (OpenAPI or equivalent) is written/generated before the frontend consumes anything; it is the single source of truth for shapes — and it is **living**: if your implementation diverges, update the contract in the same change. A stale contract is worse than none; parallel builders trust it.
-- **One error shape everywhere** (problem+json style) — a client should never parse two error formats. The shape, worked:
+- The API contract (OpenAPI or equivalent) is written/generated before the frontend consumes anything; it is the single source of truth for shapes — and it is **living**: if your implementation diverges, update the contract in the same change. A stale contract is worse than none; parallel builders trust it. Starting fresh? Copy [`assets/openapi.starter.yaml`](assets/openapi.starter.yaml) — problem+json errors, cursor pagination, and Idempotency-Key already worked in.
+- **One error shape everywhere — RFC 9457 `application/problem+json`** — a client should never parse two error formats. Problem details live at the **top level** of the body; never wrap them in a nested `{"error": {...}}` envelope. The shape, worked:
 
   ```json
-  { "error": { "status": 504, "code": "upstream_timeout",
-               "message": "Grafana did not respond within 5s.",
-               "details": [], "request_id": "req_8f3a2c" } }
+  { "type": "https://example.lab/problems/upstream-timeout",
+    "title": "Upstream timeout", "status": 504,
+    "detail": "Grafana did not respond within 5s.",
+    "instance": "/api/v1/dashboards/42", "request_id": "req_8f3a2c" }
   ```
 
-  Same envelope for validation errors (each field issue as a `details` entry), 404s, and 500s — and `request_id` in every one, so a user-reported error is greppable in the logs.
+  `type`/`title`/`status`/`detail`/`instance` are the standard members (`type` names the problem *class* as a URI, `about:blank` when the status code already says it all; `detail` explains this *occurrence*); anything more rides as top-level **extension members** — `request_id` in every one so a user-reported error is greppable in the logs, and validation issues as an `errors` array on a 422 (`"errors": [{"field": "email", "detail": "not a valid email address"}]`). Same shape for 404s and 500s. Serve it as `Content-Type: application/problem+json`, and prefer the framework's native support (Spring `ProblemDetail`, ASP.NET `ProblemDetails`, FastAPI/Starlette problem middleware) over hand-rolling.
 - **Serialize through explicit response models** — never return ORM objects or internal dicts directly. A response model is an allowlist: anything not declared in it (password hash, internal flag) *cannot* leak.
-- `/v1` in the path from day one; breaking changes mean a new version, not a mutation.
+- `/v1` in the path from day one; breaking changes mean a new version, not a mutation. Breaking = removing or renaming a field, changing a type, or changing auth; adding fields or optional params is not. Run at most two live versions: announce the sunset (`Sunset` header with a date), then `410 Gone` after it — an undated deprecation never completes. And *choosing* to break is design work at `sde-agents:principal-engineer` altitude, not a call a builder makes mid-implementation.
 - Every list endpoint paginates from the start — cursor-based by default (offset is fine for small, bounded admin lists); retrofitting pagination is a breaking change.
 
 ## Resiliency (the core focus)
@@ -48,7 +49,7 @@ These are the system-wide principles. The client-side mechanics for *calling oth
 ## Security
 
 - Secrets from env or a secret store — never in code, images, or logs.
-- Explicit CORS allowlist (never `*` with credentials); rate limiting on anything exposed (token bucket, return `Retry-After`).
+- Explicit CORS allowlist (never `*` with credentials); rate limiting on anything exposed (token bucket; on limit return `429` + `Retry-After`, and publish the budget in `X-RateLimit-Limit`/`-Remaining`/`-Reset` so well-behaved clients can self-throttle).
 - **Bound what you accept**: request-body size caps, server-side request timeouts, and bounded query params (max page size, max array length). Inbound requests can do unbounded damage exactly like unbounded outbound calls — input *validation* itself lives under Resiliency.
 
 ## Testing & quality gate

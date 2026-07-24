@@ -1,8 +1,8 @@
 {
   "cluster": "homelab-ops",
-  "description": "Routing eval for the home-lab operations overlap: homelab-platform (agent) vs its three skills service-onboard, lab-audit, runbook. All four share vocabulary — 'my lab', 'a service', 'check', 'docs' — over a LIVE lab, so a misroute here is the most consequential in the fleet (e.g. a read-only question landing on a mutating path). Positives name the specific intended member; negatives share lab/service/check/write vocabulary but must route to NO cluster member.",
-  "members": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
-  "notes": "This is the BASELINE of the current members, seeded before the planned incident / restore-drill / upgrade-campaign skills land (docs/skills-modernization-plan.md); re-run and diff after they are added. Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if NO member fired. Two watch items specific to this cluster: (1) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform (which reads it by path); a positive that fires service-onboard instead of homelab-platform is the open /code-review finding, not a clean pass. (2) lab-shaping ARCHITECTURE (storage/network layout) is routed up the ladder by homelab-platform's Boundaries, not to the cluster — the neg-lab-architecture case guards that seam.",
+  "description": "Routing eval for the home-lab operations overlap: homelab-platform (agent) vs its skills service-onboard, lab-audit, runbook, and postmortem. All share vocabulary — 'my lab', 'a service', 'check', 'docs', 'what happened' — over a LIVE lab, so a misroute here is the most consequential in the fleet (e.g. a read-only question landing on a mutating path). Positives name the specific intended member; negatives share lab/service/check/write vocabulary but must route to NO cluster member.",
+  "members": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
+  "notes": "This is the BASELINE of the current members, seeded before the planned incident / restore-drill / upgrade-campaign skills land (docs/skills-modernization-plan.md); re-run and diff after they are added. postmortem joined 2026-07-24 (backlog 1.4) — the captured baseline under baselines/ predates it, so the next full run re-baselines; postmortem's tight seams are runbook (both write docs; 'what happened' vs 'how to operate') and the future lab-incident (postmortem is after-recovery only — a live 'X is down' prompt must route to homelab-platform, never postmortem). Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if NO member fired. Two watch items specific to this cluster: (1) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform (which reads it by path); a positive that fires service-onboard instead of homelab-platform is the open /code-review finding, not a clean pass. (2) lab-shaping ARCHITECTURE (storage/network layout) is routed up the ladder by homelab-platform's Boundaries, not to the cluster — the neg-lab-architecture case guards that seam.",
   "cases": [
     {
       "id": "pos-add-service",
@@ -69,10 +69,26 @@
       "tags": ["runbook", "update-doc"]
     },
     {
+      "id": "pos-postmortem-writeup",
+      "prompt": "Last night the whole lab lost DNS for two hours — it's fixed now. Write up what happened so we learn from it.",
+      "polarity": "positive",
+      "expect_fires": ["postmortem"],
+      "expected_output": "Resolved incident, learning-focused write-up — the postmortem skill. 'It's fixed now' is the after-recovery cue that separates this from live-failure routing.",
+      "tags": ["postmortem", "write-up"]
+    },
+    {
+      "id": "pos-postmortem-retro",
+      "prompt": "Do a postmortem on yesterday's Nextcloud outage — the disk filled up and it was down all afternoon.",
+      "polarity": "positive",
+      "expect_fires": ["postmortem"],
+      "expected_output": "Named explicitly; cause already known (disk full), so no root-cause loop needed — straight to the blameless write-up.",
+      "tags": ["postmortem", "retro"]
+    },
+    {
       "id": "neg-app-feature",
       "prompt": "Add a CSV export feature to my web app's reports page.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Application code — routes to a builder (sde-fullstack / frontend-craft), not lab ops. 'Add' is shared vocabulary with add-a-service.",
       "tags": ["near-miss", "app-feature"]
     },
@@ -80,7 +96,7 @@
       "id": "neg-review-deploy",
       "prompt": "Review my deploy script's pull request for security bugs before I merge it.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Reviewing a diff — code-reviewer. 'Deploy' and 'review' share vocabulary with lab work but this is a code review.",
       "tags": ["near-miss", "review"]
     },
@@ -88,7 +104,7 @@
       "id": "neg-debug-test",
       "prompt": "My integration test for the API fails about one run in five. Find out why.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Debugging a flaky test — root-cause. 'Find out why' shares vocabulary with troubleshooting, but there is no lab here.",
       "tags": ["near-miss", "debug"]
     },
@@ -96,7 +112,7 @@
       "id": "neg-api-docs",
       "prompt": "Write API documentation for the public functions in my Python library.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Library API docs are not an ops runbook — must NOT fire runbook. 'Write documentation' is the tight near-miss for runbook.",
       "tags": ["near-miss", "api-docs"]
     },
@@ -104,7 +120,7 @@
       "id": "neg-lab-architecture",
       "prompt": "I'm planning the next two years of my lab — should I run Ceph or ZFS for storage, and how should I segment the VLANs?",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Lab-shaping architecture on a multi-year horizon — routes UP the ladder (distinguished/principal) per homelab-platform's Boundaries, not to the ops cluster. Guards the eng-ladder-vs-homelab seam. 'Lab' and 'storage' are shared vocabulary.",
       "tags": ["near-miss", "architecture"]
     },
@@ -112,7 +128,7 @@
       "id": "neg-status-dashboard",
       "prompt": "Build a status-page dashboard that reads services.json and shows each service's health.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "A UI build — frontend-craft / sde-fullstack. 'Services' and 'health' share vocabulary with lab monitoring, but this is app code.",
       "tags": ["near-miss", "frontend"]
     },
@@ -120,9 +136,17 @@
       "id": "neg-prompt-fix",
       "prompt": "My Claude Code skill for lab tasks never triggers when I ask it. Fix its description.",
       "polarity": "negative",
-      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook"],
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
       "expected_output": "Prompt tooling — prompt-craft / prompt-engineer. The word 'lab' is a decoy; the task is fixing a description.",
       "tags": ["near-miss", "prompt-tooling"]
+    },
+    {
+      "id": "neg-sprint-retro",
+      "prompt": "Write up what happened in yesterday's sprint retro and turn it into a list of action items.",
+      "polarity": "negative",
+      "expect_not_fires": ["homelab-platform", "service-onboard", "lab-audit", "runbook", "postmortem"],
+      "expected_output": "Meeting notes, not an incident — must NOT fire postmortem despite sharing 'write up what happened', 'retro', and 'action items'. The tight near-miss for the new member.",
+      "tags": ["near-miss", "postmortem"]
     }
   ]
 }

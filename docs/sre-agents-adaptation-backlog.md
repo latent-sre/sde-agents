@@ -70,7 +70,7 @@ six new routing descriptions.
   `sde-agents:homelab-platform`'s tiers (the `lab-audit` precedent). Soften multi-window burn-rate
   ceremony to lab scale. Name the skill in `service-onboard` step 6.
 
-### 1.3 RFC 9457 error-shape correction + OpenAPI starter → `skills/backend-craft`
+### 1.3 RFC 9457 error-shape correction + OpenAPI starter → `skills/backend-craft` — **landed 2026-07-24**
 
 Verified defect in a shipped skill: `backend-craft/SKILL.md:16-24` teaches a **nested**
 `{"error":{...}}` envelope and mislabels it "problem+json style". The donor's version teaches
@@ -80,8 +80,14 @@ Adopt the donor's error section; port `backend-craft/assets/openapi.starter.yaml
 schema, Idempotency-Key, cursor pagination worked concretely) after scrubbing two comments (PCF
 probe, corp SSO/UAA); link it from the contract-first section. Consider the donor's
 breaking-change-is-principal-altitude compatibility rule in the same pass.
+**Landed:** SKILL error section rewritten to top-level RFC 9457 (standard members + extension
+members, `errors` array for validation, framework-native support named); the starter authored
+natively to this item's spec (donor out of session scope — nothing to scrub) and linked from the
+contract-first bullet; the breaking-change altitude rule added beside the version-lifecycle line;
+the `sre-tool` contract template's "one error envelope" paraphrase fixed toward the source per
+the owned-conventions rule. Body-only — no routing surface.
 
-### 1.4 New skill: `postmortem`
+### 1.4 New skill: `postmortem` — **landed 2026-07-24**
 
 No component owns learning-after-failure. Near drop-in from donor `postmortem/SKILL.md`: blameless
 structure, trigger-vs-cause separation, the mitigative-vs-preventative action table, and "where we
@@ -89,6 +95,12 @@ got lucky" ("luck is a preventative action item waiting to be written").
 **Adapt:** strip SEV header, IC-log seed, typed-agent handoffs; reframe blameless for one operator
 ("what made the mistake easy"); pair with `sde-agents:root-cause` and `sde-agents:lab-incident`.
 Converges with the modernization plan's `incident` postmortem half.
+**Landed:** authored to house conventions from this item's adaptation notes (the donor repo was
+out of session scope — everything this item lists to keep is in, everything it lists to strip is
+out), plus feed-forward wiring into `sde-agents:runbook` Common failures, `sde-agents:lab-audit`
+checks, and the `sde-agents:self-improve-loop` micro-retro for fleet-caused findings. Routing
+cases seeded in `evals/routing/homelab-ops.json` (two positives, one tight negative; members
+extended — next full run re-baselines). The `sde-agents:lab-incident` pairing lands with 1.5.
 
 ### 1.5 New skill: `lab-incident` (+ root-cause deferral clause)
 
@@ -167,7 +179,11 @@ the triage bullet defers to `lab-incident`.
   required structure): machine-linkable frontmatter (`alert_names`, `last_verified`) that pairs
   with the obs pack's `runbook_url` linking; the runbook/playbook/SOP distinction; the
   rehearse-or-it-rots rule (game days = the restore drill). If an asset is wanted, generate it
-  from this fleet's own 7-slot structure.
+  from this fleet's own 7-slot structure. — **Landed 2026-07-24**: Alerts + Last-verified slots
+  in the template (lightweight prose lines, not machine frontmatter — the obs pack that would
+  consume machine keys hasn't landed; revisit with 1.2), rehearse-or-it-rots, the
+  runbook/playbook/postmortem distinction, and the worked example at
+  `skills/runbook/references/example.md` generated from the fleet's own template.
 - **3.2 Worked hypothesis table → `root-cause`** (likelihood × cheapness-to-test, Result column) —
   matches the fleet's house "worked example" style; append without disturbing the three-strikes
   ownership sentence.
@@ -242,9 +258,19 @@ From `docs/skills-modernization-plan.md` and the July 2026 best-practices re-che
   verbs; `references/checks.md` + findings ledger (modernization Tier 2 item 6).
 - `prompt-craft`: eval-wiring line in Method step 4 (repo has routing evals → run the harness
   before/after).
-- `runbook`: worked example reference (merges with 3.1).
+- `runbook`: worked example reference (merges with 3.1) — **landed with 3.1, 2026-07-24**.
 - `eng-ladder`: infra-that-is-also-architecture exception clause on the homelab routing line;
   H1-title convention sweep across skills.
+
+**2026-07-24 best-practices re-check** (live doc fetch: code.claude.com `best-practices` +
+`skills` pages; landed alongside 1.4/3.1): fleet doctrine confirmed current — verify-first with
+evidence shown, fresh-context adversarial review, trigger-led descriptions, CLAUDE.md
+conciseness, subagent isolation for investigation. Deltas landed: `background` added to the
+frontmatter reference's skill-field list; the v2.1.196 scheduled-task clause added to the
+`disable-model-invocation` caveat (doc-checked only — the #22345 stamp deliberately not advanced
+without running the probe); the Stop-hook deterministic-gate fact in `self-improve-loop`. Noted
+but not adopted (no consumer yet; `KNOWN_SKILL_FIELDS` gates the second by design): `/goal`
+conditions as session-level verify gates, and skill-scoped `hooks:` frontmatter.
 
 From `docs/ecc-skills-agents-review.md` (July 2026; that file owns the adjudication detail —
 its Tier 1/2 imports are landed, these are what remains):
@@ -261,6 +287,28 @@ its Tier 1/2 imports are landed, these are what remains):
   check the packet names `interaction-a11y.md` (or `forms.md`'s wiring bullets) and carries
   keyboard-pass evidence. Two misses trigger the `self-improve-loop` micro-retro: fix the
   definition, not the workflow. A durable assert belongs in the same finding-7b eval set.
+
+From `docs/ecc-batch2-review.md` (July 2026; that file owns the adjudication detail — its three
+body-only imports are landed, these are what remains):
+
+- **Behavioral-eval doctrine** (batch-2 item 5, from ECC `agent-eval`) — fold into the finding-7b
+  work alongside the packet-lint assert, not standalone: every behavioral case carries at least
+  one deterministic assert (the routing evals are judge-free; keep that property), fixtures are
+  pinned and versioned as code, and token cost is tracked beside pass rate.
+- **RFC 9457 priority raised** (batch-2 item 9 hazard) — ECC `api-design` teaches the same nested
+  `{"error":{...}}` envelope item 1.3 flags as a defect in `backend-craft/SKILL.md`; our copy
+  currently agrees with a wrong external source. Land 1.3 before any further error-shape edits.
+  — **Resolved 2026-07-24**: 1.3 landed; the fleet no longer carries the nested shape anywhere.
+- **Optional: `principal-engineer` agent-legibility clause** (batch-2 item 7) — one line naming
+  AI agents as a maintainer class whose legibility needs (greppability, explicit boundaries,
+  deterministic tests over hidden conventions) are stricter than humans'. Adjudicate against
+  nuance-bloat before landing; "boring by default" may already carry it.
+- **Optional: `multi-agent-architect` description extension** — wrapper-app phrasing ("my LLM app
+  got worse after adding a layer") to match the landed wrapper-diagnostics body content. A
+  description edit: gated on running the affected routing cluster before and after.
+- **Operator decision: `article-writing` import** (batch-2 item 10) — off-remit writing
+  capability with no fleet routing home; if wanted, needs an action-shaped description and
+  removal of its unresolvable `brand-voice` dependency.
 
 ## Sequencing
 
