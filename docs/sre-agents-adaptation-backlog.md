@@ -335,11 +335,44 @@ Everything else in this file has landed. What genuinely remains:
   `evals/behavioral/contracts.json` exist and are deterministic; three promises are pinned. More
   contracts (the ladder's report-to-caller handoff, `lab-incident`'s mitigate-before-diagnose order,
   `restore-drill`'s scratch-target rule) would each be a case, not new machinery.
-- **A full re-baseline of the routing suite.** `homelab-ops` is now 9 members / 24 cases and
-  `craft-vs-fullstack` 5 / 15; `investigation` has no baseline at all. The captured baselines
-  predate those changes. Smoke-checked at `--runs 1` (new lab-incident positives fired 2/2, the
-  investigation negatives 3/3 clean with the live-outage case correctly landing on `lab-incident`),
-  but the 3-run anchors are pending — that is a large session-count and deliberately deferred.
+- **A full re-baseline of the routing suite — attempted, PARKED 2026-07-25 with the runner fixed and
+  no anchor captured.** Read this before re-attempting; the attempt produced more value in tooling
+  fixes than in numbers, and repeating it naively would repeat the dead ends.
+
+  *What the attempt found and fixed* (all landed: `d268e22`, `d74fe8b`, `64e39cd`):
+  1. **`benchmark.json` recorded no conditions**, so two runs could not be validly diffed. Now
+     carries `cli_version`, `model_requested`, `models_observed`.
+  2. **The runner could not pin a model**, and a `/model` change does *not* reach `claude -p`
+     children. Two runs believed to differ by tier were both sonnet — caught by fix 1 on its first
+     use. `--model` added; **use it for anything you intend to compare.**
+  3. **Errored runs were scored as routing failures.** `run_once` marked a no-usable-transcript run
+     and its own comment said such a run must not count; nothing implemented that. Invisible until a
+     slower model was pinned and sessions began timing out *before* their first tool call. Now
+     excluded, with an `INCONCLUSIVE` verdict when every run of a case is excluded.
+  4. **`expect_not_fires` was ignored** — negatives graded against the whole member list, so
+     `neg-resolved-not-incident` failed for `postmortem` (the *correct* destination) firing. Now
+     honored; that case should pass on the next run and is worth checking first.
+
+  *What is actually known about routing* (partial, and the only real finding): `craft-vs-fullstack`
+  positives ran 1/9 on sonnet and 3/9 on pinned opus, with every failure firing **nothing at all**
+  rather than misrouting. So model tier matters but does not explain most of it, and the remaining
+  suspicion is case design — several prompts presuppose a repository ("add pagination to
+  `/api/v1/orders`", "review the changes on this branch") that the runner's empty temp cwd
+  contradicts, and a session that answers "there is no project here, I need more information"
+  never routes. `homelab-ops` scored 20/24 under the same conditions, and its prompts describe a
+  *narrative* lab rather than files on disk — consistent with that reading. Confirming it needs one
+  completed run at a raised timeout; nothing here is settled.
+
+  *Operational caveat, learned the hard way:* a detached 18-session batch died at 8/18 with no
+  traceback, no results, and no `benchmark.json`, ~45 minutes before it was noticed (memory was
+  fine; cause never established). Earlier 72- and 45-session batches survived, so it is not
+  deterministic. **Prefer small foreground batches you can watch complete** over large detached ones,
+  and treat a stalled progress counter as dead until proven otherwise.
+
+  *No anchor was captured, deliberately.* Every candidate artifact has a known defect in its
+  conditions — measured under an unrecorded or unintended model, or before the exclusion fix. An
+  anchor that cannot state what it measured is worse than none, because a later diff against it
+  looks valid.
 - **Behavioral verification of the a11y imports**, unchanged: it triggers on the next real UI task
   involving a modal, toast, or form.
 - **`references/checks.md` + findings ledger for `lab-audit`** (modernization Tier 2 item 6): the

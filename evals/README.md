@@ -56,7 +56,36 @@ python3 scripts/eval_routing.py --runs 1
 
 # just the negatives, still one cluster at a time
 python3 scripts/eval_routing.py evals/routing/homelab-ops.json --case 'neg-*'
+
+# a run whose numbers will be COMPARED to another's: pin the model, and give a slower
+# model room to reach its first tool call before the timeout cuts the session
+python3 scripts/eval_routing.py evals/routing/homelab-ops.json --runs 3 --model opus --timeout 420
 ```
+
+### Pin the model, or the comparison is not one
+
+**`--model` is required for any run you intend to diff against another.** Without it each session
+takes whatever the CLI defaults to, and that default is **not** inherited from the session that
+launched the runner — a `/model` change in an interactive session does not reach a `claude -p`
+child. This silently invalidated a comparison here: two runs of `craft-vs-fullstack` believed to
+differ by model tier were both sonnet, so their near-identical results said nothing about the tier.
+
+Every `benchmark.json` therefore records a `conditions` block — `cli_version`, `model_requested`,
+and `models_observed` (read off the transcripts, i.e. what actually ran). A benchmark without it is
+not a baseline: it cannot state what it measured. If a single run mixes models, the runner says so
+loudly and that artifact should not be treated as one anchor.
+
+### `INCONCLUSIVE` is not a failure
+
+A run that produced no usable transcript — a timeout that never reached a tool call, a failed spawn
+— is **excluded from the rates**, and a case whose every run was excluded is reported
+`INCONCLUSIVE` rather than failed. A measurement failure and a routing failure are different facts,
+and conflating them sends you to audit descriptions when the problem is the clock. When you see it,
+raise `--timeout` and re-run those cases; they are evidence in neither direction.
+
+The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
+longer than that before its first tool call, so **the timeout and the model are one decision** —
+pin both together.
 
 Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
 methodology requires). The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
