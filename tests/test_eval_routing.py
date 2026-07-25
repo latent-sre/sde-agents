@@ -138,6 +138,35 @@ class ScoringTest(unittest.TestCase):
         runs = self._runs(["postmortem"], ["lab-incident"], ["postmortem"])
         self.assertFalse(eval_routing.score_case(case, runs, members, threshold=0.5)["passed"])
 
+    def test_errored_runs_are_excluded_from_the_rates(self) -> None:
+        # REGRESSION: run_once marks a run with `error` when it captured no usable transcript, and
+        # its comment says such a run must not count — but nothing implemented that, so an invalid
+        # sample was scored as a confident "did not route". It bit as soon as a slower model was
+        # pinned and sessions began timing out before their first tool call.
+        case = {"id": "p", "polarity": "positive", "expect_fires": ["prompt-craft"]}
+        runs = self._runs(["prompt-craft"])
+        runs += [{"fired": [], "tokens": None, "duration_ms": None, "model": None,
+                  "error": "timed out after 180s (partial transcript graded)"}]
+        result = eval_routing.score_case(case, runs, self.MEMBERS, threshold=0.5)
+        self.assertTrue(result["passed"], result["detail"])       # 1/1 valid, not 1/2
+        self.assertEqual(1, result["runs_excluded"])
+        self.assertIn("excluded", result["detail"])
+
+    def test_a_case_whose_every_run_errored_is_inconclusive_not_passed(self) -> None:
+        # An unmeasured case must not be reported as a result in either direction. For a NEGATIVE
+        # this is the vacuous pass the exclusion exists to prevent: no transcript is not evidence
+        # that nothing fired.
+        errored = [{"fired": [], "tokens": None, "duration_ms": None, "model": None,
+                    "error": "run failed: boom"} for _ in range(2)]
+        for polarity, extra in (("positive", {"expect_fires": ["prompt-craft"]}),
+                                ("negative", {"expect_not_fires": list(self.MEMBERS)})):
+            with self.subTest(polarity=polarity):
+                case = {"id": "c", "polarity": polarity, **extra}
+                result = eval_routing.score_case(case, errored, self.MEMBERS, threshold=0.5)
+                self.assertTrue(result["inconclusive"])
+                self.assertFalse(result["passed"])
+                self.assertIn("INCONCLUSIVE", result["detail"])
+
     def test_per_run_firings_are_recorded_for_audit(self) -> None:
         # A surprising verdict must be explicable from the artifact rather than by re-running.
         case = {"id": "n", "polarity": "negative", "expect_not_fires": list(self.MEMBERS)}

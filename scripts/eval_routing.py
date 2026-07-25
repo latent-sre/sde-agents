@@ -185,18 +185,34 @@ def cli_version() -> str | None:
 
 
 def score_case(case: dict, runs: list[dict], members: set[str], threshold: float) -> dict:
-    """Aggregate a case's runs into rates and a pass/fail verdict."""
-    n = len(runs)
-    member_hits = [bool(set(r["fired"]) & members) for r in runs]
+    """Aggregate a case's runs into rates and a pass/fail verdict.
+
+    Runs carrying an `error` are EXCLUDED from the rates. `run_once` sets that only when a session
+    produced no usable transcript (a timeout that captured no routing decision, or a failed spawn),
+    and its comment already said why such a run must not count -- "otherwise negatives would pass
+    vacuously on empty transcripts" -- but nothing implemented the exclusion, so an invalid sample
+    was scored as a confident "did not route". That mattered as soon as a slower model was pinned:
+    sessions began timing out BEFORE their first tool call, and the resulting empty transcripts read
+    as routing failures. A measurement failure and a routing failure are different facts.
+
+    If every run of a case is invalid, the case is INCONCLUSIVE and never counts as passed -- an
+    unmeasured case must not be reported as a result in either direction.
+    """
+    valid = [r for r in runs if not r.get("error")]
+    excluded = len(runs) - len(valid)
+    n = len(valid)
+    inconclusive = n == 0
+    member_hits = [bool(set(r["fired"]) & members) for r in valid]
     fire_rate = sum(member_hits) / n if n else 0.0
     polarity = case["polarity"]
+    suffix = f" [{excluded} run(s) excluded: no usable transcript]" if excluded else ""
 
     if polarity == "positive":
         expected = set(case.get("expect_fires", members))
-        correct = [bool(set(r["fired"]) & expected) for r in runs]
+        correct = [bool(set(r["fired"]) & expected) for r in valid]
         correct_rate = sum(correct) / n if n else 0.0
-        passed = correct_rate >= threshold
-        detail = f"expected {sorted(expected)} fired in {sum(correct)}/{n} runs"
+        passed = (not inconclusive) and correct_rate >= threshold
+        detail = f"expected {sorted(expected)} fired in {sum(correct)}/{n} runs{suffix}"
     else:
         # HONOR the case's own `expect_not_fires`. Every negative declares it, and this used to grade
         # against the whole member list regardless — so a DISAMBIGUATION case (X must not fire here,
@@ -206,19 +222,26 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
         # `postmortem` — a cluster member, and the correct destination — is expected to fire.
         # Defaults to every member, so a plain near-miss case behaves exactly as before.
         forbidden = set(case.get("expect_not_fires", members))
-        hits = [bool(set(r["fired"]) & forbidden) for r in runs]
+        hits = [bool(set(r["fired"]) & forbidden) for r in valid]
         correct_rate = sum(not h for h in hits) / n if n else 0.0  # rate of NOT firing
-        passed = not any(hits)  # a negative fails if a forbidden component fires even once
+        # A negative fails if a forbidden component fires even once -- but an INCONCLUSIVE negative
+        # must not pass, which is the vacuous pass the excluded-run comment above warns about.
+        passed = (not inconclusive) and not any(hits)
         scope = "cluster" if forbidden == members else f"{sorted(forbidden)}"
-        detail = f"{scope} fired in {sum(hits)}/{n} runs (want 0)"
+        detail = f"{scope} fired in {sum(hits)}/{n} runs (want 0){suffix}"
+
+    if inconclusive:
+        detail = f"INCONCLUSIVE — no run produced a usable transcript ({excluded} attempted)"
 
     # What else fired — diagnostic, e.g. a negative correctly landing on backend-craft/sde-fullstack.
-    other = sorted({c for r in runs for c in r["fired"]} - members)
+    other = sorted({c for r in valid for c in r["fired"]} - members)
     return {
         "id": case["id"],
         "polarity": polarity,
         "tags": case.get("tags", []),
         "passed": passed,
+        "inconclusive": inconclusive,
+        "runs_excluded": excluded,
         "cluster_fire_rate": round(fire_rate, 3),
         "correct_rate": round(correct_rate, 3),
         "detail": detail,
@@ -294,7 +317,7 @@ def main() -> int:
     print("-" * 90)
     for s in scored:
         rate = s["correct_rate"]
-        mark = "PASS" if s["passed"] else "FAIL"
+        mark = "INCONC" if s.get("inconclusive") else ("PASS" if s["passed"] else "FAIL")
         also = f"  [also fired: {', '.join(s['also_fired'])}]" if s["also_fired"] else ""
         print("{:<28} {:<9} {:>6.0%} {}{}".format(s["id"], mark, rate, s["detail"], also))
         for err in s["errors"]:
@@ -303,10 +326,20 @@ def main() -> int:
     passed = sum(s["passed"] for s in scored)
     pos = [s for s in scored if s["polarity"] == "positive"]
     neg = [s for s in scored if s["polarity"] == "negative"]
+    inconc = [s for s in scored if s.get("inconclusive")]
     print("-" * 90)
     print(f"{passed}/{len(scored)} passed  "
           f"(positives: {sum(s['passed'] for s in pos)}/{len(pos)} routed correctly, "
           f"negatives: {sum(s['passed'] for s in neg)}/{len(neg)} correctly did NOT fire)")
+    if inconc:
+        # Loud, because an unmeasured case silently counted as a failure is how a measurement
+        # problem gets mistaken for a routing problem — which happened here with a slower model.
+        print(f"! {len(inconc)} case(s) INCONCLUSIVE (no usable transcript): "
+              f"{', '.join(s['id'] for s in inconc)}")
+        print("  Raise --timeout or re-run those; they are not evidence in either direction.")
+    excluded_total = sum(s.get("runs_excluded", 0) for s in scored)
+    if excluded_total:
+        print(f"! {excluded_total} individual run(s) excluded from rates for the same reason.")
 
     # The conditions the measurement was taken under. A benchmark without them is not a baseline:
     # routing behavior varies by model tier, so diffing two runs that silently used different models
