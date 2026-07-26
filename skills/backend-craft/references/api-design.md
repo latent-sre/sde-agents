@@ -20,9 +20,9 @@ The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conf
 - `200` read/update with body · `201` create **with `Location` header** · `204` no body
   (DELETE, some PUTs).
 - Client errors, precisely: `400` malformed (bad JSON), `422` well-formed but semantically invalid
-  (validation details in the error envelope), `401` not authenticated, `403` authenticated but not
-  allowed, `404` no such resource, `409` state conflict (duplicate, version mismatch), `429` rate
-  limited **with `Retry-After`**.
+  (field details in the problem+json `errors` extension member), `401` not authenticated, `403`
+  authenticated but not allowed, `404` no such resource, `409` state conflict (duplicate, version
+  mismatch), `429` rate limited **with `Retry-After`**.
 - Never `200 {"success": false}` — clients branch on status codes, not body flags. Never `500`
   for a validation failure; a 5xx means *the server* broke.
 
@@ -39,13 +39,14 @@ Pick these once and hold them across every endpoint — consistency is the featu
   `limit` server-side. Offset pagination is acceptable only where SKILL.md allows it (small,
   bounded admin lists) — it degrades at depth and shifts under concurrent writes.
 
-## Typed errors feed the one envelope
+## Typed errors feed the one problem+json response
 
 - Raise a **typed error hierarchy** in the domain layer — a base app error carrying `code` +
   HTTP status, subclasses per case (`NotFound`, `Conflict`, `Validation` with field details) —
-  and translate to the SKILL.md envelope in **one global exception handler**, not per route.
+  and translate to the SKILL.md problem+json shape in **one global exception handler**, not per
+  route.
 - The unexpected-exception path is part of the design: log the full error with the request ID,
-  return a generic `internal_error` envelope. Internals (stack traces, SQL, upstream bodies)
+  return a generic `internal_error` problem response. Internals (stack traces, SQL, upstream bodies)
   never reach the client.
 - Error codes are API contract: enumerate them in the OpenAPI spec, and treat renaming one as a
   breaking change.

@@ -43,7 +43,7 @@ The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conf
   A `SELECT`-then-`INSERT` precheck is a race; the unique index is the truth — which means the
   index must exist in the model.
 - Domain errors are FastAPI-free; routers (or a global `@app.exception_handler`) translate them
-  into the one error envelope.
+  into the one problem+json response.
 - **Async all the way down**: async SQLAlchemy, `await db.execute(select(...))` — one sync driver
   call in an async route blocks the event loop for every request. Paginated queries always carry
   `.order_by(...)` on a unique key.
@@ -51,7 +51,7 @@ The universal backend rules live in `skills/backend-craft/SKILL.md`. On any conf
 ## Testing
 
 - Integration tests drive the real app over ASGI: `httpx.AsyncClient(transport=ASGITransport(app=...))`
-  — no live server, real routing, real validation, real error envelope.
+  — no live server, real routing, real validation, real problem+json responses.
 - Fixtures compose: fresh schema per test, a session-override `client`, then `registered_user` →
   `auth_token` → `auth_client` so authenticated tests cost one fixture argument. The DB is a real
   ephemeral one per SKILL.md's testing gate — in-memory SQLite only where the SQL stays portable.
