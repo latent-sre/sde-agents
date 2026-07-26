@@ -54,7 +54,7 @@ These are the system-wide principles. The client-side mechanics for *calling oth
 
 ## Testing & quality gate
 
-- **Unit** the pure logic; **integration-test** the handlers against a **real ephemeral database** (testcontainers or a throwaway Postgres — not mocks of your own DB).
+- **Unit** the pure logic; **integration-test** the handlers against a **real ephemeral database** (testcontainers or a throwaway Postgres; in-memory SQLite is acceptable when the SQL stays portable — never mocks of your own DB).
 - **Mock the upstreams** you consume (respx / WireMock) and **test the failure paths that matter**: a timeout fires, a retry backs off, the circuit breaker opens. Resiliency code is worthless untested.
 - **Contract-test** against the OpenAPI spec so served shapes can't drift from what the frontend builds on.
 - Before "done": the service starts clean, tests pass, and the primary endpoints were exercised with **real requests** (curl/httpie) — request and response pasted in the review packet. An API that was never called is written, not verified.
