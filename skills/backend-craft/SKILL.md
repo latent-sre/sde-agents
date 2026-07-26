@@ -70,6 +70,8 @@ review packet.
 | If the task involves… | Read first |
 |---|---|
 | choosing a stack for a greenfield service | `references/stack.md` |
+| shaping the HTTP surface — new endpoints, status codes, list query params, or evolving a published API | `references/api-design.md` |
+| building in Python + FastAPI | `references/fastapi.md` |
 | calling any upstream or third-party API | `references/consuming-apis.md` |
 | a queue, a scheduled job, or an inbound webhook | `references/background-work.md` |
 | streaming to clients (SSE or WebSocket) | `references/live-data.md` |
