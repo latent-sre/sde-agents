@@ -14,11 +14,13 @@ runner exercises them TODAY, and retires when `claude plugin eval` is generally 
 
 HOW IT GRADES. Routing is a fact you can read straight off the transcript — which Skill was
 invoked, which subagent was spawned — so grading needs no judge model and is deterministic and
-free. A positive case passes when an expected cluster member fires; a negative passes only when NO
-cluster member fires. Routing is probabilistic (a skill/agent fires perhaps half the time in
-practice), so results are RATES over --runs, not booleans. The load-bearing signals are a positive
-whose rate collapses after a description edit (regression) and a negative that fires at all
-(over-trigger) — both visible in the delta between runs of this suite.
+free. A positive case passes when an expected cluster member fires; a negative passes only when
+none of its FORBIDDEN set fires, and that set is the whole cluster unless the case narrows it with
+`expect_not_fires` (a disambiguation case: "X must not fire here, but its sibling Y is the correct
+destination"). Routing is probabilistic (a skill/agent fires perhaps half the time in practice), so
+results are RATES over --runs, not booleans. The load-bearing signals are a positive whose rate
+collapses after a description edit (regression) and a negative that fires at all (over-trigger) —
+both visible in the delta between runs of this suite.
 
 Pure standard library. Spawns headless `claude -p ... --plugin-dir <repo>` sessions, one per run,
 each a fresh context (the isolation the methodology requires).
@@ -113,15 +115,17 @@ def _string_values(obj) -> list[str]:
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None) -> dict:
-    """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error}.
+    """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
     Never raises: this drives a flaky, sometimes long-running subprocess, and a routing eval only
     needs the FIRST routing decision, not a completed session. A timeout is therefore expected, not
     exceptional — the transcript captured up to that point almost always already contains the Skill
     or Agent call we grade on. (An earlier version let TimeoutExpired propagate out of the thread
     pool, and one prompt that induced a long agentic build took the whole 16-case suite down with
-    it.) So: parse whatever stdout exists whether the run exits, times out, or errors, and only
-    report an error when NOTHING was captured.
+    it.) So: parse whatever stdout exists whether the run exits, times out, or errors, and set
+    `error` only when the transcript cannot support a routing verdict (see the usability comment
+    below). `note` keeps the trouble visible even for runs that were graded anyway, so an artifact
+    can still say a rate came from cut or non-zero sessions.
     """
     stdout, stderr, note = "", "", None
     try:
@@ -146,7 +150,8 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     except Exception as exc:  # a broken spawn must not crash the suite
         note = f"run failed: {exc}"
 
-    tokens = duration = model = None
+    tokens = duration = observed_model = None
+    session_completed = False
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -156,21 +161,33 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
             usage = event.get("usage") or {}
             tokens = (usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0) or None
             duration = event.get("duration_ms")
+            # A `result` event means the session RAN TO ITS END — the transcript is whole, so its
+            # routing (or its silence) is an observation rather than a blank.
+            session_completed = True
         # Record the model the session ACTUALLY ran on, read off the transcript rather than assumed.
         # Routing behavior varies by model tier, so a benchmark that omits it cannot be validly
         # diffed against another — a lesson from comparing two runs of this suite that had silently
-        # used different models and reading the difference as a routing regression.
-        if model is None:
+        # used different models and reading the difference as a routing regression. Kept in its own
+        # local: reusing the `model` PARAMETER for this made the read conditional on --model being
+        # absent, so `models_observed` echoed the requested alias for exactly the pinned runs the
+        # conditions block exists to describe.
+        if observed_model is None:
             candidate = event.get("model") or (event.get("message") or {}).get("model")
             if isinstance(candidate, str) and candidate:
-                model = candidate
+                observed_model = candidate
 
     fired = sorted(components_fired(stdout))
-    # A timeout that captured a firing is a usable result; a timeout that captured NOTHING is an
-    # error (otherwise negatives would pass vacuously on empty transcripts). Non-timeout notes are
-    # always errors.
-    error = note if (note and not fired) else None
-    return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": model, "error": error}
+    # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
+    # reached its `result` event routed somewhere — possibly off the fleet entirely, which is a real
+    # negative sample and a real positive miss — even if the CLI then exited non-zero; discarding it
+    # because no FLEET component fired drops exactly the wrong-route evidence, and dropping misses
+    # from a positive's denominator can turn mostly-wrong routing into a PASS. A run cut by the
+    # TIMEOUT is different: its silence is not a decision, only an unfinished one, so it still counts
+    # as a measurement failure unless something already fired.
+    usable = bool(fired) or session_completed
+    error = note if (note and not usable) else None
+    return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": observed_model,
+            "error": error, "note": note}
 
 
 def cli_version() -> str | None:
@@ -251,6 +268,10 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
         # "fired 1/3" and the stored aggregate could not say which component it was.)
         "fired_per_run": [r["fired"] for r in runs],
         "errors": [r["error"] for r in runs if r["error"]],
+        # Trouble on runs that were still GRADED (a non-zero exit whose session completed, a timeout
+        # that captured a firing). Without this the artifact cannot say a rate came from cut or
+        # failed sessions, only that no run was excluded.
+        "notes": [r["note"] for r in runs if r.get("note") and not r["error"]],
     }
 
 
@@ -298,20 +319,28 @@ def main() -> int:
     print(f"cluster '{spec['cluster']}': {len(cases)} cases x {args.runs} runs = {len(work)} sessions "
           f"(members: {sorted(members)}, concurrency {args.concurrency})\n")
 
-    results_by_case: dict[str, list[dict]] = {c["id"]: [] for c in cases}
+    results_by_case: dict[str, list[tuple[int, dict]]] = {c["id"]: [] for c in cases}
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         futures = {
-            pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model): c["id"]
-            for c, _ in work
+            pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model): (c["id"], i)
+            for c, i in work
         }
         done = 0
         for future in concurrent.futures.as_completed(futures):
-            results_by_case[futures[future]].append(future.result())
+            case_id, run_index = futures[future]
+            results_by_case[case_id].append((run_index, future.result()))
             done += 1
             print(f"  [{done}/{len(work)}] runs complete", end="\r")
     print()
 
-    scored = [score_case(c, results_by_case[c["id"]], members, args.threshold) for c in cases]
+    # Sort back into submission order. Sessions finish in whatever order they finish, and the
+    # per-run arrays in the artifact would otherwise permute between two identical measurements —
+    # the documented baseline workflow diffs the whole `.cases` array, so that noise reads as a
+    # change and can bury a real one.
+    runs_by_case = {cid: [r for _, r in sorted(pairs, key=lambda p: p[0])]
+                    for cid, pairs in results_by_case.items()}
+
+    scored = [score_case(c, runs_by_case[c["id"]], members, args.threshold) for c in cases]
 
     print("\n{:<28} {:<9} {:>6} {:<40}".format("case", "verdict", "rate", "detail"))
     print("-" * 90)
@@ -322,6 +351,8 @@ def main() -> int:
         print("{:<28} {:<9} {:>6.0%} {}{}".format(s["id"], mark, rate, s["detail"], also))
         for err in s["errors"]:
             print(f"    ! run error: {err}")
+        for note in s.get("notes", []):
+            print(f"    ~ graded despite: {note}")
 
     passed = sum(s["passed"] for s in scored)
     pos = [s for s in scored if s["polarity"] == "positive"]
@@ -345,13 +376,17 @@ def main() -> int:
     # routing behavior varies by model tier, so diffing two runs that silently used different models
     # reads a model difference as a routing regression. `models_observed` is read off the transcripts
     # (what actually ran), and more than one entry means the run itself was not uniform.
-    models = sorted({r["model"] for runs in results_by_case.values() for r in runs if r.get("model")})
+    models = sorted({r["model"] for runs in runs_by_case.values() for r in runs if r.get("model")})
     conditions = {
         "cli_version": cli_version(),
         "model_requested": args.model,      # None means "whatever the CLI defaulted to"
         "models_observed": models,          # what actually ran, per the transcripts
         "plugin_dir": str(args.plugin_dir),
         "threshold": args.threshold,
+        # The timeout is a measurement decision, not a convenience: a shorter one excludes more runs
+        # and therefore moves every rate in the artifact. Two benchmarks taken at different timeouts
+        # are not comparable, and without this recorded they look identical in their conditions.
+        "timeout_s": args.timeout,
     }
     if len(models) > 1:
         print(f"\n! WARNING: runs did not use one model ({', '.join(models)}) — this benchmark mixes "
@@ -370,8 +405,13 @@ def main() -> int:
         (args.output_dir / "benchmark.json").write_text(json.dumps(benchmark, indent=2), encoding="utf-8")
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
 
-    # Exit non-zero if any case failed, so a caller can gate on it if they choose.
-    return 0 if passed == len(scored) else 1
+    # Distinct exits, because the two non-zero outcomes ask for different responses: 1 is a routing
+    # verdict to investigate, 3 is a measurement that did not happen and wants --timeout and a
+    # re-run. Collapsing them sent a caller auditing descriptions over a clock problem. A real
+    # failure outranks an inconclusive: it is the actionable one. (2 stays usage errors.)
+    if passed != len(scored) - len(inconc):
+        return 1
+    return 3 if inconc else 0
 
 
 if __name__ == "__main__":

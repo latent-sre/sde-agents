@@ -353,6 +353,21 @@ Everything else in this file has landed. What genuinely remains:
      `neg-resolved-not-incident` failed for `postmortem` (the *correct* destination) firing. Now
      honored; that case should pass on the next run and is worth checking first.
 
+  *Four more found in review of that work, all landed in the same branch:*
+  5. **`models_observed` echoed the request instead of the transcript.** The observed model reused
+     the `model` parameter, so the read was skipped exactly when `--model` was passed — the pinned
+     runs the conditions block exists to describe were the ones it could not describe.
+  6. **A completed session that exited non-zero was discarded** because no *fleet* component fired,
+     deleting the wrong-route evidence a negative needs and dropping real misses out of a positive's
+     denominator. Usability is now "the session reached its `result` event", not "something fired";
+     a timeout still excludes, since a cut session's silence is unfinished, not a decision.
+  7. **`timeout_s` was absent from `conditions`**, so two artifacts taken at 180s and 420s looked
+     identically conditioned while the shorter one excluded more runs and moved every rate.
+  8. **Run order and exit status.** Per-run arrays were appended in completion order, so two
+     identical measurements diffed as changed; they are now sorted back into submission order. And
+     `INCONCLUSIVE` exited `1` like a real failure — it exits `3` now, because the response is a
+     re-run at a longer timeout, not an audit of the descriptions.
+
   *What is actually known about routing* (partial, and the only real finding): `craft-vs-fullstack`
   positives ran 1/9 on sonnet and 3/9 on pinned opus, with every failure firing **nothing at all**
   rather than misrouting. So model tier matters but does not explain most of it, and the remaining

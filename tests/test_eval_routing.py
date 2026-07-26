@@ -173,6 +173,77 @@ class ScoringTest(unittest.TestCase):
         result = eval_routing.score_case(case, self._runs([], ["prompt-craft"]), self.MEMBERS, 0.5)
         self.assertEqual([[], ["prompt-craft"]], result["fired_per_run"])
 
+    def test_trouble_on_a_graded_run_is_still_reported(self) -> None:
+        # A run can now be graded despite a non-zero exit, so the artifact has to say so — otherwise
+        # a rate taken from troubled sessions is indistinguishable from a clean one.
+        case = {"id": "p", "polarity": "positive", "expect_fires": ["prompt-craft"]}
+        runs = self._runs(["prompt-craft"])
+        runs[0]["note"] = "exit 1: stream closed"
+        result = eval_routing.score_case(case, runs, self.MEMBERS, threshold=0.5)
+        self.assertEqual(["exit 1: stream closed"], result["notes"])
+        self.assertEqual(0, result["runs_excluded"])
+
+
+class RunUsabilityTest(unittest.TestCase):
+    """Which troubled runs count as measurements — the line between 'routed elsewhere' and 'blank'."""
+
+    def _run_with_stdout(self, stdout: str, returncode: int = 1) -> dict:
+        # `run_once`'s post-processing, exercised without spawning a session: monkeypatch the
+        # subprocess call so the pure grading half runs against a synthetic transcript.
+        import subprocess as sp
+
+        class _Proc:
+            stderr = "boom"
+
+        proc = _Proc()
+        proc.returncode, proc.stdout = returncode, stdout
+        original_run, original_claude = sp.run, eval_routing.CLAUDE
+        eval_routing.CLAUDE = "claude"
+        sp.run = lambda *a, **k: proc
+        try:
+            return eval_routing.run_once("p", REPO)
+        finally:
+            sp.run, eval_routing.CLAUDE = original_run, original_claude
+
+    def test_completed_session_that_routed_off_the_fleet_is_a_measurement(self) -> None:
+        # REGRESSION: a non-zero exit whose session nonetheless finished used to be discarded merely
+        # because no FLEET component fired. That deletes the wrong-route evidence a negative needs
+        # and drops real misses out of a positive's denominator.
+        import json
+        stdout = "\n".join([
+            transcript({"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"}}),
+            json.dumps({"type": "result", "duration_ms": 10, "usage": {"input_tokens": 1, "output_tokens": 2}}),
+        ])
+        run = self._run_with_stdout(stdout)
+        self.assertIsNone(run["error"], run)
+        self.assertEqual([], run["fired"])
+        self.assertIn("exit 1", run["note"])
+
+    def test_session_that_produced_nothing_is_an_error(self) -> None:
+        run = self._run_with_stdout("")
+        self.assertIsNotNone(run["error"])
+
+    def test_observed_model_is_read_even_when_one_was_requested(self) -> None:
+        # REGRESSION: the transcript-derived model reused the `model` PARAMETER, so the read was
+        # skipped whenever --model was passed — and `models_observed` then echoed the requested
+        # alias for exactly the pinned runs the conditions block exists to describe.
+        import json
+        import subprocess as sp
+
+        class _Proc:
+            returncode = 0
+            stdout = json.dumps({"type": "result", "model": "claude-opus-4-5-20260101"})
+            stderr = ""
+
+        original_run, original_claude = sp.run, eval_routing.CLAUDE
+        eval_routing.CLAUDE = "claude"
+        sp.run = lambda *a, **k: _Proc()
+        try:
+            run = eval_routing.run_once("p", REPO, model="opus")
+        finally:
+            sp.run, eval_routing.CLAUDE = original_run, original_claude
+        self.assertEqual("claude-opus-4-5-20260101", run["model"])
+
 
 class CaseFileTest(unittest.TestCase):
     def test_seed_cluster_is_well_formed(self) -> None:
@@ -186,6 +257,23 @@ class CaseFileTest(unittest.TestCase):
             self.assertIn(case["polarity"], ("positive", "negative"), case["id"])
             if case["polarity"] == "positive":
                 self.assertTrue(set(case["expect_fires"]) <= members, case["id"])
+
+    def test_every_negative_forbids_only_cluster_members(self) -> None:
+        # A negative is graded against its own `expect_not_fires`, so a name that is not a cluster
+        # member forbids nothing and the case passes vacuously — silently, and across every cluster.
+        import json
+        for path in sorted((REPO / "evals" / "routing").glob("*.json")):
+            spec = json.loads(path.read_text(encoding="utf-8"))
+            members = set(spec["members"])
+            for case in spec["cases"]:
+                if case["polarity"] != "negative":
+                    continue
+                forbidden = set(case.get("expect_not_fires", members))
+                self.assertTrue(forbidden <= members,
+                                f"{path.name}:{case['id']} forbids non-members "
+                                f"{sorted(forbidden - members)} — they can never fire, so the case "
+                                f"would pass without measuring anything")
+                self.assertTrue(forbidden, f"{path.name}:{case['id']} forbids nothing")
 
 
 if __name__ == "__main__":
