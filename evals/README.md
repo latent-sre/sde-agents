@@ -38,6 +38,16 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 - **negative** — a near-miss that shares vocabulary (write / fix / optimize / rewrite) but should
   route to NO cluster member.
 
+`expect_not_fires` is what a negative is graded against, and it defaults to the whole cluster — so
+an ordinary near-miss passes only when nothing in the cluster fires. A case may **narrow** it to
+name a *disambiguation* boundary instead: the components that must not fire, while a named sibling
+legitimately may. `neg-resolved-not-incident` is the one in the tree — an already-resolved outage
+must not reach the mitigation skills, but `postmortem` (a cluster member) is the correct
+destination, so grading it cluster-wide failed the case for its sibling doing the right thing. Keep
+the narrowing rare and visible: it is a declared exemption, the runner prints the forbidden set it
+actually used, and every name in it must be a cluster member (a typo would forbid nothing and pass
+vacuously).
+
 ## Running
 
 The runner takes **one cluster file per invocation**, and defaults to `prompt-tooling.json` when
@@ -56,12 +66,51 @@ python3 scripts/eval_routing.py --runs 1
 
 # just the negatives, still one cluster at a time
 python3 scripts/eval_routing.py evals/routing/homelab-ops.json --case 'neg-*'
+
+# a run whose numbers will be COMPARED to another's: pin the model, and give a slower
+# model room to reach its first tool call before the timeout cuts the session
+python3 scripts/eval_routing.py evals/routing/homelab-ops.json --runs 3 --model opus --timeout 420
 ```
+
+### Pin the model, or the comparison is not one
+
+**`--model` is required for any run you intend to diff against another.** Without it each session
+takes whatever the CLI defaults to, and that default is **not** inherited from the session that
+launched the runner — a `/model` change in an interactive session does not reach a `claude -p`
+child. This silently invalidated a comparison here: two runs of `craft-vs-fullstack` believed to
+differ by model tier were both sonnet, so their near-identical results said nothing about the tier.
+
+Every `benchmark.json` therefore records a `conditions` block — `cli_version`, `model_requested`,
+`models_observed` (read off the transcripts, i.e. what actually ran), `timeout_s`, and
+`threshold`. A benchmark without it is
+not a baseline: it cannot state what it measured. If a single run mixes models, the runner says so
+loudly and that artifact should not be treated as one anchor.
+
+### `INCONCLUSIVE` is not a failure
+
+A run whose transcript cannot support a verdict — a timeout cut before anything fired, a spawn that
+produced nothing — is **excluded from the rates**, and a case whose every run was excluded is
+reported `INCONCLUSIVE` rather than failed. A measurement failure and a routing failure are
+different facts, and conflating them sends you to audit descriptions when the problem is the clock.
+When you see it, raise `--timeout` and re-run those cases; they are evidence in neither direction.
+
+The test is usability, not silence. A session that reached its `result` event **is** graded even if
+the CLI then exited non-zero — it routed somewhere, possibly off the fleet entirely, and that is a
+real negative sample and a real positive miss. Dropping those would delete exactly the wrong-route
+evidence and could let a mostly-misrouting positive pass on its one surviving run. Runs graded
+despite trouble are listed in the output and kept in `benchmark.json` as `notes`.
+
+The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
+longer than that before its first tool call, so **the timeout and the model are one decision** —
+pin both together, and both are recorded in `conditions` (`timeout_s`, `model_requested`) because
+a shorter timeout excludes more runs and therefore moves every rate in the artifact.
 
 Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
 methodology requires). The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
-to also write a `benchmark.json` there for before/after diffing. Exit code is non-zero if any case
-fails, so you *can* gate on it — but see the caveat.
+to also write a `benchmark.json` there for before/after diffing. Exit codes separate the two things
+you would do about them — `0` all passed, `1` a case failed (a routing verdict to investigate), `3`
+nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage
+error. You *can* gate on non-zero — but see the caveat.
 
 ## How to read the results, and the caveat
 
