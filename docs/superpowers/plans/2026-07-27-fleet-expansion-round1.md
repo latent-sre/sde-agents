@@ -39,6 +39,13 @@ timeout pinned, conditions recorded.
   the round's backlog updates.
 - Commit after every task; the powershell.md commit carries provenance:
   `adapted from latent-sre/sre-agents (MIT)`.
+- **Thrift scope (operator decision 2026-07-27, taken mid-execution after Task 1 dispatched):**
+  Tasks 3 and 5 anchor the negatives plus the two PowerShell cases only — two runner invocations
+  each (`--case "neg-*"` and `--case "pos-powershell-*"`), separate output subdirs. The
+  full-cluster positive-regression check is deliberately dropped: agent positives are the doctrine's
+  weak signal in headless mode, the description change is one word, and the builder-positive
+  sessions are the expensive ones. Behavioral contracts land at `--runs 1`. The PR body records
+  this trade under Deliberately not done.
 
 ---
 
@@ -183,30 +190,33 @@ git add evals/routing/craft-vs-fullstack.json
 git commit -m "eval: repair craft-vs-fullstack empty-cwd cases per diagnose run; seed PowerShell pair"
 ```
 
-### Task 3: Capture the before-anchor (full cluster)
+### Task 3: Capture the before-anchor (thrift scope: negatives + PowerShell pair)
 
 **Files:**
-- Create (by the runner): `evals/baselines/2026-07-27-before/craft-vs-fullstack/benchmark.json`
+- Create (by the runner): `evals/baselines/2026-07-27-before/craft-vs-fullstack-neg/benchmark.json`
+  and `evals/baselines/2026-07-27-before/craft-vs-fullstack-pow/benchmark.json`
 
 **Interfaces:**
-- Produces: the anchor Task 5 diffs against. Conditions must read `opus / 420s`.
+- Produces: the anchor pair Task 5 diffs against. Conditions must read `opus / 420s` in both.
 
-- [ ] **Step 1: Full-cluster run at pinned conditions (foreground)**
+- [ ] **Step 1: Two scoped runs at pinned conditions (foreground; background-launch each and wait)**
 
 ```
-python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --output-dir evals/baselines/2026-07-27-before/craft-vs-fullstack
+python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --case "neg-*" --output-dir evals/baselines/2026-07-27-before/craft-vs-fullstack-neg
+python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --case "pos-powershell-*" --output-dir evals/baselines/2026-07-27-before/craft-vs-fullstack-pow
 ```
-Expected: exit 0 or 1 (a failing positive is information, not a blocker — `pos-powershell-pester`
-is EXPECTED to miss here). Exit 3 → re-run the INCONCLUSIVE cases at `--timeout 600`; the anchor
-must contain no case whose every run was excluded. Any negative firing at ANY rate here is a
-pre-existing over-trigger: record it in the task notes — it must not get worse in Task 5, and
-fixing it is out of this round's scope unless Task 5 shows the widening caused it.
+Run them one after the other, not concurrently (each already parallelizes internally). Expected:
+the neg run exits 0 (or 1 if a pre-existing over-trigger exists — record it: it must not get worse
+in Task 5, and fixing it is out of scope unless Task 5 shows the widening caused it); the pow run
+is EXPECTED to exit 1 (`pos-powershell-pester` should miss before the widening — that miss is the
+baseline the widening must move). Exit 3 → re-run the INCONCLUSIVE cases at `--timeout 600`; the
+anchor must contain no case whose every run was excluded.
 
 - [ ] **Step 2: Commit the anchor**
 
 ```
 git add evals/baselines/2026-07-27-before
-git commit -m "eval: craft-vs-fullstack before-anchor (opus/420s) ahead of code-craft description widening"
+git commit -m "eval: craft-vs-fullstack before-anchor, thrift scope (negatives + PowerShell pair, opus/420s)"
 ```
 
 ### Task 4: Land Item A — powershell.md and the code-craft widening
@@ -340,49 +350,51 @@ PCF mention scrubbed, register matched to the house reference style. Operator co
 that fleet/lab work is authored in PowerShell (the backlog item's settling question)."
 ```
 
-### Task 5: After-run and the acceptance diff
+### Task 5: After-run and the acceptance diff (thrift scope)
 
 **Files:**
-- Create (by the runner): `evals/baselines/2026-07-27-after/craft-vs-fullstack/benchmark.json`
+- Create (by the runner): `evals/baselines/2026-07-27-after/craft-vs-fullstack-neg/benchmark.json`
+  and `evals/baselines/2026-07-27-after/craft-vs-fullstack-pow/benchmark.json`
 
 **Interfaces:**
-- Consumes: Task 3's anchor.
+- Consumes: Task 3's anchor pair.
 
-- [ ] **Step 1: Full-cluster run, identical conditions to Task 3**
+- [ ] **Step 1: The same two scoped runs, identical conditions to Task 3**
 
 ```
-python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --output-dir evals/baselines/2026-07-27-after/craft-vs-fullstack
+python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --case "neg-*" --output-dir evals/baselines/2026-07-27-after/craft-vs-fullstack-neg
+python scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --runs 3 --model opus --timeout 420 --case "pos-powershell-*" --output-dir evals/baselines/2026-07-27-after/craft-vs-fullstack-pow
 ```
+One after the other, not concurrently.
 
 - [ ] **Step 2: Diff before → after, and apply the acceptance gates**
 
-Compare per-case rates between the two benchmark.json files (same ids, same conditions blocks).
-Gates, in order of authority (`evals/README.md`: trust negatives and regressions over absolute
-rates):
+Compare per-case rates between the anchor pair and the after pair (same ids, same conditions
+blocks). Gates, in order of authority (`evals/README.md`: trust negatives over absolute rates):
 1. **Every `neg-*` case fires at 0%** after. A negative firing at any rate — especially
    `neg-powershell-profile` — means the widened description over-triggers: a defect at any rate.
-2. **No positive regresses** by more than one run's worth (rate drop > 1/3) relative to before.
-3. `pos-powershell-pester` at or above its before rate (expected: 0 before, >0 after; if it stays
+   A negative that already fired in Task 3's anchor is pre-existing, not a widening defect — it
+   blocks only if its rate ROSE.
+2. `pos-powershell-pester` at or above its before rate (expected: 0 before, >0 after; if it stays
    at 0, record it — a skill positive is a clean signal, so a persistent 0 is a real routing miss,
    but it is a finding to report, not a silent fix-and-rerun).
 
-If gate 1 or 2 fails: revisit the ONE changed sentence (the description's language list) — the
-only permitted adjustment is phrasing of that sentence — then re-run this task once. If it fails
-again, STOP and surface to the operator with both artifacts; per the three-strikes house rule the
-diagnosis (not the phrasing) is wrong.
+The full-cluster positive-regression check is deliberately out of scope (thrift decision in Global
+Constraints; recorded in the PR body). If gate 1 fails: revisit the ONE changed sentence (the
+description's language list) — the only permitted adjustment is phrasing of that sentence — then
+re-run this task once. If it fails again, STOP and surface to the operator with both artifacts;
+per the three-strikes house rule the diagnosis (not the phrasing) is wrong.
 
-- [ ] **Step 3: Commit the after artifact and a one-paragraph diff note**
+- [ ] **Step 3: Commit the after artifacts and a one-paragraph diff note**
 
-Append the diff summary (per-case before→after rates, gates passed) to the `notes` field of the
-after `benchmark.json`? No — never hand-edit runner artifacts. Instead put the paragraph in the
-commit message:
+Never hand-edit runner artifacts; the diff paragraph goes in the commit message:
 
 ```
 git add evals/baselines/2026-07-27-after
-git commit -m "eval: craft-vs-fullstack after-run for the description widening
+git commit -m "eval: craft-vs-fullstack after-run, thrift scope, for the description widening
 
-<one paragraph: negatives all 0%, positive deltas, pos-powershell-pester before->after,
-verdict per the three gates>"
+<one paragraph: negatives all 0% (or pre-existing rates unchanged), pos-powershell-pester
+before->after, verdict per the two gates>"
 ```
 
 ### Task 6: Land Item C — lab-audit checks split and ledger convention
@@ -563,9 +575,10 @@ git commit -m "lab-audit: split checks to references/checks.md with command-leve
 
 ```
 python -c "import json; json.load(open('evals/behavioral/contracts.json'))"
-python scripts/eval_behavioral.py --case "ladder-report-*" --runs 2
+python scripts/eval_behavioral.py --case "ladder-report-*" --runs 1
 ```
-Expected: PASS on both runs, exit 0. A behavioral case must pass EVERY run (`evals/README.md`).
+Expected: PASS, exit 0 (thrift scope: one green run lands it; the suite's pass-every-run rule
+applies to however many runs execute).
 If it fails on content (must_match missing): that is a real defect finding — the builder absorbed
 an above-altitude decision — STOP and surface it to the operator with the transcript; do not edit
 the case to pass. If it fails only on `expect_fires` with otherwise-correct output, that is a
@@ -575,7 +588,7 @@ harness anomaly for a `--agent`-pinned session: re-run once; if it repeats, surf
 
 ```
 git add evals/behavioral/contracts.json
-git commit -m "eval: behavioral contract for the ladder report-up promise (green 2/2)"
+git commit -m "eval: behavioral contract for the ladder report-up promise (green 1/1, thrift scope)"
 ```
 
 ### Task 8: Behavioral contract 2 — mitigate before diagnose
@@ -610,16 +623,16 @@ git commit -m "eval: behavioral contract for the ladder report-up promise (green
 
 ```
 python -c "import json; json.load(open('evals/behavioral/contracts.json'))"
-python scripts/eval_behavioral.py --case "incident-mitigate-*" --runs 2
+python scripts/eval_behavioral.py --case "incident-mitigate-*" --runs 1
 ```
-Expected: PASS 2/2, exit 0. Same failure discipline as Task 7: content failure = defect finding,
-surface with transcript; never soften the case.
+Expected: PASS 1/1, exit 0 (thrift scope). Same failure discipline as Task 7: content failure =
+defect finding, surface with transcript; never soften the case.
 
 - [ ] **Step 3: Commit**
 
 ```
 git add evals/behavioral/contracts.json
-git commit -m "eval: behavioral contract for mitigate-before-diagnose ordering (green 2/2)"
+git commit -m "eval: behavioral contract for mitigate-before-diagnose ordering (green 1/1, thrift scope)"
 ```
 
 ### Task 9: Behavioral contract 3 — restore drills hit scratch, never live
@@ -650,15 +663,15 @@ git commit -m "eval: behavioral contract for mitigate-before-diagnose ordering (
 
 ```
 python -c "import json; json.load(open('evals/behavioral/contracts.json'))"
-python scripts/eval_behavioral.py --case "restore-drill-scratch-*" --runs 2
+python scripts/eval_behavioral.py --case "restore-drill-scratch-*" --runs 1
 ```
-Expected: PASS 2/2, exit 0. Failure discipline per its `expected` field.
+Expected: PASS 1/1, exit 0 (thrift scope). Failure discipline per its `expected` field.
 
 - [ ] **Step 3: Commit**
 
 ```
 git add evals/behavioral/contracts.json
-git commit -m "eval: behavioral contract for restore-drill scratch-target rule (green 2/2)"
+git commit -m "eval: behavioral contract for restore-drill scratch-target rule (green 1/1, thrift scope)"
 ```
 
 ### Task 10: Close the loop in the backlog
@@ -691,7 +704,8 @@ git commit -m "eval: behavioral contract for restore-drill scratch-target rule (
    `…a case, not new machinery.`):
 ```
  The three named contracts landed 2026-07-27 (Round 1): `ladder-report-not-absorb`,
-  `incident-mitigate-first`, `restore-drill-scratch-target` — each green 2/2 at landing.
+  `incident-mitigate-first`, `restore-drill-scratch-target` — each green at landing (thrift
+  scope: one run).
 ```
 
 - [ ] **Step 2: Gates and commit**
@@ -759,7 +773,7 @@ edit measured before and after.
 
 | If this PR touched… | It must show |
 |---|---|
-| a `description:` (code-craft) | before/after under opus/420s: negatives 0% → 0% [verified: evals/baselines/2026-07-27-before//-after/]; pos-powershell-pester [X]→[Y]; no positive regressed >1/3 |
+| a `description:` (code-craft) | before/after under opus/420s, thrift scope (negatives + PowerShell pair): negatives 0% → 0% [verified: evals/baselines/2026-07-27-before//-after/]; pos-powershell-pester [X]→[Y] |
 | work that a doc tracks as open | backlog stamped: powershell.md decided-yes, lab-audit split, three contracts |
 | an always-loaded body | code-craft SKILL.md +1 table row +1 word; lab-audit SKILL.md net SHRINK (eight bullets → summary+link) |
 | anything users install | plugin.json version bump deliberately deferred (see below) |
@@ -777,6 +791,10 @@ block (output-shape change).
 
 ## Deliberately not done
 
+- Full-cluster positive-regression anchoring — dropped mid-round by operator budget decision
+  (thrift scope): agent positives are the doctrine's weak headless signal, the description change
+  is one word, and the builder-positive sessions are the expensive ones. The negatives gate — the
+  doctrine's hard signal — ran at full strength.
 - No plugin.json version bump — versioning discipline is the queued `release` skill's remit;
   bumping ad hoc here would preempt it.
 - The pre-existing craft-cluster over-triggers, if Task 3 found any, were recorded but not fixed —
