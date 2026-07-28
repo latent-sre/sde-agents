@@ -27,6 +27,7 @@ not re-enter the queue unless the roadmap imports them.
 | [`skills-modernization-plan.md`](skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
 | [`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md) | Historical quality archive | Combined initial and deep reviews, security evidence, finding dispositions, and lessons |
 | [`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md) | Historical donor adjudication | Combined ECC comparison, component verdicts, accepted residue, and resolution ledger |
+| [`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md) | Historical roster design | Earlier component contracts and constraints, reconciled into the current decision and roadmap |
 | [`superpowers/specs/2026-07-27-fleet-expansion-round1-design.md`](superpowers/specs/2026-07-27-fleet-expansion-round1-design.md) | Active approved specification | Round 1 scope, non-goals, and gates |
 | [`superpowers/plans/2026-07-27-fleet-expansion-round1.md`](superpowers/plans/2026-07-27-fleet-expansion-round1.md) | Active execution plan | Round 1 task sequence and exact proposed payloads |
 

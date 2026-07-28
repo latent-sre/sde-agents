@@ -198,6 +198,49 @@ evidence belongs to the exact tested revision/environment.
 
 **Next action:** None until ROLE-003 is accepted.
 
+#### LABSEC-001 — decide adversary-focused running-lab security coverage
+
+**Status:** `decision-needed`
+
+**Outcome:** Decide whether an intent-driven `security-audit` skill should own trust zones,
+exposed services, authentication, management planes, secrets posture, vulnerability prioritization,
+and personal-data paths in the running lab without taking hygiene or fix authority.
+
+**Source:** Reconciled
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) and archived
+[`roster expansion design`](archive/2026-07/roster-expansion-design.md).
+
+**Prerequisites:** Operator approval and completion of ROUND1-001's `lab-audit` check split, so the
+hygiene/adversary boundary is tested against the final checklist rather than its transitional form.
+
+**Acceptance:** An accepted decision names the checklist boundary, active-compromise stop rule,
+fix routing to `homelab-platform`, cooperative tool limits, output contract, and routing cases
+against application security and ordinary lab hygiene.
+
+**Next action:** After ROUND1-001, compare the archived checklist proposal with the landed
+`lab-audit` reference and accept, narrow, or reject the separate adversary sweep.
+
+#### LABSEC-002 — add a guard-enforced lab inspector
+
+**Status:** `blocked`
+
+**Outcome:** If LABSEC-001 is accepted, add an optional read-only agent that can work the hygiene
+or adversary checklist without taking change authority or combining lab secrets with web access.
+
+**Source:** Archived
+[`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
+decision.
+
+**Prerequisites:** LABSEC-001 accepted; GOV-001 landed; each proposed lab reader independently
+threat-reviewed and regression-tested; hook/guard roster synchronization retained; EVAL-001 landed.
+
+**Acceptance:** The agent has no write or web tools; every additional allowlisted command is
+read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
+roster and ignores the main session; routing preserves outage/change authority in
+`homelab-platform`.
+
+**Next action:** None until LABSEC-001 and GOV-001 are complete.
+
 #### EVAL-003 — capture a comparable full routing anchor
 
 **Status:** `deferred`
@@ -213,6 +256,49 @@ fix case-design defects before treating numbers as description evidence.
 and per-run evidence; no known-invalid artifact is called an anchor.
 
 **Next action:** Revisit after Round 1's watched smoke run and scoped anchor complete.
+
+#### PORT-001 — codify the cross-fleet import method
+
+**Status:** `deferred`
+
+**Outcome:** Before the next donor-mining round, make the independent review, adaptation-notes,
+scrub, provenance, and adapt-don't-copy method invocable without duplicating prompt authoring or
+post-landing self-improvement.
+
+**Source:** Archived
+[`roster expansion design`](archive/2026-07/roster-expansion-design.md), whose timing question was
+accepted in the originating operator session.
+
+**Prerequisites:** A scheduled donor import or mining round. Measure whether a skill description
+routes correctly; if it cannot justify its always-visible cost, retain the method as a documented
+convention instead.
+
+**Acceptance:** The next import uses three independent passes before donor-doc comparison,
+produces adaptation notes as the implementation specification, scrubs donor-only assumptions,
+records provenance, and passes fleet validation and relevant routing checks.
+
+**Next action:** Reopen immediately before the next donor import.
+
+#### RELEASE-001 — add repository release discipline
+
+**Status:** `deferred`
+
+**Outcome:** On the next release-workflow task, add a bounded component for version choice,
+changelog, tag, publication, and release rollback without absorbing merge verdicts, CI authoring,
+or deployment authority.
+
+**Source:** Archived
+[`roster expansion design`](archive/2026-07/roster-expansion-design.md).
+
+**Prerequisites:** A real plugin or repository release task demonstrates the consumer. Keep
+pipeline implementation with `ci-actions`, merge readiness with `code-reviewer`, and running
+service changes with `homelab-platform`.
+
+**Acceptance:** Routing cases distinguish release, CI, deploy, and merge-verdict requests; the
+component states rollback boundaries; its first use performs the repository's actual version,
+inventory, validation, tag, and publication sequence.
+
+**Next action:** Reopen before the next manually orchestrated release.
 
 #### EVAL-004 — verify the accessibility imports behaviorally
 
@@ -336,3 +422,21 @@ direct reproduction left these candidates for the live roadmap:
 
 The current-work sections above carry these survivors, the active Round 1 work, the deferred
 routing measurement, ECC behavioral residue, and the trigger-bound compose asset.
+
+### Roster-expansion design branch
+
+The detailed source design is preserved at
+[`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md).
+
+| Historical proposal | Current disposition |
+|---|---|
+| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; no second testing agent yet |
+| Running-lab `security-audit` | Survives as LABSEC-001, distinct from repository application security |
+| Guard-enforced `lab-inspector` | Survives as blocked LABSEC-002 behind GOV-001 and command-level validation |
+| `release` | Survives as trigger-bound RELEASE-001 |
+| `porting-method` | Survives as trigger-bound PORT-001 |
+| Home-lab SRE description line | Folded into ROLE-001's rebrand without changing the component key |
+| Standalone secrets component | Remains rejected; lab posture belongs inside LABSEC-001 if accepted |
+| Generic Linux references | Superseded by ROLE-001's action-shaped `host-onboard` boundary |
+| LLM-cost, profiling, continuity, and hardware-health references | Not imported as work without an observed consumer; reopen from fresh task evidence |
+| Generic Linux agent, generic SRE agent, and merged prompt/multi-agent role | Rejected in both reviews |

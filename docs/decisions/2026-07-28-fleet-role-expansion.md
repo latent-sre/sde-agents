@@ -3,6 +3,7 @@
 **Status:** Proposed — awaiting operator acceptance, revision, or rejection
 **Date:** 2026-07-28
 **Reviewed revision:** `be2af4c87a3ecd53286fbcda84863d507ee47ac4`
+**Compared design:** [`2026-07-27 roster expansion`](../archive/2026-07/roster-expansion-design.md)
 **Implementation status:** No role, skill, guard, or routing change has been authorized by this
 record. Current work and gates live in [`fleet-roadmap.md`](../fleet-roadmap.md).
 
@@ -19,10 +20,12 @@ Does the fleet need dedicated QA, Linux, SRE, and security agents, and should
 | Linux operations | Do not add an agent; add action-shaped host lifecycle coverage |
 | General SRE | Do not add an agent; the existing home-lab operator already owns that outcome |
 | Application security | Add `application-security-auditor` with a static-first, non-PR remit |
+| Running-lab security | Decide separately on a `security-audit` skill and an optional guard-enforced `lab-inspector` |
 | Home-lab identity | Present the role as **Home-Lab SRE / Platform Engineer** while keeping the `homelab-platform` key |
 
 The resulting shape is two narrowly bounded agents, one Linux-host skill, and one visible rebrand
-— not four new agents.
+— not four generic agents. The optional lab inspector is a separate enforcement decision, not part
+of that immediate role count.
 
 ## How the proposal was reached
 
@@ -35,6 +38,24 @@ repository history, or earlier review conclusions:
 
 Their conclusions were frozen before comparison with the historical documents. The later document
 comparison affected naming, sequencing, and safeguards; it did not choose the gaps.
+
+### Reconciliation with the earlier roster design
+
+The earlier roster design was produced independently on `claude/roster-design` and proposed more
+implementation-shaped components. Merging that branch changes neither document's evidence; it
+does make their relationship explicit:
+
+| Earlier proposal | Current treatment |
+|---|---|
+| `test-engineer` authors missing tests without changing product code | Fold into ROLE-003's authority decision as one possible verification mode; do not create a second testing agent before that boundary is settled |
+| `security-audit` surveys the running lab from an adversary's perspective | Preserve as a distinct decision because application-source auditing and live-lab exposure have different inputs, authority, and fixes |
+| `lab-inspector` enforces read-only evidence gathering for lab checklists | Preserve as an optional blocked agent; GOV-001 and command-by-command guard validation must land first |
+| Home-lab SRE trigger vocabulary without renaming the key | Adopted by this proposal's visible rebrand and stable-key recommendation |
+| No generic Linux or generic SRE agent | Confirmed independently |
+| `release` and `porting-method` skills | Outside this role decision; retained as deferred roadmap items |
+
+The old design's exact descriptions, eval seeds, guard command candidates, and rejected alternatives
+remain in the archive as implementation evidence. They do not bypass the current decision gates.
 
 ## Context
 
@@ -50,6 +71,18 @@ actual runtime, compares it with acceptance criteria, and returns a release-read
 `code-reviewer` has a strong security pass, but its public remit is a PR, commit, branch, or diff.
 `researcher` can investigate external advisories and vendor evidence. Neither owns a repository or
 subsystem threat model, source-to-sink audit, attack-path validation, or severity calibration.
+
+### Adversary-focused running-lab security is a separate surface
+
+`lab-audit` owns operational hygiene. The proposed application-security auditor owns source and
+threat analysis. `homelab-platform` owns every live fix. None of those contracts, by itself, owns
+an intent-driven sweep of trust zones, exposed services, management planes, credentials, secrets,
+and personal-data paths in the running lab.
+
+The earlier design's `security-audit` skill fits that content boundary. Its optional
+`lab-inspector` fits a different enforcement boundary: executing either lab checklist with no
+write tools and no web, SSH, or curl channel. These are preserved as LABSEC-001 and LABSEC-002
+rather than being conflated with application security.
 
 ### The home-lab operator already performs SRE work
 
@@ -239,6 +272,11 @@ Rejected because testing method already exists in the craft and implementation s
 not solve the missing independent executable verdict. Extract a reusable verification skill only
 after a second consumer demonstrates one.
 
+The earlier `test-engineer` agent is not silently discarded: its test-authoring-only contract is
+one candidate answer to ROLE-003. The current recommendation starts with verification outcomes
+because pass/fail/inconclusive evidence is the missing fleet contract. Add a separate independent
+test author only if observed work proves that authoring and verification need different contexts.
+
 ### Put security into another `reviewer`
 
 Rejected because `code-reviewer` owns diffs and PRs. Whole-system security gets a separate output
@@ -258,7 +296,8 @@ Revisit this proposal when:
 - a real verification task demonstrates a safer execution-authority model;
 - repeated Linux work falls outside both host onboarding and home-lab operations;
 - the plugin expands to enterprise/non-home-lab production systems;
-- static security assessment proves insufficient without Git history or execution; or
+- static security assessment proves insufficient without Git history or execution;
+- a running-lab security task proves the hygiene checklist lacks adversary-focused depth; or
 - routing measurements show the proposed names or boundaries collide.
 
 ## Verification at review time
