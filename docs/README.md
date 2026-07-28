@@ -25,8 +25,7 @@ not re-enter the queue unless the roadmap imports them.
 | [`sre-agents-adaptation-backlog.md`](sre-agents-adaptation-backlog.md) | Historical import adjudication | Donor decisions and dated execution evidence; not current status |
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Proposed decision | QA, security, Linux, SRE, and homelab-role boundaries awaiting operator acceptance |
 | [`skills-modernization-plan.md`](skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
-| [`agents-skills-quality-review.md`](agents-skills-quality-review.md) | Historical snapshot | Initial fleet-quality findings and reasoning |
-| [`deep-review-2026-07-24.md`](deep-review-2026-07-24.md) | Historical follow-up | Later findings, runtime probes, and resolution evidence |
+| [`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md) | Historical quality archive | Combined initial and deep reviews, security evidence, finding dispositions, and lessons |
 | [`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md) | Historical donor adjudication | Combined ECC comparison, component verdicts, accepted residue, and resolution ledger |
 | [`superpowers/specs/2026-07-27-fleet-expansion-round1-design.md`](superpowers/specs/2026-07-27-fleet-expansion-round1-design.md) | Active approved specification | Round 1 scope, non-goals, and gates |
 | [`superpowers/plans/2026-07-27-fleet-expansion-round1.md`](superpowers/plans/2026-07-27-fleet-expansion-round1.md) | Active execution plan | Round 1 task sequence and exact proposed payloads |

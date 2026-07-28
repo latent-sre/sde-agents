@@ -257,6 +257,9 @@ scripts, eval cases, inventory, and active Round 1 branch.
 
 ### Quality and deep-review findings
 
+The initial and deep reviews are consolidated in
+[`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md).
+
 | Historical claim | Current evidence | Disposition |
 |---|---|---|
 | `frontend-craft` presents the default React stack as universal | `skills/frontend-craft/SKILL.md` now says an existing repository always wins and labels every core library binding as the default stack | Landed; exclude |

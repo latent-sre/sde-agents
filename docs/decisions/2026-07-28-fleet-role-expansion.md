@@ -1,8 +1,8 @@
 # Fleet role expansion and home-lab SRE identity
 
-**Status:** Proposed — awaiting operator acceptance, revision, or rejection  
-**Date:** 2026-07-28  
-**Reviewed revision:** `be2af4c87a3ecd53286fbcda84863d507ee47ac4`  
+**Status:** Proposed — awaiting operator acceptance, revision, or rejection
+**Date:** 2026-07-28
+**Reviewed revision:** `be2af4c87a3ecd53286fbcda84863d507ee47ac4`
 **Implementation status:** No role, skill, guard, or routing change has been authorized by this
 record. Current work and gates live in [`fleet-roadmap.md`](../fleet-roadmap.md).
 
@@ -271,4 +271,3 @@ At the reviewed revision:
 
 No live routing run or role implementation was performed. The skipped hook tests are why the
 guard defect is not treated as covered by the otherwise-green Windows suite.
-
