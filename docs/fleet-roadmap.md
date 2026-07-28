@@ -66,7 +66,9 @@ another batch.
 authoritative allow sentinel, while malformed unguarded/main-session input cannot brick unrelated
 work.
 
-**Source:** 2026-07-28 role/governance review, Finding G1.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md), governance
+prerequisite “Malformed guarded input returns ALLOW.”
 
 **Prerequisites:** None. Fix before adding any guarded or execution-capable role.
 
@@ -84,7 +86,9 @@ indeterminate path that reaches the hook's guarded-agent fallback.
 **Outcome:** A positive case cannot silently pass by accepting a component outside the cluster's
 declared members unless the schema explicitly declares that adjacent target.
 
-**Source:** 2026-07-28 role/governance review, Finding G2.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md), governance
+prerequisite “A routing case can pass outside its declared cluster.”
 
 **Prerequisites:** Decide whether outside-member positive targets are prohibited or represented by
 a named `adjacent_accepts` field. Default recommendation: prohibit until a real case requires the
@@ -126,7 +130,8 @@ second parser.
 Platform Engineer, add Linux-host trigger vocabulary, and decide whether `host-onboard` should be
 the first explicit-only host lifecycle skill.
 
-**Source:** 2026-07-28 independent role review; decision proposal is consolidated in Step 4.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
 
 **Prerequisites:** Operator approval. Any description edit then owes a before/after
 `homelab-ops` routing run.
@@ -143,7 +148,8 @@ land with inventory and routing coverage; existing service/application near-miss
 **Outcome:** Add a static-first agent for repository/subsystem audits, threat models, attack paths,
 and finding validation without taking PR review or remediation authority.
 
-**Source:** 2026-07-28 independent role review.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
 
 **Prerequisites:** Operator approval and EVAL-001. GOV-001 is required only if the initial agent is
 given guarded Bash; the recommended initial tools avoid it.
@@ -161,7 +167,8 @@ a source-backed output contract, and negative routing against `code-reviewer`, `
 **Outcome:** Decide how an independent verifier may execute repository tests without pretending
 that test runners are read-only or that a worktree contains network/database side effects.
 
-**Source:** 2026-07-28 independent role review.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
 
 **Prerequisites:** GOV-001 and operator choice on test-file edits, worktree isolation, integration
 tests, external effects, and live-environment approval.
@@ -178,7 +185,8 @@ external-effect gates, and enforcement limits; governance tests pin any new rost
 **Outcome:** Add an agent that independently reproduces and executes acceptance/regression
 evidence without implementing the product fix.
 
-**Source:** 2026-07-28 independent role review.
+**Source:** Proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
 
 **Prerequisites:** ROLE-003 accepted, GOV-001 landed, and EVAL-001 landed.
 
@@ -305,8 +313,10 @@ must not seed new work.
 
 ### Role and governance review
 
-The 2026-07-28 role review is current rather than historical. Static inspection and direct
-reproduction leave these candidates for Step 3:
+The proposed
+[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) preserves the
+2026-07-28 review's method, role boundaries, evidence, and reopen triggers. Static inspection and
+direct reproduction left these candidates for the live roadmap:
 
 - malformed guarded JSON returns the authoritative allow sentinel;
 - one routing positive accepts a component outside its declared cluster;
@@ -315,5 +325,5 @@ reproduction leave these candidates for Step 3:
 - add an application-security auditor with a non-PR remit;
 - design test-execution authority, then add an independent verification engineer.
 
-Step 3 converts these survivors, the active Round 1 work, the deferred routing measurement, ECC
-behavioral residue, and the trigger-bound compose asset into full roadmap items.
+The current-work sections above carry these survivors, the active Round 1 work, the deferred
+routing measurement, ECC behavioral residue, and the trigger-bound compose asset.

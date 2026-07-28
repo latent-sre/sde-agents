@@ -9,7 +9,7 @@ review silently starts governing the current fleet.
 | Document class | Purpose | Authority |
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Current, deferred, and blocked fleet work | The only live status owner |
-| `decisions/` | Accepted architecture decisions, rejected alternatives, and reopen triggers | Governs the decision it records until explicitly superseded |
+| `decisions/` | Proposed or accepted architecture decisions, rejected alternatives, and reopen triggers | An accepted record governs its decision; a proposed record carries no implementation authority |
 | `superpowers/specs/` | Approved scope and acceptance boundaries for an active round | Governs what its paired plan is allowed to implement |
 | `superpowers/plans/` | Branch-specific execution instructions and exact payloads | Operational only while that round is active |
 | `archive/` | Dated reviews, donor adjudication, and completed-plan evidence | Historical evidence only; never a task list |
@@ -23,7 +23,7 @@ not re-enter the queue unless the roadmap imports them.
 | Document | State | Read it for |
 |---|---|---|
 | [`sre-agents-adaptation-backlog.md`](sre-agents-adaptation-backlog.md) | Historical import adjudication | Donor decisions and dated execution evidence; not current status |
-| [`fleet-role-gap-review-2026-07-28.md`](fleet-role-gap-review-2026-07-28.md) | Recommendation snapshot | QA, security, Linux, SRE, and homelab-role conclusions pending conversion to a decision record |
+| [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Proposed decision | QA, security, Linux, SRE, and homelab-role boundaries awaiting operator acceptance |
 | [`skills-modernization-plan.md`](skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
 | [`agents-skills-quality-review.md`](agents-skills-quality-review.md) | Historical snapshot | Initial fleet-quality findings and reasoning |
 | [`deep-review-2026-07-24.md`](deep-review-2026-07-24.md) | Historical follow-up | Later findings, runtime probes, and resolution evidence |
@@ -37,8 +37,9 @@ not re-enter the queue unless the roadmap imports them.
 1. A historical review may explain why a decision was made; it never proves that work is still
    open.
 2. The roadmap names current work. A source review or decision record owns the detailed rationale.
-3. A decision record states what was chosen, what lost, and what evidence should reopen it. It
-   does not become an execution checklist.
+3. A decision record states its status, what is proposed or chosen, what lost, and what evidence
+   should reopen it. Only an accepted record governs implementation; it never becomes an execution
+   checklist.
 4. An active plan may be detailed and branch-specific. Once complete, its lasting decisions and
    evidence move to a short outcome record; Git history retains the exact execution payload.
 5. When a file moves or is consolidated, update every tracked reference in the same commit.
