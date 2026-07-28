@@ -8,21 +8,21 @@ review silently starts governing the current fleet.
 
 | Document class | Purpose | Authority |
 |---|---|---|
-| [`fleet-roadmap.md`](fleet-roadmap.md) | Current, deferred, and blocked fleet work | Becomes the live status owner after the consolidation reconciliation is committed |
+| [`fleet-roadmap.md`](fleet-roadmap.md) | Current, deferred, and blocked fleet work | The only live status owner |
 | `decisions/` | Accepted architecture decisions, rejected alternatives, and reopen triggers | Governs the decision it records until explicitly superseded |
 | `superpowers/specs/` | Approved scope and acceptance boundaries for an active round | Governs what its paired plan is allowed to implement |
 | `superpowers/plans/` | Branch-specific execution instructions and exact payloads | Operational only while that round is active |
 | `archive/` | Dated reviews, donor adjudication, and completed-plan evidence | Historical evidence only; never a task list |
 
-During the consolidation in progress, `sre-agents-adaptation-backlog.md` remains the live status
-owner until its genuinely open work has been reconciled into `fleet-roadmap.md`. The commit that
-completes that import must update this sentence and the repository guide together.
+The roadmap became authoritative after the 2026-07-28 current-tree reconciliation. Historical
+files may retain dated “open” sections as evidence of what was believed then; those sections do
+not re-enter the queue unless the roadmap imports them.
 
 ## Current documents
 
 | Document | State | Read it for |
 |---|---|---|
-| [`sre-agents-adaptation-backlog.md`](sre-agents-adaptation-backlog.md) | Transitional live backlog | Current import work and its detailed donor adjudication |
+| [`sre-agents-adaptation-backlog.md`](sre-agents-adaptation-backlog.md) | Historical import adjudication | Donor decisions and dated execution evidence; not current status |
 | [`fleet-role-gap-review-2026-07-28.md`](fleet-role-gap-review-2026-07-28.md) | Recommendation snapshot | QA, security, Linux, SRE, and homelab-role conclusions pending conversion to a decision record |
 | [`skills-modernization-plan.md`](skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
 | [`agents-skills-quality-review.md`](agents-skills-quality-review.md) | Historical snapshot | Initial fleet-quality findings and reasoning |
@@ -44,4 +44,3 @@ completes that import must update this sentence and the repository guide togethe
 5. When a file moves or is consolidated, update every tracked reference in the same commit.
 6. Agent and skill definitions remain canonical in `agents/` and `skills/`; documentation never
    overrides the files Claude Code loads.
-

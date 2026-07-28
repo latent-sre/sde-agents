@@ -1,8 +1,9 @@
 # Fleet roadmap
 
-> **Status: consolidation skeleton — not yet the live status owner.**
-> `docs/sre-agents-adaptation-backlog.md` remains authoritative until the historical-open-item
-> reconciliation and current-work import are complete.
+> **Status: live.**
+> This is the only document that tracks unfinished, blocked, or explicitly deferred fleet work.
+> Reviews, decision records, and execution plans supply rationale and implementation detail; they
+> do not independently add work to the queue.
 
 This file will contain only unfinished, blocked, or explicitly deferred work for the current
 fleet. Landed implementation history and donor-by-donor adjudication belong in `docs/archive/`;
@@ -27,12 +28,215 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
-No items are imported yet. Step 2 reconciles every historical “open” claim against the current
-tree; Step 3 imports only the survivors.
+### Active
+
+#### ROUND1-001 — complete the approved fleet-expansion Round 1
+
+**Status:** `active`
+
+**Outcome:** Land the PowerShell craft reference with measured routing behavior, split
+`lab-audit`'s checks into command-level guidance with a ledger output, and add the three approved
+behavioral contracts.
+
+**Source:** Approved
+[`Round 1 design`](superpowers/specs/2026-07-27-fleet-expansion-round1-design.md) and executable
+[`Round 1 plan`](superpowers/plans/2026-07-27-fleet-expansion-round1.md).
+
+**Prerequisites:** Resume measurement safely. A 27-session batch launched in a fire-and-return
+subagent produced no artifact and no provable eval session. The plan must now be worked from an
+owning foreground session.
+
+**Acceptance:** Every planned file and case lands; the scoped routing before/after artifacts record
+comparable model and timeout conditions; all new behavioral cases pass at the agreed thrift scope;
+validator, unit suite, and strict plugin validation pass; this item is closed with exact commits
+and any deliberate deviations.
+
+**Next action:** Run the backlog's cheap discriminator in a watched owning session:
+`eval_routing.py` with `--runs 1 --limit 1`, pinned model and timeout. If it completes, resume the
+plan in the foreground. If it hangs or dies, diagnose the Windows runner rather than launching
+another batch.
+
+### Ready
+
+#### GOV-001 — make malformed guarded input fail closed
+
+**Status:** `ready`
+
+**Outcome:** A malformed hook payload that still identifies a guarded agent can never return the
+authoritative allow sentinel, while malformed unguarded/main-session input cannot brick unrelated
+work.
+
+**Source:** 2026-07-28 role/governance review, Finding G1.
+
+**Prerequisites:** None. Fix before adding any guarded or execution-capable role.
+
+**Acceptance:** A focused test proves the current malformed-guarded payload passes before the fix;
+new direct and end-to-end cases cover malformed guarded deny, malformed unguarded no-op, valid
+guarded deny, and valid unguarded pass-through; hook/guard probe passes on a POSIX-capable host.
+
+**Next action:** Add the failing regression cases, then change parse failure from ALLOW to an
+indeterminate path that reaches the hook's guarded-agent fallback.
+
+#### EVAL-001 — validate routing-cluster target integrity
+
+**Status:** `ready`
+
+**Outcome:** A positive case cannot silently pass by accepting a component outside the cluster's
+declared members unless the schema explicitly declares that adjacent target.
+
+**Source:** 2026-07-28 role/governance review, Finding G2.
+
+**Prerequisites:** Decide whether outside-member positive targets are prohibited or represented by
+a named `adjacent_accepts` field. Default recommendation: prohibit until a real case requires the
+exception.
+
+**Acceptance:** A fixture or mutation test fails against the current
+`pos-ci-actions-harden`/`code-reviewer` inconsistency; validation covers unique IDs, resolvable
+members and targets, positive membership, and negative forbidden sets; the test fails without the
+validator change.
+
+**Next action:** Encode the failing cluster fixture and choose the smallest schema rule that makes
+the scorer and reported cluster rate agree.
+
+#### EVAL-002 — record behavioral-eval conditions and token use
+
+**Status:** `ready`
+
+**Outcome:** Behavioral benchmark artifacts record enough conditions and usage to compare contract
+pass rate and cost rather than reporting pass/fail alone.
+
+**Source:** ECC Batch 2's accepted eval doctrine, confirmed missing during reconciliation.
+
+**Prerequisites:** Preserve deterministic grading; usage collection must not introduce a judge.
+
+**Acceptance:** `benchmark.json` records CLI/model/timeout conditions plus observed input/output
+token usage per run or labels usage unavailable; unit tests cover complete and missing usage; the
+existing behavioral cases grade identically.
+
+**Next action:** Reuse the routing runner's transcript-usage extraction rather than deriving a
+second parser.
 
 ## Deferred decisions
 
-No decisions are imported yet.
+#### ROLE-001 — approve the home-lab SRE rebrand and Linux-host boundary
+
+**Status:** `decision-needed`
+
+**Outcome:** Keep the canonical `homelab-platform` key, present it visibly as Home-Lab SRE /
+Platform Engineer, add Linux-host trigger vocabulary, and decide whether `host-onboard` should be
+the first explicit-only host lifecycle skill.
+
+**Source:** 2026-07-28 independent role review; decision proposal is consolidated in Step 4.
+
+**Prerequisites:** Operator approval. Any description edit then owes a before/after
+`homelab-ops` routing run.
+
+**Acceptance:** Decision record is marked accepted; visible title/description and `host-onboard`
+land with inventory and routing coverage; existing service/application near-misses remain clean.
+
+**Next action:** Review the Step 4 decision record and accept, revise, or reject the recommendation.
+
+#### ROLE-002 — approve an application-security auditor
+
+**Status:** `decision-needed`
+
+**Outcome:** Add a static-first agent for repository/subsystem audits, threat models, attack paths,
+and finding validation without taking PR review or remediation authority.
+
+**Source:** 2026-07-28 independent role review.
+
+**Prerequisites:** Operator approval and EVAL-001. GOV-001 is required only if the initial agent is
+given guarded Bash; the recommended initial tools avoid it.
+
+**Acceptance:** Decision is accepted; agent has explicit static tools, no implementation authority,
+a source-backed output contract, and negative routing against `code-reviewer`, `researcher`,
+`homelab-platform`, and `sde-fullstack`.
+
+**Next action:** Approve the role boundary and initial no-Bash authority.
+
+#### ROLE-003 — define verification execution authority
+
+**Status:** `decision-needed`
+
+**Outcome:** Decide how an independent verifier may execute repository tests without pretending
+that test runners are read-only or that a worktree contains network/database side effects.
+
+**Source:** 2026-07-28 independent role review.
+
+**Prerequisites:** GOV-001 and operator choice on test-file edits, worktree isolation, integration
+tests, external effects, and live-environment approval.
+
+**Acceptance:** A written authority contract names allowed product/test edits, worktree behavior,
+external-effect gates, and enforcement limits; governance tests pin any new roster or exception.
+
+**Next action:** Choose the authority model before authoring the agent.
+
+#### ROLE-004 — add an independent verification engineer
+
+**Status:** `blocked`
+
+**Outcome:** Add an agent that independently reproduces and executes acceptance/regression
+evidence without implementing the product fix.
+
+**Source:** 2026-07-28 independent role review.
+
+**Prerequisites:** ROLE-003 accepted, GOV-001 landed, and EVAL-001 landed.
+
+**Acceptance:** Agent and routing cases separate verification from implementation, diagnosis,
+static review, and live operations; behavioral tests prove unrun checks cannot be called passed and
+evidence belongs to the exact tested revision/environment.
+
+**Next action:** None until ROLE-003 is accepted.
+
+#### EVAL-003 — capture a comparable full routing anchor
+
+**Status:** `deferred`
+
+**Outcome:** Establish one current, condition-complete baseline across all routing clusters.
+
+**Source:** Adaptation backlog's parked re-baseline analysis.
+
+**Prerequisites:** ROUND1-001 measurement path is healthy; run small watched foreground batches;
+fix case-design defects before treating numbers as description evidence.
+
+**Acceptance:** Every artifact records requested/observed model, timeout, CLI version, threshold,
+and per-run evidence; no known-invalid artifact is called an anchor.
+
+**Next action:** Revisit after Round 1's watched smoke run and scoped anchor complete.
+
+#### EVAL-004 — verify the accessibility imports behaviorally
+
+**Status:** `deferred`
+
+**Outcome:** Demonstrate that a real UI task loads and applies form wiring or interaction
+accessibility guidance and supplies keyboard-pass evidence.
+
+**Source:** ECC Batch 1's only remaining implementation-verification residue.
+
+**Prerequisites:** A real task involving a form, modal, drawer, custom widget, toast, or async
+status. Do not manufacture a component solely to close this item.
+
+**Acceptance:** Task packet names the applicable reference and provides keyboard/announcement
+evidence; two observed misses trigger a dedicated behavioral contract and definition repair.
+
+**Next action:** Evaluate on the next qualifying UI task.
+
+#### LAB-001 — provide a fallback service compose asset
+
+**Status:** `deferred`
+
+**Outcome:** Supply an annotated service block only for a lab that has no established compose
+pattern, covering pinned image, restart, health, resource, and storage slots.
+
+**Source:** Skills modernization Tier 2.
+
+**Prerequisites:** An onboarding task demonstrates that the target lab lacks a reusable pattern.
+Existing lab conventions always win.
+
+**Acceptance:** Asset is linked skill-relative from `service-onboard`, contains no environment
+specific defaults, and the validator's orphan/reference checks pass.
+
+**Next action:** Reopen on the first qualifying service-onboarding task.
 
 ## Reconciliation record
 

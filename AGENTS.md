@@ -23,7 +23,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
-| `docs/` | Working documents — reviews, plans, and the adaptation backlog. `sre-agents-adaptation-backlog.md` is the one that tracks what is still **open**; the reviews and the modernization plan are dated snapshots that carry adjudication detail and are partly superseded. Check the backlog before acting on any of the others. |
+| `docs/` | Current roadmap, decisions, active plans, and historical reviews. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. Reviews and the adaptation backlog are dated evidence, never task lists. |
 | `.claude-plugin/` | Plugin and marketplace manifests. The manifest `name` is the namespace; the guard cross-checks it. |
 
 ## Validate before you push

@@ -1,7 +1,7 @@
 # Skills modernization & portfolio plan — July 2026
 
 > **Status: partly landed / partly superseded — verified against the tree 2026-07-24.**
-> `docs/sre-agents-adaptation-backlog.md` owns the live status. Landed since this plan was
+> `docs/fleet-roadmap.md` owns the live status. Landed since this plan was
 > written: **item 2** (routing evals — five clusters seeded and four baselined, shipped as
 > `evals/routing/homelab-ops.json`, not the `homelab.json` this plan names) and **Tier 3 item 10**
 > (`skills/runbook/references/example.md`). **Superseded: item 3** — `incident` was split by
