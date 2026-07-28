@@ -286,8 +286,8 @@ without running the probe); the Stop-hook deterministic-gate fact in `self-impro
 but not adopted (no consumer yet; `KNOWN_SKILL_FIELDS` gates the second by design): `/goal`
 conditions as session-level verify gates, and skill-scoped `hooks:` frontmatter.
 
-From `docs/ecc-skills-agents-review.md` (July 2026; that file owns the adjudication detail —
-its Tier 1/2 imports are landed, these are what remains):
+From `docs/archive/2026-07/ecc-import-review.md` (July 2026; the combined Batch 1/2 archive owns
+the adjudication detail — its Tier 1/2 imports are landed, these are what remains):
 
 - **Packet-lint assert helper** (ECC review item 3a) — stdlib script asserting packet-slot
   presence and flagging hedge-claims that carry no evidence label; missing evidence fails, never
@@ -302,8 +302,8 @@ its Tier 1/2 imports are landed, these are what remains):
   keyboard-pass evidence. Two misses trigger the `self-improve-loop` micro-retro: fix the
   definition, not the workflow. A durable assert belongs in the same finding-7b eval set.
 
-From `docs/ecc-batch2-review.md` (July 2026; that file owns the adjudication detail — its three
-body-only imports are landed, these are what remains):
+From `docs/archive/2026-07/ecc-import-review.md` Batch 2 (its three body-only imports are landed;
+these are what remains):
 
 - **Behavioral-eval doctrine** (batch-2 item 5, from ECC `agent-eval`) — fold into the finding-7b
   work alongside the packet-lint assert, not standalone: every behavioral case carries at least

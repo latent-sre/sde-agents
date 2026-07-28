@@ -109,7 +109,9 @@ the scorer and reported cluster rate agree.
 **Outcome:** Behavioral benchmark artifacts record enough conditions and usage to compare contract
 pass rate and cost rather than reporting pass/fail alone.
 
-**Source:** ECC Batch 2's accepted eval doctrine, confirmed missing during reconciliation.
+**Source:** Combined
+[`ECC import review`](archive/2026-07/ecc-import-review.md), Batch 2 `agent-eval` doctrine,
+confirmed missing during reconciliation.
 
 **Prerequisites:** Preserve deterministic grading; usage collection must not introduce a judge.
 
@@ -219,7 +221,8 @@ and per-run evidence; no known-invalid artifact is called an anchor.
 **Outcome:** Demonstrate that a real UI task loads and applies form wiring or interaction
 accessibility guidance and supplies keyboard-pass evidence.
 
-**Source:** ECC Batch 1's only remaining implementation-verification residue.
+**Source:** Combined
+[`ECC import review`](archive/2026-07/ecc-import-review.md), Batch 1 accessibility residue.
 
 **Prerequisites:** A real task involving a form, modal, drawer, custom widget, toast, or async
 status. Do not manufacture a component solely to close this item.
@@ -300,6 +303,9 @@ must not seed new work.
 | Full routing re-baseline | No comparable current anchor exists; prior attempts are invalid or incomplete | Survives as deferred measurement work |
 
 ### ECC residue
+
+The two source reviews are consolidated in
+[`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md).
 
 | Historical item | Current evidence | Disposition |
 |---|---|---|

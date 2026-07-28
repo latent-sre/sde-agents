@@ -72,7 +72,8 @@ discloses, so three docs present landed work as open.
   map names only the quality review and modernization plan — the two mostly-superseded docs — and
   omits `sre-agents-adaptation-backlog.md`, the file that actually owns what's open. **Fix:**
   reword to "reviews, plans, and the adaptation backlog; the backlog tracks what remains open."
-- **D6 — `docs/ecc-batch2-review.md:38,191` states the RFC 9457 hazard as still open [LOW,
+- **D6 — the legacy ECC Batch 2 review (now consolidated in
+  `docs/archive/2026-07/ecc-import-review.md`) stated the RFC 9457 hazard as still open [LOW,
   verified].** It landed today (`c88d380`) and the backlog stamps it resolved; batch-2 itself uses
   "landed" stamps elsewhere, so the unamended hazard reads as a live ban on error-shape edits.
   **Fix:** append "— resolved 2026-07-24, see backlog 1.3" at both spots.
