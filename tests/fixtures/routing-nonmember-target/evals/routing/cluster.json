@@ -1,0 +1,16 @@
+{
+  "cluster": "demo",
+  "members": [
+    "craft"
+  ],
+  "cases": [
+    {
+      "id": "pos-demo",
+      "prompt": "Refactor this helper.",
+      "polarity": "positive",
+      "expect_fires": [
+        "builder"
+      ]
+    }
+  ]
+}

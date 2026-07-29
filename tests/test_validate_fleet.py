@@ -764,5 +764,84 @@ class PluginWiringTests(unittest.TestCase):
         self.assertEqual([], issues)
 
 
+class RoutingClusterTests(unittest.TestCase):
+    """Schema integrity for evals/routing/*.json (EVAL-001).
+
+    The scorer grades a positive on its own expect_fires but reports the CLUSTER's fire rate — so
+    a positive naming a component outside the declared members can pass while the reported rate
+    reads zero (observed live: pos-ci-actions-harden accepting code-reviewer). And both target
+    lists match components BY NAME, so a typo'd member or target forbids or expects nothing and
+    passes vacuously. The runner has no error to raise at grade time; only a validator sees it.
+    """
+
+    BASE = {"cluster": "demo", "members": ["craft", "builder"], "cases": []}
+
+    def _issues_with_cluster(self, doc) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "valid", dst)
+            routing = dst / "evals" / "routing"
+            routing.mkdir(parents=True)
+            payload = doc if isinstance(doc, str) else json.dumps(doc)
+            (routing / "cluster.json").write_text(payload, encoding="utf-8")
+            issues, _, _ = validate_fleet.validate_repo(dst)
+            return issues
+
+    def test_positive_target_outside_members_is_reported(self) -> None:
+        issues, _, _ = validate_fleet.validate_repo(FIXTURES / "routing-nonmember-target")
+        self.assertTrue(any("outside the cluster's members" in i for i in issues), issues)
+
+    def test_well_formed_cluster_passes(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+            {"id": "neg-a", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": ["craft", "builder"]},
+            {"id": "neg-default", "prompt": "p", "polarity": "negative"},
+        ])
+        self.assertEqual([], self._issues_with_cluster(doc))
+
+    def test_unresolvable_member_is_reported(self) -> None:
+        issues = self._issues_with_cluster(dict(self.BASE, members=["craft", "no-such-component"]))
+        self.assertTrue(any("not a fleet component" in i for i in issues), issues)
+
+    def test_duplicate_case_ids_are_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+            {"id": "pos-a", "prompt": "q", "polarity": "positive", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("duplicate case id" in i for i in issues), issues)
+
+    def test_nonmember_forbidden_target_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "neg-a", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": ["no-such-component"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("forbids" in i for i in issues), issues)
+
+    def test_unparseable_cluster_file_is_reported(self) -> None:
+        issues = self._issues_with_cluster("not json {")
+        self.assertTrue(any("unreadable cluster file" in i for i in issues), issues)
+
+    def test_reintroducing_the_observed_inconsistency_is_reported(self) -> None:
+        # The exact defect EVAL-001 was opened on, proven against a COPY of the real repository
+        # rather than a synthetic shape that could drift away from the actual cluster file.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            path = dst / "evals" / "routing" / "craft-vs-fullstack.json"
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            case = next(c for c in doc["cases"] if c["id"] == "pos-ci-actions-harden")
+            case["expect_fires"].append("code-reviewer")
+            path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("pos-ci-actions-harden" in i and "outside the cluster's members" in i
+                for i in issues),
+            issues,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -72,6 +72,9 @@ see the contract canary in main().
 Decision transport: a deny is the permissionDecision JSON on stdout with exit EXIT_DENY (43); an
 allow is empty stdout with exit EXIT_ALLOW (42). The distinctive codes are how the hook tells THIS
 guard's answer from a stand-in interpreter that merely exits 0 — see the comment at EXIT_ALLOW.
+Anything else — including EXIT_INDETERMINATE (44), the deliberate answer for input the guard
+cannot parse — is not an answer at all: the hook falls through to its raw guarded-agent match,
+denying for guarded payloads and no-oping for everyone else.
 The hook shell string translates them back to the documented exit-0 contract
 (https://code.claude.com/docs/en/hooks) before Claude Code sees anything.
 
@@ -116,6 +119,15 @@ GUARDED_AGENTS = frozenset(
 # and moves to the next candidate interpreter, failing closed if none answers correctly.
 EXIT_ALLOW = 42
 EXIT_DENY = 43
+# The third answer, deliberately NOT authoritative: "this input is not something I can vouch for."
+# Input the guard cannot parse must never earn EXIT_ALLOW — 42 stops the hook cold, so a truncated
+# GUARDED payload would never reach the hook's raw agent_type fallback that exists to deny exactly
+# that (GOV-001: reproduced — the same guarded push that denies intact flipped to allow when the
+# JSON was cut). Exiting with neither sentinel makes the hook treat this run like a stand-in
+# interpreter's: it falls through to the fallback, which fails closed for guarded payloads and
+# no-ops for everyone else. The value only needs to be not-42-and-not-43; it is pinned anyway so
+# the tests can tell a deliberate indeterminate from an uncaught crash's exit 1.
+EXIT_INDETERMINATE = 44
 
 # --- shell constructs we refuse to reason about ---------------------------------------------
 # An allowlist only means something if the string really is the commands we think it is. Command
@@ -424,7 +436,14 @@ def main() -> None:
         raw = sys.stdin.buffer.read().decode("utf-8-sig", errors="replace")
         data = json.loads(raw) if raw.strip() else {}
     except Exception:
-        _allow()  # unparseable input -> don't interfere with the normal permission flow
+        # Never vouch for input you could not read: the hook's fallback decides (see the
+        # EXIT_INDETERMINATE comment above for why this must not be _allow()).
+        sys.exit(EXIT_INDETERMINATE)
+    if not isinstance(data, dict):
+        # Parseable JSON that is not the documented dict envelope is equally unreadable to the
+        # scoping logic below — before this check it crashed on `.get` and only failed safe by
+        # accident of the hook treating a traceback's exit 1 as indeterminate.
+        sys.exit(EXIT_INDETERMINATE)
 
     if data.get("tool_name") != "Bash":
         _allow()

@@ -31,6 +31,7 @@ DESIGN_AGENTS = frozenset({"principal-engineer", "distinguished-architect"})
 # Must match scripts/readonly-guard.py.
 EXIT_ALLOW = 42
 EXIT_DENY = 43
+EXIT_INDETERMINATE = 44
 
 REVIEWER = "sde-agents:code-reviewer"
 
@@ -370,12 +371,43 @@ class ReadonlyGuardTest(unittest.TestCase):
         self.assertEqual(proc.returncode, EXIT_ALLOW)
         self.assertEqual(decision(proc), "allow")
 
-    def test_unparseable_and_empty_input_pass_through(self) -> None:
-        for stdin_text in ("", "not json {", "﻿"):
+    def test_empty_input_passes_through(self) -> None:
+        # Empty stdin (and a BOM that decodes to empty) is not malformed — it parses to an empty
+        # envelope, which names no tool and no agent, so the allow is an informed answer.
+        for stdin_text in ("", "﻿"):
             with self.subTest(stdin=stdin_text):
                 proc = run_guard(stdin_text)
                 self.assertEqual(proc.returncode, EXIT_ALLOW)
                 self.assertEqual(decision(proc), "allow")
+
+    def test_unparseable_input_is_indeterminate_never_the_allow_sentinel(self) -> None:
+        # GOV-001. Exit 42 is the guard's AUTHORITATIVE answer, and it stops the hook cold — so
+        # when unparseable input earned it, a truncated GUARDED payload never reached the hook
+        # fallback that would have denied it. Input the guard cannot read gets neither sentinel:
+        # the hook then decides, failing closed for guarded payloads and no-oping for the rest.
+        for stdin_text in ("not json {", '{"tool_name": "Bash", "agent_type":'):
+            with self.subTest(stdin=stdin_text):
+                proc = run_guard(stdin_text)
+                self.assertEqual(proc.returncode, EXIT_INDETERMINATE)
+                self.assertEqual(proc.stdout.strip(), b"")
+
+    def test_malformed_guarded_payload_never_earns_the_allow_sentinel(self) -> None:
+        # The exact reproduction from the role-expansion review: a valid guarded payload with a
+        # state-changing command, truncated into malformed JSON, used to flip from deny to ALLOW.
+        intact = bash_call("git push --force origin main")
+        truncated = intact[:-1]  # drop only the closing brace: malformed, identity text intact
+        self.assertIn(REVIEWER, truncated)
+        proc = run_guard(truncated)
+        self.assertEqual(proc.returncode, EXIT_INDETERMINATE)
+        self.assertEqual(proc.stdout.strip(), b"")
+
+    def test_json_that_is_not_an_envelope_is_indeterminate(self) -> None:
+        # Parseable JSON that is not the documented dict envelope is still input the guard cannot
+        # vouch for — before this rule it crashed on `.get` and the crash happened to fail safe;
+        # now the answer is deliberate rather than accidental.
+        proc = run_guard('["tool_name", "Bash"]')
+        self.assertEqual(proc.returncode, EXIT_INDETERMINATE)
+        self.assertEqual(proc.stdout.strip(), b"")
 
     def test_bom_prefixed_payload_is_still_parsed(self) -> None:
         proc = run_guard("﻿" + bash_call("git push origin main"))
