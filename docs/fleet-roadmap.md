@@ -51,10 +51,15 @@ comparable model and timeout conditions; all new behavioral cases pass at the ag
 validator, unit suite, and strict plugin validation pass; this item is closed with exact commits
 and any deliberate deviations.
 
-**Next action:** Run the backlog's cheap discriminator in a watched owning session:
-`eval_routing.py` with `--runs 1 --limit 1`, pinned model and timeout. If it completes, resume the
-plan in the foreground. If it hangs or dies, diagnose the Windows runner rather than launching
-another batch.
+**Executed 2026-07-29** on PR #37 from the owning controller session (smoke discriminator passed,
+then the full plan foreground/controller-owned): powershell.md + measured widening (negatives
+0% → 0%, `pos-powershell-pester` 0/3 → 3/3, opus/420s, claude-opus-5 observed), lab-audit split,
+two of the three behavioral contracts green. Deliberate deviation: the ladder contract failed 2/2
+at landing and was surfaced as `DEF-001` instead of shipped red; the empty-cwd case-repair branch
+was correctly skipped (hypothesis refuted by the diagnose artifact).
+
+**Next action:** Merge PR #37, then land `DEF-001`; this item closes only when its full acceptance
+gate is met.
 
 ### Ready
 
@@ -117,54 +122,111 @@ confirmed missing during reconciliation.
 
 **Acceptance:** `benchmark.json` records CLI/model/timeout conditions plus observed input/output
 token usage per run or labels usage unavailable; unit tests cover complete and missing usage; the
-existing behavioral cases grade identically.
+existing behavioral cases grade identically; and the runner's scratch cwd behavior is repaired (or
+explicitly version-pinned) with a validating case so `packet-slots-builder` can exercise its
+write-and-test premise.
 
 **Next action:** Reuse the routing runner's transcript-usage extraction rather than deriving a
 second parser.
 
-## Deferred decisions
+**Live evidence 2026-07-29 (Round 1 Task 7):** behavioral sessions ran on `claude-fable-5` — the
+CLI default, unpinned and unrecorded — and the runner's `%TEMP%` scratch cwd blocked `Write` even
+under `acceptEdits` on CLI 2.1.220, compromising `packet-slots-builder`'s stated premise. Scope
+addition: the runner gains a `--model` pin recorded in conditions, and its scratch cwd moves off
+`%TEMP%` (or the write-block is proven version-specific and pinned in a test).
 
-#### ROLE-001 — approve the home-lab SRE rebrand and Linux-host boundary
+#### DEF-001 — the ladder report-up contract does not bind
 
-**Status:** `decision-needed`
+**Status:** `ready`
+
+**Outcome:** A spawned builder handed an above-altitude fork reports it with the owning rung named
+(principal-engineer / distinguished-architect) rather than answering with a hedged default, and
+the `ladder-report-not-absorb` behavioral case lands green **unchanged**.
+
+**Source:** Round 1 Task 7 defect finding — failed 2/2 (runner + faithful repro with transcript);
+forensics in the Round 1 SDD workspace (`task-7-report.md`), summary in PR #37. The case text
+lives verbatim in the Round 1 plan, Task 7.
+
+**Prerequisites:** None. The expected fix is body-only in the ladder paraphrases (no description
+change); if a description turns out to need the edit, it owes the affected cluster's before/after.
+
+**Acceptance:** The report-to-caller paraphrase in `agents/sde-fullstack.md` (and any ladder agent
+carrying it) names the routing obligation explicitly; the case relands unchanged and passes; the
+regex is not weakened to accept advice-with-hedge.
+
+**Next action:** Strengthen the report-up wording in the builder's ladder section, then reland the
+case and require green.
+
+#### ROLE-001 — implement the home-lab SRE rebrand and Linux-host boundary
+
+**Status:** `ready`
 
 **Outcome:** Keep the canonical `homelab-platform` key, present it visibly as Home-Lab SRE /
-Platform Engineer, add Linux-host trigger vocabulary, and decide whether `host-onboard` should be
-the first explicit-only host lifecycle skill.
+Platform Engineer, add Linux-host trigger vocabulary, and add `host-onboard` as the first
+explicit-only host lifecycle skill.
 
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
+**Source:** [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md),
+accepted as proposed 2026-07-29 (see its acceptance record).
 
-**Prerequisites:** Operator approval. Any description edit then owes a before/after
+**Prerequisites:** Approval obtained 2026-07-29. The description edit owes a before/after
 `homelab-ops` routing run.
 
-**Acceptance:** Decision record is marked accepted; visible title/description and `host-onboard`
-land with inventory and routing coverage; existing service/application near-misses remain clean.
+**Acceptance:** Visible title/description and `host-onboard` land with inventory and routing
+coverage; existing service/application near-misses remain clean in the before/after diff.
 
-**Next action:** Review the Step 4 decision record and accept, revise, or reject the recommendation.
+**Next action:** Implement the rebrand + `host-onboard` per the decision record's contract, with
+the owed `homelab-ops` before/after run.
 
-#### ROLE-002 — approve an application-security auditor
+#### ROLE-002 — add the application-security auditor
 
-**Status:** `decision-needed`
+**Status:** `ready`
 
 **Outcome:** Add a static-first agent for repository/subsystem audits, threat models, attack paths,
 and finding validation without taking PR review or remediation authority.
 
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
+**Source:** [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md),
+accepted as proposed 2026-07-29 (see its acceptance record).
 
-**Prerequisites:** Operator approval and EVAL-001. GOV-001 is required only if the initial agent is
-given guarded Bash; the recommended initial tools avoid it.
+**Prerequisites:** Approval obtained 2026-07-29. EVAL-001 must land first (routing-case target
+integrity). GOV-001 is required only if the agent is ever given guarded Bash; the accepted initial
+tools (`Read, Grep, Glob, WebSearch, WebFetch`) avoid it.
 
-**Acceptance:** Decision is accepted; agent has explicit static tools, no implementation authority,
-a source-backed output contract, and negative routing against `code-reviewer`, `researcher`,
-`homelab-platform`, and `sde-fullstack`.
+**Acceptance:** Agent has explicit static tools, no implementation authority, a source-backed
+output contract, and negative routing against `code-reviewer`, `researcher`, `homelab-platform`,
+and `sde-fullstack`; a routing cluster covers the auditor/reviewer/researcher seam.
 
-**Next action:** Approve the role boundary and initial no-Bash authority.
+**Next action:** Land EVAL-001, then author the agent per the decision record's role contract and
+seed its routing cases.
+
+## Deferred decisions
+
+#### DEPLOY-001 — decide the fleet's daily deployment mode
+
+**Status:** `decision-needed`
+
+**Outcome:** The fleet's daily-use deployment matches what its guard, namespacing, and eval
+conditions assume — or the divergence is recorded and accepted in a governing decision record.
+
+**Source:** Proposed [`deployment-mode decision`](decisions/2026-07-29-deployment-mode.md).
+Verified 2026-07-29: `~/.claude/{skills,agents}` are junctions into this repo and `sde-agents` is
+absent from the installed plugins, so components register bare and the read-only guard is dormant
+in every normal session.
+
+**Prerequisites:** Operator choice; parked deliberately on 2026-07-29.
+
+**Acceptance:** The decision record is accepted. If plugin-install is chosen: junctions dropped,
+install verified, and a reproducible normal-session (non `--plugin-dir`) check proves namespaced
+registration plus guarded-command denial. If junctions are kept: the README/AGENTS honest-posture
+note lands and LABSEC-002's value is re-adjudicated.
+
+**Next action:** Operator reviews the decision record's trade table and picks a mode — required
+before any LABSEC-002 work.
 
 #### ROLE-003 — define verification execution authority
 
-**Status:** `decision-needed`
+**Status:** `deferred` — parked trigger-bound by the operator on 2026-07-29: reopen on the first
+real independent-verification task; choose the authority model then. ROLE-004 stays blocked
+behind it.
 
 **Outcome:** Decide how an independent verifier may execute repository tests without pretending
 that test runners are read-only or that a worktree contains network/database side effects.
@@ -231,15 +293,16 @@ or adversary checklist without taking change authority or combining lab secrets 
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
 decision.
 
-**Prerequisites:** LABSEC-001 accepted; GOV-001 landed; each proposed lab reader independently
-threat-reviewed and regression-tested; hook/guard roster synchronization retained; EVAL-001 landed.
+**Prerequisites:** LABSEC-001 accepted; DEPLOY-001 accepted; GOV-001 landed; each proposed lab
+reader independently threat-reviewed and regression-tested; hook/guard roster synchronization
+retained; EVAL-001 landed.
 
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
 `homelab-platform`.
 
-**Next action:** None until LABSEC-001 and GOV-001 are complete.
+**Next action:** None until LABSEC-001, DEPLOY-001, and GOV-001 are complete.
 
 #### EVAL-003 — capture a comparable full routing anchor
 

@@ -1,11 +1,24 @@
 # Fleet role expansion and home-lab SRE identity
 
-**Status:** Proposed — awaiting operator acceptance, revision, or rejection
+**Status:** Accepted in part (2026-07-29) — the application-security auditor (ROLE-002) and the
+home-lab SRE identity with `host-onboard` (ROLE-001) are accepted as proposed; the
+verification-execution authority question (ROLE-003) remains open, parked trigger-bound
 **Date:** 2026-07-28
 **Reviewed revision:** `be2af4c87a3ecd53286fbcda84863d507ee47ac4`
 **Compared design:** [`2026-07-27 roster expansion`](../archive/2026-07/roster-expansion-design.md)
-**Implementation status:** No role, skill, guard, or routing change has been authorized by this
-record. Current work and gates live in [`fleet-roadmap.md`](../fleet-roadmap.md).
+**Implementation status:** Implementation of the two accepted roles is authorized subject to the
+gates the roadmap names (ROLE-001, ROLE-002). Current work and gates live in
+[`fleet-roadmap.md`](../fleet-roadmap.md).
+
+## Acceptance record
+
+2026-07-29, fresh-look session, operator answered directly: **accept both** decidable roles as
+proposed — ROLE-001 (visible rebrand to Home-Lab SRE / Platform Engineer with the
+`homelab-platform` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
+and ROLE-002 (`application-security-auditor`, static-first tools, no Bash, non-PR remit).
+ROLE-003 was deliberately not decided: it parks trigger-bound and reopens on the first real
+independent-verification task, which also keeps ROLE-004 blocked. LABSEC-001 remains sequenced
+behind ROUND1-001's lab-audit split, unchanged.
 
 ## Decision question
 

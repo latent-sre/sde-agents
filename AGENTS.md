@@ -57,7 +57,8 @@ Two checks are manual and on demand, deliberately not CI gates (both drive real 
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
   and the guard fires for the guarded agents and only them. Re-run after upgrading the Claude
-  Code CLI: the guard rests on the undocumented `agent_type` payload field, and the probe is what
+  Code CLI: the guard rests on the `agent_type` payload field — documented upstream since July
+  2026, though its plugin-namespaced form is still only probe-verified — and the probe is what
   turns a silent upstream rename into a loud failure instead of a quietly disarmed guard.
   **CI's `plugin-contract` job pins the CLI version**, so bumping that pin is the upgrade — and the
   moment this probe is owed. The pin buys a deterministic gate; this probe is what keeps the pin
