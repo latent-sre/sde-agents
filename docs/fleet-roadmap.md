@@ -32,48 +32,6 @@ Git history and archived reviews retain the implementation detail.
 
 ### Ready
 
-#### ROLE-001 — implement the home-lab SRE rebrand and Linux-host boundary
-
-**Status:** `ready`
-
-**Outcome:** Keep the canonical `homelab-platform` key, present it visibly as Home-Lab SRE /
-Platform Engineer, add Linux-host trigger vocabulary, and add `host-onboard` as the first
-explicit-only host lifecycle skill.
-
-**Source:** [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md),
-accepted as proposed 2026-07-29 (see its acceptance record).
-
-**Prerequisites:** Approval obtained 2026-07-29. The description edit owes a before/after
-`homelab-ops` routing run.
-
-**Acceptance:** Visible title/description and `host-onboard` land with inventory and routing
-coverage; existing service/application near-misses remain clean in the before/after diff.
-
-**Next action:** Implement the rebrand + `host-onboard` per the decision record's contract, with
-the owed `homelab-ops` before/after run.
-
-#### ROLE-002 — add the application-security auditor
-
-**Status:** `ready`
-
-**Outcome:** Add a static-first agent for repository/subsystem audits, threat models, attack paths,
-and finding validation without taking PR review or remediation authority.
-
-**Source:** [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md),
-accepted as proposed 2026-07-29 (see its acceptance record).
-
-**Prerequisites:** Approval obtained 2026-07-29; EVAL-001 and GOV-001 both landed in PR #40 (the
-routing-schema integrity the auditor's new cluster will be validated under, and the guard
-fail-closed fix that would matter if the agent is ever given guarded Bash — the accepted initial
-tools, `Read, Grep, Glob, WebSearch, WebFetch`, avoid it).
-
-**Acceptance:** Agent has explicit static tools, no implementation authority, a source-backed
-output contract, and negative routing against `code-reviewer`, `researcher`, `homelab-platform`,
-and `sde-fullstack`; a routing cluster covers the auditor/reviewer/researcher seam.
-
-**Next action:** Land EVAL-001, then author the agent per the decision record's role contract and
-seed its routing cases.
-
 ## Deferred decisions
 
 #### DEPLOY-001 — decide the fleet's daily deployment mode

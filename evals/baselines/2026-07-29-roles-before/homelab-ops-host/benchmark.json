@@ -1,0 +1,75 @@
+{
+  "cluster": "homelab-ops",
+  "runs_per_case": 3,
+  "members": [
+    "homelab-platform",
+    "lab-audit",
+    "lab-incident",
+    "observability",
+    "postmortem",
+    "restore-drill",
+    "runbook",
+    "service-onboard",
+    "upgrade-campaign"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "threshold": 0.5,
+    "timeout_s": 420
+  },
+  "summary": {
+    "passed": 0,
+    "total": 2
+  },
+  "cases": [
+    {
+      "id": "pos-host-linux",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "linux-host"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-host-onboard",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "host-onboard"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}

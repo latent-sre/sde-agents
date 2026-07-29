@@ -218,6 +218,21 @@ def cli_version() -> str | None:
         return None
 
 
+def plugin_dir_label(plugin_dir: Path) -> str:
+    """The plugin_dir as recorded in a benchmark's conditions.
+
+    Recorded verbatim, the default (this repo, absolute) bakes the operator's local filesystem
+    layout — a home-directory username on Windows — into a committed artifact, where it is identity
+    noise rather than a measurement condition and makes identical runs from two machines diff. So a
+    plugin_dir inside the repo is recorded repo-relative ("." for the repo itself); a genuinely
+    external plugin_dir IS a measurement condition and stays verbatim.
+    """
+    try:
+        return str(plugin_dir.resolve().relative_to(REPO))
+    except ValueError:
+        return str(plugin_dir)
+
+
 def score_case(case: dict, runs: list[dict], members: set[str], threshold: float) -> dict:
     """Aggregate a case's runs into rates and a pass/fail verdict.
 
@@ -398,7 +413,7 @@ def main() -> int:
         "cli_version": cli_version(),
         "model_requested": args.model,      # None means "whatever the CLI defaulted to"
         "models_observed": models,          # what actually ran, per the transcripts
-        "plugin_dir": str(args.plugin_dir),
+        "plugin_dir": plugin_dir_label(args.plugin_dir),
         "threshold": args.threshold,
         # The timeout is a measurement decision, not a convenience: a shorter one excludes more runs
         # and therefore moves every rate in the artifact. Two benchmarks taken at different timeouts
