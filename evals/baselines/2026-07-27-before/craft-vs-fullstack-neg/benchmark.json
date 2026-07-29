@@ -1,0 +1,193 @@
+{
+  "cluster": "craft-vs-fullstack",
+  "runs_per_case": 3,
+  "members": [
+    "backend-craft",
+    "ci-actions",
+    "code-craft",
+    "frontend-craft",
+    "sde-fullstack"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": "C:\\Users\\hawkins\\sde-agents",
+    "threshold": 0.5,
+    "timeout_s": 420
+  },
+  "summary": {
+    "passed": 7,
+    "total": 7
+  },
+  "cases": [
+    {
+      "id": "neg-review",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "review"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-design-migration",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "design"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-lab-service",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "lab"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-debug",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "debug"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-prompt",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "prompt-tooling"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "prompt-craft"
+      ],
+      "fired_per_run": [
+        [
+          "prompt-craft"
+        ],
+        [
+          "prompt-craft"
+        ],
+        [
+          "prompt-craft"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-adr",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "adr"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-powershell-profile",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "powershell"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "root-cause"
+      ],
+      "fired_per_run": [
+        [],
+        [
+          "root-cause"
+        ],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}
