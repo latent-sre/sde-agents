@@ -407,6 +407,7 @@ class ReadonlyGuardTest(unittest.TestCase):
         # now the answer is deliberate rather than accidental.
         proc = run_guard('["tool_name", "Bash"]')
         self.assertEqual(proc.returncode, EXIT_INDETERMINATE)
+        self.assertEqual(proc.stdout.strip(), b"")
 
     def test_bom_prefixed_payload_is_still_parsed(self) -> None:
         proc = run_guard("﻿" + bash_call("git push origin main"))
