@@ -341,7 +341,12 @@ Everything else in this file has landed. What genuinely remains:
 - **Behavioral-eval coverage beyond the three seeded contracts.** `scripts/eval_behavioral.py` and
   `evals/behavioral/contracts.json` exist and are deterministic; three promises are pinned. More
   contracts (the ladder's report-to-caller handoff, `lab-incident`'s mitigate-before-diagnose order,
-  `restore-drill`'s scratch-target rule) would each be a case, not new machinery.
+  `restore-drill`'s scratch-target rule) would each be a case, not new machinery. Two of the three
+  landed 2026-07-29 (Round 1): `incident-mitigate-first` and `restore-drill-scratch-target`, each
+  green at landing (thrift scope: one run). `ladder-report-not-absorb` FAILED 2/2 at landing — the
+  builder answered an above-altitude fork with a hedged default instead of reporting it with the
+  rung named — and was NOT shipped red; the defect finding and transcript live in the Round 1 SDD
+  workspace (`task-7-report.md`), and the case relands unchanged after the definition fix.
 - **A full re-baseline of the routing suite — attempted, PARKED 2026-07-25 with the runner fixed and
   no anchor captured.** Read this before re-attempting; the attempt produced more value in tooling
   fixes than in numbers, and repeating it naively would repeat the dead ends.
@@ -414,7 +419,10 @@ Everything else in this file has landed. What genuinely remains:
   involving a modal, toast, or form.
 - **`references/checks.md` + findings ledger for `lab-audit`** (modernization Tier 2 item 6): the
   tool-scoping half landed (`NotebookEdit` added to `disallowed-tools`), the reference-file split
-  did not — the Checks list is still inline, which is defensible while it stays short.
+  did not — the Checks list is still inline, which is defensible while it stays short. —
+  **Landed 2026-07-29 (Round 1)**: checks split to `references/checks.md` with command-level detail;
+  the findings ledger landed as an output convention (the skill is read-only and cannot own a file
+  it writes).
 - **`allowed-tools` pre-approvals for `lab-audit`**, deliberately not taken: pre-approving inspection
   verbs would cut permission friction, but it is a real grant on a skill that operates a live lab,
   and the friction is currently doing useful work.
@@ -426,4 +434,10 @@ Everything else in this file has landed. What genuinely remains:
   ever *authored* in PowerShell rather than merely run through it — a reference nobody reads is
   preload cost with no return, and the drop is correct if the answer is no. Landing it also widens
   `code-craft`'s description (currently "Python, Bash, or Go"), so it owes a before/after routing run
-  on the overlapping cluster.
+  on the overlapping cluster. — **Landed 2026-07-29 (Round 1), decided YES**: the operator confirmed
+  fleet/lab work is authored in PowerShell (the settling question, asked directly 2026-07-27).
+  Reference ported with the PCF scrub; description widened one word; craft cluster diagnosed first —
+  the empty-cwd hypothesis was REFUTED (the repo-presupposing skill positives passed 3/3; the failing
+  positives are the agent/layer-expecting cases, all zero-fire), so no prompts were rewritten — then
+  anchored before/after under opus/420s: negatives held 0% → 0%, `pos-powershell-pester` 0/3 → 3/3.
+  Artifacts in `evals/baselines/2026-07-27-*/`.
