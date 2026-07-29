@@ -13,7 +13,7 @@
     "models_observed": [
       "claude-opus-5"
     ],
-    "plugin_dir": "C:\\Users\\hawkins\\sde-agents",
+    "plugin_dir": ".",
     "threshold": 0.5,
     "timeout_s": 420
   },
@@ -34,7 +34,7 @@
       "runs_excluded": 0,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "fired_per_run": [
         [],
@@ -56,7 +56,7 @@
       "runs_excluded": 0,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [],
       "fired_per_run": [
         [],
@@ -78,7 +78,7 @@
       "runs_excluded": 0,
       "cluster_fire_rate": 0.0,
       "correct_rate": 1.0,
-      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "detail": "cluster fired in 0/3 runs (want 0)",
       "also_fired": [
         "lab-incident"
       ],

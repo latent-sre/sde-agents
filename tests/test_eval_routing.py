@@ -276,5 +276,20 @@ class CaseFileTest(unittest.TestCase):
                 self.assertTrue(forbidden, f"{path.name}:{case['id']} forbids nothing")
 
 
+class ConditionsTest(unittest.TestCase):
+    def test_plugin_dir_inside_repo_is_recorded_repo_relative(self) -> None:
+        # Recorded verbatim, the default plugin_dir (this repo, absolute) commits the operator's
+        # local filesystem layout into a baseline artifact — identity noise that makes identical
+        # measurements from two machines diff.
+        self.assertEqual(".", eval_routing.plugin_dir_label(REPO))
+        self.assertEqual("agents", eval_routing.plugin_dir_label(REPO / "agents"))
+
+    def test_external_plugin_dir_is_recorded_verbatim(self) -> None:
+        # A plugin_dir OUTSIDE the repo is a real measurement condition (a different plugin was
+        # loaded), so it must survive into the artifact unchanged.
+        outside = Path(REPO.anchor) / "somewhere-else"
+        self.assertEqual(str(outside), eval_routing.plugin_dir_label(outside))
+
+
 if __name__ == "__main__":
     unittest.main()
