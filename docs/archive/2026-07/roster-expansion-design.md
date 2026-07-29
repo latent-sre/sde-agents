@@ -305,7 +305,7 @@ anything to a running service (`homelab-platform`).
 ### 1.5 `porting-method` — skill (Round 6, with a queue-jump option)
 
 **Remit.** Codifies the cross-fleet import method that currently lives only in session memory and
-in the worked example of `docs/sre-agents-adaptation-backlog.md`'s Method paragraph: multi-pass
+in the worked example of `docs/archive/2026-07/sre-agents-adaptation-backlog.md`'s Method paragraph: multi-pass
 blind review (independent quality pass and gap pass, no sight of each other, then adversarial
 verification of the union against the actual files); adaptation-notes-as-spec (author natively
 from the notes — the notes are the specification, never a copy source); scrub rules (donor voice,
@@ -628,5 +628,5 @@ declared single source of truth, read before drafting any frontmatter above);
 `scripts/readonly-guard.py` docstring and allowlist body (guard growth rules, 42/43 contract);
 `evals/README.md` (rates-over-runs, negative-zero-fire, narrowing mechanism, agent under-fire
 caveat); `skills/lab-audit/SKILL.md:12` (the cooperative-not-enforced admission);
-`docs/sre-agents-adaptation-backlog.md` (killed merge-gate precedent, porting method seed, parked
+`docs/archive/2026-07/sre-agents-adaptation-backlog.md` (killed merge-gate precedent, porting method seed, parked
 baseline state).

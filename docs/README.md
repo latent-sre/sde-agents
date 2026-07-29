@@ -20,16 +20,25 @@ not re-enter the queue unless the roadmap imports them.
 
 ## Current documents
 
+Only two classes are live: the roadmap, and the decision records. Everything else here is
+historical evidence.
+
 | Document | State | Read it for |
 |---|---|---|
-| [`sre-agents-adaptation-backlog.md`](sre-agents-adaptation-backlog.md) | Historical import adjudication | Donor decisions and dated execution evidence; not current status |
-| [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001 and ROLE-002 accepted; ROLE-003 remains parked trigger-bound |
-| [`skills-modernization-plan.md`](skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
+| [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
+| [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
+| [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Proposed, parked | The junctions-vs-plugin trade table and its reopen triggers; DEPLOY-001 is undecided by choice |
+| [`archive/2026-07/fleet-program-outcomes-2026-07-29.md`](archive/2026-07/fleet-program-outcomes-2026-07-29.md) | Historical outcome record | What Round 1 and the role-expansion program landed, what was measured, and the lessons — including the DEF-001 defect analysis |
+| [`archive/2026-07/sre-agents-adaptation-backlog.md`](archive/2026-07/sre-agents-adaptation-backlog.md) | Historical import adjudication | Donor decisions and dated execution evidence; not current status |
+| [`archive/2026-07/skills-modernization-plan.md`](archive/2026-07/skills-modernization-plan.md) | Partly superseded snapshot | Original portfolio rationale; not current status |
 | [`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md) | Historical quality archive | Combined initial and deep reviews, security evidence, finding dispositions, and lessons |
 | [`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md) | Historical donor adjudication | Combined ECC comparison, component verdicts, accepted residue, and resolution ledger |
 | [`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md) | Historical roster design | Earlier component contracts and constraints, reconciled into the current decision and roadmap |
-| [`superpowers/specs/2026-07-27-fleet-expansion-round1-design.md`](superpowers/specs/2026-07-27-fleet-expansion-round1-design.md) | Active approved specification | Round 1 scope, non-goals, and gates |
-| [`superpowers/plans/2026-07-27-fleet-expansion-round1.md`](superpowers/plans/2026-07-27-fleet-expansion-round1.md) | Active execution plan | Round 1 task sequence and exact proposed payloads |
+
+`superpowers/specs/` and `superpowers/plans/` are **absent, and that is the correct state**: no
+round is active. They reappear when one starts and are retired to an outcome record when it
+finishes (rule 4) — a plan file lying around after its round is how a finished task keeps reading
+as pending work.
 
 ## Rules
 

@@ -16,6 +16,11 @@ capacity, updates — live with their command-level detail in
 [`references/checks.md`](references/checks.md); read it before sweeping. Run what applies, and
 name what you skipped in the denominator.
 
+This is the hygiene sweep: is the lab well-kept. The adversary's sweep — what an attacker in a
+given position can reach, move through, or take (trust zones, authn, management planes,
+credentials, secrets, reachable vulnerabilities, family data) — is
+`sde-agents:security-audit`. Same read-only posture, same ledger format, different question.
+
 ## Output
 
 Open with the coverage denominator — hosts covered and checks run vs. skipped, with why (e.g. "3/4 hosts; 6/8 checks — backups and drift skipped: no repo access") — findings without a denominator overstate the sweep. Then `[P0]`–`[P3]` findings, each with the evidence (command + output) and the one-line fix. P0 = exposed without auth, or stateful and unbacked-up. End with the top three things to fix this weekend — not a list of thirty. After the top three, emit the findings-ledger rows (format at the end of

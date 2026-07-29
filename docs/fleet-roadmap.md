@@ -36,10 +36,15 @@ Git history and archived reviews retain the implementation detail.
 
 #### DEPLOY-001 — decide the fleet's daily deployment mode
 
-**Status:** `deferred` — the operator confirmed 2026-07-29 this is the plugin-vs-junctions
-deployment choice and deferred it to the end of the current implementation queue: decide after
-GOV-001, EVAL-001, ROLE-001, and ROLE-002 land. The hard gates are unchanged — it must still be
-decided before any LABSEC-002 work and before a second user installs the plugin.
+**Status:** `deferred` — indefinitely, by operator choice. The original deferral said "decide after
+GOV-001, EVAL-001, ROLE-001, and ROLE-002 land"; **all four landed on 2026-07-29 and the operator
+deferred again with no new condition**, so this item is parked rather than pending. Do not read it
+as ready-to-decide. The hard gates are unchanged and are the reopen triggers: it must be decided
+before any LABSEC-002 work, and before a second user installs the plugin.
+
+**Both options are executable when it reopens** (verified 2026-07-29, CLI 2.1.220): the CLI carries
+`claude plugin marketplace add <path>` and `claude plugin install`, so plugin mode needs no manual
+`settings.json` surgery; junction mode needs only the honest-posture note.
 
 **Outcome:** The fleet's daily-use deployment matches what its guard, namespacing, and eval
 conditions assume — or the divergence is recorded and accepted in a governing decision record.
@@ -97,34 +102,14 @@ evidence belongs to the exact tested revision/environment.
 
 **Next action:** None until ROLE-003 is accepted.
 
-#### LABSEC-001 — decide adversary-focused running-lab security coverage
-
-**Status:** `decision-needed`
-
-**Outcome:** Decide whether an intent-driven `security-audit` skill should own trust zones,
-exposed services, authentication, management planes, secrets posture, vulnerability prioritization,
-and personal-data paths in the running lab without taking hygiene or fix authority.
-
-**Source:** Reconciled
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) and archived
-[`roster expansion design`](archive/2026-07/roster-expansion-design.md).
-
-**Prerequisites:** Operator approval and completion of ROUND1-001's `lab-audit` check split, so the
-hygiene/adversary boundary is tested against the final checklist rather than its transitional form.
-
-**Acceptance:** An accepted decision names the checklist boundary, active-compromise stop rule,
-fix routing to `homelab-platform`, cooperative tool limits, output contract, and routing cases
-against application security and ordinary lab hygiene.
-
-**Next action:** After ROUND1-001, compare the archived checklist proposal with the landed
-`lab-audit` reference and accept, narrow, or reject the separate adversary sweep.
-
 #### LABSEC-002 — add a guard-enforced lab inspector
 
 **Status:** `blocked`
 
-**Outcome:** If LABSEC-001 is accepted, add an optional read-only agent that can work the hygiene
-or adversary checklist without taking change authority or combining lab secrets with web access.
+**Outcome:** Add an optional read-only agent that can work the hygiene (`lab-audit`) or adversary
+(`security-audit`) checklist under guard enforcement, without taking change authority or combining
+lab secrets with web access. Both checklists now exist — LABSEC-001 landed 2026-07-29 — so this
+item is purely the enforcement shell.
 
 **Source:** Archived
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
@@ -155,7 +140,21 @@ fix case-design defects before treating numbers as description evidence.
 **Acceptance:** Every artifact records requested/observed model, timeout, CLI version, threshold,
 and per-run evidence; no known-invalid artifact is called an anchor.
 
-**Next action:** Revisit after Round 1's watched smoke run and scoped anchor complete.
+**Two facts established 2026-07-29 that shape this item:**
+
+1. **The native `claude plugin eval` is still gated** — the subcommand now exists with ablation,
+   graders, and JSON output, but invoking it returns "`plugin eval` is currently in early access"
+   (checked at CLI 2.1.220). So `evals/README.md`'s stopgap framing remains accurate, and this
+   anchor must still be captured with `scripts/eval_routing.py`. Re-check on CLI upgrades: when it
+   opens, note that its case shape (`evals/**/case.yaml` or `prompt.md` + `graders/*.md`) is *not*
+   the fleet's cluster JSON, so migration is real work, not a rename.
+2. **Agent-expecting positives fire at ~0% in headless one-shot mode on the current tier** —
+   0/21 in the Round 1 diagnose, 0/6 for ROLE-001's host cases, 0/6 for the auditor's, while
+   sharp-trigger *skill* positives hit 100% (6/6 in the diagnose, 6/6 for `security-audit`). An
+   anchor capturing agent positives at zero would record the harness, not the descriptions. Settle
+   the case design — or grade agent members differently — before spending a full-suite capture.
+
+**Next action:** Decide the agent-positive case design first; only then capture the anchor.
 
 #### PORT-001 — codify the cross-fleet import method
 
@@ -198,7 +197,16 @@ service changes with `homelab-platform`.
 component states rollback boundaries; its first use performs the repository's actual version,
 inventory, validation, tag, and publication sequence.
 
-**Next action:** Reopen before the next manually orchestrated release.
+**The platform already does part of this** (found 2026-07-29, CLI 2.1.220):
+`claude plugin tag [path]` creates a `{name}--v{version}` git tag *and validates that `plugin.json`
+agrees with the enclosing marketplace entry* — with `--dry-run`, `--push`, and `--remote`. That is
+exactly the manifest-consistency check this item would otherwise hand-roll, so the component must
+**consume** it rather than reimplement it, and the tagging step of its own release row is one
+command. `claude plugin update` is the counterpart for a consumer refreshing an installed copy.
+
+**Next action:** Reopen before the next manually orchestrated release; start from `claude plugin
+tag --dry-run` and write the component around what it does *not* cover (version choice, changelog,
+publication, yank).
 
 #### EVAL-004 — verify the accessibility imports behaviorally
 

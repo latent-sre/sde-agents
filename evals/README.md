@@ -194,7 +194,7 @@ simple-stays-simple, and read-only-investigation seams:
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
 there, 5 / 18 now), so it is a *historical* anchor, not a like-for-like comparison — a fresh
 capture lives in `baselines/2026-07-24/`. Re-baseline again when the planned `lab-incident`
-(backlog 1.5; the `incident` half named in `docs/skills-modernization-plan.md` shipped as
+(backlog 1.5; the `incident` half named in `docs/archive/2026-07/skills-modernization-plan.md` shipped as
 `postmortem`), `restore-drill`, or `upgrade-campaign` skills land.
 
 ### Measurement caveat: skills fire, agents must be delegated to
