@@ -10,6 +10,11 @@ applies it).
 
 ## 1. Exposure
 
+Hygiene depth only: listening sockets vs the proxy list. The adversary's version of this question —
+what a specific attacker position reaches, and across which boundary — is
+`sde-agents:security-audit`'s [`references/checks.md`](../../security-audit/references/checks.md)
+row 1; a finding here that needs an attack path belongs there.
+
 - Read: `ss -tlnp` per Linux host (`netstat -ano` on a Windows host); the reverse-proxy config
   from the lab repo; the router/firewall forward table where the repo exports it.
 - Compare: every listening socket vs what the proxy fronts; anything bound to `0.0.0.0`/`[::]`

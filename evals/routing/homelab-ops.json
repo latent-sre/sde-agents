@@ -11,9 +11,10 @@
     "restore-drill",
     "upgrade-campaign",
     "observability",
-    "host-onboard"
+    "host-onboard",
+    "security-audit"
   ],
-  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if none of its forbidden set fired \u2014 the whole cluster by default, unless the case narrows it with expect_not_fires (a disambiguation case where a sibling member is the correct destination, e.g. neg-resolved-not-incident, where postmortem may fire). History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 10-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-platform's Boundaries, not to this cluster (neg-lab-architecture). ROLE-001 (2026-07-29): host-onboard joined as the tenth member, mirroring the service-onboard pattern (disable-model-invocation set but possibly invocable per #22345); pos-host-* were seeded BEFORE the rebrand so their before/after diff measures the Linux-host trigger widening (anchor: baselines/2026-07-29-roles-before/). The ordinary negatives now rely on the documented whole-cluster default for expect_not_fires (their identical explicit lists predated the runner honoring the field and would silently omit every new member); neg-resolved-not-incident keeps the one deliberate narrowing.",
+  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if none of its forbidden set fired \u2014 the whole cluster by default, unless the case narrows it with expect_not_fires (a disambiguation case where a sibling member is the correct destination, e.g. neg-resolved-not-incident, where postmortem may fire). History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 10-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-platform's Boundaries, not to this cluster (neg-lab-architecture). ROLE-001 (2026-07-29): host-onboard joined as the tenth member, mirroring the service-onboard pattern (disable-model-invocation set but possibly invocable per #22345); pos-host-* were seeded BEFORE the rebrand so their before/after diff measures the Linux-host trigger widening (anchor: baselines/2026-07-29-roles-before/). The ordinary negatives now rely on the documented whole-cluster default for expect_not_fires (their identical explicit lists predated the runner honoring the field and would silently omit every new member); neg-resolved-not-incident keeps the one deliberate narrowing. LABSEC-001 (2026-07-29): security-audit joined as the eleventh member — the adversary sweep, vs lab-audit's hygiene sweep. That seam is the cluster's newest and is guarded in both directions: pos-attacker-reach/pos-default-creds must reach security-audit, while pos-audit-whats-wrong (hygiene vocabulary) must still reach lab-audit, and neg-harden-app-code keeps 'harden'/'auth' from dragging either onto app code. lab-audit firing on an adversary prompt is a near-miss worth recording, not a pass — both skills are cluster members, so a cross-fire shows up in also_fired.",
   "cases": [
     {
       "id": "pos-add-service",
@@ -343,6 +344,42 @@
       "tags": [
         "near-miss",
         "linux-host"
+      ]
+    },
+    {
+      "id": "pos-attacker-reach",
+      "prompt": "If someone got onto my guest wifi, what could they actually reach? Check my lab's exposure from an attacker's point of view.",
+      "polarity": "positive",
+      "expect_fires": [
+        "security-audit"
+      ],
+      "expected_output": "The adversary question stated as an attacker position \u2014 security-audit's trust-zone/reachability row. lab-audit firing instead is the seam's near-miss (visible in also_fired): its Exposure check is ports-vs-proxy hygiene, not position-to-reach analysis.",
+      "tags": [
+        "security-audit",
+        "attacker-reach"
+      ]
+    },
+    {
+      "id": "pos-default-creds",
+      "prompt": "I never changed the admin passwords on half my containers, and I'm not sure what my Proxmox console is reachable from. Security-audit the lab and tell me what's actually at risk.",
+      "polarity": "positive",
+      "expect_fires": [
+        "security-audit"
+      ],
+      "expected_output": "Default credentials plus a management plane \u2014 security-audit rows 3 and 4, with 'what's actually at risk' asking for the attack-path-or-downgrade rule.",
+      "tags": [
+        "security-audit",
+        "credentials"
+      ]
+    },
+    {
+      "id": "neg-harden-app-code",
+      "prompt": "Harden the auth middleware in my Flask app against injection attacks.",
+      "polarity": "negative",
+      "expected_output": "Application code hardening \u2014 a builder (sde-fullstack / backend-craft), or the repository auditor for an audit of it; no LAB component owns app code. 'Harden' and 'auth' are the decoy vocabulary for the security-audit join, and this is the tight near-miss guarding it.",
+      "tags": [
+        "near-miss",
+        "security-audit"
       ]
     }
   ]
