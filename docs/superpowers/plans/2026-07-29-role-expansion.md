@@ -14,6 +14,7 @@ The 2026-07-29 fresh-look review re-verified the whole ledger and executed four 
 | #38 | Docs wave — ROLE-001/002 accepted, DEPLOY-001 opened, stale lines fixed |
 | #39 | Round 1 gate — EVAL-002 (conditions/usage/model pin/scratch cwd), DEF-001 (ladder fix) |
 | #40 | GOV-001 (guard fails closed on malformed input) + EVAL-001 (cluster-target integrity) |
+| #41 | ROLE-001 (Home-Lab SRE rebrand + `host-onboard`) + ROLE-002 (`application-security-auditor`) — all 14 cluster negatives held 0% |
 
 ## Active: the role-expansion round (branch `claude/role-expansion`)
 
@@ -47,13 +48,13 @@ program, in recommended order:
   vs installed plugin for daily use. Hard gates unchanged — must be decided before any LABSEC-002
   work and before a second user installs. Decision record:
   `docs/decisions/2026-07-29-deployment-mode.md`.
-- **LABSEC-001** (operator decision, now decidable): whether an adversary-focused `security-audit`
-  skill should exist for the *running lab*, distinct from `lab-audit` hygiene and from the new
-  repository auditor. Its prerequisite (the lab-audit checks split) landed in PR #37 — the next
-  step is comparing the archived proposal against `skills/lab-audit/references/checks.md`.
-- **LABSEC-002** (blocked): guard-enforced lab inspector — needs LABSEC-001 accepted *and*
-  DEPLOY-001 decided (a guard-enforced agent must not ship into a deployment where the guard
-  never runs). GOV-001 is already landed.
+- ~~**LABSEC-001**~~ — **accepted as proposed and implemented 2026-07-29**: `security-audit` ships
+  as its own read-only skill (seven adversary checks, `references/checks.md` +
+  `references/secrets.md`), wired to `lab-audit` in both directions, vulnerabilities feeding
+  `upgrade-campaign`, active-compromise stop rule. Fleet 9 agents / 19 skills.
+- **LABSEC-002** (blocked): guard-enforced lab inspector — both checklists now exist, so this is
+  purely the enforcement shell. Still needs **DEPLOY-001 decided** (a guard-enforced agent must not
+  ship into a deployment where the guard never runs). GOV-001 is already landed.
 - **ROLE-003 / ROLE-004** (parked trigger-bound): verification execution authority, then the
   independent verification engineer. Reopens on the first real verification task.
 - **EVAL-003** (deferred): one comparable full routing anchor. The measurement path is proven

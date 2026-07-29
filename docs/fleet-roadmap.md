@@ -97,34 +97,14 @@ evidence belongs to the exact tested revision/environment.
 
 **Next action:** None until ROLE-003 is accepted.
 
-#### LABSEC-001 — decide adversary-focused running-lab security coverage
-
-**Status:** `decision-needed`
-
-**Outcome:** Decide whether an intent-driven `security-audit` skill should own trust zones,
-exposed services, authentication, management planes, secrets posture, vulnerability prioritization,
-and personal-data paths in the running lab without taking hygiene or fix authority.
-
-**Source:** Reconciled
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) and archived
-[`roster expansion design`](archive/2026-07/roster-expansion-design.md).
-
-**Prerequisites:** Operator approval and completion of ROUND1-001's `lab-audit` check split, so the
-hygiene/adversary boundary is tested against the final checklist rather than its transitional form.
-
-**Acceptance:** An accepted decision names the checklist boundary, active-compromise stop rule,
-fix routing to `homelab-platform`, cooperative tool limits, output contract, and routing cases
-against application security and ordinary lab hygiene.
-
-**Next action:** After ROUND1-001, compare the archived checklist proposal with the landed
-`lab-audit` reference and accept, narrow, or reject the separate adversary sweep.
-
 #### LABSEC-002 — add a guard-enforced lab inspector
 
 **Status:** `blocked`
 
-**Outcome:** If LABSEC-001 is accepted, add an optional read-only agent that can work the hygiene
-or adversary checklist without taking change authority or combining lab secrets with web access.
+**Outcome:** Add an optional read-only agent that can work the hygiene (`lab-audit`) or adversary
+(`security-audit`) checklist under guard enforcement, without taking change authority or combining
+lab secrets with web access. Both checklists now exist — LABSEC-001 landed 2026-07-29 — so this
+item is purely the enforcement shell.
 
 **Source:** Archived
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role

@@ -12,6 +12,15 @@ gates the roadmap names (ROLE-001, ROLE-002). Current work and gates live in
 
 ## Acceptance record
 
+**LABSEC-001 accepted as proposed, 2026-07-29** (the reconciled running-lab security decision this
+record carried alongside the two roles): the adversary sweep exists as its own read-only
+`security-audit` skill rather than being folded into `lab-audit`, with the boundary this record
+named — hygiene stays with `lab-audit`, fixes stay with `homelab-platform`, vulnerability output
+feeds `upgrade-campaign`, and evidence of active compromise stops the sweep. Implemented the same
+day; `LABSEC-002` (the guard-enforced inspector that could run either checklist under
+enforcement) remains blocked on `DEPLOY-001`, since a guard-enforced agent must not ship into a
+deployment where the guard never runs.
+
 2026-07-29, fresh-look session, operator answered directly: **accept both** decidable roles as
 proposed — ROLE-001 (visible rebrand to Home-Lab SRE / Platform Engineer with the
 `homelab-platform` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
