@@ -23,7 +23,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
-| `docs/` | Current roadmap, decisions, active plans, and historical reviews. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. Reviews and the adaptation backlog are dated evidence, never task lists. |
+| `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file. |
 | `.claude-plugin/` | Plugin and marketplace manifests. The manifest `name` is the namespace; the guard cross-checks it. |
 
 ## Validate before you push

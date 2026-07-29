@@ -29,7 +29,7 @@ what the fork **dropped or never had**: the donor kept an entire detect→respon
 (incident method, observability craft, postmortems) and language-level idiom guidance that this
 fleet demands ("match the codebase's idioms") but nowhere supplies. Independent cross-check: the
 two blind passes re-derived `incident` and `postmortem` — the same top gaps
-`docs/skills-modernization-plan.md` had already identified — without being allowed to read it.
+`docs/archive/2026-07/skills-modernization-plan.md` had already identified — without being allowed to read it.
 
 > **Status 2026-07-24 — Tiers 1, 2, and 3 are now fully landed.** Every numbered item below carries
 > its landing stamp; the sections are kept for their adjudication detail (what was adapted, what was
@@ -259,7 +259,7 @@ the triage bullet defers to `lab-incident`.
 
 ## Related open work (pre-existing backlog, folds into the tiers)
 
-From `docs/skills-modernization-plan.md` and the July 2026 best-practices re-check:
+From `docs/archive/2026-07/skills-modernization-plan.md` and the July 2026 best-practices re-check:
 
 - Modernization Tier 1 `incident`/postmortem → **superseded by items 1.4/1.5** (richer donor
   source material); `restore-drill` and `upgrade-campaign` remain open as originally planned;
@@ -345,8 +345,12 @@ Everything else in this file has landed. What genuinely remains:
   landed 2026-07-29 (Round 1): `incident-mitigate-first` and `restore-drill-scratch-target`, each
   green at landing (thrift scope: one run). `ladder-report-not-absorb` FAILED 2/2 at landing — the
   builder answered an above-altitude fork with a hedged default instead of reporting it with the
-  rung named — and was NOT shipped red; the defect finding and transcript live in the Round 1 SDD
-  workspace (`task-7-report.md`), and the case relands unchanged after the definition fix.
+  rung named — and was NOT shipped red. **Resolved 2026-07-29** (roadmap DEF-001): the builder's
+  ladder paragraph now requires naming the owning rung, and the case relanded byte-identical and
+  green. The durable analysis is in
+  [`fleet-program-outcomes-2026-07-29.md`](fleet-program-outcomes-2026-07-29.md) — the raw
+  transcript was captured only to the local, gitignored SDD workspace and is deliberately not
+  committed.
 - **A full re-baseline of the routing suite — attempted, PARKED 2026-07-25 with the runner fixed and
   no anchor captured.** Read this before re-attempting; the attempt produced more value in tooling
   fixes than in numbers, and repeating it naively would repeat the dead ends.
