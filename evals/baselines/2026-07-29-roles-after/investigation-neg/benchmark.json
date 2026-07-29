@@ -1,0 +1,122 @@
+{
+  "cluster": "investigation",
+  "runs_per_case": 3,
+  "members": [
+    "application-security-auditor",
+    "code-reviewer",
+    "researcher",
+    "root-cause"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": "C:\\Users\\hawkins\\sde-agents",
+    "threshold": 0.5,
+    "timeout_s": 420
+  },
+  "summary": {
+    "passed": 4,
+    "total": 4
+  },
+  "cases": [
+    {
+      "id": "neg-write-the-feature",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "build"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-design-decision",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "architecture"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-lab-outage",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "outage"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "['code-reviewer', 'researcher', 'root-cause'] fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "lab-incident"
+      ],
+      "fired_per_run": [
+        [
+          "lab-incident"
+        ],
+        [
+          "lab-incident"
+        ],
+        [
+          "lab-incident"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-security-fix",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "remediation"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}
