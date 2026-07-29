@@ -394,6 +394,53 @@
         "lab-incident",
         "postmortem"
       ]
+    },
+    {
+      "id": "pos-host-linux",
+      "prompt": "Harden SSH on my lab's Ubuntu box \u2014 key-only logins, no root login, and make sure I can't lock myself out in the process.",
+      "polarity": "positive",
+      "expect_fires": [
+        "homelab-platform"
+      ],
+      "expected_output": "Host-level Linux work on a lab machine \u2014 the Home-Lab SRE's substrate (the users/SSH/access-recovery vocabulary lands in the description with ROLE-001). Seeded before the rebrand: the before-anchor measures the old description, so this case's before/after diff is the direct measure of the Linux-host trigger widening.",
+      "tags": [
+        "homelab-platform",
+        "linux-host"
+      ]
+    },
+    {
+      "id": "pos-host-onboard",
+      "prompt": "I just set up a new mini PC with a fresh Debian install for the lab. Bring it up to standard as a lab host \u2014 users and SSH, firewall, updates, monitoring, and backups.",
+      "polarity": "positive",
+      "expect_fires": [
+        "homelab-platform"
+      ],
+      "expected_output": "A new machine entering the lab \u2014 homelab-platform working the host-onboard checklist. The skill joins the cluster's members when it lands (ROLE-001 edit wave); until then the agent is the only routable owner, mirroring the pos-add-service / service-onboard pattern.",
+      "tags": [
+        "homelab-platform",
+        "host-onboard"
+      ]
+    },
+    {
+      "id": "neg-personal-machine",
+      "prompt": "Partition my personal laptop and install Arch on it, then set up my dotfiles and dev tools.",
+      "polarity": "negative",
+      "expect_not_fires": [
+        "homelab-platform",
+        "service-onboard",
+        "lab-audit",
+        "runbook",
+        "postmortem",
+        "lab-incident",
+        "restore-drill",
+        "upgrade-campaign",
+        "observability"
+      ],
+      "expected_output": "A personal workstation, not the lab \u2014 no cluster member owns it. Partition/install/users/dotfiles is the decoy vocabulary for ROLE-001's Linux-host trigger widening; this is the tight near-miss that guards it.",
+      "tags": [
+        "near-miss",
+        "linux-host"
+      ]
     }
   ]
 }
