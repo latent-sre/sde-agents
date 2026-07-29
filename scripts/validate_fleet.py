@@ -244,10 +244,17 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
             # An empty inline value can mean a YAML block sequence follows (`skills:` then indented
             # `- item` lines). Collect it so a value like `skills:` doesn't silently become "" with
             # nothing downstream ever able to check it -- see LIST_ITEM_RE.
+            # Skip blank lines and comments within the sequence, mirroring the outer loop, so that
+            # `skills:\n  # note\n  - item` doesn't leave `- item` stranded in the outer loop
+            # where it fails TOP_LEVEL_KEY_RE and returns None.
             items: list[str] = []
             j = i + 1
             while j < end:
-                item_match = LIST_ITEM_RE.match(lines[j])
+                line = lines[j]
+                if not line.strip() or line.lstrip().startswith("#"):
+                    j += 1
+                    continue
+                item_match = LIST_ITEM_RE.match(line)
                 if not item_match:
                     break
                 items.append(item_match.group(1).strip("'\""))

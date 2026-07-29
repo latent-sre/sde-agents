@@ -192,6 +192,17 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertEqual("backend-craft, frontend-craft", fields["skills"])
         self.assertEqual("inherit", fields["model"])  # the key after the list is still parsed
 
+    def test_parser_reads_block_sequence_with_interleaved_blanks_and_comments(self) -> None:
+        # A blank line or `#` comment between `skills:` and the first `- item` used to leave the
+        # list items stranded in the outer loop, which then returned None because `- item` lines
+        # don't match TOP_LEVEL_KEY_RE.
+        fields = self._parse(
+            "---\nname: builder\nskills:\n  # note\n\n  - backend-craft\n  - frontend-craft\nmodel: inherit\n---\n"
+        )
+        self.assertIsNotNone(fields)
+        self.assertEqual("backend-craft, frontend-craft", fields["skills"])
+        self.assertEqual("inherit", fields["model"])
+
     # --- validator guardrail branches (T2) ---
 
     def _agent_issues(self, *files: tuple[str, str]) -> list[str]:
