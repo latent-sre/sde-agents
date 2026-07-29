@@ -184,6 +184,23 @@ class HookWiringTest(unittest.TestCase):
             decision(self._run(payload('git commit -m "fix sde-agents:code-reviewer"')))
         )
 
+    # --- malformed input: fail closed for the guarded, inert for everyone else (GOV-001) --
+    def test_malformed_guarded_payload_fails_closed(self) -> None:
+        # End to end: the guard cannot parse this, so it must answer with NEITHER sentinel; the
+        # hook then reaches its raw agent_type match and denies. Before the fix the guard said
+        # EXIT_ALLOW and the hook stopped listening one line earlier — the fallback that exists
+        # for exactly this payload never ran.
+        truncated = payload(PUSH, REVIEWER)[:-1]  # drop only the brace: identity survives intact
+        self.assertIn(f'"agent_type": "{REVIEWER}"', truncated)
+        self.assertEqual(decision(self._run(truncated)), "deny")
+
+    def test_malformed_unguarded_payload_is_a_no_op(self) -> None:
+        # The complementary half: malformed input whose agent_type names no guarded agent must
+        # not brick unrelated work — even when a guarded NAME rides in user-controlled command
+        # text, which is what gets it past the hook's cheap pre-filter in the first place.
+        truncated = payload('echo "ask code-reviewer later"', "sde-agents:sde-fullstack")[:-1]
+        self.assertIsNone(decision(self._run(truncated)))
+
     # --- failing closed, but only for the reviewer ---------------------------------------
     def test_fails_closed_for_the_reviewer_when_the_guard_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as empty:
