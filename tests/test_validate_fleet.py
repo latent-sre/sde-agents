@@ -43,10 +43,28 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertTrue(any("unknown tool 'Bogus'" in issue for issue in issues))
 
     def test_missing_bundled_reference_fails(self) -> None:
+        """The fixture links `./references/missing.md` on purpose. Before BUNDLE_REF_RE accepted the
+        `./` prefix the link matched nothing at all, so a broken path raised no issue whatsoever --
+        this test is what fails if that lookbehind regresses.
+        """
         issues, _, _ = validate_fleet.validate_repo(
             FIXTURES / "missing-reference", check_inventory=False
         )
         self.assertTrue(any("references/missing.md" in issue for issue in issues))
+
+    def test_dot_slash_and_bare_bundle_paths_are_the_same_reference(self) -> None:
+        """Both direction checks compare against this set, so the two spellings must collapse or the
+        orphan check would call a linked file unreachable.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            skill.write_text(
+                "See ./references/a.md and references/b.md.\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                {"references/a.md", "references/b.md"},
+                validate_fleet.bundle_references(skill),
+            )
 
     def test_evidence_label_drift_is_reported(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(
@@ -68,6 +86,22 @@ class FleetValidatorTests(unittest.TestCase):
         fields = validate_fleet.parse_frontmatter(FIXTURES / "folded" / "builder.md")
         self.assertIsNotNone(fields)
         self.assertEqual("Use when implementing a small feature.", fields["description"])
+
+    def test_malformed_frontmatter_is_rejected(self) -> None:
+        """An unparseable line used to be skipped silently, so a typo'd key configured nothing and
+        still validated.
+        """
+        self.assertIsNone(
+            validate_fleet.parse_frontmatter(FIXTURES / "folded" / "malformed.md")
+        )
+
+    def test_duplicate_frontmatter_key_is_rejected(self) -> None:
+        """YAML keeps the last duplicate, so the file would validate against a value its author did
+        not mean to be live.
+        """
+        self.assertIsNone(
+            validate_fleet.parse_frontmatter(FIXTURES / "folded" / "duplicate-key.md")
+        )
 
     def test_inventory_replacement_is_pure(self) -> None:
         content = (FIXTURES / "inventory-drift" / "README.md").read_text(encoding="utf-8")
@@ -157,6 +191,17 @@ class FleetValidatorTests(unittest.TestCase):
         )
         self.assertEqual("backend-craft, frontend-craft", fields["skills"])
         self.assertEqual("inherit", fields["model"])  # the key after the list is still parsed
+
+    def test_parser_reads_block_sequence_with_interleaved_blanks_and_comments(self) -> None:
+        # A blank line or `#` comment between `skills:` and the first `- item` used to leave the
+        # list items stranded in the outer loop, which then returned None because `- item` lines
+        # don't match TOP_LEVEL_KEY_RE.
+        fields = self._parse(
+            "---\nname: builder\nskills:\n  # note\n\n  - backend-craft\n  - frontend-craft\nmodel: inherit\n---\n"
+        )
+        self.assertIsNotNone(fields)
+        self.assertEqual("backend-craft, frontend-craft", fields["skills"])
+        self.assertEqual("inherit", fields["model"])
 
     # --- validator guardrail branches (T2) ---
 

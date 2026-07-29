@@ -17,8 +17,12 @@ from pathlib import Path
 
 
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+# The optional `./` is load-bearing. Without it the lookbehind rejected any link written
+# `./references/foo.md`, so such a link matched nothing: the existence check never ran (a broken
+# path shipped silently) and the orphan check counted the target as unlinked. Both consumers strip
+# the prefix before comparing, so the two spellings resolve to the same file.
 BUNDLE_REF_RE = re.compile(
-    r"(?<![\w./])(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
+    r"(?<![\w/])(?:\./)?(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
 )
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
 # A YAML block-sequence item, e.g. `  - backend-craft`. TOP_LEVEL_KEY_RE is anchored at column zero
@@ -210,12 +214,22 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
     fields: dict[str, str] = {}
     i = 1
     while i < end:
-        match = TOP_LEVEL_KEY_RE.match(lines[i])
-        if not match:
+        if not lines[i].strip() or lines[i].lstrip().startswith("#"):
             i += 1
             continue
 
+        match = TOP_LEVEL_KEY_RE.match(lines[i])
+        if not match:
+            # Skipping an unparseable line loses whatever it configured without a word: a typo'd
+            # `tools Read, Write` would read as no tools authority at all, and the file would
+            # validate. Refuse the block instead so the caller reports it.
+            return None
+
         key, value = match.groups()
+        if key in fields:
+            # YAML keeps the last duplicate. A file carrying `model: opus` then `model: inherit`
+            # would validate against a value its author never intended to be the live one.
+            return None
         value = value.strip()
         if value in {">", ">-", "|", "|-"}:
             parts: list[str] = []
@@ -230,10 +244,17 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
             # An empty inline value can mean a YAML block sequence follows (`skills:` then indented
             # `- item` lines). Collect it so a value like `skills:` doesn't silently become "" with
             # nothing downstream ever able to check it -- see LIST_ITEM_RE.
+            # Skip blank lines and comments within the sequence, mirroring the outer loop, so that
+            # `skills:\n  # note\n  - item` doesn't leave `- item` stranded in the outer loop
+            # where it fails TOP_LEVEL_KEY_RE and returns None.
             items: list[str] = []
             j = i + 1
             while j < end:
-                item_match = LIST_ITEM_RE.match(lines[j])
+                line = lines[j]
+                if not line.strip() or line.lstrip().startswith("#"):
+                    j += 1
+                    continue
+                item_match = LIST_ITEM_RE.match(line)
                 if not item_match:
                     break
                 items.append(item_match.group(1).strip("'\""))
@@ -413,10 +434,19 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
     return issues, sorted(names)
 
 
+def bundle_references(skill_file: Path) -> set[str]:
+    """Every bundle path named in SKILL.md, normalized so `./references/x.md` and `references/x.md`
+    are the same reference. Both direction checks read this, so they cannot disagree on spelling.
+    """
+    return {
+        match.group(0).rstrip(".,;:)]}").removeprefix("./")
+        for match in BUNDLE_REF_RE.finditer(read_text(skill_file))
+    }
+
+
 def validate_bundle_references(root: Path, skill_dir: Path, skill_file: Path) -> list[str]:
     issues: list[str] = []
-    for match in BUNDLE_REF_RE.finditer(read_text(skill_file)):
-        reference = match.group(0).rstrip(".,;:)]}")
+    for reference in sorted(bundle_references(skill_file)):
         local_target = skill_dir / Path(reference)
         shared_target = root / Path(reference)
         if not local_target.exists() and not shared_target.exists():
@@ -437,10 +467,7 @@ def validate_reference_orphans(skill_dir: Path, skill_file: Path) -> list[str]:
     references_dir = skill_dir / "references"
     if not references_dir.is_dir():
         return issues
-    linked = {
-        match.group(0).rstrip(".,;:)]}")
-        for match in BUNDLE_REF_RE.finditer(read_text(skill_file))
-    }
+    linked = bundle_references(skill_file)
     for ref_file in sorted(references_dir.rglob("*")):
         if not ref_file.is_file():
             continue
