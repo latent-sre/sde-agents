@@ -820,12 +820,81 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
     return issues
 
 
+def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: list[str]) -> list[str]:
+    """Schema integrity for evals/routing/*.json — the rules that keep the scorer honest.
+
+    Every rule here is a tripwire for a measurement that would silently lie. The scorer grades a
+    positive against its own expect_fires but reports the CLUSTER's fire rate, so a positive
+    naming a component outside the declared members can pass while the reported rate reads zero
+    (observed live in pos-ci-actions-harden, which accepted code-reviewer). Both target lists
+    match components BY NAME, so a typo'd member or target expects or forbids nothing and passes
+    vacuously. And case ids are the keys a before/after diff aligns on, so a duplicate makes two
+    measurements read as one. The runner raises no error for any of these at grade time.
+    """
+    issues: list[str] = []
+    routing = root / "evals" / "routing"
+    if not routing.is_dir():
+        return issues
+    components = set(agent_names) | set(skill_names)
+    for path in sorted(routing.glob("*.json")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            issues.append(
+                f"{rel}: unreadable cluster file ({exc}) — the runner would fail loudly, but a "
+                f"cluster nobody can run measures nothing while still looking like coverage."
+            )
+            continue
+        members = doc.get("members") if isinstance(doc, dict) else None
+        if not isinstance(members, list) or not members:
+            issues.append(
+                f"{rel}: no non-empty 'members' list — every routing assertion grades against the "
+                f"member set, so without one the file asserts nothing."
+            )
+            continue
+        for member in members:
+            if member not in components:
+                issues.append(
+                    f"{rel}: member {member!r} is not a fleet component — a name that resolves to "
+                    f"nothing can be expected or forbidden and never match, passing vacuously."
+                )
+        member_set = set(members)
+        seen_ids: set[str] = set()
+        for case in doc.get("cases", []) if isinstance(doc.get("cases"), list) else []:
+            if not isinstance(case, dict):
+                continue
+            case_id = case.get("id", "<missing id>")
+            if case_id in seen_ids:
+                issues.append(
+                    f"{rel}: duplicate case id {case_id!r} — ids are what a before/after diff "
+                    f"aligns on, so a duplicate makes two measurements read as one."
+                )
+            seen_ids.add(case_id)
+            for target in case.get("expect_fires", []):
+                if target not in member_set:
+                    issues.append(
+                        f"{rel}: case {case_id!r} expects {target!r}, outside the cluster's members "
+                        f"— the scorer would pass the case on a fire the cluster rate does not "
+                        f"count, so the case can pass while the reported rate reads zero."
+                    )
+            for target in case.get("expect_not_fires", []):
+                if target not in member_set:
+                    issues.append(
+                        f"{rel}: case {case_id!r} forbids {target!r}, outside the cluster's members "
+                        f"— a non-member can never fire as this cluster, so the prohibition matches "
+                        f"nothing and the negative passes vacuously."
+                    )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
     issues.extend(validate_plugin(root, agent_names, skill_names))
     issues.extend(validate_agent_guide(root))
+    issues.extend(validate_routing_clusters(root, agent_names, skill_names))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

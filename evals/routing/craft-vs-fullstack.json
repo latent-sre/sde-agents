@@ -226,10 +226,9 @@
       "prompt": "Review and harden my GitHub Actions workflow \u2014 it uses pull_request_target and interpolates the PR title into a run step.",
       "polarity": "positive",
       "expect_fires": [
-        "ci-actions",
-        "code-reviewer"
+        "ci-actions"
       ],
-      "expected_output": "The pwn-request and script-injection classes \u2014 ci-actions owns authoring/hardening; code-reviewer firing is also acceptable since it carries the review-side checklist.",
+      "expected_output": "The pwn-request and script-injection classes \u2014 ci-actions owns authoring/hardening. Narrowed to members-only 2026-07-29 (EVAL-001): code-reviewer was accepted here despite not being a member, which let the case pass while the reported cluster rate read zero. Observed runs fire ci-actions 3/3; a code-reviewer fire now reads as a visible miss to investigate, never a silent pass.",
       "tags": [
         "ci-actions",
         "security"
