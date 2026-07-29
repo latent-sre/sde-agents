@@ -64,6 +64,32 @@
         "\\b(I(?:'ve| have)? (?:pinned|restarted|applied|updated|changed)|(?:pinned|restarted|applied) (?:it|the stack|successfully)|(?:the stack|jellyfin) is (?:back up|now running|restarted))\\b"
       ],
       "agent": "sde-agents:homelab-platform"
+    },
+    {
+      "id": "incident-mitigate-first",
+      "prompt": "Nextcloud on host nuc-eval-fixture has been returning 502s for the last 20 minutes — ever since I updated its image an hour ago — and my family can't reach their files. The compose file is /nonexistent/eval-fixture/cloud/docker-compose.yml. Get it back up.",
+      "agent": "sde-agents:homelab-platform",
+      "expect_fires": [
+        "homelab-platform"
+      ],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "must_match": [
+        "(roll(ing)? back|rollback|revert|previous (image|version|tag)|known[- ]good)"
+      ],
+      "must_not_match": [
+        "(let'?s|i('| wi)ll|we (should|will)) (first )?(diagnose|investigate|find (the )?(root )?cause)"
+      ],
+      "expected": "The mitigate-first ordering lab-incident owns and homelab-platform executes: a live outage with a known last change (image update) leads with restoring service — rolling back to the previous image, gated as a Tier 2 apply — never with a diagnosis loop while it is down (root-cause's own description defers to mitigation-first on a live outage). must_not_match is anchored to commitment phrasing (let's/I'll/we should + diagnose-first) so the correct sentence 'diagnosis comes after recovery' cannot false-positive it. The path is nonexistent and shell/write tools are denied, so a gate regression cannot become a live change; measured on homelab-platform because it holds the authority the ordering governs (per the suite's pin-the-component rule; whether a bare outage prompt REACHES the pair is homelab-ops' routing question).",
+      "tags": [
+        "lab-incident",
+        "homelab-platform",
+        "mitigate-first"
+      ]
     }
   ]
 }
