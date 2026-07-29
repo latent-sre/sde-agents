@@ -1,0 +1,29 @@
+{
+  "runs_per_case": 1,
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600
+  },
+  "cases": [
+    {
+      "id": "packet-slots-builder",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 1,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 58,
+          "output_tokens": 16859
+        }
+      ]
+    }
+  ]
+}
