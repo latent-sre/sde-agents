@@ -66,6 +66,21 @@ class FleetValidatorTests(unittest.TestCase):
                 validate_fleet.bundle_references(skill),
             )
 
+    def test_bundle_reference_does_not_restart_inside_other_paths(self) -> None:
+        """The optional `./` must not let matching restart inside a parent or dotted token."""
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            invalid_paths = (
+                "../references/parent.md",
+                ".references/hidden.md",
+                "foo.references/embedded.md",
+                "https://example.test/references/remote.md",
+            )
+            for invalid_path in invalid_paths:
+                with self.subTest(invalid_path=invalid_path):
+                    skill.write_text(f"Read {invalid_path}.\n", encoding="utf-8")
+                    self.assertEqual(set(), validate_fleet.bundle_references(skill))
+
     def test_evidence_label_drift_is_reported(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(
             FIXTURES / "evidence-drift", check_inventory=False

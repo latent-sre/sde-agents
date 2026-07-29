@@ -1,5 +1,11 @@
 # Adaptation backlog — imports from `latent-sre/sre-agents` — July 2026
 
+> **Status: historical import adjudication, reconciled 2026-07-28.**
+> `docs/fleet-roadmap.md` now owns all current and deferred work. The “Still open” section below is
+> preserved as dated source evidence, including the operator's PowerShell reopening and the failed
+> Round 1 background-run forensics; both were imported into the live roadmap. Do not execute an
+> item from this file unless the roadmap still names it.
+
 **Question:** which agents and skills from the sister repo `latent-sre/sre-agents` (enterprise-SRE
 fleet, components under `.claude/agents/` and `.claude/skills/`) are worth adapting into this
 plugin?
@@ -30,7 +36,8 @@ two blind passes re-derived `incident` and `postmortem` — the same top gaps
 > deliberately excluded, and why), which still governs any future import from the same donor.
 > Imports were authored natively from each item's adaptation notes — the donor repo is out of this
 > session's scope — so the notes are the specification that was implemented, not a copy source.
-> **What remains open** is listed under "Still open" at the bottom of this file.
+> The dated “Still open” source section remains at the bottom of this file; current status lives
+> only in `docs/fleet-roadmap.md`.
 
 Donor paths below are relative to the sre-agents repo root (`.claude/skills/...`,
 `.claude/agents/...`).
@@ -279,8 +286,8 @@ without running the probe); the Stop-hook deterministic-gate fact in `self-impro
 but not adopted (no consumer yet; `KNOWN_SKILL_FIELDS` gates the second by design): `/goal`
 conditions as session-level verify gates, and skill-scoped `hooks:` frontmatter.
 
-From `docs/ecc-skills-agents-review.md` (July 2026; that file owns the adjudication detail —
-its Tier 1/2 imports are landed, these are what remains):
+From `docs/archive/2026-07/ecc-import-review.md` (July 2026; the combined Batch 1/2 archive owns
+the adjudication detail — its Tier 1/2 imports are landed, these are what remains):
 
 - **Packet-lint assert helper** (ECC review item 3a) — stdlib script asserting packet-slot
   presence and flagging hedge-claims that carry no evidence label; missing evidence fails, never
@@ -295,8 +302,8 @@ its Tier 1/2 imports are landed, these are what remains):
   keyboard-pass evidence. Two misses trigger the `self-improve-loop` micro-retro: fix the
   definition, not the workflow. A durable assert belongs in the same finding-7b eval set.
 
-From `docs/ecc-batch2-review.md` (July 2026; that file owns the adjudication detail — its three
-body-only imports are landed, these are what remains):
+From `docs/archive/2026-07/ecc-import-review.md` Batch 2 (its three body-only imports are landed;
+these are what remains):
 
 - **Behavioral-eval doctrine** (batch-2 item 5, from ECC `agent-eval`) — fold into the finding-7b
   work alongside the packet-lint assert, not standalone: every behavioral case carries at least
@@ -384,6 +391,21 @@ Everything else in this file has landed. What genuinely remains:
   deterministic. **Prefer small foreground batches you can watch complete** over large detached ones,
   and treat a stalled progress counter as dead until proven otherwise.
 
+  *Second caveat (2026-07-28, Round 1 Task 1):* a 27-session batch launched `run_in_background`
+  **inside a fire-and-return subagent** died with a **0-byte output file** — not even the runner's
+  banner — and the harness later reported the job id unknown; no artifact dir was ever created and
+  no eval session provably spawned (so the failure cost time, not API spend). Three lessons.
+  (1) A background batch must be owned by a session that stays alive to receive its completion —
+  a subagent that returns after launching is not that owner. (2) `eval_routing.py` never flushes
+  stdout, and Python block-buffers to a file, so a 0-byte output cannot distinguish instant death
+  from hours of silent progress; the real liveness check is the **process table filtered by
+  CommandLine** (`python` + `eval_routing`), not process counts — a VS Code session plus MCP
+  servers reads as "batch activity" if you match on names alone, which is exactly the misread that
+  happened first. (3) Before any re-run, a watched `--runs 1 --limit 1` foreground smoke run is
+  the cheap discriminator between "the runner has a Windows hang/kill bug" and "the environment
+  terminates backgrounded runners" — they need different fixes. Full forensics: Round 1 SDD
+  ledger, `task-1-report.md` (workspace, gitignored); this note is the durable copy.
+
   *No anchor was captured, deliberately.* Every candidate artifact has a known defect in its
   conditions — measured under an unrecorded or unintended model, or before the exclusion fix. An
   anchor that cannot state what it measured is worse than none, because a later diff against it
@@ -396,3 +418,12 @@ Everything else in this file has landed. What genuinely remains:
 - **`allowed-tools` pre-approvals for `lab-audit`**, deliberately not taken: pre-approving inspection
   verbs would cut permission friction, but it is a real grant on a skill that operates a live lab,
   and the friction is currently doing useful work.
+- **`code-craft/references/powershell.md`, reopened 2026-07-26** — dropped at import (Tier 2.1 above)
+  when the language set was read as Python/Bash/Go, which is worth revisiting: the operator's own
+  shell is PowerShell, `PowerShell` is a real entry in `FLEET_TOOLS`, and the donor content is the
+  trap class that costs a session rather than a lint pass (`$null -eq $x` ordering, Pester 5's
+  Discovery/Run split, 5.1-vs-7 divergence). **What would settle it:** whether fleet or lab work is
+  ever *authored* in PowerShell rather than merely run through it — a reference nobody reads is
+  preload cost with no return, and the drop is correct if the answer is no. Landing it also widens
+  `code-craft`'s description (currently "Python, Bash, or Go"), so it owes a before/after routing run
+  on the overlapping cluster.

@@ -19,10 +19,12 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 # The optional `./` is load-bearing. Without it the lookbehind rejected any link written
 # `./references/foo.md`, so such a link matched nothing: the existence check never ran (a broken
-# path shipped silently) and the orphan check counted the target as unlinked. Both consumers strip
-# the prefix before comparing, so the two spellings resolve to the same file.
+# path shipped silently) and the orphan check counted the target as unlinked. The dot remains in
+# the leading boundary: without it matching restarts inside `../references` or
+# `foo.references`, incorrectly treating either as a local bundle path. Both consumers strip the
+# allowed prefix before comparing, so the two valid spellings resolve to the same file.
 BUNDLE_REF_RE = re.compile(
-    r"(?<![\w/])(?:\./)?(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
+    r"(?<![\w./])(?:\./)?(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
 )
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
 # A YAML block-sequence item, e.g. `  - backend-craft`. TOP_LEVEL_KEY_RE is anchored at column zero
