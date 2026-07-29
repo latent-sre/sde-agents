@@ -121,7 +121,10 @@ seed its routing cases.
 
 #### DEPLOY-001 — decide the fleet's daily deployment mode
 
-**Status:** `decision-needed`
+**Status:** `deferred` — the operator confirmed 2026-07-29 this is the plugin-vs-junctions
+deployment choice and deferred it to the end of the current implementation queue: decide after
+GOV-001, EVAL-001, ROLE-001, and ROLE-002 land. The hard gates are unchanged — it must still be
+decided before any LABSEC-002 work and before a second user installs the plugin.
 
 **Outcome:** The fleet's daily-use deployment matches what its guard, namespacing, and eval
 conditions assume — or the divergence is recorded and accepted in a governing decision record.
@@ -138,8 +141,8 @@ install verified, and a reproducible normal-session (non `--plugin-dir`) check p
 registration plus guarded-command denial. If junctions are kept: the README/AGENTS honest-posture
 note lands and LABSEC-002's value is re-adjudicated.
 
-**Next action:** Operator reviews the decision record's trade table and picks a mode — required
-before any LABSEC-002 work.
+**Next action:** Reopen after the current Ready queue lands; the operator then reviews the
+decision record's trade table and picks a mode.
 
 #### ROLE-003 — define verification execution authority
 

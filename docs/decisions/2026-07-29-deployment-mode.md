@@ -1,7 +1,8 @@
 # Fleet deployment mode on the operator's machine
 
-**Status:** Proposed — parked deliberately by the operator on 2026-07-29 (fresh-look session);
-tracked as roadmap `DEPLOY-001`
+**Status:** Proposed — parked deliberately by the operator on 2026-07-29 (fresh-look session) and,
+the same day, deferred to the end of the current implementation queue (after GOV-001, EVAL-001,
+ROLE-001, ROLE-002); tracked as roadmap `DEPLOY-001`
 **Date:** 2026-07-29
 **Verified state at writing:** `~/.claude/skills` and `~/.claude/agents` are NTFS junctions into
 this repository, and `sde-agents` appears in neither `installed_plugins.json` nor
