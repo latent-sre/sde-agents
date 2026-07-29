@@ -1,6 +1,6 @@
 ---
 name: code-craft
-description: Language-level engineering craft — the idioms, traps, and testing discipline of the language you're writing in, plus how to change working code safely. Use when writing or reviewing Python, Bash, or Go, when adding tests to existing code, or when refactoring something that already works. Complements the layer skills: sde-agents:backend-craft owns the service, sde-agents:frontend-craft the UI, and sde-agents:sde-fullstack the end-to-end feature — this owns what good code looks like inside those layers.
+description: Language-level engineering craft — the idioms, traps, and testing discipline of the language you're writing in, plus how to change working code safely. Use when writing or reviewing Python, Bash, PowerShell, or Go, when adding tests to existing code, or when refactoring something that already works. Complements the layer skills: sde-agents:backend-craft owns the service, sde-agents:frontend-craft the UI, and sde-agents:sde-fullstack the end-to-end feature — this owns what good code looks like inside those layers.
 argument-hint: [the language or the code to change]
 ---
 
@@ -27,6 +27,7 @@ Two rules that hold in every language:
 |---|---|
 | Python | [`references/python.md`](references/python.md) |
 | Bash or a shell script | [`references/bash.md`](references/bash.md) |
+| PowerShell | [`references/powershell.md`](references/powershell.md) |
 | Go | [`references/go.md`](references/go.md) |
 | writing tests, or code that has none | [`references/tdd.md`](references/tdd.md) |
 | changing code that already works | [`references/safe-refactor.md`](references/safe-refactor.md) |
