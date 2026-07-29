@@ -419,7 +419,7 @@ Everything else in this file has landed. What genuinely remains:
   involving a modal, toast, or form.
 - **`references/checks.md` + findings ledger for `lab-audit`** (modernization Tier 2 item 6): the
   tool-scoping half landed (`NotebookEdit` added to `disallowed-tools`), the reference-file split
-  did not — the Checks list is still inline, which is defensible while it stays short. —
+  did not — the Checks list is still inline, which is defensible while it stays short.
   **Landed 2026-07-29 (Round 1)**: checks split to `references/checks.md` with command-level detail;
   the findings ledger landed as an output convention (the skill is read-only and cannot own a file
   it writes).
