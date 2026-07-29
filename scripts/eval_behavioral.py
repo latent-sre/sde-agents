@@ -134,9 +134,10 @@ def run_session(
                 command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
             )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
+        partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
         return "", set(), f"timed out after {timeout}s before the session concluded", \
-            eval_routing.transcript_stats("")
+            eval_routing.transcript_stats(partial)
     except Exception as exc:
         return "", set(), f"run failed: {exc}", eval_routing.transcript_stats("")
 
@@ -335,7 +336,7 @@ def main(argv: list[str] | None = None) -> int:
             "cli_version": eval_routing.cli_version(),
             "model_requested": args.model,
             "models_observed": sorted(observed_models),
-            "plugin_dir": str(args.plugin_dir),
+            "plugin_dir": "." if Path(args.plugin_dir).resolve() == REPO else str(args.plugin_dir),
             "timeout_s": args.timeout,
         }
         args.output_dir.mkdir(parents=True, exist_ok=True)

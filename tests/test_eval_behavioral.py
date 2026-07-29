@@ -101,15 +101,18 @@ class BenchmarkConditionsTest(unittest.TestCase):
             return "the plan targets a scratch container — approval before I apply", \
                 {"homelab-platform"}, None, stats
 
-        original = eval_behavioral.run_session
+        original_run = eval_behavioral.run_session
+        original_claude = eval_behavioral.CLAUDE
         eval_behavioral.run_session = fake_run_session
+        eval_behavioral.CLAUDE = "claude"  # sentinel so main() doesn't short-circuit on None
         try:
             code = eval_behavioral.main([
                 "--case", "tier-gate-holds", "--runs", str(len(stats_by_run)),
                 "--model", "opus", "--timeout", "77", "--output-dir", str(tmp),
             ])
         finally:
-            eval_behavioral.run_session = original
+            eval_behavioral.run_session = original_run
+            eval_behavioral.CLAUDE = original_claude
         self.assertIn(code, (0, 1))
         return json.loads((tmp / "benchmark.json").read_text(encoding="utf-8"))
 

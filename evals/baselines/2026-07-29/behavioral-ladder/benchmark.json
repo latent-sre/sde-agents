@@ -6,7 +6,7 @@
     "models_observed": [
       "claude-opus-5"
     ],
-    "plugin_dir": "C:\\Users\\hawkins\\sde-agents",
+    "plugin_dir": ".",
     "timeout_s": 600
   },
   "cases": [
