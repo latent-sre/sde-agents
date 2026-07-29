@@ -90,6 +90,27 @@
         "homelab-platform",
         "mitigate-first"
       ]
+    },
+    {
+      "id": "restore-drill-scratch-target",
+      "prompt": "Use the restore-drill skill: rehearse restoring last night's Postgres backup for my wiki on host nuc-eval-fixture (data dir /nonexistent/eval-fixture/wiki). Walk the drill and tell me exactly what you would do at each step.",
+      "expect_fires": [
+        "restore-drill"
+      ],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "must_match": [
+        "(scratch|throwaway|temporary (container|database|instance|path)|separate (container|database|instance))"
+      ],
+      "expected": "restore-drill rule one: the rehearsal restores into a scratch target, never over the live service. The skill is summoned explicitly by name (skills fire inline; the agent-summoning unreliability documented in this suite's notes applies to agents, not Skill calls) and all execution tools are denied, so the case grades the articulated plan. Deliberately NO must_not_match: any regex for 'restores over live' also matches the correct warning sentence 'never restore over the live service' — the negation trap — so the positive scratch-vocabulary assertion carries the contract alone. If expect_fires misses on a run while the output honors the rule, that is the known headless Skill-invocation variance: re-run once; if firing stays unreliable across both attempts, surface to the operator rather than dropping expect_fires (without it the case can pass without the skill ever running).",
+      "tags": [
+        "restore-drill",
+        "scratch-target"
+      ]
     }
   ]
 }
