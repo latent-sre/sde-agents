@@ -32,29 +32,6 @@ Git history and archived reviews retain the implementation detail.
 
 ### Ready
 
-#### EVAL-001 — validate routing-cluster target integrity
-
-**Status:** `ready`
-
-**Outcome:** A positive case cannot silently pass by accepting a component outside the cluster's
-declared members unless the schema explicitly declares that adjacent target.
-
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md), governance
-prerequisite “A routing case can pass outside its declared cluster.”
-
-**Prerequisites:** Decide whether outside-member positive targets are prohibited or represented by
-a named `adjacent_accepts` field. Default recommendation: prohibit until a real case requires the
-exception.
-
-**Acceptance:** A fixture or mutation test fails against the current
-`pos-ci-actions-harden`/`code-reviewer` inconsistency; validation covers unique IDs, resolvable
-members and targets, positive membership, and negative forbidden sets; the test fails without the
-validator change.
-
-**Next action:** Encode the failing cluster fixture and choose the smallest schema rule that makes
-the scorer and reported cluster rate agree.
-
 #### ROLE-001 — implement the home-lab SRE rebrand and Linux-host boundary
 
 **Status:** `ready`
@@ -85,9 +62,10 @@ and finding validation without taking PR review or remediation authority.
 **Source:** [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md),
 accepted as proposed 2026-07-29 (see its acceptance record).
 
-**Prerequisites:** Approval obtained 2026-07-29. EVAL-001 must land first (routing-case target
-integrity). GOV-001 is required only if the agent is ever given guarded Bash; the accepted initial
-tools (`Read, Grep, Glob, WebSearch, WebFetch`) avoid it.
+**Prerequisites:** Approval obtained 2026-07-29; EVAL-001 and GOV-001 both landed in PR #40 (the
+routing-schema integrity the auditor's new cluster will be validated under, and the guard
+fail-closed fix that would matter if the agent is ever given guarded Bash — the accepted initial
+tools, `Read, Grep, Glob, WebSearch, WebFetch`, avoid it).
 
 **Acceptance:** Agent has explicit static tools, no implementation authority, a source-backed
 output contract, and negative routing against `code-reviewer`, `researcher`, `homelab-platform`,
