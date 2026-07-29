@@ -120,7 +120,9 @@ Two properties fall out of that, both load-bearing and both tested:
   leaving every other caller untouched. A broken install degrades the reviewer; it cannot brick your
   session.
 
-`agent_type` is real but undocumented. If it is ever renamed upstream to another agent-named key
+`agent_type` is documented upstream as of July 2026 — the sub-agents reference names it as the
+value hooks receive — but its namespaced form for plugin agents remains probe-verified rather than
+documented. If it is ever renamed upstream to another agent-named key
 (`subagent_type`, `agentType`, …), the guard fails closed with an explicit message rather than
 quietly ceasing to guard. A rename to something that no longer says "agent" at all would escape that
 canary — the probe below is the backstop that catches it, which is why it must be re-run after CLI
