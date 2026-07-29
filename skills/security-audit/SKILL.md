@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: An adversary-eyes security sweep of the running home lab — trust zones and what the proxy actually fronts, authn on every exposed service, management planes reachable from the wrong zone, default credentials, secrets posture and rotation, image and stack vulnerabilities triaged into sde-agents:upgrade-campaign priorities, and personal-data governance at home scale. Use for "security-audit my lab", "what could an attacker reach", "check my exposure", or after standing up anything internet-facing. Surveys and reports; fixes route to sde-agents:homelab-platform. For code or a diff, sde-agents:code-reviewer's security pass; for hygiene (backups, drift, capacity), sde-agents:lab-audit.
+description: An adversary-eyes security sweep of the running home lab — trust zones and what the proxy actually fronts, authn on every exposed service, management planes reachable from the wrong zone, default credentials, secrets posture and rotation, image and stack vulnerabilities triaged into sde-agents:upgrade-campaign priorities, and personal-data governance at home scale. Use for "security-audit my lab", "what could an attacker reach", "check my exposure", or after standing up anything internet-facing. Surveys and reports; fixes route to sde-agents:homelab-platform. For code or a diff, the security pass in sde-agents:code-reviewer; for hygiene (backups, drift, capacity), sde-agents:lab-audit.
 argument-hint: [scope - a zone, a service, or the whole lab]
 disallowed-tools: Write, Edit, NotebookEdit
 ---
@@ -39,9 +39,10 @@ loaded when that row trips.
 ## Output
 
 Open with the coverage denominator — zones and checks swept vs. skipped, with why — then findings
-ranked `[P0]`–`[P3]`, each with its evidence (command + output), its attack path (position →
-crossing → reach), and the one-line fix class. P0 = reachable from outside a trust boundary
-without auth, or family data exposed. End with the top three things to fix this weekend, then
-emit the findings-ledger rows in `sde-agents:lab-audit`'s table format for the operator to append
-to the lab repo's ledger — this skill holds no write tools, so the emitted block IS the ledger
-entry.
+ranked `[P0]`–`[P3]`, each with its evidence (command + output — for secrets and credentials,
+names and paths only, never values: a report that quotes a secret is itself a leak), its attack
+path (position → crossing → reach), and the one-line fix class. P0 = reachable from outside a
+trust boundary without auth, or family data exposed. End with the top three things to fix this
+weekend, then emit the findings-ledger rows in `sde-agents:lab-audit`'s table format for the
+operator to append to the lab repo's ledger — this skill holds no write tools, so the emitted
+block IS the ledger entry.

@@ -10,15 +10,21 @@ reaches position X learn, and what does that credential then open?** Blast radiu
 ## Where to look, and what it means
 
 - **The lab repo's history, not just its worktree.** A secret deleted in the current file is still
-  in git history and still valid until rotated. `git log -p -- <env-or-config-path>` and a search
-  across history for the shapes below; a hit is a finding even if the file is now clean.
+  in git history and still valid until rotated. Find *where* without printing *what*:
+  `git log --oneline -- <env-or-config-path>` for a tracked secret file's commits, and
+  `git log -G'<shape>' --name-only --oneline` for the shapes below — both identify commits and
+  paths without emitting file contents. Never run `git log -p` over suspect paths: it prints the
+  secret values into the session transcript, which is itself a leak. A hit is a finding even if
+  the file is now clean.
 - **Compose and unit files** for inline values rather than `env_file:`/`EnvironmentFile=`
   indirection. Read names, never values — an audit that copies a secret into its own report has
   created a new leak. Cite `file:line` and the variable *name*.
 - **Env files on disk**: permissions (`ls -l` — world-readable is a finding), ownership, and
   whether they sit inside a directory the proxy or an app can serve.
-- **Container environment at runtime** (`docker inspect` env keys): anything present here is
-  visible to anyone who can talk to the docker socket — which ties this row to check 3.
+- **Container environment at runtime** — keys only, since bare `docker inspect` prints every
+  value: `docker inspect --format '{{range .Config.Env}}{{println (index (split . "=") 0)}}{{end}}' <container>`.
+  Any secret-shaped key present here is visible to anyone who can talk to the docker socket —
+  which ties this row to check 3.
 - **Backups**: whether the backup set includes the env/secret files, and whether that destination
   is encrypted. An unencrypted off-site backup of a secrets directory is the same exposure as
   publishing it, delayed.
