@@ -11,7 +11,7 @@ The checklist that keeps the lab from rotting. Work through every step in order;
 
 **Read the lab's own profile before step 1.** The lab repo's project context should state the stack, hosts, conventions, and quirks; those facts outrank any default in this checklist, and proposing something the lab's profile rules out wastes a round. If the lab has no such file, [`assets/lab-profile.template.md`](assets/lab-profile.template.md) is the shape to create in *the lab's* repository (not in this plugin — the plugin ships method, the lab owns its facts).
 
-1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names).
+1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names). A host that is itself new to the lab first works `sde-agents:host-onboard`; this checklist assumes the machine under it is already a lab citizen.
 2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`); restart policy; health check; resource limits.
 3. **Storage** — named volumes or explicit paths for state; added to the backup set; confirm the restore path actually exists, don't assume it.
 4. **Network** — reverse proxy entry, DNS record, TLS. No direct port exposure without written justification.

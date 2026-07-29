@@ -1,8 +1,8 @@
 {
   "cluster": "investigation",
   "description": "Routing eval for the read-only investigation overlap introduced by the researcher agent (backlog 3.6). researcher, code-reviewer, and root-cause all 'look into something and report back' without changing it, and all three share the vocabulary of finding out, checking, and investigating. The boundaries: researcher answers a question from sources (docs, the web, the repo as evidence); code-reviewer judges a DIFF against a bar; root-cause diagnoses an observed FAILURE. Positives name the intended member; negatives share the investigate/check/look-into vocabulary but must route to none of them.",
-  "members": ["researcher", "code-reviewer", "root-cause"],
-  "notes": "Seeded 2026-07-24 with the researcher agent; no baseline captured yet. Read per the suite caveat in ../README.md: researcher and code-reviewer are AGENTS, so their positives under-fire in headless one-shot mode (the session tends to do the work inline rather than delegate) — trust the negatives and cross-run regressions over absolute agent-positive rates. The tightest seam is researcher vs root-cause: 'find out why X broke' is a diagnosis (root-cause), while 'find out whether X supports Y' is research.",
+  "members": ["researcher", "code-reviewer", "root-cause", "application-security-auditor"],
+  "notes": "Seeded 2026-07-24 with the researcher agent; no baseline captured yet. Read per the suite caveat in ../README.md: researcher and code-reviewer are AGENTS, so their positives under-fire in headless one-shot mode (the session tends to do the work inline rather than delegate) — trust the negatives and cross-run regressions over absolute agent-positive rates. The tightest seam is researcher vs root-cause: 'find out why X broke' is a diagnosis (root-cause), while 'find out whether X supports Y' is research. application-security-auditor joined 2026-07-29 (ROLE-002): whole-repository/subsystem security audits and threat models, static-first — vs code-reviewer (a DIFF to judge, even a security-motivated one) and researcher (evidence questions that leave the repo). Its positives are agent positives (the weak headless signal); the negatives, and pos-review-diff staying with code-reviewer, are the hard signals. Negatives' before-anchor for the join: baselines/2026-07-29-roles-before/investigation-neg.",
   "cases": [
     {
       "id": "pos-research-library",
@@ -59,6 +59,30 @@
       "expect_not_fires": ["researcher", "code-reviewer", "root-cause"],
       "expected_output": "A live lab outage — lab-incident under homelab-platform, mitigate-first. root-cause is explicitly the WRONG loop mid-outage, which is why it appears as a negative here; 'check what's wrong' is the shared vocabulary.",
       "tags": ["near-miss", "outage"]
+    },
+    {
+      "id": "pos-appsec-audit",
+      "prompt": "Do a security audit of the payments service in this repo — threat model it, trace how untrusted input could reach the database or a shell, and tell me which findings are actually exploitable.",
+      "polarity": "positive",
+      "expect_fires": ["application-security-auditor"],
+      "expected_output": "A whole-subsystem audit with threat model, source-to-sink paths, and exploitability validation — the auditor's remit exactly. Agent positive: read under the headless under-fire caveat.",
+      "tags": ["application-security-auditor", "audit"]
+    },
+    {
+      "id": "pos-appsec-threatmodel",
+      "prompt": "Threat model my webhook receiver subsystem: what are the assets, trust boundaries, and entry points, and which attack paths would a real attacker actually take?",
+      "polarity": "positive",
+      "expect_fires": ["application-security-auditor"],
+      "expected_output": "Threat modeling by name — assets/boundaries/entry-points is the auditor's opening move. Agent positive: read under the headless under-fire caveat.",
+      "tags": ["application-security-auditor", "threat-model"]
+    },
+    {
+      "id": "neg-security-fix",
+      "prompt": "Fix the SQL injection in our search endpoint that last week's audit flagged.",
+      "polarity": "negative",
+      "expect_not_fires": ["researcher", "code-reviewer", "root-cause", "application-security-auditor"],
+      "expected_output": "Remediation — sde-fullstack's, never the auditor's (its contract explicitly excludes implementing fixes). 'SQL injection' and 'audit' are the decoy vocabulary; this is the tight near-miss guarding the new member.",
+      "tags": ["near-miss", "remediation"]
     }
   ]
 }

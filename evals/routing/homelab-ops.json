@@ -10,9 +10,10 @@
     "lab-incident",
     "restore-drill",
     "upgrade-campaign",
-    "observability"
+    "observability",
+    "host-onboard"
   ],
-  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if NO member fired. History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 9-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-platform's Boundaries, not to this cluster (neg-lab-architecture).",
+  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if NO member fired. History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 9-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-platform; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-platform's Boundaries, not to this cluster (neg-lab-architecture). ROLE-001 (2026-07-29): host-onboard joined as the tenth member, mirroring the service-onboard pattern (disable-model-invocation set but possibly invocable per #22345); pos-host-* were seeded BEFORE the rebrand so their before/after diff measures the Linux-host trigger widening (anchor: baselines/2026-07-29-roles-before/). The ordinary negatives now rely on the documented whole-cluster default for expect_not_fires (their identical explicit lists predated the runner honoring the field and would silently omit every new member); neg-resolved-not-incident keeps the one deliberate narrowing.",
   "cases": [
     {
       "id": "pos-add-service",
@@ -150,17 +151,6 @@
       "id": "neg-app-feature",
       "prompt": "Add a CSV export feature to my web app's reports page.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Application code \u2014 routes to a builder (sde-fullstack / frontend-craft), not lab ops. 'Add' is shared vocabulary with add-a-service.",
       "tags": [
         "near-miss",
@@ -171,17 +161,6 @@
       "id": "neg-review-deploy",
       "prompt": "Review my deploy script's pull request for security bugs before I merge it.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Reviewing a diff \u2014 code-reviewer. 'Deploy' and 'review' share vocabulary with lab work but this is a code review.",
       "tags": [
         "near-miss",
@@ -192,17 +171,6 @@
       "id": "neg-debug-test",
       "prompt": "My integration test for the API fails about one run in five. Find out why.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Debugging a flaky test \u2014 root-cause. 'Find out why' shares vocabulary with troubleshooting, but there is no lab here.",
       "tags": [
         "near-miss",
@@ -213,17 +181,6 @@
       "id": "neg-api-docs",
       "prompt": "Write API documentation for the public functions in my Python library.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Library API docs are not an ops runbook \u2014 must NOT fire runbook. 'Write documentation' is the tight near-miss for runbook.",
       "tags": [
         "near-miss",
@@ -234,17 +191,6 @@
       "id": "neg-lab-architecture",
       "prompt": "I'm planning the next two years of my lab \u2014 should I run Ceph or ZFS for storage, and how should I segment the VLANs?",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Lab-shaping architecture on a multi-year horizon \u2014 routes UP the ladder (distinguished/principal) per homelab-platform's Boundaries, not to the ops cluster. Guards the eng-ladder-vs-homelab seam. 'Lab' and 'storage' are shared vocabulary.",
       "tags": [
         "near-miss",
@@ -255,17 +201,6 @@
       "id": "neg-status-dashboard",
       "prompt": "Build a status-page dashboard that reads services.json and shows each service's health.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "A UI build \u2014 frontend-craft / sde-fullstack. 'Services' and 'health' share vocabulary with lab monitoring, but this is app code.",
       "tags": [
         "near-miss",
@@ -276,17 +211,6 @@
       "id": "neg-prompt-fix",
       "prompt": "My Claude Code skill for lab tasks never triggers when I ask it. Fix its description.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Prompt tooling \u2014 prompt-craft / prompt-engineer. The word 'lab' is a decoy; the task is fixing a description.",
       "tags": [
         "near-miss",
@@ -297,17 +221,6 @@
       "id": "neg-sprint-retro",
       "prompt": "Write up what happened in yesterday's sprint retro and turn it into a list of action items.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "Meeting notes, not an incident \u2014 must NOT fire postmortem despite sharing 'write up what happened', 'retro', and 'action items'. The tight near-miss for the new member.",
       "tags": [
         "near-miss",
@@ -413,9 +326,10 @@
       "prompt": "I just set up a new mini PC with a fresh Debian install for the lab. Bring it up to standard as a lab host \u2014 users and SSH, firewall, updates, monitoring, and backups.",
       "polarity": "positive",
       "expect_fires": [
-        "homelab-platform"
+        "homelab-platform",
+        "host-onboard"
       ],
-      "expected_output": "A new machine entering the lab \u2014 homelab-platform working the host-onboard checklist. The skill joins the cluster's members when it lands (ROLE-001 edit wave); until then the agent is the only routable owner, mirroring the pos-add-service / service-onboard pattern.",
+      "expected_output": "A new machine entering the lab \u2014 homelab-platform working the host-onboard checklist (either firing is a correct route, mirroring pos-add-service / service-onboard). Seeded pre-rebrand with the agent as sole target; host-onboard added to expect_fires when it joined the members in the ROLE-001 edit wave.",
       "tags": [
         "homelab-platform",
         "host-onboard"
@@ -425,17 +339,6 @@
       "id": "neg-personal-machine",
       "prompt": "Partition my personal laptop and install Arch on it, then set up my dotfiles and dev tools.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "homelab-platform",
-        "service-onboard",
-        "lab-audit",
-        "runbook",
-        "postmortem",
-        "lab-incident",
-        "restore-drill",
-        "upgrade-campaign",
-        "observability"
-      ],
       "expected_output": "A personal workstation, not the lab \u2014 no cluster member owns it. Partition/install/users/dotfiles is the decoy vocabulary for ROLE-001's Linux-host trigger widening; this is the tight near-miss that guards it.",
       "tags": [
         "near-miss",
