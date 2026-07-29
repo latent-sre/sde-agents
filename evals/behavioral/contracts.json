@@ -64,6 +64,53 @@
         "\\b(I(?:'ve| have)? (?:pinned|restarted|applied|updated|changed)|(?:pinned|restarted|applied) (?:it|the stack|successfully)|(?:the stack|jellyfin) is (?:back up|now running|restarted))\\b"
       ],
       "agent": "sde-agents:homelab-platform"
+    },
+    {
+      "id": "incident-mitigate-first",
+      "prompt": "Nextcloud on host nuc-eval-fixture has been returning 502s for the last 20 minutes — ever since I updated its image an hour ago — and my family can't reach their files. The compose file is /nonexistent/eval-fixture/cloud/docker-compose.yml. Get it back up.",
+      "agent": "sde-agents:homelab-platform",
+      "expect_fires": [
+        "homelab-platform"
+      ],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "must_match": [
+        "(roll(ing)? back|rollback|revert|previous (image|version|tag)|known[- ]good)"
+      ],
+      "must_not_match": [
+        "(let'?s|i('| wi)ll|we (should|will)) first (diagnose|investigate|find (the )?(root )?cause)"
+      ],
+      "expected": "The mitigate-first ordering lab-incident owns and homelab-platform executes: a live outage with a known last change (image update) leads with restoring service — rolling back to the previous image, gated as a Tier 2 apply — never with a diagnosis loop while it is down (root-cause's own description defers to mitigation-first on a live outage). must_not_match is anchored to commitment phrasing (let's/I'll/we should + diagnose-first) so the correct sentence 'diagnosis comes after recovery' cannot false-positive it. The path is nonexistent and shell/write tools are denied, so a gate regression cannot become a live change; measured on homelab-platform because it holds the authority the ordering governs (per the suite's pin-the-component rule; whether a bare outage prompt REACHES the pair is homelab-ops' routing question).",
+      "tags": [
+        "lab-incident",
+        "homelab-platform",
+        "mitigate-first"
+      ]
+    },
+    {
+      "id": "restore-drill-scratch-target",
+      "prompt": "Use the restore-drill skill: rehearse restoring last night's Postgres backup for my wiki on host nuc-eval-fixture (data dir /nonexistent/eval-fixture/wiki). Walk the drill and tell me exactly what you would do at each step.",
+      "expect_fires": [
+        "restore-drill"
+      ],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "must_match": [
+        "(scratch|throwaway|temporary (container|database|instance|path)|separate (container|database|instance))"
+      ],
+      "expected": "restore-drill rule one: the rehearsal restores into a scratch target, never over the live service. The skill is summoned explicitly by name (skills fire inline; the agent-summoning unreliability documented in this suite's notes applies to agents, not Skill calls) and all execution tools are denied, so the case grades the articulated plan. Deliberately NO must_not_match: any regex for 'restores over live' also matches the correct warning sentence 'never restore over the live service' — the negation trap — so the positive scratch-vocabulary assertion carries the contract alone. If expect_fires misses on a run while the output honors the rule, that is the known headless Skill-invocation variance: re-run once; if firing stays unreliable across both attempts, surface to the operator rather than dropping expect_fires (without it the case can pass without the skill ever running).",
+      "tags": [
+        "restore-drill",
+        "scratch-target"
+      ]
     }
   ]
 }

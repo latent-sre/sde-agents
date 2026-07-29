@@ -8,7 +8,7 @@
     "code-craft",
     "ci-actions"
   ],
-  "notes": "What this cluster can and cannot assert, given the deterministic grader (scripts/eval_routing.py): sde-fullstack PRELOADS backend-craft and frontend-craft via its skills: field, and preloaded skills are injected at startup, NOT invoked via the Skill tool \u2014 so they do NOT register as 'fired'. Only a direct Skill call (main session invokes a craft skill inline) or an Agent/Task spawn of sde-fullstack registers. A single-layer task legitimately routes to EITHER the craft skill or sde-fullstack, so single-layer positives accept both and the load-bearing assertions are: (a) cross-layer work routes to sde-fullstack (pos-fullstack-*), and (b) build vocabulary does NOT drag review/design/lab/prompt requests onto a builder (the negatives). Fine-grained backend-vs-frontend contamination is not cleanly gradeable here and is left to output-quality review.",
+  "notes": "What this cluster can and cannot assert, given the deterministic grader (scripts/eval_routing.py): sde-fullstack PRELOADS backend-craft and frontend-craft via its skills: field, and preloaded skills are injected at startup, NOT invoked via the Skill tool \u2014 so they do NOT register as 'fired'. Only a direct Skill call (main session invokes a craft skill inline) or an Agent/Task spawn of sde-fullstack registers. A single-layer task legitimately routes to EITHER the craft skill or sde-fullstack, so single-layer positives accept both and the load-bearing assertions are: (a) cross-layer work routes to sde-fullstack (pos-fullstack-*), and (b) build vocabulary does NOT drag review/design/lab/prompt requests onto a builder (the negatives). Fine-grained backend-vs-frontend contamination is not cleanly gradeable here and is left to output-quality review. Case repair 2026-07-27: 0 positive prompts rewritten — the diagnose run REFUTED the empty-cwd defect (the repo-presupposing skill positives passed 3/3 while every agent/layer-expecting positive was zero-fire; diagnose artifact: evals/baselines/2026-07-27-diagnose/), ids kept stable; pos-powershell-pester + neg-powershell-profile seeded with the Round 1 description widening.",
   "cases": [
     {
       "id": "pos-backend-pagination",
@@ -233,6 +233,36 @@
       "tags": [
         "ci-actions",
         "security"
+      ]
+    },
+    {
+      "id": "pos-powershell-pester",
+      "prompt": "My Pester 5 test file runs but half the tests never execute — I put setup code directly inside Describe, and the variables from it come up null inside my It blocks. Restructure the test file so the Discovery and Run phases behave.",
+      "polarity": "positive",
+      "expect_fires": [
+        "code-craft"
+      ],
+      "expected_output": "The Pester 5 Discovery/Run split — code-craft's powershell reference (lands this round). Before the description widening this is expected to miss; the before/after diff on this case is the direct measure of the widening.",
+      "tags": [
+        "code-craft",
+        "powershell"
+      ]
+    },
+    {
+      "id": "neg-powershell-profile",
+      "prompt": "Why does my PowerShell profile take six seconds to load? Figure out what's slow in it.",
+      "polarity": "negative",
+      "expect_not_fires": [
+        "backend-craft",
+        "frontend-craft",
+        "sde-fullstack",
+        "code-craft",
+        "ci-actions"
+      ],
+      "expected_output": "A diagnosis ask — root-cause, not a builder or craft skill. 'PowerShell' is the decoy vocabulary; this is the tight near-miss for the widened description.",
+      "tags": [
+        "near-miss",
+        "powershell"
       ]
     }
   ]

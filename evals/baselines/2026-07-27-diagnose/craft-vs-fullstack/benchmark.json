@@ -1,0 +1,237 @@
+{
+  "cluster": "craft-vs-fullstack",
+  "runs_per_case": 3,
+  "members": [
+    "backend-craft",
+    "ci-actions",
+    "code-craft",
+    "frontend-craft",
+    "sde-fullstack"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "threshold": 0.5,
+    "timeout_s": 420
+  },
+  "summary": {
+    "passed": 2,
+    "total": 9
+  },
+  "cases": [
+    {
+      "id": "pos-backend-pagination",
+      "polarity": "positive",
+      "tags": [
+        "backend-craft",
+        "single-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['backend-craft', 'sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-backend-webhook",
+      "polarity": "positive",
+      "tags": [
+        "backend-craft",
+        "single-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['backend-craft', 'sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-backend-resiliency",
+      "polarity": "positive",
+      "tags": [
+        "backend-craft",
+        "single-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['backend-craft', 'sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-frontend-table",
+      "polarity": "positive",
+      "tags": [
+        "frontend-craft",
+        "single-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['frontend-craft', 'sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-frontend-form",
+      "polarity": "positive",
+      "tags": [
+        "frontend-craft",
+        "single-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['frontend-craft', 'sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-fullstack-crosslayer",
+      "polarity": "positive",
+      "tags": [
+        "sde-fullstack",
+        "cross-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-fullstack-feature",
+      "polarity": "positive",
+      "tags": [
+        "sde-fullstack",
+        "cross-layer"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['sde-fullstack'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-code-craft-idioms",
+      "polarity": "positive",
+      "tags": [
+        "code-craft",
+        "bash"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['code-craft'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "code-craft"
+        ],
+        [
+          "code-craft"
+        ],
+        [
+          "code-craft"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-ci-actions-harden",
+      "polarity": "positive",
+      "tags": [
+        "ci-actions",
+        "security"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['ci-actions', 'code-reviewer'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "ci-actions"
+        ],
+        [
+          "ci-actions"
+        ],
+        [
+          "ci-actions"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}
