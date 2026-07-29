@@ -32,27 +32,6 @@ Git history and archived reviews retain the implementation detail.
 
 ### Ready
 
-#### GOV-001 — make malformed guarded input fail closed
-
-**Status:** `ready`
-
-**Outcome:** A malformed hook payload that still identifies a guarded agent can never return the
-authoritative allow sentinel, while malformed unguarded/main-session input cannot brick unrelated
-work.
-
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md), governance
-prerequisite “Malformed guarded input returns ALLOW.”
-
-**Prerequisites:** None. Fix before adding any guarded or execution-capable role.
-
-**Acceptance:** A focused test proves the current malformed-guarded payload passes before the fix;
-new direct and end-to-end cases cover malformed guarded deny, malformed unguarded no-op, valid
-guarded deny, and valid unguarded pass-through; hook/guard probe passes on a POSIX-capable host.
-
-**Next action:** Add the failing regression cases, then change parse failure from ALLOW to an
-indeterminate path that reaches the hook's guarded-agent fallback.
-
 #### EVAL-001 — validate routing-cluster target integrity
 
 **Status:** `ready`
