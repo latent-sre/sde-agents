@@ -30,37 +30,6 @@ Git history and archived reviews retain the implementation detail.
 
 ### Active
 
-#### ROUND1-001 — complete the approved fleet-expansion Round 1
-
-**Status:** `active`
-
-**Outcome:** Land the PowerShell craft reference with measured routing behavior, split
-`lab-audit`'s checks into command-level guidance with a ledger output, and add the three approved
-behavioral contracts.
-
-**Source:** Approved
-[`Round 1 design`](superpowers/specs/2026-07-27-fleet-expansion-round1-design.md) and executable
-[`Round 1 plan`](superpowers/plans/2026-07-27-fleet-expansion-round1.md).
-
-**Prerequisites:** Resume measurement safely. A 27-session batch launched in a fire-and-return
-subagent produced no artifact and no provable eval session. The plan must now be worked from an
-owning foreground session.
-
-**Acceptance:** Every planned file and case lands; the scoped routing before/after artifacts record
-comparable model and timeout conditions; all new behavioral cases pass at the agreed thrift scope;
-validator, unit suite, and strict plugin validation pass; this item is closed with exact commits
-and any deliberate deviations.
-
-**Executed 2026-07-29** on PR #37 from the owning controller session (smoke discriminator passed,
-then the full plan foreground/controller-owned): powershell.md + measured widening (negatives
-0% → 0%, `pos-powershell-pester` 0/3 → 3/3, opus/420s, claude-opus-5 observed), lab-audit split,
-two of the three behavioral contracts green. Deliberate deviation: the ladder contract failed 2/2
-at landing and was surfaced as `DEF-001` instead of shipped red; the empty-cwd case-repair branch
-was correctly skipped (hypothesis refuted by the diagnose artifact).
-
-**Next action:** Merge PR #37, then land `DEF-001`; this item closes only when its full acceptance
-gate is met.
-
 ### Ready
 
 #### GOV-001 — make malformed guarded input fail closed
@@ -106,56 +75,6 @@ validator change.
 
 **Next action:** Encode the failing cluster fixture and choose the smallest schema rule that makes
 the scorer and reported cluster rate agree.
-
-#### EVAL-002 — record behavioral-eval conditions and token use
-
-**Status:** `ready`
-
-**Outcome:** Behavioral benchmark artifacts record enough conditions and usage to compare contract
-pass rate and cost rather than reporting pass/fail alone.
-
-**Source:** Combined
-[`ECC import review`](archive/2026-07/ecc-import-review.md), Batch 2 `agent-eval` doctrine,
-confirmed missing during reconciliation.
-
-**Prerequisites:** Preserve deterministic grading; usage collection must not introduce a judge.
-
-**Acceptance:** `benchmark.json` records CLI/model/timeout conditions plus observed input/output
-token usage per run or labels usage unavailable; unit tests cover complete and missing usage; the
-existing behavioral cases grade identically; and the runner's scratch cwd behavior is repaired (or
-explicitly version-pinned) with a validating case so `packet-slots-builder` can exercise its
-write-and-test premise.
-
-**Next action:** Reuse the routing runner's transcript-usage extraction rather than deriving a
-second parser.
-
-**Live evidence 2026-07-29 (Round 1 Task 7):** behavioral sessions ran on `claude-fable-5` — the
-CLI default, unpinned and unrecorded — and the runner's `%TEMP%` scratch cwd blocked `Write` even
-under `acceptEdits` on CLI 2.1.220, compromising `packet-slots-builder`'s stated premise. Scope
-addition: the runner gains a `--model` pin recorded in conditions, and its scratch cwd moves off
-`%TEMP%` (or the write-block is proven version-specific and pinned in a test).
-
-#### DEF-001 — the ladder report-up contract does not bind
-
-**Status:** `ready`
-
-**Outcome:** A spawned builder handed an above-altitude fork reports it with the owning rung named
-(principal-engineer / distinguished-architect) rather than answering with a hedged default, and
-the `ladder-report-not-absorb` behavioral case lands green **unchanged**.
-
-**Source:** Round 1 Task 7 defect finding — failed 2/2 (runner + faithful repro with transcript);
-forensics in the Round 1 SDD workspace (`task-7-report.md`), summary in PR #37. The case text
-lives verbatim in the Round 1 plan, Task 7.
-
-**Prerequisites:** None. The expected fix is body-only in the ladder paraphrases (no description
-change); if a description turns out to need the edit, it owes the affected cluster's before/after.
-
-**Acceptance:** The report-to-caller paraphrase in `agents/sde-fullstack.md` (and any ladder agent
-carrying it) names the routing obligation explicitly; the case relands unchanged and passes; the
-regex is not weakened to accept advice-with-hedge.
-
-**Next action:** Strengthen the report-up wording in the builder's ladder section, then reland the
-case and require green.
 
 #### ROLE-001 — implement the home-lab SRE rebrand and Linux-host boundary
 
