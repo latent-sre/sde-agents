@@ -176,5 +176,5 @@ python3 scripts/probe_plugin.py
 ```
 
 It loads the plugin with `--plugin-dir .`, drives a headless run, and asserts against the transcript.
-Re-run it after upgrading the Claude Code CLI: it is what turns an undocumented payload field from a
+Re-run it after upgrading the Claude Code CLI: it is what turns an upstream payload rename from a
 silent-disarm risk into a loud failure.

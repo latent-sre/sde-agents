@@ -58,8 +58,8 @@ two of the three behavioral contracts green. Deliberate deviation: the ladder co
 at landing and was surfaced as `DEF-001` instead of shipped red; the empty-cwd case-repair branch
 was correctly skipped (hypothesis refuted by the diagnose artifact).
 
-**Next action:** Merge PR #37 after review; this item closes on merge (acceptance evidence is in
-the PR and `evals/baselines/2026-07-27-*/`).
+**Next action:** Merge PR #37, then land `DEF-001`; this item closes only when its full acceptance
+gate is met.
 
 ### Ready
 
@@ -122,7 +122,9 @@ confirmed missing during reconciliation.
 
 **Acceptance:** `benchmark.json` records CLI/model/timeout conditions plus observed input/output
 token usage per run or labels usage unavailable; unit tests cover complete and missing usage; the
-existing behavioral cases grade identically.
+existing behavioral cases grade identically; and the runner's scratch cwd behavior is repaired (or
+explicitly version-pinned) with a validating case so `packet-slots-builder` can exercise its
+write-and-test premise.
 
 **Next action:** Reuse the routing runner's transcript-usage extraction rather than deriving a
 second parser.
@@ -213,8 +215,9 @@ in every normal session.
 **Prerequisites:** Operator choice; parked deliberately on 2026-07-29.
 
 **Acceptance:** The decision record is accepted. If plugin-install is chosen: junctions dropped,
-install verified, guard probe green in a normal (non `--plugin-dir`) session. If junctions are
-kept: the README/AGENTS honest-posture note lands and LABSEC-002's value is re-adjudicated.
+install verified, and a reproducible normal-session (non `--plugin-dir`) check proves namespaced
+registration plus guarded-command denial. If junctions are kept: the README/AGENTS honest-posture
+note lands and LABSEC-002's value is re-adjudicated.
 
 **Next action:** Operator reviews the decision record's trade table and picks a mode — required
 before any LABSEC-002 work.
@@ -290,15 +293,16 @@ or adversary checklist without taking change authority or combining lab secrets 
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
 decision.
 
-**Prerequisites:** LABSEC-001 accepted; GOV-001 landed; each proposed lab reader independently
-threat-reviewed and regression-tested; hook/guard roster synchronization retained; EVAL-001 landed.
+**Prerequisites:** LABSEC-001 accepted; DEPLOY-001 accepted; GOV-001 landed; each proposed lab
+reader independently threat-reviewed and regression-tested; hook/guard roster synchronization
+retained; EVAL-001 landed.
 
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
 `homelab-platform`.
 
-**Next action:** None until LABSEC-001 and GOV-001 are complete.
+**Next action:** None until LABSEC-001, DEPLOY-001, and GOV-001 are complete.
 
 #### EVAL-003 — capture a comparable full routing anchor
 

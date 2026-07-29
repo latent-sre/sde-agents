@@ -65,8 +65,9 @@ the pager entirely when stdout is not a TTY, which it never is under a hook.)
 SCOPING CONTRACT (probed, not assumed): the stdin payload carries `agent_type` — namespaced for a
 plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. THE MAIN LOOP CARRIES
 NO `agent_type` KEY AT ALL, which is what makes a session-wide hook safe: the user's own Bash can
-never match GUARDED_AGENTS and is never inspected. `agent_type` is UNDOCUMENTED, so if it is ever
-renamed upstream the guard would silently stop guarding — see the contract canary in main().
+never match GUARDED_AGENTS and is never inspected. `agent_type` is documented upstream, but if it
+is ever renamed (or the plugin namespaced form changes) the guard would silently stop guarding —
+see the contract canary in main().
 
 Decision transport: a deny is the permissionDecision JSON on stdout with exit EXIT_DENY (43); an
 allow is empty stdout with exit EXIT_ALLOW (42). The distinctive codes are how the hook tells THIS
