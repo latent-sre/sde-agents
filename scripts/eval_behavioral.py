@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import fnmatch
 import importlib.util
 import json
@@ -42,6 +43,24 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 CASES_DIR = REPO / "evals" / "behavioral"
 CLAUDE = shutil.which("claude")
+
+# NOT under tempfile.gettempdir(), deliberately. The CLI's sandbox write-blocks the %TEMP% tree,
+# and a behavioral session launched with its cwd there cannot Write even under acceptEdits —
+# observed directly on CLI 2.1.220 (2026-07-29): packet-slots-builder's builder had both Write
+# calls permission-blocked, so the case's write-and-run premise was silently void. Home is outside
+# that block; each session still gets a throwaway subdirectory that is removed afterward.
+SCRATCH_ROOT = Path.home() / ".sde-agents" / "eval-scratch"
+
+
+@contextlib.contextmanager
+def scratch_cwd():
+    """A disposable session cwd that the CLI sandbox allows writes in (see SCRATCH_ROOT)."""
+    SCRATCH_ROOT.mkdir(parents=True, exist_ok=True)
+    cwd = Path(tempfile.mkdtemp(dir=SCRATCH_ROOT))
+    try:
+        yield cwd
+    finally:
+        shutil.rmtree(cwd, ignore_errors=True)
 
 _spec = importlib.util.spec_from_file_location("packet_lint", REPO / "scripts" / "packet_lint.py")
 packet_lint = importlib.util.module_from_spec(_spec)
@@ -63,9 +82,15 @@ _routing_spec.loader.exec_module(eval_routing)
 
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, disallowed_tools: list[str] | None = None,
-    agent: str | None = None, permission_mode: str | None = None,
-) -> tuple[str, set[str], str | None]:
-    """Drive one headless session to completion; return (final text, components fired, note).
+    agent: str | None = None, permission_mode: str | None = None, model: str | None = None,
+) -> tuple[str, set[str], str | None, dict]:
+    """Drive one headless session to completion; return (final text, fired, note, stats).
+
+    `stats` is the shared transcript read (`eval_routing.transcript_stats`) — tokens, duration,
+    observed model, completion — so the benchmark can state the conditions it measured under
+    instead of reporting pass/fail alone. `model` pins the session model and is recorded by the
+    caller as `model_requested`; without it the session takes whatever the CLI defaults to, which
+    was observed to be the TOP tier (claude-fable-5) — an unchosen, unrecorded condition.
 
     Unlike the routing runner — which grades the FIRST routing decision and is happy with a partial
     transcript — a behavioral eval needs the session's CONCLUSION, so a timeout is a real failure
@@ -78,11 +103,12 @@ def run_session(
     meant to detect.
     """
     if CLAUDE is None:
-        return "", set(), "the `claude` CLI is not on PATH"
+        return "", set(), "the `claude` CLI is not on PATH", eval_routing.transcript_stats("")
     command = [
         CLAUDE, "-p", prompt,
         "--plugin-dir", str(plugin_dir),
         "--output-format", "stream-json", "--verbose",
+        *(("--model", model) if model else ()),
     ]
     # `--agent` runs the session AS the component, which is the only deterministic way to measure
     # an agent's contract. Asking a headless session to delegate does not work reliably: probed
@@ -103,15 +129,16 @@ def run_session(
     if disallowed_tools:
         command += ["--disallowed-tools", *disallowed_tools]
     try:
-        with tempfile.TemporaryDirectory() as cwd:
+        with scratch_cwd() as cwd:
             proc = subprocess.run(
                 command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
             )
     except subprocess.TimeoutExpired:
-        return "", set(), f"timed out after {timeout}s before the session concluded"
+        return "", set(), f"timed out after {timeout}s before the session concluded", \
+            eval_routing.transcript_stats("")
     except Exception as exc:
-        return "", set(), f"run failed: {exc}"
+        return "", set(), f"run failed: {exc}", eval_routing.transcript_stats("")
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
     # text blocks if the shape ever changes, so a stream-format tweak degrades rather than breaks.
@@ -156,7 +183,7 @@ def run_session(
     text = "\n\n".join(filter(None, [final or "\n".join(assistant_text), *agent_outputs]))
     fired = eval_routing.components_fired(proc.stdout or "")
     note = None if text else f"no output captured (exit {proc.returncode})"
-    return text, fired, note
+    return text, fired, note, eval_routing.transcript_stats(proc.stdout or "")
 
 
 def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[str]:
@@ -207,6 +234,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--concurrency", type=int, default=3)
     parser.add_argument("--plugin-dir", type=Path, default=REPO)
     parser.add_argument("--output-dir", type=Path, help="also write benchmark.json here")
+    parser.add_argument("--model", default=None,
+                        help="pin the session model (recorded in conditions). Without it every "
+                             "session takes the CLI default — an unchosen condition no artifact "
+                             "records, observed to be the most expensive tier.")
     args = parser.parse_args(argv)
 
     cases = load_cases(args.case)
@@ -231,27 +262,40 @@ def main(argv: list[str] | None = None) -> int:
     jobs = [(case, run) for case in cases for run in range(args.runs)]
     results: dict[str, list[list[str]]] = {case["id"]: [] for case in cases}
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
+    usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
+    observed_models: set[str] = set()
 
-    def execute(job: tuple[dict, int]) -> tuple[str, list[str], str | None]:
+    def execute(job: tuple[dict, int]) -> tuple[str, list[str], str | None, dict]:
         case, _ = job
-        text, fired, note = run_session(
+        text, fired, note, stats = run_session(
             case["prompt"], args.plugin_dir, args.timeout, case.get("disallowed_tools"),
-            case.get("agent"), case.get("permission_mode"),
+            case.get("agent"), case.get("permission_mode"), args.model,
         )
         # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
         # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
         if case.get("agent"):
             fired = fired | {case["agent"].split(":")[-1]}
         if note and not text:
-            return case["id"], [f"session produced nothing: {note}"], note
-        return case["id"], assert_case(text, case, fired), note
+            return case["id"], [f"session produced nothing: {note}"], note, stats
+        return case["id"], assert_case(text, case, fired), note, stats
 
     done = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        for case_id, failures, note in pool.map(execute, jobs):
+        # pool.map preserves submission order, so per-case run arrays stay diffable between two
+        # otherwise-identical benchmarks (the routing runner re-sorts for the same reason).
+        for case_id, failures, note, stats in pool.map(execute, jobs):
             results[case_id].append(failures)
             if note:
                 notes[case_id].append(note)
+            # Usage is per RUN, None when the transcript carried none — a labeled absence, never a
+            # fabricated zero (the same rule packet_lint applies to unevidenced claims).
+            has_usage = stats["input_tokens"] is not None or stats["output_tokens"] is not None
+            usage[case_id].append(
+                {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
+                if has_usage else None
+            )
+            if stats["model"]:
+                observed_models.add(stats["model"])
             done += 1
             print(f"  [{done}/{total}] complete", end="\r", flush=True)
     print(" " * 40, end="\r")
@@ -278,15 +322,26 @@ def main(argv: list[str] | None = None) -> int:
             "runs": len(runs), "rate": rate,
             "failures": sorted({f for failures in runs for f in failures}),
             "notes": notes[case["id"]],
+            "usage_per_run": usage[case["id"]],
         })
 
     print("-" * 100)
     print(f"{passed_cases}/{len(cases)} cases passed every run")
 
     if args.output_dir:
+        # The same contract the routing artifacts carry: a benchmark without its conditions cannot
+        # state what it measured, so two of them cannot be validly compared (EVAL-002).
+        conditions = {
+            "cli_version": eval_routing.cli_version(),
+            "model_requested": args.model,
+            "models_observed": sorted(observed_models),
+            "plugin_dir": str(args.plugin_dir),
+            "timeout_s": args.timeout,
+        }
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "benchmark.json").write_text(
-            json.dumps({"runs_per_case": args.runs, "cases": payload}, indent=2) + "\n",
+            json.dumps({"runs_per_case": args.runs, "conditions": conditions, "cases": payload},
+                       indent=2) + "\n",
             encoding="utf-8",
         )
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")

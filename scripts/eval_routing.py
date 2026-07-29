@@ -114,6 +114,44 @@ def _string_values(obj) -> list[str]:
     return []
 
 
+def transcript_stats(stdout: str) -> dict:
+    """Measurement conditions read off one stream-json transcript:
+    {input_tokens, output_tokens, duration_ms, model, completed}.
+
+    Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
+    baseline, and two parsers would eventually disagree about one transcript — so this is the one
+    read every benchmark writer uses. Token fields are None when the transcript carries no usage,
+    never zero: a fabricated 0 reads as "this run was free" in any later cost comparison.
+    """
+    input_tokens = output_tokens = duration = model = None
+    completed = False
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "result":
+            usage = event.get("usage") or {}
+            input_tokens = usage.get("input_tokens", input_tokens)
+            output_tokens = usage.get("output_tokens", output_tokens)
+            duration = event.get("duration_ms")
+            # A `result` event means the session RAN TO ITS END — the transcript is whole, so its
+            # routing (or its silence) is an observation rather than a blank.
+            completed = True
+        # Record the model the session ACTUALLY ran on, read off the transcript rather than
+        # assumed — routing behavior varies by tier, so an artifact that omits it cannot be validly
+        # diffed against another. Deliberately independent of any REQUESTED model: reusing the
+        # request for this once made the read conditional on --model being absent, so
+        # `models_observed` echoed the requested alias for exactly the pinned runs the conditions
+        # block exists to describe.
+        if model is None:
+            candidate = event.get("model") or (event.get("message") or {}).get("model")
+            if isinstance(candidate, str) and candidate:
+                model = candidate
+    return {"input_tokens": input_tokens, "output_tokens": output_tokens,
+            "duration_ms": duration, "model": model, "completed": completed}
+
+
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None) -> dict:
     """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
@@ -150,31 +188,10 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     except Exception as exc:  # a broken spawn must not crash the suite
         note = f"run failed: {exc}"
 
-    tokens = duration = observed_model = None
-    session_completed = False
-    for line in stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("type") == "result":
-            usage = event.get("usage") or {}
-            tokens = (usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0) or None
-            duration = event.get("duration_ms")
-            # A `result` event means the session RAN TO ITS END — the transcript is whole, so its
-            # routing (or its silence) is an observation rather than a blank.
-            session_completed = True
-        # Record the model the session ACTUALLY ran on, read off the transcript rather than assumed.
-        # Routing behavior varies by model tier, so a benchmark that omits it cannot be validly
-        # diffed against another — a lesson from comparing two runs of this suite that had silently
-        # used different models and reading the difference as a routing regression. Kept in its own
-        # local: reusing the `model` PARAMETER for this made the read conditional on --model being
-        # absent, so `models_observed` echoed the requested alias for exactly the pinned runs the
-        # conditions block exists to describe.
-        if observed_model is None:
-            candidate = event.get("model") or (event.get("message") or {}).get("model")
-            if isinstance(candidate, str) and candidate:
-                observed_model = candidate
+    stats = transcript_stats(stdout)
+    tokens = ((stats["input_tokens"] or 0) + (stats["output_tokens"] or 0)) or None
+    duration, observed_model = stats["duration_ms"], stats["model"]
+    session_completed = stats["completed"]
 
     fired = sorted(components_fired(stdout))
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
