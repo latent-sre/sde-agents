@@ -29,7 +29,8 @@ was copied wholesale.
 ---
 
 This repository also contains debugging discipline adapted from the `systematic-debugging` skill
-of [`obra/superpowers`](https://github.com/obra/superpowers), reviewed at plugin version 6.2.0.
+of [`obra/superpowers`](https://github.com/obra/superpowers), reviewed at tag `v6.2.0`, which is
+commit `3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9`.
 
 Copyright (c) 2025 Jesse Vincent. Licensed under the MIT License (text as above).
 
