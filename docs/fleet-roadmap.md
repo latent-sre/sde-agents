@@ -116,7 +116,22 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    anchor capturing agent positives at zero would record the harness, not the descriptions. Settle
    the case design — or grade agent members differently — before spending a full-suite capture.
 
-**Next action:** Decide the agent-positive case design first; only then capture the anchor.
+3. **Configuration contamination is measured — and refuted as the agent-positive suppressor**
+   (2026-07-29, phase 1 of this item). `scripts/probe_isolation.py` showed every eval session had
+   been inheriting 134 operator-side entries, with the fleet registered twice (9 bare via the
+   junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
+   (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent
+   positives still fired **0/6** under otherwise-identical conditions
+   (`baselines/2026-07-29-isolation/appsec-cleanroom` vs the same day's contaminated 0/6). The
+   under-fire is a property of headless one-shot mode on this tier, not of the operator's
+   configuration. Both runners now record `clean_room` in `conditions`, and artifacts differing on
+   it must not be diffed against each other.
+
+**Next action:** Decide the agent-member grading — the evidence-backed default is negatives-only
+in routing, with each agent's contract covered by the pinned behavioral suite (`--agent` runs are
+deterministic where routing summons are not) — then capture the anchor under `--clean-room`, whose
+conditions the artifact now records. Isolation will not rescue agent positives; nothing further is
+owed on that question.
 
 #### PORT-001 — codify the cross-fleet import method
 
