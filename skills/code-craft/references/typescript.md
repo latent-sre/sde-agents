@@ -1,0 +1,97 @@
+# TypeScript — idioms and the traps that pass review
+
+Read before writing TypeScript or JavaScript, React included. The universal rules live in
+`skills/code-craft/SKILL.md`. On any conflict, SKILL.md wins; the repository's own conventions
+outrank both. Layer boundary: `sde-agents:frontend-craft` owns the UI layer — state placement
+across the app, resilience UX, accessibility. This file owns what the code does inside a module or
+component.
+
+## Make the compiler catch what review would miss
+
+- **Brand your ids.** `type UserId = string & { readonly __brand: 'UserId' }` costs nothing at
+  runtime and stops an order id crossing into a user-id slot at check time. Two ids of the same
+  primitive type in one signature is the bug the checker can't see until you brand them.
+- **Variants are a discriminated union**, not a string field plus `if`s:
+  `type State = { status: 'success'; data: T } | { status: 'error'; error: E }` — narrow with a
+  `switch` on the discriminant, and give the `default` branch a `never` assignment so adding a
+  variant fails compilation everywhere it isn't handled.
+- **Separate input types from output types.** What callers send (`CreateTaskInput`) and what you
+  return (`Task`, with server-owned id and timestamps) drift independently; one shared type grows
+  optional fields that lie in both directions.
+
+## The traps that produce wrong behavior, not errors
+
+- **A floating promise swallows its rejection.** An `async` call without `await` (or an explicit
+  `void` and a reason) fails silently — enable the lint rule (`no-floating-promises`) and treat
+  every exception it flags as a decision to justify.
+- **Sequential awaits on independent work** is the number-one performance defect class: three
+  `await`s in a row are three round trips; `Promise.all` makes them one. Waterfalls compound in
+  server components and route handlers where every render pays them.
+- **Don't await before the branch that needs it.** A fetch above an early return blocks the path
+  that never uses the result — move each `await` into the branch that consumes it, cheapest guard
+  first.
+- **Module scope on a server is process-wide shared memory.** Concurrent renders and requests
+  share it: a `let currentUser` written by one request and read by another leaks one user's data
+  into another's response. Request data travels through props and arguments; module scope is for
+  immutable config and deliberately shared, correctly keyed caches.
+- **Barrel imports load the whole library.** A package's `index` entry can re-export thousands of
+  modules, and tree-shaking doesn't rescue an external dependency. Import deep from the module you
+  use, or turn on the framework's import optimizer; deep paths in some libraries ship no `.d.ts`
+  and go implicit-`any` under `strict` — check before committing to that form.
+
+## React: rendering and structure
+
+- **Derived values compute during render.** `useEffect` + `setState` to maintain what
+  props/state already determine causes an extra render per change and drifts when one path is
+  missed — assign the expression, or key the component to reset it. Subscribe at the granularity
+  you consume, too: a media query that yields the boolean re-renders when the *answer* changes; a
+  window-width hook re-renders per pixel.
+- **Never define a component inside a component.** The inner function is a new component type
+  every render, so React fully remounts it — the tell is inputs losing focus per keystroke,
+  effects re-running, state resetting. Hoist it and pass props.
+- **Memoize at the right boundary — both directions.** Extract expensive work into a memoized
+  child so the parent's early returns skip it entirely; and don't wrap a simple primitive
+  expression in `useMemo` — the hook plus dependency compare costs more than the expression. (A
+  repo with React Compiler enabled makes manual memoization unnecessary; match what the repo
+  does.)
+- **Boolean props multiply states; variants compose them.** When `isThread`/`isEditing`/
+  `isForwarding` start branching one component's render, build explicit variant components that
+  compose shared parts (`ThreadComposer`, `EditComposer`) — each states what it renders, and
+  impossible combinations stop existing.
+- **Compound components share one context, not prop threads**: export an object of sub-components
+  around a provider whose value is shaped `{ state, actions, meta }` — UI consumes the interface,
+  providers own the implementation, so the same composed UI runs on local state or a synced store.
+  The **provider boundary, not visual nesting, grants access**: a preview or submit button outside
+  the frame but inside the provider reads the same state and calls the same actions.
+- **Children over render props** for composing structure; a render prop is right only when the
+  parent supplies per-item data (`renderItem={({ item }) => …}`).
+- **On React 19+**, `ref` is a regular prop (`forwardRef` is legacy) and `use(Context)` replaces
+  `useContext` — and may be called conditionally.
+
+## The write path (any app with a query/cache layer)
+
+- **The optimistic lifecycle is five beats, in order**: cancel in-flight queries → snapshot every
+  affected cache → patch instantly → on error, restore the exact snapshot → on settle (success
+  *and* error), invalidate so server-computed fields refetch. Skipping cancel is the classic
+  flicker: an already-in-flight refetch resolves after your patch and clobbers it. Rollback
+  restores the snapshot verbatim, never a re-derivation.
+- **Know when not to be optimistic**: a create returning server-owned fields runs as a pending
+  mutation that seeds the cache from the response; a destructive or money-moving write confirms
+  first; and server state lives in the query cache only — never mirrored into a client store.
+- **One entity lives in many caches** — its detail plus every filtered list page. Patch and
+  snapshot all of them through a hierarchical query-key factory, or the badge in the list
+  disagrees with the detail view after the write.
+- **Mint the idempotency key at first intent** (form init), and thread it through retries. A key
+  generated inside the mutation function regenerates per retry and protects nothing — that is the
+  double-charge bug. Pair it with disabled-while-pending so a user can't fire a second distinct
+  write.
+- **Retries are stratified by safety**: reads retry with backoff; non-idempotent writes never
+  auto-retry (at most a bounded retry on pure network errors, never on 4xx); a `409` never
+  auto-retries — surface the conflict, invalidate, and let the user decide on fresh data.
+
+## Verify
+
+Before "done": the typechecker at the repo's configured strictness and the linter are clean
+(`no-floating-promises` on), tests pass per `references/tdd.md`, and anything rendered was
+exercised in a real browser — that gate, and where state should live at all, belong to
+`sde-agents:frontend-craft`.
