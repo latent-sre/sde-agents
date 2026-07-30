@@ -1,0 +1,769 @@
+{
+  "cluster": "homelab-ops",
+  "runs_per_case": 3,
+  "members": [
+    "homelab-platform",
+    "host-onboard",
+    "lab-audit",
+    "lab-incident",
+    "observability",
+    "postmortem",
+    "restore-drill",
+    "runbook",
+    "security-audit",
+    "service-onboard",
+    "upgrade-campaign"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "threshold": 0.5,
+    "timeout_s": 420,
+    "clean_room": true
+  },
+  "summary": {
+    "passed": 21,
+    "total": 30
+  },
+  "cases": [
+    {
+      "id": "pos-add-service",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "add-service"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-onboard-standardize",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "standardize"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.333,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform', 'service-onboard'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [
+          "runbook"
+        ],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-troubleshoot-proxy",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "troubleshoot"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-pin-and-restart",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "change"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-audit-whats-wrong",
+      "polarity": "positive",
+      "tags": [
+        "lab-audit",
+        "sweep"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['lab-audit'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "lab-audit"
+        ],
+        [
+          "lab-audit"
+        ],
+        [
+          "lab-audit"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-audit-security",
+      "polarity": "positive",
+      "tags": [
+        "lab-audit",
+        "security-sweep"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.333,
+      "correct_rate": 0.333,
+      "detail": "expected ['lab-audit'] fired in 1/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [
+          "lab-audit"
+        ],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-runbook-write",
+      "polarity": "positive",
+      "tags": [
+        "runbook",
+        "write-doc"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['runbook'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "runbook"
+        ],
+        [
+          "runbook"
+        ],
+        [
+          "runbook"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-runbook-update",
+      "polarity": "positive",
+      "tags": [
+        "runbook",
+        "update-doc"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['runbook'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-postmortem-writeup",
+      "polarity": "positive",
+      "tags": [
+        "postmortem",
+        "write-up"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['postmortem'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-postmortem-retro",
+      "polarity": "positive",
+      "tags": [
+        "postmortem",
+        "retro"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['postmortem'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-app-feature",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "app-feature"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-review-deploy",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "review"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-debug-test",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "debug"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-api-docs",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "api-docs"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-lab-architecture",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "architecture"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-status-dashboard",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "frontend"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 1,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/2 runs (want 0) [1 run(s) excluded: no usable transcript]",
+      "also_fired": [
+        "frontend-craft"
+      ],
+      "fired_per_run": [
+        [],
+        [],
+        [
+          "frontend-craft"
+        ]
+      ],
+      "errors": [
+        "timed out after 420s (partial transcript graded)"
+      ],
+      "notes": [
+        "timed out after 420s (partial transcript graded)"
+      ]
+    },
+    {
+      "id": "neg-prompt-fix",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "prompt-tooling"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-sprint-retro",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "postmortem"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-incident-down",
+      "polarity": "positive",
+      "tags": [
+        "lab-incident",
+        "outage"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['homelab-platform', 'lab-incident'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "lab-incident"
+        ],
+        [
+          "lab-incident"
+        ],
+        [
+          "lab-incident"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-incident-after-update",
+      "polarity": "positive",
+      "tags": [
+        "lab-incident",
+        "outage"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.667,
+      "correct_rate": 0.667,
+      "detail": "expected ['homelab-platform', 'lab-incident'] fired in 2/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "lab-incident"
+        ],
+        [],
+        [
+          "lab-incident"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-restore-drill",
+      "polarity": "positive",
+      "tags": [
+        "restore-drill"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['restore-drill'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "restore-drill"
+        ],
+        [
+          "restore-drill"
+        ],
+        [
+          "restore-drill"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-upgrade-campaign",
+      "polarity": "positive",
+      "tags": [
+        "upgrade-campaign"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['upgrade-campaign'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "upgrade-campaign"
+        ],
+        [
+          "upgrade-campaign"
+        ],
+        [
+          "upgrade-campaign"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-observability-alert",
+      "polarity": "positive",
+      "tags": [
+        "observability",
+        "promql"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['observability'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "observability"
+        ],
+        [
+          "observability"
+        ],
+        [
+          "observability"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-resolved-not-incident",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "lab-incident",
+        "postmortem"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "['lab-incident', 'restore-drill', 'upgrade-campaign'] fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-host-linux",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "linux-host"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-host-onboard",
+      "polarity": "positive",
+      "tags": [
+        "homelab-platform",
+        "host-onboard"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 0.0,
+      "detail": "expected ['homelab-platform', 'host-onboard'] fired in 0/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-personal-machine",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "linux-host"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-attacker-reach",
+      "polarity": "positive",
+      "tags": [
+        "security-audit",
+        "attacker-reach"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.667,
+      "correct_rate": 0.667,
+      "detail": "expected ['security-audit'] fired in 2/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "security-audit"
+        ],
+        [
+          "security-audit"
+        ],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-default-creds",
+      "polarity": "positive",
+      "tags": [
+        "security-audit",
+        "credentials"
+      ],
+      "passed": false,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.333,
+      "correct_rate": 0.333,
+      "detail": "expected ['security-audit'] fired in 1/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [
+          "security-audit"
+        ],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-harden-app-code",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "security-audit"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}

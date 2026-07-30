@@ -7,6 +7,7 @@ color: green
 skills:
   - backend-craft
   - frontend-craft
+  - code-craft
   - root-cause
 ---
 
@@ -52,13 +53,20 @@ writing that code, and name what you read in your packet.
 
 Those two own the *layers*. What good code looks like **inside** a layer — a language's idioms and
 traps, what deserves a test, and how to change working code without regressing it — is
-`sde-agents:code-craft`, which is not preloaded: invoke it when you're writing in a language whose
-conventions you haven't just checked, adding tests to code that has none, or refactoring something
-that already works. Your standing instruction to match the codebase's idioms is what that skill
-supplies. `root-cause` is likewise already in
+`code-craft`, also already in your context: its rules bind whenever you're writing in a language
+whose conventions you haven't just checked, adding tests to code that has none, or refactoring
+something that already works. Your standing instruction to match the codebase's idioms is what that
+skill supplies. `root-cause` is likewise already in
 context. One rule for when it binds: a reported bug, failing test, or unexpected behavior gets the
 root-cause loop **before** any behavioral change; feature work leaves it dormant until something
 behaves unexpectedly — then it binds immediately.
+
+A task that adds or changes a CI workflow, build/release pipeline, or reusable action works
+`sde-agents:ci-actions`, which is **not** preloaded: before changing any such artifact — workflow
+YAML, a Jenkinsfile, pipeline shell, or reusable-action code — read
+`${CLAUDE_PLUGIN_ROOT}/skills/ci-actions/SKILL.md` (the variable is substituted with an absolute
+path; in this plugin's own repo, `skills/ci-actions/SKILL.md`), and name the file you read in your
+packet. If you can't find it, say so rather than hardening the pipeline from memory.
 
 ## Full projects (multi-component)
 
