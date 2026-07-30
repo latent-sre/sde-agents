@@ -30,6 +30,20 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 
 Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. Avoid nuance clauses ("unless it matters") — they reopen the negotiation. Everywhere outside the pressure-discipline row, the default register is plain imperative that explains *why* — reaching for all-caps MUST/NEVER there is a sign the form is wrong.
 
+## When a new model generation lands
+
+Try **removing instructions first** — each generation needs less scaffolding (Anthropic cut over
+80% of Claude Code's system prompt for the Claude 5 models with no measured loss). Audit absolute
+bans into contextual judgment ("never write multi-paragraph docstrings" → "match the surrounding
+code's comment density"); the pressure-discipline row above is the exception that stays absolute.
+And when trimming a body, keep the gotchas — hard-won failure points are the highest-signal
+content a definition carries; generic workflow prose is what goes.
+
+One recorded conflict (stamped 2026-07): the official skill-authoring doc still recommends worked
+input/output examples, while the Claude 5-era context-engineering guidance reports examples can
+constrain exploration. The fleet keeps its compressed worked examples — re-decide when the docs
+page moves.
+
 ## Load the reference for what you're working on
 
 The method above applies to every prompt task. These apply when the task involves the thing named —
