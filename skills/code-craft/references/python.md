@@ -32,8 +32,9 @@ SKILL.md wins; the repository's own conventions outrank both.
   formatting and survives a name that blows up `__str__`.
 - **`dataclasses`** (or `pydantic` where validation is the point) instead of dicts-as-records — a
   typo in a dict key is a runtime `KeyError`, in a dataclass it's caught by the type checker.
-- **Type the domain, not just the shape.** `NewType("UserId", str)` costs nothing at runtime and
-  stops an order id crossing into a user-id slot at check time. Variants are a
+- **Type the domain, not just the shape.** `NewType("UserId", str)` is a check-time distinction
+  (the cast call `UserId(...)` is a near-free identity function at runtime) and stops an order id
+  crossing into a user-id slot at check time. Variants are a
   `Literal`-discriminated union dispatched with `match`, not a string field plus `if`s; accept
   capabilities structurally with `Protocol` ("has a `read()`"), not by inheritance.
 - **Type hints on public functions**, and run the checker the repo runs. Hints nobody checks are

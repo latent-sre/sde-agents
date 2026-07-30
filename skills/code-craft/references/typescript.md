@@ -35,9 +35,10 @@ component.
   into another's response. Request data travels through props and arguments; module scope is for
   immutable config and deliberately shared, correctly keyed caches.
 - **Barrel imports load the whole library.** A package's `index` entry can re-export thousands of
-  modules, and tree-shaking doesn't rescue an external dependency. Import deep from the module you
-  use, or turn on the framework's import optimizer; deep paths in some libraries ship no `.d.ts`
-  and go implicit-`any` under `strict` — check before committing to that form.
+  modules, and tree-shaking often fails to rescue an external dependency — it depends on the
+  package's module format and side-effect declarations, which you don't control. Import deep from
+  the module you use, or turn on the framework's import optimizer; deep paths in some libraries
+  ship no `.d.ts` and go implicit-`any` under `strict` — check before committing to that form.
 
 ## React: rendering and structure
 
@@ -92,6 +93,6 @@ component.
 ## Verify
 
 Before "done": the typechecker at the repo's configured strictness and the linter are clean
-(`no-floating-promises` on), tests pass per `references/tdd.md`, and anything rendered was
+(`no-floating-promises` on), tests pass per [tdd.md](tdd.md), and anything rendered was
 exercised in a real browser — that gate, and where state should live at all, belong to
 `sde-agents:frontend-craft`.
