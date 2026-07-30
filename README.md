@@ -8,7 +8,7 @@ generated copy and no second source of truth.
 ## Fleet
 
 <!-- fleet-inventory:start -->
-- **Agents (9):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `researcher`, `sde-fullstack`
+- **Agents (10):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `researcher`, `sde-fullstack`, `verification-engineer`
 - **Skills (19):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 

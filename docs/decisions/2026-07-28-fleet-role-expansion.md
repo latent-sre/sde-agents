@@ -1,8 +1,9 @@
 # Fleet role expansion and home-lab SRE identity
 
-**Status:** Accepted in part (2026-07-29) — the application-security auditor (ROLE-002) and the
+**Status:** Accepted (2026-07-29) — the application-security auditor (ROLE-002) and the
 home-lab SRE identity with `host-onboard` (ROLE-001) are accepted as proposed; the
-verification-execution authority question (ROLE-003) remains open, parked trigger-bound
+verification-execution authority question (ROLE-003) was accepted later the same day as the
+test-authoring verifier contract recorded below
 **Date:** 2026-07-28
 **Reviewed revision:** `be2af4c87a3ecd53286fbcda84863d507ee47ac4`
 **Compared design:** [`2026-07-27 roster expansion`](../archive/2026-07/roster-expansion-design.md)
@@ -28,6 +29,30 @@ and ROLE-002 (`application-security-auditor`, static-first tools, no Bash, non-P
 ROLE-003 was deliberately not decided: it parks trigger-bound and reopens on the first real
 independent-verification task, which also keeps ROLE-004 blocked. LABSEC-001 remains sequenced
 behind ROUND1-001's lab-audit split, unchanged.
+
+**ROLE-003 accepted, 2026-07-29 (later the same session).** The operator reopened the question
+directly rather than waiting for a trigger task and chose the **test-authoring verifier** model
+with a local-containers-free effects gate. The authority contract, answering the six forks this
+record posed:
+
+- it may create and edit tests — the earlier `test-engineer` authoring contract folds in here;
+- product-code edits are always prohibited, as a cooperative limit the definition states honestly
+  (no tool layer distinguishes test paths from product paths);
+- it verifies in a disposable worktree by default, and evidence binds to the exact revision and
+  environment actually tested;
+- hermetic checks run freely, and so do throwaway local containers — with mandatory teardown and
+  packet-reported residue, because container side effects outlive the worktree — while live-lab
+  services, external network calls, shared databases, and external systems require approval named
+  in the task;
+- a check whose gated effect lacks approval is reported **inconclusive**, never silently skipped
+  and never counted passed; and
+- the `tools:` list is the only enforced limit; path scoping and effects gating are cooperative,
+  and the definition states which is which.
+
+Write and Edit are held for the real purpose of test authoring, which keeps the agent out of the
+read-only classification; an execute-only design was rejected because it would either be blocked
+by the guard's no-interpreters rule or require weakening that rule. This acceptance unblocks
+ROLE-004; the roadmap and the 2026-07-29 verification-round documents own implementation status.
 
 ## Decision question
 

@@ -64,44 +64,6 @@ note lands and LABSEC-002's value is re-adjudicated.
 **Next action:** Reopen after the current Ready queue lands; the operator then reviews the
 decision record's trade table and picks a mode.
 
-#### ROLE-003 — define verification execution authority
-
-**Status:** `deferred` — parked trigger-bound by the operator on 2026-07-29: reopen on the first
-real independent-verification task; choose the authority model then. ROLE-004 stays blocked
-behind it.
-
-**Outcome:** Decide how an independent verifier may execute repository tests without pretending
-that test runners are read-only or that a worktree contains network/database side effects.
-
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
-
-**Prerequisites:** GOV-001 and operator choice on test-file edits, worktree isolation, integration
-tests, external effects, and live-environment approval.
-
-**Acceptance:** A written authority contract names allowed product/test edits, worktree behavior,
-external-effect gates, and enforcement limits; governance tests pin any new roster or exception.
-
-**Next action:** Choose the authority model before authoring the agent.
-
-#### ROLE-004 — add an independent verification engineer
-
-**Status:** `blocked`
-
-**Outcome:** Add an agent that independently reproduces and executes acceptance/regression
-evidence without implementing the product fix.
-
-**Source:** Proposed
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md).
-
-**Prerequisites:** ROLE-003 accepted, GOV-001 landed, and EVAL-001 landed.
-
-**Acceptance:** Agent and routing cases separate verification from implementation, diagnosis,
-static review, and live operations; behavioral tests prove unrun checks cannot be called passed and
-evidence belongs to the exact tested revision/environment.
-
-**Next action:** None until ROLE-003 is accepted.
-
 #### LABSEC-002 — add a guard-enforced lab inspector
 
 **Status:** `blocked`
