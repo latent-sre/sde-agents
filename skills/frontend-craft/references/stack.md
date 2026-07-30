@@ -5,7 +5,9 @@ working in one, you do not need this file.
 
 The universal frontend rules live in `skills/frontend-craft/SKILL.md`. On any conflict, SKILL.md wins.
 
-Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
+When neither the repository nor the user has chosen a framework, the greenfield default is a
+**React + TypeScript SPA on Vite**. An explicit Vue, static-HTML, or other framework choice wins.
+Keep two layers cleanly separated — enterprise-grade logic, custom-painted SPA:
 
 **Paint — one Tailwind reset, one token system:**
 - **Tailwind** for all styling.
@@ -15,9 +17,15 @@ Greenfield is always a **React + TypeScript SPA on Vite**. Keep two layers clean
 
 **Logic — zero CSS, decoupled from the paint:**
 - **TanStack Query** (server state), **TanStack Router** (typed routing + URL state), **TanStack Table** (headless data grids) — one type-safe, zero-CSS suite that *is* the logic layer, painted with Tailwind.
+- **Recharts** for ordinary SVG charts; **uPlot** for dense real-time time-series. The chart
+  contract and selection criteria live in `references/data-viz.md`.
 - **@mantine/hooks** for utility logic (disclosure, debounce, local storage, hotkeys, click-outside, media query, element size); optionally **@mantine/form** for form state. Both ship no CSS and need no provider.
 - Accessible *widget* behavior (focus trap, ARIA, roving tabindex) comes from **Radix / Base UI**, not from Mantine hooks.
 
 **The one hard rule** — never import `@mantine/core` or any styled Mantine component — is stated in full in `SKILL.md` (State and data); hooks-vs-components is the line.
 
-For a greenfield SPA, use this stack no matter how small. Existing repositories keep their established stack as required above. If the user explicitly asks for plain HTML or a static page, comply; that call is theirs. Any greenfield deviation from this default gets one line in the review packet.
+For a greenfield UI with no framework choice, use this stack when SPA navigation and shared client
+state are actually part of the requested scope. A static or narrowly interactive page gets the
+smallest stack that satisfies its contract. Existing repositories and explicit user choices keep
+their selected framework. Any greenfield deviation from the default gets one line in the review
+packet.

@@ -1,6 +1,6 @@
 # TypeScript — idioms and the traps that pass review
 
-Read before writing TypeScript or JavaScript, React included. The universal rules live in
+Read before writing TypeScript or JavaScript in any framework. The universal rules live in
 `skills/code-craft/SKILL.md`. On any conflict, SKILL.md wins; the repository's own conventions
 outrank both. Layer boundary: `sde-agents:frontend-craft` owns the UI layer — state placement
 across the app, resilience UX, accessibility. This file owns what the code does inside a module or
@@ -42,34 +42,12 @@ component.
   the module you use, or turn on the framework's import optimizer; deep paths in some libraries
   ship no `.d.ts` and go implicit-`any` under `strict` — check before committing to that form.
 
-## React: rendering and structure
+## Framework boundary
 
-- **Derived values compute during render.** `useEffect` + `setState` to maintain what
-  props/state already determine causes an extra render per change and drifts when one path is
-  missed — assign the expression, or key the component to reset it. Subscribe at the granularity
-  you consume, too: a media query that yields the boolean re-renders when the *answer* changes; a
-  window-width hook re-renders per pixel.
-- **Never define a component inside a component.** The inner function is a new component type
-  every render, so React fully remounts it — the tell is inputs losing focus per keystroke,
-  effects re-running, state resetting. Hoist it and pass props.
-- **Memoize at the right boundary — both directions.** Extract expensive work into a memoized
-  child so the parent's early returns skip it entirely; and don't wrap a simple primitive
-  expression in `useMemo` — the hook plus dependency compare costs more than the expression. (A
-  repo with React Compiler enabled makes manual memoization unnecessary; match what the repo
-  does.)
-- **Boolean props multiply states; variants compose them.** When `isThread`/`isEditing`/
-  `isForwarding` start branching one component's render, build explicit variant components that
-  compose shared parts (`ThreadComposer`, `EditComposer`) — each states what it renders, and
-  impossible combinations stop existing.
-- **Compound components share one context, not prop threads**: export an object of sub-components
-  around a provider whose value is shaped `{ state, actions, meta }` — UI consumes the interface,
-  providers own the implementation, so the same composed UI runs on local state or a synced store.
-  The **provider boundary, not visual nesting, grants access**: a preview or submit button outside
-  the frame but inside the provider reads the same state and calls the same actions.
-- **Children over render props** for composing structure; a render prop is right only when the
-  parent supplies per-item data (`renderItem={({ item }) => …}`).
-- **On React 19+**, `ref` is a regular prop (`forwardRef` is legacy) and `use(Context)` replaces
-  `useContext` — and may be called conditionally.
+React and Vue rendering, state, lifecycle, SSR, and component-composition rules live in
+`sde-agents:frontend-craft`'s conditional framework references. This language reference still
+applies inside their `.ts`, `.tsx`, and `<script lang="ts">` code, but JSX/TSX or the word
+"component" alone does not identify a framework.
 
 ## The write path (any app with a query/cache layer)
 
