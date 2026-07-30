@@ -35,9 +35,12 @@ Prohibitions backfire on shaping problems; recipes leave nothing to negotiate. A
 Try **removing instructions first** — each generation needs less scaffolding (Anthropic cut over
 80% of Claude Code's system prompt for the Claude 5 models with no measured loss). Audit absolute
 bans into contextual judgment ("never write multi-paragraph docstrings" → "match the surrounding
-code's comment density"); the pressure-discipline row above is the exception that stays absolute.
-And when trimming a body, keep the gotchas — hard-won failure points are the highest-signal
-content a definition carries; generic workflow prose is what goes.
+code's comment density") — but **only stylistic and workflow bans**. Security, privacy, permission,
+and destructive-action invariants stay absolute through every generation: no secrets in prompts,
+untrusted content never selects a tool or widens a permission, no irreversible action without
+authorization (`references/agent-security.md` owns that list). The pressure-discipline row above
+stays absolute for the same reason. And when trimming a body, keep the gotchas — hard-won failure
+points are the highest-signal content a definition carries; generic workflow prose is what goes.
 
 One recorded conflict (stamped 2026-07): the official skill-authoring doc still recommends worked
 input/output examples, while the Claude 5-era context-engineering guidance reports examples can

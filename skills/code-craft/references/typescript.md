@@ -21,9 +21,11 @@ component.
 
 ## The traps that produce wrong behavior, not errors
 
-- **A floating promise swallows its rejection.** An `async` call without `await` (or an explicit
-  `void` and a reason) fails silently — enable the lint rule (`no-floating-promises`) and treat
-  every exception it flags as a decision to justify.
+- **A floating promise swallows its rejection.** An `async` call without `await` fails silently —
+  enable the lint rule (`no-floating-promises`) and treat every exception it flags as a decision to
+  justify. `void` only discards the promise; it observes nothing, so fire-and-forget still needs a
+  `.catch` that reports to your error boundary. `void someCall()` with a comment is a silenced
+  lint, not a handled failure.
 - **Sequential awaits on independent work** is the number-one performance defect class: three
   `await`s in a row are three round trips; `Promise.all` makes them one. Waterfalls compound in
   server components and route handlers where every render pays them.
@@ -82,13 +84,17 @@ component.
 - **One entity lives in many caches** — its detail plus every filtered list page. Patch and
   snapshot all of them through a hierarchical query-key factory, or the badge in the list
   disagrees with the detail view after the write.
-- **Mint the idempotency key at first intent** (form init), and thread it through retries. A key
-  generated inside the mutation function regenerates per retry and protects nothing — that is the
-  double-charge bug. Pair it with disabled-while-pending so a user can't fire a second distinct
-  write.
-- **Retries are stratified by safety**: reads retry with backoff; non-idempotent writes never
-  auto-retry (at most a bounded retry on pure network errors, never on 4xx); a `409` never
-  auto-retries — surface the conflict, invalidate, and let the user decide on fresh data.
+- **Mint the idempotency key once per logical write** — at first intent (form init or the click
+  that starts the operation) — and thread that same key through every retry of it. A key generated
+  inside the mutation function regenerates per retry and protects nothing: that is the
+  double-charge bug. Rotate it after the write settles, or an "add another" flow on a still-mounted
+  form replays the first key and gets the recorded response instead of a second write. Pair it with
+  disabled-while-pending so a user can't fire a second distinct write.
+- **Retries are stratified by safety**: reads retry with backoff; a non-idempotent write
+  auto-retries only when the same server-enforced idempotency key rides along, and never on 4xx. A
+  bare network error is ambiguous — the server may have committed before the connection dropped —
+  so without a key, a "pure network error" retry is a duplicate charge. A `409` never auto-retries:
+  surface the conflict, invalidate, and let the user decide on fresh data.
 
 ## Verify
 

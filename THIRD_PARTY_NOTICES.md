@@ -82,4 +82,10 @@ sentences, never copied files — from the following sources. The adjudication i
 Claude 5-era authoring guidance adapted into `skills/prompt-craft/SKILL.md`,
 `skills/prompt-craft/references/context.md`, and `skills/self-improve-loop/SKILL.md` derives from
 Anthropic's own published posts (claude.com/blog, 2026) and platform documentation
-(code.claude.com/docs), cited in the adjudication notes and commit messages.
+(code.claude.com/docs). **The corpus was recorded at domain granularity only** — the adjudication
+notes and commit messages name the domains, not the individual pages. Nothing here pins a URL, so
+the date-sensitive claims (the 80% system-prompt cut, the session-boundary rule, verification-skill
+capture, and the CLI/frontmatter facts) must be re-verified against the live docs and blog index
+rather than re-read at a citation; the platform facts in
+`skills/prompt-craft/references/claude-code-frontmatter.md` carry their own verification stamps for
+that purpose. Future donor rounds record the exact page URL per claim.

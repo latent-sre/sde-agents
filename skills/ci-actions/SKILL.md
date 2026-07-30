@@ -17,8 +17,10 @@ boundary that also happens to run tests.
    compromise (March 2025) worked by retagging existing versions, so every workflow tracking a tag
    pulled the attacker's code and leaked its secrets into build logs. A SHA cannot be moved.
    Re-pin deliberately (Dependabot can propose SHA bumps), read the diff when you do, and give
-   re-pins a cooldown — adopt a release only after it has been public a few days, because
-   compromise campaigns count on fast adoption before detection catches the malicious version.
+   routine re-pins a cooldown — adopt a release only after it has been public a few days, because
+   compromise campaigns count on fast adoption before detection catches the malicious version. A
+   fix for a disclosed vulnerability in the SHA you are on skips the cooldown: waiting there keeps
+   you on the known-bad version. Read the diff and the provenance, then re-pin immediately.
 2. **`permissions:` least-privilege, declared explicitly.** Default to `contents: read` at the
    workflow level and widen per job only where needed (`pull-requests: write` for a commenting job,
    `id-token: write` only for OIDC). An undeclared block inherits the repository default, which is
