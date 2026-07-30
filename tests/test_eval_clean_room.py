@@ -28,6 +28,11 @@ class CleanEnvironmentTest(unittest.TestCase):
             config = self._config(Path(root))
             room = None
             with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(config)}, clear=False):
+                # Without this the assertion silently inverts on any machine that exports
+                # ANTHROPIC_API_KEY: environment auth skips the credential copy, so the room is
+                # empty and the test stops covering the copy path it exists to cover.
+                for key in eval_clean_room.AUTH_ENV_VARS:
+                    os.environ.pop(key, None)
                 with eval_clean_room.clean_env() as env:
                     room = Path(env["CLAUDE_CONFIG_DIR"])
                     self.assertEqual([eval_clean_room.CREDENTIALS], [p.name for p in room.iterdir()])
