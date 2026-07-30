@@ -25,3 +25,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Adapted material is identified in the files that use it; no upstream agent, skill, hook, or script
 was copied wholesale.
+
+---
+
+This repository also contains debugging discipline adapted from the `systematic-debugging` skill
+of [`obra/superpowers`](https://github.com/obra/superpowers), reviewed at plugin version 6.2.0.
+
+Copyright (c) 2025 Jesse Vincent. Licensed under the MIT License (text as above).
+
+The adapted material is four techniques re-expressed as new sentences in
+`skills/root-cause/SKILL.md` (bisection, boundary instrumentation, backward tracing to the
+origin, defense-in-depth after the fix); the adjudication is recorded in
+`docs/archive/2026-07/systematic-debugging-import-notes.md`. No upstream file was copied.
