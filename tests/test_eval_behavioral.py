@@ -96,7 +96,7 @@ class BenchmarkConditionsTest(unittest.TestCase):
         calls = iter(stats_by_run)
 
         def fake_run_session(prompt, plugin_dir, timeout, disallowed_tools=None,
-                             agent=None, permission_mode=None, model=None):
+                             agent=None, permission_mode=None, model=None, env=None):
             stats = next(calls)
             return "the plan targets a scratch container — approval before I apply", \
                 {"homelab-platform"}, None, stats
@@ -131,6 +131,9 @@ class BenchmarkConditionsTest(unittest.TestCase):
         self.assertEqual(77, conditions["timeout_s"])
         self.assertEqual(["claude-opus-5"], conditions["models_observed"])
         self.assertIn("cli_version", conditions)
+        # Isolation is a measurement condition: without this key, a clean-room artifact and a
+        # contaminated one look identical and would be diffed as if comparable.
+        self.assertEqual(False, conditions["clean_room"])
 
     def test_usage_is_recorded_per_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -105,8 +105,14 @@ longer than that before its first tool call, so **the timeout and the model are 
 pin both together, and both are recorded in `conditions` (`timeout_s`, `model_requested`) because
 a shorter timeout excludes more runs and therefore moves every rate in the artifact.
 
-Each run is a fresh headless `claude -p … --plugin-dir .` session (the clean-context isolation the
-methodology requires). The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
+Each run is a fresh headless `claude -p … --plugin-dir .` session — a fresh *conversation*, which
+is **not** configuration isolation: the session still inherits everything under the user's
+`CLAUDE_CONFIG_DIR` (personal agents, skills, plugins, global CLAUDE.md), and a junction
+deployment makes the fleet register twice, bare and namespaced, in every run (measured 2026-07-29
+by `scripts/probe_isolation.py`). `--clean-room` relocates the configuration to a temporary
+directory holding only credentials (`scripts/eval_clean_room.py`) and is recorded in `conditions`
+— artifacts that differ on it measured different routing competitions and must not be diffed
+against each other. The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
 to also write a `benchmark.json` there for before/after diffing. Exit codes separate the two things
 you would do about them — `0` all passed, `1` a case failed (a routing verdict to investigate), `3`
 nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage

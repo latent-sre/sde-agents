@@ -23,13 +23,19 @@ collapses after a description edit (regression) and a negative that fires at all
 both visible in the delta between runs of this suite.
 
 Pure standard library. Spawns headless `claude -p ... --plugin-dir <repo>` sessions, one per run,
-each a fresh context (the isolation the methodology requires).
+each with a fresh cwd and conversation. A fresh session is NOT configuration isolation: it still
+inherits everything under the user's CLAUDE_CONFIG_DIR (personal agents, skills, plugins, global
+CLAUDE.md), and a junction deployment makes the fleet register twice — bare and namespaced — in
+every run. `--clean-room` (scripts/eval_clean_room.py) is the isolation switch, and it is recorded
+in `conditions` because two artifacts that differ on it are not comparable.
 """
 from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import fnmatch
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -152,7 +158,8 @@ def transcript_stats(stdout: str) -> dict:
             "duration_ms": duration, "model": model, "completed": completed}
 
 
-def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None) -> dict:
+def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
+             env: dict | None = None) -> dict:
     """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
     Never raises: this drives a flaky, sometimes long-running subprocess, and a routing eval only
@@ -176,6 +183,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
                     *(("--model", model) if model else ()),
                 ],
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
+                env=env,
             )
             stdout, stderr = proc.stdout or "", proc.stderr or ""
             if proc.returncode != 0:
@@ -205,6 +213,22 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     error = note if (note and not usable) else None
     return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": observed_model,
             "error": error, "note": note}
+
+
+def _load_clean_room():
+    """Load scripts/eval_clean_room.py by path. A plain import spells differently in this file's
+    two runtime contexts (script vs `from scripts import eval_routing`); path loading works in both,
+    and it happens lazily so only `--clean-room` runs pay for or depend on it."""
+    path = Path(__file__).resolve().parent / "eval_clean_room.py"
+    spec = importlib.util.spec_from_file_location("eval_clean_room", path)
+    # An assert here would vanish under `python -O` and surface later as an opaque AttributeError;
+    # a --clean-room run must instead fail loudly at the point the isolation module went missing.
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load the clean-room module from {path}; without it --clean-room "
+                          "cannot isolate the run, so refusing rather than measuring a dirty room")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def cli_version() -> str | None:
@@ -328,6 +352,11 @@ def main() -> int:
     parser.add_argument("--model", default=None,
                         help="model for the eval sessions (alias or id). Default: the CLI's own "
                              "default, which is NOT inherited from the launching session")
+    parser.add_argument("--clean-room", action="store_true",
+                        help="relocate CLAUDE_CONFIG_DIR to a temp dir holding only credentials for "
+                             "every session, so personal components and a junction-deployed fleet "
+                             "cannot enter the routing surface (see scripts/eval_clean_room.py). "
+                             "Recorded in conditions: artifacts differing on it are not comparable")
     args = parser.parse_args()
 
     if args.runs < 1:
@@ -352,17 +381,32 @@ def main() -> int:
           f"(members: {sorted(members)}, concurrency {args.concurrency})\n")
 
     results_by_case: dict[str, list[tuple[int, dict]]] = {c["id"]: [] for c in cases}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        futures = {
-            pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model): (c["id"], i)
-            for c, i in work
-        }
-        done = 0
-        for future in concurrent.futures.as_completed(futures):
-            case_id, run_index = futures[future]
-            results_by_case[case_id].append((run_index, future.result()))
-            done += 1
-            print(f"  [{done}/{len(work)}] runs complete", end="\r")
+    # One room for the whole batch: the sessions only read the relocated config, and per-session
+    # rooms would copy credentials once per run for no added isolation. The room must outlive the
+    # pool, so the ExitStack closes after the last future resolves.
+    with contextlib.ExitStack() as stack:
+        session_env = None
+        if args.clean_room:
+            clean_room = _load_clean_room()
+            try:
+                session_env = stack.enter_context(clean_room.clean_env())
+            except clean_room.AuthUnavailable as exc:
+                # A refusal here is the module doing its job: an unauthenticated batch would
+                # produce 24 vacuously-passing negatives, not 24 measurements.
+                print(f"clean room refused to run: {exc}", file=sys.stderr)
+                return 2
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+            futures = {
+                pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model,
+                            session_env): (c["id"], i)
+                for c, i in work
+            }
+            done = 0
+            for future in concurrent.futures.as_completed(futures):
+                case_id, run_index = futures[future]
+                results_by_case[case_id].append((run_index, future.result()))
+                done += 1
+                print(f"  [{done}/{len(work)}] runs complete", end="\r")
     print()
 
     # Sort back into submission order. Sessions finish in whatever order they finish, and the
@@ -419,6 +463,10 @@ def main() -> int:
         # and therefore moves every rate in the artifact. Two benchmarks taken at different timeouts
         # are not comparable, and without this recorded they look identical in their conditions.
         "timeout_s": args.timeout,
+        # Whether the sessions saw only this plugin (clean room) or the operator's whole
+        # configuration surface. Two artifacts differing here measured different competitions
+        # for every routing decision — diffing them reads contamination as a description change.
+        "clean_room": bool(args.clean_room),
     }
     if len(models) > 1:
         print(f"\n! WARNING: runs did not use one model ({', '.join(models)}) — this benchmark mixes "
