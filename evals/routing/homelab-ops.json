@@ -396,6 +396,30 @@
         "near-miss",
         "security-audit"
       ]
+    },
+    {
+      "id": "pos-target-specific-lab-glue",
+      "prompt": "Write a tiny host-specific wrapper that runs this lab's existing restic backup command and exposes its exit code to the current monitoring check. No reusable API or domain logic.",
+      "polarity": "positive",
+      "expect_fires": [
+        "homelab-platform"
+      ],
+      "expected_output": "Target-specific orchestration of existing lab commands stays with homelab-platform's small-glue exception and still follows its change tiers.",
+      "tags": [
+        "homelab-platform",
+        "glue-script"
+      ]
+    },
+    {
+      "id": "neg-reusable-backup-service",
+      "prompt": "Build a reusable backup coordinator service with a REST API, pluggable retention policies, envelope encryption, remote-provider clients, and unit tests.",
+      "polarity": "negative",
+      "expected_output": "A reusable service with domain logic and an API is application implementation, even though its topic is backups. It routes to a builder and must fire no home-lab component.",
+      "tags": [
+        "near-miss",
+        "application-code",
+        "glue-boundary"
+      ]
     }
   ]
 }

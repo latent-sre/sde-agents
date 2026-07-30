@@ -140,6 +140,34 @@
         "near-miss",
         "remediation"
       ]
+    },
+    {
+      "id": "pos-appsec-advisory-reachability",
+      "prompt": "Our lockfile pins a version affected by GHSA-EXAMPLE. Trace this repository to determine whether the vulnerable function is actually reachable from untrusted input, and calibrate exploitability.",
+      "polarity": "positive",
+      "expect_fires": [
+        "application-security-auditor"
+      ],
+      "expected_output": "The advisory is only an input; repository reachability and source-to-sink exploitability make this application-security-auditor work, with authoritative advisory evidence incorporated.",
+      "tags": [
+        "application-security-auditor",
+        "advisory",
+        "reachability"
+      ]
+    },
+    {
+      "id": "neg-advisory-lookup-only-not-appsec",
+      "prompt": "Look up whether package frobnitz 2.4.1 is in the affected range for GHSA-EXAMPLE and name the first fixed release. Do not inspect a repository or assess reachability.",
+      "polarity": "negative",
+      "expect_not_fires": [
+        "application-security-auditor"
+      ],
+      "expected_output": "Authoritative advisory/version lookup alone belongs to researcher. The explicit absence of repository reachability forbids application-security-auditor while allowing researcher.",
+      "tags": [
+        "disambiguation",
+        "researcher",
+        "advisory"
+      ]
     }
   ]
 }
