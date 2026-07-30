@@ -26,7 +26,7 @@ Two rules that hold in every language:
 | If the work involves… | Read first |
 |---|---|
 | Python | [`references/python.md`](references/python.md) |
-| TypeScript or JavaScript — React included | [`references/typescript.md`](references/typescript.md) |
+| TypeScript or JavaScript — language-level code in any framework | [`references/typescript.md`](references/typescript.md) |
 | Bash or a shell script | [`references/bash.md`](references/bash.md) |
 | PowerShell | [`references/powershell.md`](references/powershell.md) |
 | Go | [`references/go.md`](references/go.md) |
