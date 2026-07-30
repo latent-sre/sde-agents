@@ -52,7 +52,7 @@ vacuously).
 
 The runner takes **one cluster file per invocation**, and defaults to `prompt-tooling.json` when
 given none — there is no all-clusters mode, so "I ran the evals" without naming a file means one
-cluster of five was measured:
+default cluster was measured:
 
 ```bash
 # one cluster, 3 runs per case (the methodology's default), ~4 parallel
@@ -184,24 +184,25 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Six clusters are seeded — every overlap this README names, plus the altitude,
+Eight clusters are seeded — every overlap this README names, plus the altitude,
 simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
 | `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
-| `homelab-ops.json` | homelab-platform, service-onboard, lab-audit, runbook, postmortem | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
-| `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
+| `homelab-ops.json` | homelab-platform and ten lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
-| `investigation.json` | researcher, code-reviewer, root-cause | read-only investigation: a question from sources vs a diff to judge vs a failure to diagnose |
+| `investigation.json` | researcher, code-reviewer, root-cause, application-security-auditor | read-only investigation: a question from sources vs a diff to judge vs a failure to diagnose |
+| `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
+| `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
-there, 5 / 18 now), so it is a *historical* anchor, not a like-for-like comparison — a fresh
-capture lives in `baselines/2026-07-24/`. Re-baseline again when the planned `lab-incident`
-(backlog 1.5; the `incident` half named in `docs/archive/2026-07/skills-modernization-plan.md` shipped as
-`postmortem`), `restore-drill`, or `upgrade-campaign` skills land.
+there); the capture under `baselines/2026-07-24/` records the later 5-member / 18-case shape. Both
+are *historical* anchors, not like-for-like comparisons with the current 11-member / 33-case
+cluster. Re-baseline whenever membership changes.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 

@@ -42,6 +42,17 @@ class FleetValidatorTests(unittest.TestCase):
         )
         self.assertTrue(any("unknown tool 'Bogus'" in issue for issue in issues))
 
+    def test_unadopted_mcp_tool_is_reported(self) -> None:
+        # The fixture uses GitHits' feedback tool: structurally real MCP authority, but an external
+        # write that the fleet's evidence agents do not need. It must fail as a POLICY decision,
+        # not be mislabeled as an unknown Claude Code tool.
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "unadopted-mcp-tool", check_inventory=False
+        )
+        feedback_issues = [issue for issue in issues if "feedback" in issue]
+        self.assertTrue(any("not adopted by this fleet" in issue for issue in feedback_issues), issues)
+        self.assertFalse(any("not a Claude Code tool" in issue for issue in feedback_issues), issues)
+
     def test_bare_skill_reference_without_preload_is_reported(self) -> None:
         # The fixture's agent says "work the `tuning` skill" with no skills: preload — an
         # instruction that cannot execute and errors nowhere, which is exactly how sde-fullstack's
@@ -338,6 +349,25 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertTrue(any("not adopted by this fleet" in i for i in issues), issues)
         self.assertFalse(any("is not a Claude Code tool" in i for i in issues), issues)
 
+    def test_adopted_exact_mcp_tool_is_accepted(self) -> None:
+        body = VALID_AGENT.replace(
+            "tools: Read",
+            "tools: Read, ToolSearch, mcp__plugin_githits_githits__pkg_info",
+        )
+        issues = self._agent_issues(("builder.md", body))
+        self.assertFalse(any("tool" in i.lower() and "authority" in i.lower() for i in issues), issues)
+
+    def test_server_wide_mcp_grant_is_rejected_as_drifting_authority(self) -> None:
+        # A server wildcard silently acquires every tool added in a future MCP release. GitHits
+        # currently exposes a feedback write beside its read-only evidence tools, so broad grant
+        # syntax defeats the fleet's "every tool is deliberate authority" policy.
+        body = VALID_AGENT.replace(
+            "tools: Read",
+            "tools: Read, mcp__plugin_githits_githits__*",
+        )
+        issues = self._agent_issues(("builder.md", body))
+        self.assertTrue(any("server-wide MCP grant" in i and "future tools" in i for i in issues), issues)
+
     def test_tool_unavailable_to_subagents_is_reported(self) -> None:
         body = VALID_AGENT.replace("tools: Read", "tools: Read, AskUserQuestion")
         issues = self._agent_issues(("builder.md", body))
@@ -503,6 +533,29 @@ class PluginWiringTests(unittest.TestCase):
     def test_the_real_repo_is_a_valid_plugin(self) -> None:
         # The positive control. Without it, every test below could pass for the wrong reason.
         self.assertEqual([], self._issues_after(lambda _: None))
+
+    def test_evidence_agent_cannot_silently_lose_its_mcp_authority(self) -> None:
+        # Both evidence agents used to promise Context7/GitHits while their tools allowlist removed
+        # every MCP tool. Mutation is the right test because the invariant binds a real role's
+        # method to its real frontmatter rather than defining a synthetic "researcher" fixture.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "  - mcp__plugin_githits_githits__pkg_info\n", ""
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "evidence role 'researcher' is missing required tools" in issue
+                and "pkg_info" in issue
+                for issue in issues
+            ),
+            issues,
+        )
 
     def test_dangling_namespace_reference_is_reported(self) -> None:
         # The corpus carries hundreds of `sde-agents:<name>` cross-references and nothing at

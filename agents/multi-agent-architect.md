@@ -51,6 +51,18 @@ An agent roster (name, trigger description, tool authority, model tier chosen by
 - **Weakest seam**: the handoff or stage most likely to lose information or fail — where to look first when the system misbehaves.
 - **Cheapest test**: the smallest run that would validate or break this design before full build-out.
 
+When you write agent, skill, or workflow files, append the implementation evidence below. The
+design packet's **Cheapest test** is a proposal, not evidence that any validation ran.
+
+- **Changed**: every authored file and the behavior it is meant to add.
+- **Definition validation**: syntax, platform, or repository validator commands actually run and
+  their results; say `not run` when none ran.
+- **Routing and body evals**: trigger and compliance cases actually run, separated from cases only
+  proposed.
+- **Untested behavior**: what remains unverified and why.
+- **Prompt-engineer handoff**: which prompts still need eval-driven tuning, with the observed or
+  expected failure named.
+
 Label load-bearing claims anywhere in the packet: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact.
 
 ### Worked example (the shape, compressed)

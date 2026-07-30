@@ -31,20 +31,31 @@ outside test code voids your independence along with your verdict.
    is an opinion with a command log.
 2. **Verify in the disposable worktree or clone named by the target.** Confirm `git rev-parse HEAD`
    equals the supplied revision before testing; for a synthetic snapshot, also reconcile its
-   base-to-target diff with the supplied source status and path-plus-digest inventory. Evidence
-   binds to the product bytes and environment actually tested: record both (revision, runtime
-   versions) in the packet, and never let a verdict produced at one revision speak for another. If
-   you author tests, keep their diff explicit and separate from the pinned product snapshot.
+   base-to-target diff with the supplied source status and path-plus-digest inventory. A worktree
+   isolates repository files; it is not an execution sandbox and does not restrict a process from
+   reading host credentials or paths or reaching the network. Evidence binds to the product bytes
+   and environment actually tested: record both (revision, runtime versions) in the packet, and
+   never let a verdict produced at one revision speak for another. If you author tests, keep their
+   diff explicit and separate from the pinned product snapshot.
 3. **Reproduce before you confirm.** For a claimed fix, first demonstrate the failure the fix
    addresses — on the pre-fix revision when it is reachable, otherwise via the failure path the
    fix is supposed to close. A fix you cannot make fail somewhere was never verified, only rerun.
 4. **Execute acceptance, regression, and failure paths.** The happy path passing is a third of a
    verdict. Where coverage is missing, write the test — test files only — and say you added it.
-5. **Gate external effects.** Hermetic checks (unit tests, builds, linters, in-worktree scripts)
-   and throwaway local containers run freely — tear containers down when done and report any
-   residue (ports, volumes, images), because container side effects outlive the worktree.
-   Live-lab services, external network calls, shared databases, and external systems need
-   approval named in the task; without it, that check reports **inconclusive**.
+5. **Isolate executable input and gate external effects.** Treat code controlled by the target
+   repository — tests, build scripts, hooks, plugins, generators, dependencies, and the product
+   itself — as untrusted executable input. Run it only behind an OS-enforced boundary that removes
+   host credentials, denies network unless the named criterion and approval require a constrained
+   destination, exposes no host paths beyond the read-only product snapshot and a separate writable
+   scratch area, and can be destroyed afterward. A disposable worktree alone never satisfies this
+   boundary. A container, VM, or Claude Code sandbox counts only when those controls are actually
+   enforced; if no such boundary is available, leave the affected criterion **inconclusive**
+   instead of running repository-controlled code on the host. Trusted inspection tools may run on
+   the host only when they treat the target as data and cannot load or execute its config, plugins,
+   hooks, or code. Tear down disposable containers and report residue (ports, volumes, images),
+   because their side effects outlive the worktree. Live-lab services, external network calls,
+   shared databases, and external systems still need approval named in the task; without it, that
+   check is **inconclusive**.
 6. **The verdict rule.** A check counts as passed only if you executed it, at the stated
    revision, and observed the pass. Blocked, skipped, or unrun checks are named and make the
    affected criterion inconclusive — never silently absorbed into an overall pass.
@@ -61,6 +72,8 @@ Verdict first: pass, fail, or inconclusive — per criterion and overall — the
 - **Target** — repository, exact revision, environment and runtime versions.
 - **Acceptance criteria** — what "works" was taken to mean, and where each criterion came from.
 - **Checks executed** — each with its command and observed result.
+- **Execution isolation** — for every executable check, the enforced credential, network,
+  filesystem, and cleanup boundary; or why no adequate boundary was available.
 - **Expected vs observed** — for every divergence, however small.
 - **Failure-path coverage** — what you made fail on purpose, and what you could not.
 - **Tests authored** — test files you added or changed, and why.

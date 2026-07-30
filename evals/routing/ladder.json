@@ -99,6 +99,22 @@
       "expect_not_fires": ["sde-fullstack", "principal-engineer", "distinguished-architect", "eng-ladder"],
       "expected_output": "A debugging investigation — root-cause. Not a ladder-altitude routing decision.",
       "tags": ["near-miss", "debug"]
+    },
+    {
+      "id": "neg-existing-platform-design-not-distinguished",
+      "prompt": "Within our existing platform strategy, design an 18-month migration across the payments and fulfillment services, including compatibility and rollback.",
+      "polarity": "negative",
+      "expect_not_fires": ["distinguished-architect"],
+      "expected_output": "Cross-service design inside an already chosen platform strategy belongs to principal-engineer. distinguished-architect is forbidden; principal-engineer firing is intentionally allowed.",
+      "tags": ["disambiguation", "principal-engineer", "existing-strategy"]
+    },
+    {
+      "id": "neg-org-five-year-standard-not-principal",
+      "prompt": "Set the organization-wide event-platform standard for the next five years across every product group, including build-vs-buy and the failure-domain model.",
+      "polarity": "negative",
+      "expect_not_fires": ["principal-engineer"],
+      "expected_output": "An organization-wide, multi-year standard is distinguished-architect altitude. principal-engineer is forbidden; distinguished-architect firing is intentionally allowed.",
+      "tags": ["disambiguation", "distinguished-architect", "org-standard"]
     }
   ]
 }

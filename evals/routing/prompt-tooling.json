@@ -132,6 +132,14 @@
       "expect_not_fires": ["prompt-craft", "prompt-engineer"],
       "expected_output": "Routes to frontend/implementation work, not prompt tooling.",
       "tags": ["near-miss", "frontend"]
+    },
+    {
+      "id": "neg-quick-draft-not-prompt-engineer",
+      "prompt": "Draft one Claude Code agent prompt for summarizing support tickets. This is a quick first draft; do not build an eval harness or run repeated trials.",
+      "polarity": "negative",
+      "expect_not_fires": ["prompt-engineer"],
+      "expected_output": "The explicit quick/one-shot path belongs to prompt-craft. prompt-engineer is forbidden here; prompt-craft firing is correct and intentionally allowed.",
+      "tags": ["disambiguation", "quick-draft", "prompt-craft"]
     }
   ]
 }

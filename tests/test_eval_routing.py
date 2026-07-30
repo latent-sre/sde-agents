@@ -275,6 +275,19 @@ class CaseFileTest(unittest.TestCase):
                                 f"would pass without measuring anything")
                 self.assertTrue(forbidden, f"{path.name}:{case['id']} forbids nothing")
 
+    def test_coverage_table_lists_every_cluster_file(self) -> None:
+        readme = (REPO / "evals" / "README.md").read_text(encoding="utf-8")
+        missing = [
+            path.name
+            for path in sorted((REPO / "evals" / "routing").glob("*.json"))
+            if f"`{path.name}`" not in readme
+        ]
+        self.assertEqual(
+            [],
+            missing,
+            "evals/README.md omits routing clusters, so operators can silently skip shipped evals",
+        )
+
 
 class ConditionsTest(unittest.TestCase):
     def test_plugin_dir_inside_repo_is_recorded_repo_relative(self) -> None:

@@ -135,7 +135,43 @@ RUNTIME_TOOLS = {
 # What this fleet actually grants. Widen deliberately; every entry is authority.
 FLEET_TOOLS = {
     "Agent", "Bash", "Edit", "Glob", "Grep", "NotebookEdit", "Read", "Skill", "TodoWrite",
-    "WebFetch", "WebSearch", "Write",
+    "ToolSearch", "WebFetch", "WebSearch", "Write",
+}
+# MCP tools share the `tools:` availability allowlist with built-ins, but their namespace is
+# runtime-configured rather than a closed Claude Code table. Keep a separate exact allowlist so
+# every external capability is an explicit fleet decision. Server-level grants (`mcp__server` or
+# `mcp__server__*`) are valid runtime syntax but forbidden here: they silently acquire whatever a
+# future server release adds. That is already unsafe for GitHits, whose read-only evidence tools
+# sit beside `feedback`, an external write.
+EVIDENCE_MCP_TOOLS = {
+    "mcp__claude_ai_Context7__query-docs",
+    "mcp__claude_ai_Context7__resolve-library-id",
+    "mcp__plugin_context7_context7__query-docs",
+    "mcp__plugin_context7_context7__resolve-library-id",
+    "mcp__plugin_githits_githits__code_files",
+    "mcp__plugin_githits_githits__code_grep",
+    "mcp__plugin_githits_githits__code_read",
+    "mcp__plugin_githits_githits__docs_list",
+    "mcp__plugin_githits_githits__docs_read",
+    "mcp__plugin_githits_githits__get_example",
+    "mcp__plugin_githits_githits__pkg_changelog",
+    "mcp__plugin_githits_githits__pkg_deps",
+    "mcp__plugin_githits_githits__pkg_info",
+    "mcp__plugin_githits_githits__pkg_upgrade_review",
+    "mcp__plugin_githits_githits__pkg_vulns",
+    "mcp__plugin_githits_githits__search",
+    "mcp__plugin_githits_githits__search_language",
+    "mcp__plugin_githits_githits__search_status",
+}
+FLEET_MCP_TOOLS = set(EVIDENCE_MCP_TOOLS)
+# These two agents promise current, primary, provenance-separated library and OSS evidence. Their
+# old built-in-only allowlists made that method impossible while every validator still passed.
+# Pin the authority to the role so removing one line cannot silently degrade them back to generic
+# web search. Keep this mapping narrow: an MCP tool adopted for another role should not
+# automatically flow into either evidence agent.
+REQUIRED_AGENT_TOOLS = {
+    "application-security-auditor": {"ToolSearch", *EVIDENCE_MCP_TOOLS},
+    "researcher": {"ToolSearch", *EVIDENCE_MCP_TOOLS},
 }
 # Real tools that a SUBAGENT never receives, however they are listed, because they depend on the main
 # conversation's UI or session state (code.claude.com/docs/en/sub-agents). Everything in agents/ is a
@@ -149,6 +185,11 @@ SUBAGENT_UNAVAILABLE_TOOLS = {
 }
 # A tools entry: a bare name, or a name with a parenthesized scope, e.g. `Agent(worker, researcher)`.
 TOOL_ENTRY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)(?:\((.*)\))?$")
+# Exact MCP names use the runtime's `mcp__<server>__<tool>` convention. Hyphens are real in tool
+# names (`query-docs`, `resolve-library-id`), so the built-in-name grammar above cannot parse them.
+# Server names are normalized to one underscore-delimited segment; `__` remains the separator.
+MCP_EXACT_TOOL_RE = re.compile(r"^mcp__[A-Za-z0-9_.-]+__[A-Za-z0-9_.-]+$")
+MCP_SERVER_GRANT_RE = re.compile(r"^mcp__[A-Za-z0-9_.-]+(?:__\*)?$")
 
 
 def split_tools(raw: str) -> list[str]:
@@ -339,6 +380,7 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
         issues.extend(validate_description(fields, "agent", path))
 
         tools = fields.get("tools", "").strip()
+        parsed_tools: list[str] = []
         if not tools:
             # Not a harmless omission: an absent `tools:` INHERITS EVERY TOOL rather than granting
             # none, so a reviewer meant to be read-only would silently receive Write and Edit.
@@ -348,6 +390,27 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
             if len(parsed_tools) != len(set(parsed_tools)):
                 issues.append(f"{path}: duplicate tool in tools authority")
             for tool in parsed_tools:
+                if tool.startswith("mcp__"):
+                    if MCP_EXACT_TOOL_RE.fullmatch(tool):
+                        if tool not in FLEET_MCP_TOOLS:
+                            issues.append(
+                                f"{path}: MCP tool {tool!r} is structurally valid but is not adopted "
+                                f"by this fleet; add it to FLEET_MCP_TOOLS deliberately if the agent "
+                                f"needs it"
+                            )
+                    elif MCP_SERVER_GRANT_RE.fullmatch(tool):
+                        issues.append(
+                            f"{path}: server-wide MCP grant {tool!r} is real Claude Code syntax but "
+                            f"is not adopted by this fleet. It silently acquires future tools from "
+                            f"that server, so list each required exact tool in FLEET_MCP_TOOLS"
+                        )
+                    else:
+                        issues.append(
+                            f"{path}: malformed MCP tool entry {tool!r} in tools authority; expected "
+                            f"an exact mcp__<server>__<tool> name"
+                        )
+                    continue
+
                 entry = TOOL_ENTRY_RE.match(tool)
                 if not entry:
                     issues.append(f"{path}: malformed tool entry {tool!r} in tools authority")
@@ -387,6 +450,15 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
                         f"Specifiers work only in settings.json permission rules (session-wide) or a "
                         f"PreToolUse hook; narrow there, not here."
                     )
+
+        required_tools = REQUIRED_AGENT_TOOLS.get(name, set())
+        missing_required_tools = sorted(required_tools - set(parsed_tools))
+        if missing_required_tools:
+            issues.append(
+                f"{path}: evidence role {name!r} is missing required tools "
+                f"{missing_required_tools}. Its method promises Context7 and GitHits evidence, so "
+                f"removing this authority silently degrades the role to generic web search"
+            )
 
         # `skills:` is in KNOWN_AGENT_FIELDS, which only checks that the KEY is real -- it says
         # nothing about whether each listed VALUE resolves to anything. Two ways that silently
