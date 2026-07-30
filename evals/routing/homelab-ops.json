@@ -310,6 +310,21 @@
       ]
     },
     {
+      "id": "neg-idle-failure-not-incident",
+      "prompt": "Monitoring found an unused Jellyfin test container stopped, but nobody is affected. Do not restart it yet; figure out why it exited.",
+      "polarity": "negative",
+      "expect_not_fires": [
+        "lab-incident"
+      ],
+      "expected_output": "No current user impact means diagnosis under homelab-platform's tiers; lab-incident's mitigate-first path must not fire.",
+      "tags": [
+        "near-miss",
+        "lab-incident",
+        "root-cause",
+        "no-current-impact"
+      ]
+    },
+    {
       "id": "pos-host-linux",
       "prompt": "Harden SSH on my lab's Ubuntu box \u2014 key-only logins, no root login, and make sure I can't lock myself out in the process.",
       "polarity": "positive",

@@ -62,7 +62,8 @@ root-cause loop **before** any behavioral change; feature work leaves it dormant
 behaves unexpectedly — then it binds immediately.
 
 A task that adds or changes a CI workflow, build/release pipeline, or reusable action works
-`sde-agents:ci-actions`, which is **not** preloaded: before writing any workflow YAML, read
+`sde-agents:ci-actions`, which is **not** preloaded: before changing any such artifact — workflow
+YAML, a Jenkinsfile, pipeline shell, or reusable-action code — read
 `${CLAUDE_PLUGIN_ROOT}/skills/ci-actions/SKILL.md` (the variable is substituted with an absolute
 path; in this plugin's own repo, `skills/ci-actions/SKILL.md`), and name the file you read in your
 packet. If you can't find it, say so rather than hardening the pipeline from memory.

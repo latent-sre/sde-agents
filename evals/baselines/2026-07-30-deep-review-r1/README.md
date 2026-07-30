@@ -15,9 +15,11 @@ drops are regressions; absolute agent-positive rates are known-suppressed in hea
   `--runs 5` per side (`recheck-before/`, `recheck-after/`): `pos-attacker-reach` and
   `pos-default-creds` recovered to 5/5 — variance. `pos-audit-security` stayed depressed
   (before 8/8 total, after 4/8).
-- **Ablation** (`ablate-secaudit/`): the one edited description sharing the case's vocabulary
-  (security-audit) was reverted alone and the case still ran 3/5 — the edit is exonerated. The
-  case's prompt deliberately straddles the lab-audit/security-audit boundary and every failing
-  run fired *nothing* (inline answering, the known headless noise mode) rather than a wrong
-  component; the cause of the depressed rate is unresolved and flagged, not hidden. lab-audit's
-  own description was not edited in this round.
+- **Ablation** (`ablate-secaudit/`): reverting security-audit's description alone still produced
+  3/5. That does **not** isolate the cause: application-security-auditor's description also gained
+  the competing terms "running lab", "security-audit", and "lab-audit" in this round, so the
+  single-description ablation cannot exonerate either routing edit. The case's prompt deliberately
+  straddles the lab-audit/security-audit boundary and every failing run fired *nothing* (inline
+  answering, the known headless noise mode) rather than a wrong component. The depressed rate is
+  unresolved; no causal claim is made from this incomplete ablation. lab-audit's own description
+  was not edited in this round.
