@@ -8,7 +8,7 @@
     "code-craft",
     "ci-actions"
   ],
-  "notes": "What this cluster can and cannot assert, given the deterministic grader (scripts/eval_routing.py): sde-fullstack PRELOADS backend-craft and frontend-craft via its skills: field, and preloaded skills are injected at startup, NOT invoked via the Skill tool \u2014 so they do NOT register as 'fired'. Only a direct Skill call (main session invokes a craft skill inline) or an Agent/Task spawn of sde-fullstack registers. A single-layer task legitimately routes to EITHER the craft skill or sde-fullstack, so single-layer positives accept both and the load-bearing assertions are: (a) cross-layer work routes to sde-fullstack (pos-fullstack-*), and (b) build vocabulary does NOT drag review/design/lab/prompt requests onto a builder (the negatives). Fine-grained backend-vs-frontend contamination is not cleanly gradeable here and is left to output-quality review. Case repair 2026-07-27: 0 positive prompts rewritten — the diagnose run REFUTED the empty-cwd defect (the repo-presupposing skill positives passed 3/3 while every agent/layer-expecting positive was zero-fire; diagnose artifact: evals/baselines/2026-07-27-diagnose/), ids kept stable; pos-powershell-pester + neg-powershell-profile seeded with the Round 1 description widening.",
+  "notes": "What this cluster can and cannot assert, given the deterministic grader (scripts/eval_routing.py): sde-fullstack PRELOADS backend-craft and frontend-craft via its skills: field, and preloaded skills are injected at startup, NOT invoked via the Skill tool \u2014 so they do NOT register as 'fired'. Only a direct Skill call (main session invokes a craft skill inline) or an Agent/Task spawn of sde-fullstack registers. A single-layer task legitimately routes to EITHER the craft skill or sde-fullstack, so single-layer positives accept both and the load-bearing assertions are: (a) cross-layer work routes to sde-fullstack (pos-fullstack-*), and (b) build vocabulary does NOT drag review/design/lab/prompt requests onto a builder (the negatives). Fine-grained backend-vs-frontend contamination is not cleanly gradeable here and is left to output-quality review. Case repair 2026-07-27: 0 positive prompts rewritten — the diagnose run REFUTED the empty-cwd defect (the repo-presupposing skill positives passed 3/3 while every agent/layer-expecting positive was zero-fire; diagnose artifact: evals/baselines/2026-07-27-diagnose/), ids kept stable; pos-powershell-pester + neg-powershell-profile seeded with the Round 1 description widening. pos-typescript-branded-ids + neg-typescript-build-slow seeded 2026-07-30 with the donor-graft round's typescript widening, same before/after pattern.",
   "cases": [
     {
       "id": "pos-backend-pagination",
@@ -262,6 +262,36 @@
       "tags": [
         "near-miss",
         "powershell"
+      ]
+    },
+    {
+      "id": "pos-typescript-branded-ids",
+      "prompt": "Our TypeScript sync script passes user ids and order ids around as plain strings, and we just shipped a bug where two of them got swapped in a call. Tighten the types so the compiler catches that class of mistake — without changing runtime behavior.",
+      "polarity": "positive",
+      "expect_fires": [
+        "code-craft"
+      ],
+      "expected_output": "TypeScript type-level craft (branded/opaque id types, discriminated unions) — code-craft's typescript reference (lands this round). Expected to miss before the description widening; the before/after diff on this case is the direct measure of the widening. Deliberately non-UI (a sync script) so frontend-craft is not a legitimate alternative route.",
+      "tags": [
+        "code-craft",
+        "typescript"
+      ]
+    },
+    {
+      "id": "neg-typescript-build-slow",
+      "prompt": "Our TypeScript build got slow — tsc takes four minutes in CI and nobody knows why. Dig into what is actually eating the time.",
+      "polarity": "negative",
+      "expect_not_fires": [
+        "backend-craft",
+        "frontend-craft",
+        "sde-fullstack",
+        "code-craft",
+        "ci-actions"
+      ],
+      "expected_output": "A diagnosis ask — root-cause, not a builder or craft skill. 'TypeScript' is the decoy vocabulary; this is the tight near-miss guarding the widened description against over-trigger.",
+      "tags": [
+        "near-miss",
+        "typescript"
       ]
     }
   ]

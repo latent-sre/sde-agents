@@ -16,6 +16,12 @@ Load what the current step needs, when it needs it — not everything that might
 - **Predicate-keyed references** are the fleet's working form of this: a table that says "if the task
   involves X, read Y first". The router is always loaded and cheap; the depth loads only when its
   predicate trips. That is why the craft skills are structured the way they are.
+- **Splitting an oversized file** into an entry plus siblings: the test of a boundary is that the
+  entry stays comprehensible alone — needing a sibling open to follow it means the cut is in the
+  wrong place. Name siblings by content role (`verification.md`, not `notes.md`) so the filename is
+  the trigger, and write pointers that name both trigger and target ("touching migrations? read
+  `migrations.md` first"). Splitting removes nothing — delete obsolete content outright — and stop
+  splitting while the entry file is still legible.
 - **What must be up front** is what changes behavior on *every* step: the mandate, the output
   contract, the hard prohibitions. Anything conditional belongs behind a predicate.
 - Beware the opposite failure: an agent that must fetch three files before it can start has traded
@@ -48,6 +54,9 @@ constraints at every hop; a schema (or a required slot list) survives.
   self-critique in the same context.
 - **Isolate exploration.** Reading twenty files to answer one question should happen in a subagent
   whose context you can throw away; the parent keeps the answer, not the twenty files.
+- **A new task gets a new session.** Compaction manages a long run; it does not make a finished
+  task's residue useful to the next one. Carrying a window across unrelated tasks buys nothing and
+  costs attention.
 
 ## Durable state lives in files
 

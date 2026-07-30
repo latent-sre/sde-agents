@@ -32,6 +32,11 @@ SKILL.md wins; the repository's own conventions outrank both.
   formatting and survives a name that blows up `__str__`.
 - **`dataclasses`** (or `pydantic` where validation is the point) instead of dicts-as-records — a
   typo in a dict key is a runtime `KeyError`, in a dataclass it's caught by the type checker.
+- **Type the domain, not just the shape.** `NewType("UserId", str)` is a check-time distinction
+  (the cast call `UserId(...)` is a near-free identity function at runtime) and stops an order id
+  crossing into a user-id slot at check time. Variants are a
+  `Literal`-discriminated union dispatched with `match`, not a string field plus `if`s; accept
+  capabilities structurally with `Protocol` ("has a `read()`"), not by inheritance.
 - **Type hints on public functions**, and run the checker the repo runs. Hints nobody checks are
   comments that rot.
 - **`enumerate`/`zip`/comprehensions** over index arithmetic; a comprehension that needs a comment is
@@ -41,7 +46,9 @@ SKILL.md wins; the repository's own conventions outrank both.
   or handle it), and set a `timeout`.
 - **Generators for large streams** so memory doesn't scale with input.
 - Standard tooling settles style: `ruff`/`black` for format and lint, `pytest` for tests, `uv` or the
-  repo's chosen manager for dependencies. Don't hand-argue formatting.
+  repo's chosen manager for dependencies. Don't hand-argue formatting. Dev-only tools belong in
+  PEP 735 `[dependency-groups]`, not `[project.optional-dependencies]` — extras ship to your
+  users, groups don't.
 
 ## Dry-run: prove the decision and the effect are separable
 

@@ -37,10 +37,18 @@ The leverage is in *verify* — an action you don't check is an assumption. Orde
    intent, subtle correctness. Use it *after* the cheap checks, not instead of them.
 
 **Move the lesson left.** When the same failure recurs, encode it as a rules-based check — a test, a
-lint rule, a validator rule, a hook — rather than re-judging it by reasoning each time. (A Stop hook
+lint rule, a validator rule, a hook, or a project-specific verification skill (anything you keep
+enforcing by hand qualifies for capture) — rather than re-judging it by reasoning each time. (A Stop hook
 is the enforced end-of-turn form — the turn cannot end while the check fails — but the gate is
 bounded, not absolute: the harness force-ends after 8 consecutive blocks. Treat it as a strong gate,
 never as the guarantee; the deterministic check itself stays the safety system.)
+
+A captured verification skill deploys four ways — invoked deliberately after the artifact exists,
+embedded in the producing skill's own steps, chained behind other checks, or run on every PR once
+proven. Start standalone and chain only after it catches something real: every link in a chain
+re-spends tokens. For generated reports and recommendations the strongest form is claim-level —
+extract the output's checkable claims, verify each against ground truth, regenerate (bounded) on
+failures.
 
 ## Pattern 3 — The unattended outer loop ("Ralph")
 

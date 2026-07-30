@@ -60,3 +60,6 @@ Pick these once and hold them across every endpoint — consistency is the featu
   what a new `/v2` is for, and you run at most two versions at once.
 - **Deprecation is a protocol, not a deletion**: announce, add a `Sunset` header with the date,
   return `410 Gone` after it. Silent removal is an outage you scheduled for someone else.
+- **Gate the contract in CI**: diff every spec change with a breaking-change detector (oasdiff or
+  equivalent) so a removal, rename, type change, or new-required-field cannot merge unlabeled —
+  the taxonomy above, enforced mechanically.

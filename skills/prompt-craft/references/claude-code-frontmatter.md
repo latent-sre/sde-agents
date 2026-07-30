@@ -68,7 +68,28 @@ Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior swit
 Also available: `when_to_use`, `arguments`, `model`, `effort`, `context`, `agent`, `background`
 (with `context: fork`; `false` waits for the forked result in the invoking turn), `hooks`, `paths`,
 `shell` — not exhaustive; see code.claude.com/docs/en/skills for the current table
-(`validate_fleet.py` keeps `KNOWN_SKILL_FIELDS` as the fleet's checked copy).
+(`validate_fleet.py` keeps `KNOWN_SKILL_FIELDS` as the fleet's checked copy). Skill/subagent
+frontmatter `hooks` are scoped to the component's lifecycle — registered when it activates,
+cleaned up when it finishes; a subagent's `Stop` converts to `SubagentStop` (doc-checked
+2026-07-30). Whether a **plugin-shipped skill's** `hooks` fire is unprobed — plugin *agents*
+ignore the field outright (see above), so treat this as unenforced in a plugin until
+`scripts/probe_plugin.py` proves otherwise.
+
+## Platform environment facts (doc-checked 2026-07-30, CLI 2.1.220 era)
+
+- **`${CLAUDE_PLUGIN_DATA}`** — per-plugin persistent directory (`~/.claude/plugins/data/{id}/`),
+  created on first reference, survives plugin updates; exported to hook processes. The place for
+  installed dependencies, generated state, caches — never the plugin tree itself.
+- **`CLAUDE_ENV_FILE`** — available to `SessionStart` hooks: append `export` lines there to
+  persist environment variables for the session's later Bash commands (append, don't truncate —
+  other hooks share it).
+- **`/doctor`** — a bundled skill (was a built-in command before v2.1.205): diagnoses setup,
+  flags unused skills/MCP servers/plugins against their context cost and slow hooks, trims
+  checked-in `CLAUDE.md` of content derivable from the codebase, and migrates always-loaded
+  guidance into on-demand skills — reports first, asks before changing. `claude doctor` from the
+  terminal is the read-only form.
+- **`/verify`** — a bundled skill (v2.1.145+): builds and runs the app to confirm a change does
+  what it should. Since v2.1.215 it runs only when the user invokes it, never autonomously.
 
 Keep descriptions lean — they load into context every session.
 
