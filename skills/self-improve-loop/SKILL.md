@@ -32,7 +32,10 @@ The leverage is in *verify* — an action you don't check is an assumption. Orde
 1. **Deterministic checks** — tests, linters/type-checks, `scripts/validate_fleet.py` for fleet
    edits, the `readonly-guard` hook. Fast, reliable, no judgment risk. **Default to these.**
 2. **Observed signal** — run it and read the result: the failing assertion clears, the mission
-   transaction succeeds end to end (never a substitute flow that happens to work).
+   transaction succeeds end to end (never a substitute flow that happens to work). When the verdict
+   is one someone will stake a release on, the independent form of this tier is
+   `sde-agents:verification-engineer` — a fresh-context executor that did not write the change and
+   does not want it to pass.
 3. **LLM-as-judge** — a reasoning review (`sde-agents:code-reviewer`) for what rules can't encode: design,
    intent, subtle correctness. Use it *after* the cheap checks, not instead of them.
 
@@ -107,6 +110,7 @@ proposed if out of scope (or "none — no recurring failure"). Label verificatio
 ## Handoffs
 
 - → `sde-agents:code-reviewer` as the evaluator lens; → `sde-agents:sde-fullstack` to apply a confirmed revision.
+- → `sde-agents:verification-engineer` when the verification itself must be independent — reproducing a claimed fix and executing acceptance checks the author shouldn't self-grade.
 - → `sde-agents:root-cause` when verification fails for an unknown reason (the loop found a bug; now find its cause).
 - → `sde-agents:postmortem` after a lab incident — an operational failure gets the full write-up, not just a micro-retro; its preventative actions are this loop's candidate lessons, and its fleet-caused findings come back here to be moved left.
 - → `sde-agents:prompt-craft` / `sde-agents:prompt-engineer` when the encoded lesson is an edit to a fleet definition.

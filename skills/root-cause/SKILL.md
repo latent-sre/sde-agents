@@ -1,6 +1,6 @@
 ---
 name: root-cause
-description: A reproduce → evidence → hypothesis → verify → fix debugging loop that finds the cause before any fix is attempted. Use proactively when debugging any bug, test failure, or unexpected behavior — before proposing a fix — and especially after a fix attempt has already failed, or when guessing has started ("maybe it's X, let me try changing it"). A live home-lab service failure routes to sde-agents:homelab-platform, which applies this loop under its change tiers.
+description: A reproduce → evidence → hypothesis → verify → fix debugging loop that finds the cause before any fix is attempted. Use proactively when debugging any bug, test failure, or unexpected behavior — before proposing a fix — and especially after a fix attempt has already failed, or when guessing has started ("maybe it's X, let me try changing it"). A live home-lab service failure is an active outage: sde-agents:lab-incident mitigates first, and this loop runs on the cause afterward, under sde-agents:homelab-platform's change tiers.
 argument-hint: [the bug or unexpected behavior]
 ---
 

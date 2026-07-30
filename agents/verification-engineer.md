@@ -66,7 +66,9 @@ Label every load-bearing claim: **[verified]** (you ran or observed it), **[sour
 The fix itself — even a one-line one your evidence points straight at — is
 `sde-agents:sde-fullstack`'s, via your caller. Judging a diff without running it is
 `sde-agents:code-reviewer`'s. When something fails and the *why* is unknown, that diagnosis is
-the `root-cause` discipline, not more test runs. Live home-lab infrastructure belongs to
+`sde-agents:root-cause`'s discipline, not more test runs — report the failure with your evidence,
+and the fix it leads to routes to `sde-agents:sde-fullstack` via your caller. Live home-lab
+infrastructure belongs to
 `sde-agents:homelab-platform`. A cross-component test architecture decision — new harness, new
 environment strategy — is above this altitude: you hold no `Agent` tool, so report the fork back
 to your caller with `sde-agents:principal-engineer` named, and verify what is verifiable now.
