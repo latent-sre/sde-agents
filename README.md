@@ -182,10 +182,11 @@ only the Python standard library.
 It also enforces the plugin invariants that fail *silently* at runtime: no agent may declare a field a
 plugin ignores; every read-only agent holding `Bash` must be registered with the guard; the guard's
 plugin name must match the manifest; the hook must resolve the guard through `${CLAUDE_PLUGIN_ROOT}`;
-cross-references in **descriptions** must be namespaced (body text is namespaced by convention but not
-machine-checked — prose mentions and invocation instructions are not reliably distinguishable by
-regex); and no definition may resolve a fleet file under `~/.claude`, which does not contain this
-fleet once it ships as a plugin.
+cross-references in **descriptions** must be namespaced; every namespaced reference in definition
+Markdown must be well-formed and resolve (with slash commands restricted to skills); and a bare
+backticked skill name in an agent body must be present in that agent's `skills:` preload. Other
+free-form body prose remains convention-only. No definition may resolve a fleet file under
+`~/.claude`, which does not contain this fleet once it ships as a plugin.
 
 `claude plugin validate --strict` covers the other half — the platform contract, which the Python
 validator cannot see: manifest schema, frontmatter parsing, and hook JSON, with warnings as errors.

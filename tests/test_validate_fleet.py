@@ -42,6 +42,25 @@ class FleetValidatorTests(unittest.TestCase):
         )
         self.assertTrue(any("unknown tool 'Bogus'" in issue for issue in issues))
 
+    def test_bare_skill_reference_without_preload_is_reported(self) -> None:
+        # The fixture's agent says "work the `tuning` skill" with no skills: preload — an
+        # instruction that cannot execute and errors nowhere, which is exactly how sde-fullstack's
+        # `code-craft` reference shipped unreachable.
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "unreachable-bare-skill", check_inventory=False
+        )
+        self.assertTrue(any("unreachable authority" in issue and "tuning" in issue for issue in issues), issues)
+
+    def test_perishable_token_outside_owner_is_reported(self) -> None:
+        # The fixture's agent restates the complete upstream issue identifier while its skill uses
+        # the same digits as an unrelated port. Only the platform-fact copy should be rejected.
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "perishable-token-copy", check_inventory=False
+        )
+        token_issues = [issue for issue in issues if "perishable platform token" in issue]
+        self.assertEqual(1, len(token_issues), issues)
+        self.assertIn("anthropics/claude-code#22345", token_issues[0])
+
     def test_missing_bundled_reference_fails(self) -> None:
         """The fixture links `./references/missing.md` on purpose. Before BUNDLE_REF_RE accepted the
         `./` prefix the link matched nothing at all, so a broken path raised no issue whatsoever --
@@ -484,6 +503,68 @@ class PluginWiringTests(unittest.TestCase):
     def test_the_real_repo_is_a_valid_plugin(self) -> None:
         # The positive control. Without it, every test below could pass for the wrong reason.
         self.assertEqual([], self._issues_after(lambda _: None))
+
+    def test_dangling_namespace_reference_is_reported(self) -> None:
+        # The corpus carries hundreds of `sde-agents:<name>` cross-references and nothing at
+        # runtime resolves one: a renamed or deleted member leaves pointers that pass every gate
+        # while routing quietly degrades. Mutation, not a fixture, because the invariant is about
+        # the real repo's densely linked graph.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nEscalate fan-out design to `sde-agents:ghost-skill`.\n",
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("sde-agents:ghost-skill" in i for i in issues), issues)
+
+    def test_malformed_namespace_reference_is_reported_as_the_complete_token(self) -> None:
+        # A prefix-only regex used to accept code-reviewer_v2 as the live code-reviewer target and
+        # skipped uppercase targets entirely. Each mutation introduces one malformed reference.
+        for target in ("code-reviewer_v2", "Code-Reviewer", "code--reviewer"):
+            with self.subTest(target=target):
+
+                def mutate(repo: Path) -> None:
+                    path = repo / "agents" / "researcher.md"
+                    path.write_text(
+                        path.read_text(encoding="utf-8")
+                        + f"\nEscalate to `sde-agents:{target}`.\n",
+                        encoding="utf-8",
+                    )
+
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any(
+                        f"sde-agents:{target}" in issue
+                        and "malformed namespaced reference" in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+
+    def test_slash_command_reference_must_target_a_skill(self) -> None:
+        # code-reviewer is a real fleet member, but it is an agent and therefore cannot resolve
+        # through slash-command syntax. Union membership must not certify the invocation.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nRun `/sde-agents:code-reviewer` before continuing.\n",
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "/sde-agents:code-reviewer" in issue
+                and "slash-command reference" in issue
+                and "must target a skill" in issue
+                for issue in issues
+            ),
+            issues,
+        )
 
     def test_missing_hook_registration_is_reported(self) -> None:
         issues = self._issues_after(lambda r: (r / "hooks" / "hooks.json").unlink())

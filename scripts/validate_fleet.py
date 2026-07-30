@@ -184,6 +184,17 @@ EVIDENCE_LABEL_RE = re.compile(r"\*\*\[(?:un)?(?:verified|sourced)\]\*\*")
 PACKET_HEADING_RE = re.compile(
     r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
 )
+# Perishable platform facts get exactly ONE home inside agents/ and skills/, so when the platform
+# moves, the correction lands once instead of chasing prose copies. Keys are literal substrings
+# searched in every definition markdown file; values are the only file (repo-relative POSIX path)
+# allowed to carry them. The complete issue identifier below is the upstream
+# disable-model-invocation-ignored-for-plugin-skills bug: it had already been copied into an agent
+# body once, and a stale copy keeps teaching the old platform behavior with no runtime error after
+# the issue closes. Pin the full identifier rather than its common numeric suffix so unrelated
+# ports, record IDs, and metrics remain valid definition content.
+PERISHABLE_TOKENS = {
+    "anthropics/claude-code#22345": "skills/prompt-craft/references/claude-code-frontmatter.md",
+}
 # AGENTS.md drift tripwires. The guide paraphrases the validator and the repo layout, and prose has
 # no runtime: Claude Code loads CLAUDE.md (not AGENTS.md), so a lost `@AGENTS.md` import orphans the
 # guide without an error; a renamed script leaves it pointing at nothing; an alias change leaves it
@@ -529,6 +540,64 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     return issues, sorted(names)
 
 
+def definition_markdown_files(root: Path) -> list[Path]:
+    """Every markdown file the fleet ships as behavior: agent bodies, SKILL.md files, and each
+    skill's references/ and assets/ — the surface a cross-reference or platform-fact rule must
+    cover, because all of it is loaded (or read by path) into real sessions."""
+    files = sorted((root / "agents").glob("*.md")) if (root / "agents").is_dir() else []
+    if (root / "skills").is_dir():
+        files += sorted((root / "skills").rglob("*.md"))
+    return files
+
+
+def validate_bare_skill_references(root: Path, skill_names: list[str]) -> list[str]:
+    """A bare backticked skill name in an agent body asserts "already in context".
+
+    AGENTS.md reserves the bare form for preloaded content; everything else must be namespaced.
+    The failure this catches is silent by construction: an agent told to work `some-skill` with no
+    preload, no Skill grant, and no path has an instruction that cannot execute — the model just
+    proceeds without the skill's content, and nothing errors. Observed for real: sde-fullstack
+    said "invoke `code-craft`" while holding no route to it, and the fleet's flagship pipeline
+    forbade its callers from working around the gap.
+    """
+    issues: list[str] = []
+    known = set(skill_names)
+    agents_dir = root / "agents"
+    if not agents_dir.is_dir():
+        return issues
+    for path in sorted(agents_dir.glob("*.md")):
+        fields = parse_frontmatter(path) or {}
+        preloaded = {entry.strip() for entry in fields.get("skills", "").split(",") if entry.strip()}
+        for span in sorted(set(INLINE_CODE_RE.findall(read_text(path)))):
+            if span in known and span not in preloaded:
+                issues.append(
+                    f"{path}: bare backticked skill name `{span}` claims the skill is already in "
+                    f"this agent's context, but it is not in the skills: preload — the reference "
+                    f"is unreachable authority that reads as configured, and nothing errors at "
+                    f"runtime. Preload it; use the namespaced form if routing is the intent; or "
+                    f"give an explicit, resolvable "
+                    f"${{CLAUDE_PLUGIN_ROOT}}/skills/{span}/SKILL.md path if the agent must read it."
+                )
+    return issues
+
+
+def validate_perishable_tokens(root: Path) -> list[str]:
+    """Each perishable platform fact may appear in exactly one declared owner file."""
+    issues: list[str] = []
+    for token, owner in PERISHABLE_TOKENS.items():
+        for path in definition_markdown_files(root):
+            if path.relative_to(root).as_posix() == owner:
+                continue
+            if token in read_text(path):
+                issues.append(
+                    f"{path}: carries perishable platform token {token!r}, whose only allowed home "
+                    f"is {owner}. A second copy stays behind when the platform moves and keeps "
+                    f"teaching the stale behavior with no runtime error — state the role-local "
+                    f"consequence here and point at the owner file for the fact."
+                )
+    return issues
+
+
 def render_inventory(agent_names: list[str], skill_names: list[str]) -> str:
     agents = ", ".join(f"`{name}`" for name in agent_names)
     skills = ", ".join(f"`{name}`" for name in skill_names)
@@ -817,6 +886,51 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
                 f"Use '${{CLAUDE_PLUGIN_ROOT}}/{kind}/...' instead."
             )
 
+    # Every namespaced cross-reference must be one complete, well-formed token that resolves to
+    # the right kind of fleet member. The corpus is a densely linked graph (hundreds of
+    # `<plugin>:<name>` references) and NOTHING at runtime checks one: a prefix-only matcher can
+    # certify `code-reviewer_v2` as `code-reviewer`, while union membership can certify a slash
+    # command that names an agent even though slash commands invoke skills. Both failures are
+    # silent. The token matcher therefore captures uppercase and invalid punctuation too, so
+    # syntax is rejected explicitly instead of being skipped or truncated to a valid prefix.
+    if plugin_name:
+        ns_ref_re = re.compile(
+            rf"(?<![\w/.-])(?P<slash>/)?{re.escape(plugin_name)}:"
+            r"(?P<target>[^\s`'\"<>()\[\]{},;!?]*)"
+        )
+        agents = set(agent_names)
+        skills = set(skill_names)
+        for path in definition_markdown_files(root):
+            references = {
+                (bool(match.group("slash")), match.group("target").rstrip(".:"))
+                for match in ns_ref_re.finditer(read_text(path))
+            }
+            for is_slash_command, target in sorted(references):
+                reference = f"{'/' if is_slash_command else ''}{plugin_name}:{target}"
+                if not NAME_RE.fullmatch(target):
+                    issues.append(
+                        f"{path}: malformed namespaced reference {reference!r}; the complete target "
+                        f"must be a kebab-case fleet name. Prefix matching would silently certify "
+                        f"a different live member while this token fails to resolve at runtime."
+                    )
+                    continue
+                if is_slash_command and target not in skills:
+                    target_kind = "an agent" if target in agents else "no shipped skill"
+                    issues.append(
+                        f"{path}: slash-command reference {reference!r} names {target_kind}; a "
+                        f"slash-command reference must target a skill, or the invocation cannot "
+                        f"resolve at runtime."
+                    )
+                    continue
+                if target not in fleet:
+                    issues.append(
+                        f"{path}: references {reference}, which is not an agent or "
+                        f"skill in this fleet. A dangling cross-reference fails nowhere at "
+                        f"runtime — routing and handoffs just quietly stop resolving — so a "
+                        f"rename or removal must update every referrer, and this rule is what "
+                        f"makes the miss loud."
+                    )
+
     return issues
 
 
@@ -895,6 +1009,8 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_plugin(root, agent_names, skill_names))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
+    issues.extend(validate_bare_skill_references(root, skill_names))
+    issues.extend(validate_perishable_tokens(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names
