@@ -1,0 +1,64 @@
+{
+  "cluster": "homelab-ops",
+  "runs_per_case": 5,
+  "members": [
+    "homelab-platform",
+    "host-onboard",
+    "lab-audit",
+    "lab-incident",
+    "observability",
+    "postmortem",
+    "restore-drill",
+    "runbook",
+    "security-audit",
+    "service-onboard",
+    "upgrade-campaign"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "threshold": 0.5,
+    "timeout_s": 420,
+    "clean_room": true
+  },
+  "summary": {
+    "passed": 1,
+    "total": 1
+  },
+  "cases": [
+    {
+      "id": "pos-audit-security",
+      "polarity": "positive",
+      "tags": [
+        "lab-audit",
+        "security-sweep"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.6,
+      "correct_rate": 0.6,
+      "detail": "expected ['lab-audit'] fired in 3/5 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [
+          "lab-audit"
+        ],
+        [],
+        [
+          "lab-audit"
+        ],
+        [
+          "lab-audit"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}
