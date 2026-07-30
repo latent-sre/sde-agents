@@ -133,28 +133,6 @@ deterministic where routing summons are not) — then capture the anchor under `
 conditions the artifact now records. Isolation will not rescue agent positives; nothing further is
 owed on that question.
 
-#### PORT-001 — codify the cross-fleet import method
-
-**Status:** `deferred`
-
-**Outcome:** Before the next donor-mining round, make the independent review, adaptation-notes,
-scrub, provenance, and adapt-don't-copy method invocable without duplicating prompt authoring or
-post-landing self-improvement.
-
-**Source:** Archived
-[`roster expansion design`](archive/2026-07/roster-expansion-design.md), whose timing question was
-accepted in the originating operator session.
-
-**Prerequisites:** A scheduled donor import or mining round. Measure whether a skill description
-routes correctly; if it cannot justify its always-visible cost, retain the method as a documented
-convention instead.
-
-**Acceptance:** The next import uses three independent passes before donor-doc comparison,
-produces adaptation notes as the implementation specification, scrubs donor-only assumptions,
-records provenance, and passes fleet validation and relevant routing checks.
-
-**Next action:** Reopen immediately before the next donor import.
-
 #### RELEASE-001 — add repository release discipline
 
 **Status:** `deferred`
