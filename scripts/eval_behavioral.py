@@ -83,6 +83,7 @@ _routing_spec.loader.exec_module(eval_routing)
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, disallowed_tools: list[str] | None = None,
     agent: str | None = None, permission_mode: str | None = None, model: str | None = None,
+    env: dict | None = None,
 ) -> tuple[str, set[str], str | None, dict]:
     """Drive one headless session to completion; return (final text, fired, note, stats).
 
@@ -133,6 +134,7 @@ def run_session(
             proc = subprocess.run(
                 command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
+                env=env,
             )
     except subprocess.TimeoutExpired as exc:
         partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
@@ -239,6 +241,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="pin the session model (recorded in conditions). Without it every "
                              "session takes the CLI default — an unchosen condition no artifact "
                              "records, observed to be the most expensive tier.")
+    parser.add_argument("--clean-room", action="store_true",
+                        help="relocate CLAUDE_CONFIG_DIR to a temp dir holding only credentials for "
+                             "every session (see scripts/eval_routing.py --clean-room; same switch, "
+                             "same conditions rule)")
     args = parser.parse_args(argv)
 
     cases = load_cases(args.case)
@@ -270,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         case, _ = job
         text, fired, note, stats = run_session(
             case["prompt"], args.plugin_dir, args.timeout, case.get("disallowed_tools"),
-            case.get("agent"), case.get("permission_mode"), args.model,
+            case.get("agent"), case.get("permission_mode"), args.model, session_env,
         )
         # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
         # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
@@ -281,24 +287,35 @@ def main(argv: list[str] | None = None) -> int:
         return case["id"], assert_case(text, case, fired), note, stats
 
     done = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        # pool.map preserves submission order, so per-case run arrays stay diffable between two
-        # otherwise-identical benchmarks (the routing runner re-sorts for the same reason).
-        for case_id, failures, note, stats in pool.map(execute, jobs):
-            results[case_id].append(failures)
-            if note:
-                notes[case_id].append(note)
-            # Usage is per RUN, None when the transcript carried none — a labeled absence, never a
-            # fabricated zero (the same rule packet_lint applies to unevidenced claims).
-            has_usage = stats["input_tokens"] is not None or stats["output_tokens"] is not None
-            usage[case_id].append(
-                {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
-                if has_usage else None
-            )
-            if stats["model"]:
-                observed_models.add(stats["model"])
-            done += 1
-            print(f"  [{done}/{total}] complete", end="\r", flush=True)
+    with contextlib.ExitStack() as stack:
+        # One room for the whole batch, same as the routing runner: sessions only read the
+        # relocated config, and the room must outlive the pool.
+        session_env = None
+        if args.clean_room:
+            clean_room = eval_routing._load_clean_room()
+            try:
+                session_env = stack.enter_context(clean_room.clean_env())
+            except clean_room.AuthUnavailable as exc:
+                print(f"clean room refused to run: {exc}", file=sys.stderr)
+                return 2
+        with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+            # pool.map preserves submission order, so per-case run arrays stay diffable between two
+            # otherwise-identical benchmarks (the routing runner re-sorts for the same reason).
+            for case_id, failures, note, stats in pool.map(execute, jobs):
+                results[case_id].append(failures)
+                if note:
+                    notes[case_id].append(note)
+                # Usage is per RUN, None when the transcript carried none — a labeled absence,
+                # never a fabricated zero (the same rule packet_lint applies to unevidenced claims).
+                has_usage = stats["input_tokens"] is not None or stats["output_tokens"] is not None
+                usage[case_id].append(
+                    {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
+                    if has_usage else None
+                )
+                if stats["model"]:
+                    observed_models.add(stats["model"])
+                done += 1
+                print(f"  [{done}/{total}] complete", end="\r", flush=True)
     print(" " * 40, end="\r")
 
     print(f"\n{'case':32s} {'verdict':8s} {'pass':>6s}  detail")
@@ -338,6 +355,9 @@ def main(argv: list[str] | None = None) -> int:
             "models_observed": sorted(observed_models),
             "plugin_dir": "." if Path(args.plugin_dir).resolve() == REPO else str(args.plugin_dir),
             "timeout_s": args.timeout,
+            # Same rule as the routing runner: isolation is a measurement condition, and two
+            # artifacts differing on it are not comparable.
+            "clean_room": bool(args.clean_room),
         }
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "benchmark.json").write_text(
