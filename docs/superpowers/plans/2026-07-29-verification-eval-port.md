@@ -28,7 +28,13 @@ PR C merges.
 
 1. Salvage `scripts/eval_clean_room.py` + `tests/test_eval_clean_room.py` from
    `modernization-cleanup` via `git checkout <branch> -- <paths>`; adapt only what current code
-   requires; verify the two `CLAUDE_CODE_*` env-var claims against current docs.
+   requires. Env-var facts verified against current docs 2026-07-29: `CLAUDE_CONFIG_DIR` and
+   `CLAUDE_CODE_SKIP_PROMPT_HISTORY` are documented and behave as the script assumes, but
+   `CLAUDE_CODE_DISABLE_POLICY_SKILLS` appears in no documentation — the documented variable is
+   `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` (v2.1.169) — so the script and its test must be corrected
+   or the setting ships as a silent no-op. Also salvage `THIRD_PARTY_NOTICES.md`: it carries the
+   MIT attribution for material adapted from `sre-agents`, which the tree currently lacks, and it
+   is where PR C's import records its own upstream.
 2. Fix the false isolation claim at `evals/README.md:108` to state what is actually true.
 3. Two-session registration probe (one contaminated, one clean-room); artifacts under
    `evals/baselines/2026-07-29-isolation/`.
