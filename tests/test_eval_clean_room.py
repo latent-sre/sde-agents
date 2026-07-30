@@ -85,6 +85,7 @@ class CleanEnvironmentTest(unittest.TestCase):
                     "ANTHROPIC_API_KEY": "test-not-real",
                     "CLAUDE_CODE_SYNC_SKILLS": "1",
                     "CLAUDE_CODE_PLUGIN_SEED_DIR": "/personal/plugins",
+                    "CLAUDE_CODE_DISABLE_POLICY_SKILLS": "1",
                 },
                 clear=False,
             ):
@@ -92,8 +93,8 @@ class CleanEnvironmentTest(unittest.TestCase):
                     self.assertNotIn("CLAUDE_CODE_SYNC_SKILLS", env)
                     self.assertNotIn("CLAUDE_CODE_PLUGIN_SEED_DIR", env)
                     # The salvage source set CLAUDE_CODE_DISABLE_POLICY_SKILLS here; that variable
-                    # exists in no current documentation, so the room must NOT set it — a phantom
-                    # env var is isolation that reads as armor and configures nothing.
+                    # exists in no current documentation, so the room must NOT set it — and must
+                    # scrub an externally exported copy, or the phantom leaks in via inheritance.
                     self.assertNotIn("CLAUDE_CODE_DISABLE_POLICY_SKILLS", env)
                     self.assertEqual("1", env["CLAUDE_CODE_SKIP_PROMPT_HISTORY"])
 
@@ -118,6 +119,21 @@ class RunValidationTest(unittest.TestCase):
         trace = self.event(error=True, result="Not logged in · Please run /login")
         with self.assertRaises(eval_clean_room.AuthUnavailable):
             eval_clean_room.validate_completed_run(trace, 1)
+
+    def test_auth_failure_in_stderr_without_result_event_is_auth_unavailable(self) -> None:
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.validate_completed_run("", 1, "Not logged in · Please run /login")
+
+    def test_auth_failure_in_transcript_without_result_event_is_auth_unavailable(self) -> None:
+        trace = '{"type":"system","subtype":"authentication_failed"}'
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.validate_completed_run(trace, 1)
+
+    def test_successful_run_mentioning_auth_text_is_not_an_outage(self) -> None:
+        event = eval_clean_room.validate_completed_run(
+            self.event(result="the error was: Not logged in"), 0
+        )
+        self.assertFalse(event["is_error"])
 
 
 if __name__ == "__main__":

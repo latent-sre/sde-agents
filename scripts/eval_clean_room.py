@@ -37,6 +37,10 @@ AUTH_ENV_VARS = (
 )
 CONTAMINATING_ENV_VARS = (
     "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD",
+    # Phantom in current docs (see the note in clean_env), scrubbed anyway: the room must not SET
+    # it, but it must not INHERIT it either — an operator who exported it would otherwise carry an
+    # undocumented variable into an environment the artifact records as clean.
+    "CLAUDE_CODE_DISABLE_POLICY_SKILLS",
     "CLAUDE_CODE_ENABLE_BACKGROUND_PLUGIN_REFRESH",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
     "CLAUDE_CODE_PLUGIN_CACHE_DIR",
@@ -144,14 +148,20 @@ def validate_completed_run(transcript: str, returncode: int, stderr: str = "") -
     """
     event = result_event(transcript)
     event_text = json.dumps(event or {})
-    if returncode != 0 and any(marker in event_text for marker in AUTH_MARKERS):
+    # A run that already failed is classified by scanning everything the CLI said, not only the
+    # result event: an auth failure can exit non-zero before any result event is emitted, or land
+    # only in stderr/transcript, and mislabeling it RunnerFailed erases the very distinction this
+    # helper exists to draw. Successful runs are never scanned — a model quoting "Not logged in"
+    # in its answer is a measurement, not an outage.
+    failed = returncode != 0 or event is None or bool(event.get("is_error"))
+    if failed and any(
+        marker in text for text in (event_text, stderr or "", transcript or "") for marker in AUTH_MARKERS
+    ):
         raise AuthUnavailable("Claude authentication failed during the eval; refresh /login and rerun")
     if returncode != 0:
         raise RunnerFailed(f"Claude exited {returncode}: {(stderr or '')[:180]}")
     if event is None:
         raise RunnerFailed("Claude exited without a structured result event")
     if event.get("is_error"):
-        if any(marker in event_text for marker in AUTH_MARKERS):
-            raise AuthUnavailable("Claude authentication failed during the eval; refresh /login and rerun")
         raise RunnerFailed(f"Claude result event reported an error: {event_text[:220]}")
     return event

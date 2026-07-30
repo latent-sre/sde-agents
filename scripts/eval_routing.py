@@ -219,10 +219,14 @@ def _load_clean_room():
     """Load scripts/eval_clean_room.py by path. A plain import spells differently in this file's
     two runtime contexts (script vs `from scripts import eval_routing`); path loading works in both,
     and it happens lazily so only `--clean-room` runs pay for or depend on it."""
-    spec = importlib.util.spec_from_file_location(
-        "eval_clean_room", Path(__file__).resolve().parent / "eval_clean_room.py")
+    path = Path(__file__).resolve().parent / "eval_clean_room.py"
+    spec = importlib.util.spec_from_file_location("eval_clean_room", path)
+    # An assert here would vanish under `python -O` and surface later as an opaque AttributeError;
+    # a --clean-room run must instead fail loudly at the point the isolation module went missing.
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load the clean-room module from {path}; without it --clean-room "
+                          "cannot isolate the run, so refusing rather than measuring a dirty room")
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
 

@@ -37,10 +37,15 @@ REPO = Path(__file__).resolve().parents[1]
 CLAUDE = shutil.which("claude")
 PROMPT = "Reply with exactly: ready"
 
-_spec = importlib.util.spec_from_file_location(
-    "eval_clean_room", Path(__file__).resolve().parent / "eval_clean_room.py")
+_CLEAN_ROOM_PATH = Path(__file__).resolve().parent / "eval_clean_room.py"
+_spec = importlib.util.spec_from_file_location("eval_clean_room", _CLEAN_ROOM_PATH)
+# An assert here would vanish under `python -O` and surface later as an opaque AttributeError;
+# a probe that cannot load its isolation module must say so before pretending to measure anything.
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"cannot load the clean-room module from {_CLEAN_ROOM_PATH}; the probe "
+                      "refuses to run without it because an unisolated clean-room session would "
+                      "measure a contamination delta of zero by construction")
 clean_room = importlib.util.module_from_spec(_spec)
-assert _spec.loader is not None
 _spec.loader.exec_module(clean_room)
 
 
