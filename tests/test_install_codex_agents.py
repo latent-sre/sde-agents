@@ -93,7 +93,7 @@ class InstallCodexAgentsTests(unittest.TestCase):
             {"CODEX_HOME": str(codex_home)},
         ):
             self.assertEqual(
-                codex_home / "agents",
+                (codex_home / "agents").resolve(),
                 install_codex_agents._user_agents_directory(),
             )
 
@@ -120,7 +120,7 @@ class InstallCodexAgentsTests(unittest.TestCase):
             mock.patch.object(Path, "home", return_value=self.root),
         ):
             self.assertEqual(
-                self.root / ".codex" / "agents",
+                (self.root / ".codex" / "agents").resolve(),
                 install_codex_agents._user_agents_directory(),
             )
 
