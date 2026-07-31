@@ -28,8 +28,6 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
-### Active
-
 ### Ready
 
 ## Deferred decisions
@@ -218,7 +216,7 @@ The initial and deep reviews are consolidated in
 | Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
 | `homelab-platform` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
 | `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
-| Eval coverage stops at one routing cluster with no behavioral checks | Six routing clusters, the behavioral runner, packet linter, and three deterministic contracts exist | Machinery landed; additional contract coverage survives below |
+| Eval coverage stops at one routing cluster with no behavioral checks | Six routing clusters, the behavioral runner, packet linter, and 21 deterministic contracts exist | Machinery landed; additional contract coverage survives below |
 | Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
 | Body cross-reference namespacing is inconsistent | Descriptions are validator-enforced; body text follows the namespaced-when-invocable convention, with bare names reserved for content already in context | No current broken route found; close |
 | `sre-tool` keeps multi-component detail in its always-loaded core | `skills/sre-tool/references/multi-component.md` now owns that conditional material | Landed; exclude |
@@ -244,10 +242,10 @@ must not seed new work.
 | Historical item | Current evidence | Disposition |
 |---|---|---|
 | `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
-| `restore-drill` and `upgrade-campaign` | Both appear in the generated 17-skill inventory | Landed; exclude despite the backlog's stale “remain open” sentence |
+| `restore-drill` and `upgrade-campaign` | Both appear in the generated 19-skill inventory | Landed; exclude despite the backlog's stale “remain open” sentence |
 | `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
-| `host-onboard` | No skill or equivalent host-lifecycle checklist exists | Survives |
-| `lab-audit` command reference and findings ledger | Checks remain inline and no reference file exists; active Round 1 Item C owns it | Survives as active Round 1 work |
+| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-platform` | Landed; exclude |
+| `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
 | `lab-audit` allowed-tool preapprovals | The backlog explicitly rejected the authority expansion because approval friction is useful | Deliberately closed |
 | `service-onboard` compose template | No template exists; the original plan limits it to labs with no existing pattern | Survives as deferred, trigger-bound work |
 | Prompt-craft eval wiring | The retest step now requires the repository harness before/after | Landed; exclude |
@@ -266,7 +264,7 @@ The two source reviews are consolidated in
 | Packet-lint helper | `scripts/packet_lint.py`, fixtures, and behavioral-runner integration exist | Landed; exclude |
 | Behavioral verification of accessibility imports | No behavioral contract covers form wiring, overlays, keyboard flow, or async announcements | Survives, triggered by the next applicable UI task |
 | Deterministic behavioral assertions and pinned fixtures | The current suite is deterministic and stores cases as versioned JSON | Landed; exclude |
-| Track token cost beside behavioral pass rate | `eval_behavioral.py` does not capture usage or cost conditions | Survives |
+| Track token cost beside behavioral pass rate | `eval_behavioral.py` records per-run input/output usage plus requested/observed model and other measurement conditions | Landed; exclude |
 | Principal-engineer AI-maintainer clause | Still absent; explicitly optional and adds nuance without an observed failure | Deliberately closed |
 | Multi-agent wrapper-stack trigger | Present in the current description | Landed; exclude |
 | `article-writing` import | Remains outside the SDE/SRE fleet remit with no routing home | Deliberately closed |

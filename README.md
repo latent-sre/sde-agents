@@ -8,7 +8,7 @@ generated, host-specific adapters whose byte-for-byte currency is enforced by th
 ## Fleet
 
 <!-- fleet-inventory:start -->
-- **Agents (10):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `researcher`, `sde-fullstack`, `verification-engineer`
+- **Agents (11):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `repository-investigator`, `researcher`, `sde-fullstack`, `verification-engineer`
 - **Skills (19):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
@@ -155,6 +155,40 @@ authority.
 Claude `skills:` preloads are translated into explicit required-skill instructions. The generator
 also rewrites Claude-only claims about hooks, tool names, context inheritance, and frontmatter;
 keeping those sentences unchanged would make the adapter contradict its real host controls.
+
+## Runtime control plane
+
+Prompt instructions describe intent; these standard-library controls bind the parts that need
+machine enforcement. They are deliberately separate programs so an operator can place state and
+authority outside an agent's writable checkout:
+
+| Control | What it enforces | Required trust boundary |
+|---|---|---|
+| `scripts/evidence_envelope.py` | Versioned JSON evidence bound to producer, run/task/attempt, immutable target, direct argv, timestamps, artifacts, status, and limitations | Producers expose only explicit non-secret environment facts; artifact bytes are retained wherever their digests must be checked |
+| `scripts/run_state.py` | Transactional run/task/attempt transitions, optimistic versions, leases, heartbeat, cancellation, supersession, and evidence-linked completion | SQLite database outside every worker workspace; workers receive IDs and stdin lease tokens, not direct database write access |
+| `scripts/verification_sandbox.py` | Digest-pinned, no-pull, networkless Docker/Podman execution with read-only source, isolated scratch, non-root identity, dropped capabilities, limits, timeout, cleanup, and residue evidence | Trusted fleet script and local engine; no worker access to a remote engine socket or host credentials; network-required checks remain inconclusive |
+| `scripts/effect_broker.py` | HMAC-signed approval of one exact action/target/argv/executable digest with expiry and atomic one-shot replay protection | Approval key and SQLite replay ledger outside agent authority; a separate operator identity approves and executes; the agent may only prepare a request |
+
+The placement condition is load-bearing. Keeping a database or key merely outside the Git root does
+not help if the same agent identity can still read or alter it. `run_state.py` and
+`effect_broker.py` reject paths inside the declared workspace, but OS identity and ACL separation
+remain the operator's responsibility. A target repository's same-named script is untrusted input;
+invoke the fleet-owned copy. Claude can resolve that copy through `${CLAUDE_PLUGIN_ROOT}`. Generated
+Copilot, VS Code, and Codex artifacts do not package these scripts, so their instructions require an
+operator-provided trusted copy instead of retaining a path that would not exist.
+
+The effect flow has three actors: the agent emits a canonical request; the user approves that exact
+request; an operator-owned mediator holding the key and replay ledger signs and executes it. Never
+pass the key to an agent prompt, environment, argv, progress file, or workspace. If the mediator is
+unavailable, Tier 2/3 work stops at the prepared request—the agent does not fall back to executing
+after a prose “yes.” Verification is similar: an unavailable pinned container boundary makes the
+affected criterion inconclusive rather than authorizing target-controlled code on the host.
+
+`scripts/fleet_doctor.py` and `scripts/probe_hosts.py` observe this system but do not enforce it.
+The doctor is read-only and reports repository, generated, install, CLI, junction, guard, and Codex
+sync posture. Host probes keep static packaging, discovery, live Claude behavior, and model-specific
+Codex baselines in separate lanes so an absent host or unexposed observed-model field cannot become
+a pass.
 
 ## Project context convention
 

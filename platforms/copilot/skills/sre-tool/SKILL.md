@@ -19,6 +19,17 @@ For safety-critical work, name both consequences: the Phase-3 independent-review
 **blocked**, the Phase-4 verification verdict is **inconclusive**, and Phase 5 stays blocked. Execute
 the inline checks you can as non-independent evidence, but do not relabel them as either gate.
 
+For any multi-agent or safety-critical run, keep authoritative orchestration state with
+an operator-provided trusted copy of the fleet's `run_state.py` control. Its SQLite database must live outside every worker's
+writable workspace under an operator-owned identity. The orchestrator creates runs and tasks,
+issues time-limited leases, propagates cancellation or supersession, and accepts completion only
+with a schema-valid evidence envelope bound to the same run, task, attempt, and target revision.
+Workers receive identifiers and lease tokens, not database write access; lease tokens travel on
+stdin and never enter prompts, argv, progress files, or evidence. If that trusted state boundary is
+unavailable, degrade to one attended worker at a time and say explicitly that cancellation,
+supersession, lease expiry, and completion are not durably enforced. Do not present progress shards
+or conversation memory as equivalent control-plane state.
+
 **Multi-component builds** (e.g. a web UI plus the backend API behind it): the contract, parallel-batch, and review-routing rules live in [`references/multi-component.md`](references/multi-component.md). Read it at Phase 1, the moment the design has more than one component — before spawning any builder. Single-component runs never need it.
 
 ## Phase 0 — Requirements (don't skip)
@@ -53,7 +64,7 @@ Agents do not inherit this conversation. Pass each one full context: the Phase 0
 
 1. **Spawn** `sde-fullstack` with the requirements, the design, exact repo paths and conventions, and the success criterion. The builder requires both craft skills — include that requirement in the spawn contract and ensure the host loads them before work. For trivial scope, implement directly while holding to the same SRE-lens standards (observability, timeouts, idempotency, dry-run for destructive actions).
 2. **State a checkpoint contract in every spawn prompt**, shaped by [`assets/spawn-prompt.template.md`](assets/spawn-prompt.template.md) — every slot filled or an explicit "n/a — why": the boundary to run to, the acceptance criteria the builder self-verifies against, scope in *and out*, and the leash — reversible decisions are the builder's to make and log; it returns only at the boundary or on a material fork. What the handoff omits, the agent will improvise.
-3. **Accept a builder's review packet on its evidence** (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification.
+3. **Accept a builder's review packet on its evidence** (fresh command + output): re-run declared safety proofs and one spot-check per batch, never the whole verification. In a durable-state run, accept the checkpoint only after the matching task attempt records a valid evidence envelope; prose and progress-file claims do not complete the attempt.
 4. **Answer status questions from the builders' progress shards** declared in the project context (solo default `.agents/PROGRESS.md`; parallel batches: one `.agents/progress/<component>.md` per builder, one writer per file) — never interrupt a running builder to ask.
 5. **Failure path**: a packet that returns short of its checkpoint contract gets one relaunch with the gap named; a second miss escalates to the user. Fix→re-review cycles cap at two rounds, which — counting the build that failed review as the first failed attempt — is `root-cause`'s three strikes reached: the diagnosis is wrong, so switch to that skill's method rather than spending a third fix. Record these counts in the plan file next to the cadence contract — like the contract, they must survive compaction, or a mid-pipeline compaction silently resets the cap.
 
@@ -96,6 +107,11 @@ own run: the orchestrator that drove the build wants a green result, which is ex
 that agent exists to remove. Your own spot-checks (Phase 2.3) continue, but they are checks, not the
 verdict. If subagent spawning is unavailable, those spot-checks remain non-independent evidence only;
 the safety-critical verdict is **inconclusive**, and Phase 5 stays blocked.
+
+For a durably tracked run, the verifier's typed evidence envelope is the completion input for the
+matching attempt. Validate its run/task/attempt identifiers and immutable target revision before
+accepting it; then let the state control perform the legal transition. A Markdown packet may explain
+the verdict, but it must not manufacture, rewrite, or stand in for that envelope.
 
 For everything else, run the tool and execute the **mission transaction from the environment card, verbatim** — not just the test suite, and not a substitute flow that happens to work. Deploy/install docs are runbooks: every command executed as written or labeled `unverified`. Final report: what was built, how to run it, what was verified end to end, the review verdict, and known gaps.
 

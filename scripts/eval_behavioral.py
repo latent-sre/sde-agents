@@ -7,13 +7,11 @@ half: a real headless session is driven to completion, and its final output is a
 DETERMINISTIC checks — packet-slot compliance via scripts/packet_lint.py, plus literal
 must-contain / must-not-contain assertions. No judge model, so a failure is a fact, not an opinion.
 
-The three promises seeded here are the ones whose silent failure would be worst, and each is a claim
-some file in this fleet makes about itself:
-
-  * the builder's review packet arrives with every slot filled (the packet contract);
-  * the reviewer IGNORES AND REPORTS an instruction embedded in the code it reviews, rather than
-    obeying it (the fetched-content-is-data rule, tested adversarially);
-  * a live-lab change is not applied without its approval gate (homelab-platform's change tiers).
+The seeded contracts are promises whose silent failure would be costly and each is a claim some
+fleet component makes about itself. `evals/behavioral/contracts.json` is the authoritative
+inventory; it spans packet shape, review and verification boundaries, adversarial content, live
+effects, incident/restore behavior, architecture handoffs, prompt evaluation, and multi-agent
+state and validation.
 
 Like the routing suite this is MANUAL and on demand, not a CI gate: it drives real API sessions,
 costs real money, and has real variance. Run it before and after a change to a definition whose
