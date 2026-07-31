@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import io
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import install_codex_agents
 
@@ -81,6 +84,51 @@ class InstallCodexAgentsTests(unittest.TestCase):
             "name = \"personal\"\n",
             unmanaged.read_text(encoding="utf-8"),
         )
+
+    def test_user_target_honors_codex_home(self) -> None:
+        codex_home = self.root / "custom-codex-home"
+        codex_home.mkdir()
+        with mock.patch.dict(
+            os.environ,
+            {"CODEX_HOME": str(codex_home)},
+        ):
+            self.assertEqual(
+                codex_home / "agents",
+                install_codex_agents._user_agents_directory(),
+            )
+
+    def test_user_sync_writes_beneath_codex_home(self) -> None:
+        codex_home = self.root / "sync-codex-home"
+        codex_home.mkdir()
+        with (
+            mock.patch.dict(os.environ, {"CODEX_HOME": str(codex_home)}),
+            mock.patch("sys.stdout", new=io.StringIO()),
+        ):
+            self.assertEqual(0, install_codex_agents.main(["--user"]))
+
+        installed = codex_home / "agents" / "code-reviewer.toml"
+        self.assertTrue(installed.is_file())
+        self.assertTrue(
+            installed.read_text(encoding="utf-8").startswith(
+                install_codex_agents.INSTALL_MARKER
+            )
+        )
+
+    def test_user_target_defaults_to_dot_codex_under_home(self) -> None:
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch.object(Path, "home", return_value=self.root),
+        ):
+            self.assertEqual(
+                self.root / ".codex" / "agents",
+                install_codex_agents._user_agents_directory(),
+            )
+
+    def test_user_target_rejects_missing_codex_home(self) -> None:
+        missing = self.root / "missing-codex-home"
+        with mock.patch.dict(os.environ, {"CODEX_HOME": str(missing)}):
+            with self.assertRaisesRegex(ValueError, "CODEX_HOME.*does not exist"):
+                install_codex_agents._user_agents_directory()
 
 
 if __name__ == "__main__":

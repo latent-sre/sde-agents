@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import generate_platform_adapters
 from scripts import validate_fleet
@@ -12,6 +16,31 @@ from scripts import validate_fleet
 REPO = Path(__file__).resolve().parents[1]
 COPILOT_TOOL_ALIASES = {"agent", "edit", "execute", "read", "search", "web"}
 WRITE_TOOLS = {"Edit", "NotebookEdit", "Write"}
+
+
+def _create_directory_link(target: Path, link: Path) -> None:
+    """Create the link primitive that can redirect directory traversal on this host."""
+
+    if os.name == "nt":
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode:
+            raise unittest.SkipTest(
+                f"cannot create a Windows junction for the regression test: {result.stderr}"
+            )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def _remove_directory_link(link: Path) -> None:
+    if link.is_symlink():
+        link.unlink()
+    elif link.exists():
+        link.rmdir()
 
 
 class PlatformAdapterTests(unittest.TestCase):
@@ -55,6 +84,151 @@ class PlatformAdapterTests(unittest.TestCase):
                     path.parent.rmdir()
                 except OSError:
                     pass
+
+    def test_tracked_runtime_byproduct_cannot_evade_generated_drift_check(self) -> None:
+        payload = (
+            REPO
+            / generate_platform_adapters.CODEX_SKILLS
+            / "observability"
+            / "scripts"
+            / "__pycache__"
+            / "tracked-adapter-payload.py"
+        )
+        relative = payload.relative_to(REPO)
+        try:
+            payload.parent.mkdir(parents=True, exist_ok=True)
+            payload.write_text("arbitrary tracked payload\n", encoding="utf-8")
+            with mock.patch.object(
+                generate_platform_adapters,
+                "_repository_tracked_files",
+                return_value={relative},
+            ):
+                issues = generate_platform_adapters.validate_generated_outputs(REPO)
+            self.assertTrue(
+                any(
+                    str(relative) in issue
+                    and "stale generated platform adapter" in issue
+                    for issue in issues
+                ),
+                issues,
+            )
+        finally:
+            payload.unlink(missing_ok=True)
+            try:
+                payload.parent.rmdir()
+            except OSError:
+                pass
+
+    def test_nested_non_repo_copy_does_not_inherit_parent_tracking_state(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO) as temporary:
+            nested_copy = Path(temporary) / "archive"
+            nested_copy.mkdir()
+            self.assertIsNone(
+                generate_platform_adapters._repository_tracked_files(nested_copy)
+            )
+
+    def test_non_git_copy_validates_cache_shaped_files_strictly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "archive"
+            payload = (
+                root
+                / generate_platform_adapters.CODEX_SKILLS
+                / "__pycache__"
+                / "packaged-payload.py"
+            )
+            (root / ".claude-plugin").mkdir(parents=True)
+            (root / ".claude-plugin" / "plugin.json").write_text(
+                "{}\n",
+                encoding="utf-8",
+            )
+            payload.parent.mkdir(parents=True)
+            payload.write_text("packaged payload\n", encoding="utf-8")
+
+            with mock.patch.object(
+                generate_platform_adapters,
+                "expected_outputs",
+                return_value={},
+            ):
+                issues = generate_platform_adapters.validate_generated_outputs(root)
+            self.assertTrue(
+                any(
+                    str(payload.relative_to(root)) in issue
+                    and "stale generated platform adapter" in issue
+                    for issue in issues
+                ),
+                issues,
+            )
+
+    def test_write_rejects_linked_generated_root_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            sensitive = root / "canonical-source"
+            link = root / generate_platform_adapters.COPILOT_SKILLS
+            sensitive.mkdir(parents=True)
+            link.parent.mkdir(parents=True)
+            sentinel = sensitive / "sentinel.txt"
+            sentinel.write_text("must survive\n", encoding="utf-8")
+            _create_directory_link(sensitive, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "expected_outputs",
+                    return_value={},
+                ):
+                    with self.assertRaisesRegex(ValueError, "link|junction|reparse"):
+                        generate_platform_adapters.write_generated_outputs(root)
+                self.assertEqual("must survive\n", sentinel.read_text(encoding="utf-8"))
+            finally:
+                _remove_directory_link(link)
+
+    def test_write_rejects_linked_generated_parent_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            sensitive = root / "canonical-source"
+            redirected_target = sensitive / "copilot" / "skills"
+            redirected_target.mkdir(parents=True)
+            sentinel = redirected_target / "sentinel.txt"
+            sentinel.write_text("must survive\n", encoding="utf-8")
+            link = root / "platforms"
+            _create_directory_link(sensitive, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "expected_outputs",
+                    return_value={},
+                ):
+                    with self.assertRaisesRegex(ValueError, "link|junction|reparse"):
+                        generate_platform_adapters.write_generated_outputs(root)
+                self.assertEqual("must survive\n", sentinel.read_text(encoding="utf-8"))
+            finally:
+                _remove_directory_link(link)
+
+    def test_canonical_source_links_are_rejected_before_resource_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "repo"
+            external = base / "external"
+            (root / "agents").mkdir(parents=True)
+            (root / "skills").mkdir()
+            external.mkdir()
+            secret = external / "secret.bin"
+            secret.write_bytes(b"external secret")
+            link = root / "skills" / "linked-resource"
+            _create_directory_link(external, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "_guarded_names",
+                    return_value=set(),
+                ):
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "canonical source.*(?:link|junction|reparse)",
+                    ):
+                        generate_platform_adapters.expected_outputs(root)
+                self.assertEqual(b"external secret", secret.read_bytes())
+            finally:
+                _remove_directory_link(link)
 
     def test_every_canonical_agent_has_both_host_adapters(self) -> None:
         names = {path.stem for path in (REPO / "agents").glob("*.md")}
@@ -127,6 +301,33 @@ class PlatformAdapterTests(unittest.TestCase):
                 )
                 self.assertEqual(source.stem, generated["name"])
                 self.assertEqual(expected, generated["sandbox_mode"])
+
+    def test_codex_adapters_do_not_claim_overridable_defaults_are_controls(self) -> None:
+        for path in sorted((REPO / ".codex" / "agents").glob("*.toml")):
+            with self.subTest(agent=path.stem):
+                generated = tomllib.loads(path.read_text(encoding="utf-8"))
+                instructions = generated["developer_instructions"]
+                normalized = " ".join(instructions.split())
+                self.assertIn(
+                    "Parent session permissions can override this requested sandbox",
+                    normalized,
+                )
+                self.assertIn(
+                    "Codex custom-agent TOML does not provide a per-agent tool allowlist",
+                    normalized,
+                )
+                for false_control in (
+                    "Filesystem mutation is enforced by",
+                    "The read-only sandbox enforces filesystem immutability",
+                    "this role has no subagent-spawn authority",
+                    "you hold no shell",
+                    "no write tools, no shell",
+                    "safe to spawn speculatively",
+                    "Your tool list is the platform-enforced boundary",
+                    "reviewers can't edit, researchers can't write",
+                    "you hold no `Agent` tool",
+                ):
+                    self.assertNotIn(false_control, normalized)
 
     def test_host_agent_adapters_have_no_claude_runtime_references(self) -> None:
         paths = [

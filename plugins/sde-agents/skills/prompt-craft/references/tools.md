@@ -5,12 +5,13 @@
 Read when deciding which tools an agent gets, or when designing tools for a model to call. The
 universal method lives in the installed `prompt-craft` skill. On any conflict, SKILL.md wins.
 
-## The sandbox and inherited configuration are the mandate
+## Parent permissions and inherited configuration are the mandate
 
 Codex custom-agent TOML does not use Claude or Copilot `tools:` frontmatter. Start investigative
-roles with `sandbox_mode = "read-only"`, review inherited MCP and skill configuration, and treat a
-workspace-write sandbox as broad workspace authority. Prose can narrow a mandate cooperatively, but
-it cannot remove a capability that the runtime still exposes.
+roles with a requested `sandbox_mode = "read-only"`, review inherited shell, MCP, skill, and
+subagent authority, and remember that parent permission changes can override the profile default.
+Prose can narrow a mandate cooperatively, but it cannot remove a capability that the runtime still
+exposes.
 
 ## When to promote a shell invocation into a real tool
 

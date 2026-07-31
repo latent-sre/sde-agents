@@ -83,7 +83,8 @@ python3 scripts/install_codex_agents.py --user --check
 ```
 
 The installer preflights the complete target, refuses to overwrite an unmanaged same-name agent,
-and removes only stale files that it previously marked as managed.
+and removes only stale files that it previously marked as managed. `--user` writes to
+`$CODEX_HOME/agents` when `CODEX_HOME` is set and otherwise defaults to `~/.codex/agents`.
 
 ### Working on the fleet itself
 
@@ -138,16 +139,18 @@ always-visible routing tokens on something that never routes — the roadmap's c
 The adapters translate authority as well as syntax. A prompt that says "read-only" is not a
 control, and the hosts do not expose equivalent hook payloads:
 
-| Host | Agents and skills | Read-only control | Important boundary |
+| Host | Agents and skills | Read-only posture | Important boundary |
 |---|---|---|---|
 | Claude Code | Canonical `agents/` and `skills/` | Session hook allowlists Bash for the guarded roles | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are Claude-only |
 | Copilot CLI / VS Code | Generated `.github/agents/` and `platforms/copilot/skills/` | Guarded roles receive no `execute` tool | Their `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused |
-| Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Every role without canonical write tools gets `sandbox_mode = "read-only"` | The plugin installs skills; custom-agent TOML needs project scope or the explicit sync helper |
+| Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Roles without canonical write tools request `sandbox_mode = "read-only"` | Parent permissions can override agent sandbox defaults, and custom-agent TOML has no per-agent tool allowlist |
 
 Claude-specific MCP tool identifiers are not promised on other hosts. Generated agents direct the
 host to use an equivalent connected evidence tool only when one is actually available and to label
 the evidence gap otherwise. Document-only and live-effect boundaries that are narrower than a
-host's write sandbox remain cooperative and are described as such.
+host's write sandbox remain cooperative and are described as such. On Codex, no-write, no-shell,
+and no-spawn claims are also cooperative whenever the parent session grants the corresponding
+authority.
 
 Claude `skills:` preloads are translated into explicit required-skill instructions. The generator
 also rewrites Claude-only claims about hooks, tool names, context inheritance, and frontmatter;

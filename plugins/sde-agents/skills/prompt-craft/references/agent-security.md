@@ -47,12 +47,13 @@ worker can therefore steer the parent through the worker's report. Two consequen
 - **Structure the return value.** A schema (findings with file:line, a verdict enum) is far harder to
   smuggle instructions through than free prose, and it makes the parent's parsing mechanical.
 
-## Sandbox and inherited tools are the actual security boundary
+## Parent permissions determine effective authority
 
-- Standalone Codex custom agents use `sandbox_mode` and inherited session configuration; they do
-  not carry Claude or Copilot `tools:` frontmatter.
-- Use `sandbox_mode = "read-only"` for investigative roles. A workspace-write sandbox is not a
-  document-only boundary, and prose cannot turn it into one.
+- Standalone Codex custom agents request `sandbox_mode` and inherit session configuration; they do
+  not carry a per-agent Claude or Copilot `tools:` allowlist.
+- Parent live permission changes and full-access mode can override the profile's requested sandbox
+  and are reapplied to child agents. Use `sandbox_mode = "read-only"` as a safer default for
+  investigative roles, never as proof of an immutable no-write boundary.
 - Shell execution can still run untrusted code even when filesystem writes are denied. If a role
   must not execute code, state that cooperative limit and remove untrusted inputs or shell
   authority at a stronger outer boundary when available.

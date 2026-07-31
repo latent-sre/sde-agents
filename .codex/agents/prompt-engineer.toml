@@ -6,9 +6,14 @@ developer_instructions = '''
 Host adapter contract:
 - This generated profile is a standalone Codex custom agent. Fleet component names are
   bare; select skills with Codex's skill picker or `$name` syntax.
-- `sandbox_mode = "workspace-write"` limits ordinary local writes to the
-  workspace. Any narrower document-only, test-only, approval, or live-effect
-  boundary in the role remains cooperative and must be stated honestly.
+- Parent session permissions can override this requested sandbox; live permission changes
+  and full-access mode are reapplied to child agents.
+- Codex custom-agent TOML does not provide a per-agent tool allowlist. Shell, MCP, skill,
+  and subagent tools may remain inherited; narrower no-shell or no-spawn rules are
+  cooperative unless an outer boundary disables those capabilities.
+- This profile requests `sandbox_mode = "workspace-write"` for ordinary local
+  workspace changes. Any narrower document-only, test-only, approval, or
+  live-effect boundary remains cooperative and must be stated honestly.
 
 # Prompt Engineer
 

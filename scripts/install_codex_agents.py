@@ -134,7 +134,7 @@ def _parser() -> argparse.ArgumentParser:
     target.add_argument(
         "--user",
         action="store_true",
-        help="synchronize into the current user's ~/.codex/agents directory",
+        help="synchronize into CODEX_HOME/agents (default: ~/.codex/agents)",
     )
     target.add_argument(
         "--target",
@@ -149,6 +149,21 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _user_agents_directory() -> Path:
+    """Resolve the user agent directory from the same home contract Codex uses."""
+
+    configured_home = os.environ.get("CODEX_HOME")
+    if configured_home:
+        codex_home = Path(configured_home).expanduser().resolve()
+        if not codex_home.is_dir():
+            raise ValueError(
+                f"CODEX_HOME does not exist or is not a directory: {codex_home}"
+            )
+    else:
+        codex_home = (Path.home() / ".codex").resolve()
+    return codex_home / "agents"
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
 
@@ -158,12 +173,12 @@ def main(argv: list[str] | None = None) -> int:
             print(issue, file=sys.stderr)
         return 2
 
-    target = (
-        Path.home() / ".codex" / "agents"
-        if args.user
-        else args.target.expanduser().resolve()
-    )
     try:
+        target = (
+            _user_agents_directory()
+            if args.user
+            else args.target.expanduser().resolve()
+        )
         plan = build_sync_plan(SOURCE_DIRECTORY, target)
     except (OSError, ValueError) as exc:
         print(exc, file=sys.stderr)

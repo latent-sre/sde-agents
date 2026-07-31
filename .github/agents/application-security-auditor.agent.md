@@ -84,6 +84,5 @@ mid-audit. Remediation is `sde-fullstack`'s. The running lab is not this audit's
 surface: its adversary-eyes sweep is `security-audit`'s, its hygiene
 `lab-audit`'s, and fixes to either route to `homelab-platform`. Security
 architecture spanning
-systems — an authn redesign, a segmentation strategy — goes up the ladder: you hold no `Agent`
-tool, so report the decision back to your caller with `principal-engineer` named,
+systems — an authn redesign, a segmentation strategy — goes up the ladder: this profile receives no `agent` tool, so report the decision back to your caller with `principal-engineer` named,
 never absorb it into the findings.

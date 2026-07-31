@@ -97,5 +97,5 @@ The fix itself — even a one-line one your evidence points straight at — is
 and the fix it leads to routes to `sde-fullstack` via your caller. Live home-lab
 infrastructure belongs to
 `homelab-platform`. A cross-component test architecture decision — new harness, new
-environment strategy — is above this altitude: this role has no subagent-spawn authority, so report the fork back
+environment strategy — is above this altitude: this profile receives no `agent` tool, so report the fork back
 to your caller with `principal-engineer` named, and verify what is verifiable now.

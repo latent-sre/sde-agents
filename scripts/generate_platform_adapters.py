@@ -9,8 +9,8 @@ differences explicit:
 * Copilot/VS Code agents use native tool aliases. Agents protected by Claude's session-wide Bash
   hook receive no ``execute`` tool because neither host exposes the active agent identity on
   ``PreToolUse``.
-* Codex agents use standalone TOML and select ``read-only`` or ``workspace-write`` sandbox mode
-  from the canonical write-tool authority.
+* Codex agents use standalone TOML and request ``read-only`` or ``workspace-write`` sandbox mode
+  from the canonical write-tool authority, while naming that parent permissions can override it.
 * Each host gets a skill copy with valid YAML, no Claude plugin namespace, and no direct
   plugin-root paths. Copilot retains its explicit-invocation frontmatter; Codex expresses the
   same rule through ``agents/openai.yaml``.
@@ -24,8 +24,11 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import os
 import re
 import shutil
+import stat
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -386,9 +389,17 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         "You hold Write and Edit **to author tests**",
         "You hold edit authority **to author tests**",
     )
-    text = text.replace(
-        "you hold no `Agent` tool, so",
-        "this role has no subagent-spawn authority, so",
+    if host == "copilot":
+        spawn_boundary = "this profile receives no `agent` tool, so"
+    else:
+        spawn_boundary = (
+            "Codex custom-agent TOML cannot remove inherited subagent authority,\nso the role's "
+            "no-spawn rule is cooperative; therefore"
+        )
+    text = re.sub(
+        r"you hold no `Agent`\s+tool, so",
+        spawn_boundary,
+        text,
     )
 
     if name == "code-reviewer":
@@ -407,8 +418,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             )
         else:
             enforcement = (
-                "The read-only sandbox enforces filesystem immutability, but it does not make "
-                "arbitrary code safe to execute; the no-execution rule remains cooperative."
+                "This profile cannot remove inherited shell authority, and its requested sandbox "
+                "can be overridden by parent permissions; the no-execution rule is cooperative."
             )
         replacement = (
             "**Inspection only. You may not execute code** — no test runners, build tools, "
@@ -432,6 +443,56 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             replacement,
             text,
             flags=re.DOTALL,
+        )
+
+    if host == "codex" and name == "application-security-auditor":
+        text = re.sub(
+            r"Static-first is a deliberate boundary, not a limitation:.*?"
+            r"not something you improvise\.",
+            "Static-first remains a deliberate mandate: do not run the target's code. Codex\n"
+            "custom-agent TOML cannot remove inherited shell authority, so the no-execution rule\n"
+            "is cooperative and the caller must provide any required isolation before pointing\n"
+            "this role at an untrusted repository. Request execution evidence from the caller\n"
+            "instead of improvising it.",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+
+    if host == "codex" and name == "researcher":
+        text = re.sub(
+            r"You cannot change anything.*?while you looked\.",
+            "Do not change anything or use shell execution. Codex custom-agent TOML cannot remove\n"
+            "inherited shell or write authority, and its requested sandbox is overridable, so the\n"
+            "caller must provide any required isolation before spawning this role and must not\n"
+            "treat the profile as proof that nothing can happen while you look.",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+
+    if host == "codex" and name == "verification-engineer":
+        text = re.sub(
+            r"Your tool list is the platform-enforced boundary;.*?"
+            r"voids your independence along with your verdict\.",
+            "Effective authority comes from the parent session and its requested sandbox; Codex\n"
+            "custom-agent TOML cannot reproduce the canonical per-role tool list. This role's\n"
+            "mandate permits edits only to author tests, but that test-only boundary is\n"
+            "cooperative because no tool layer distinguishes a test path from product code. Any\n"
+            "edit outside test code voids your independence along with your verdict.",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+
+    if host == "codex" and name == "multi-agent-architect":
+        text = text.replace(
+            "- **Tools are authority.** An agent's tool list encodes its mandate: reviewers can't "
+            "edit, researchers can't write. Enforce roles at the tool layer, not with prose.",
+            "- **Effective capabilities are authority.** Use each target host's structural tool,\n"
+            "  sandbox, permission, or isolation controls to match the mandate. Codex custom-agent\n"
+            "  TOML has no per-agent tool list, so a reviewer-no-edit or researcher-no-write rule\n"
+            "  needs a stronger outer boundary; prose alone does not enforce it.",
         )
 
     if name == "principal-engineer":
@@ -621,20 +682,26 @@ def render_codex_agent(source: Path) -> str:
         "Host adapter contract:",
         "- This generated profile is a standalone Codex custom agent. Fleet component names are",
         "  bare; select skills with Codex's skill picker or `$name` syntax.",
+        "- Parent session permissions can override this requested sandbox; live permission changes",
+        "  and full-access mode are reapplied to child agents.",
+        "- Codex custom-agent TOML does not provide a per-agent tool allowlist. Shell, MCP, skill,",
+        "  and subagent tools may remain inherited; narrower no-shell or no-spawn rules are",
+        "  cooperative unless an outer boundary disables those capabilities.",
     ]
     if sandbox_mode == "read-only":
         adapter_lines.extend(
             [
-                "- Filesystem mutation is enforced by `sandbox_mode = \"read-only\"`. This is the",
-                "  Codex control for the canonical role's no-write boundary.",
+                "- This profile requests `sandbox_mode = \"read-only\"` to match the canonical",
+                "  no-write mandate. If the parent grants write authority, that mandate becomes",
+                "  cooperative rather than enforced by this profile.",
             ]
         )
     else:
         adapter_lines.extend(
             [
-                "- `sandbox_mode = \"workspace-write\"` limits ordinary local writes to the",
-                "  workspace. Any narrower document-only, test-only, approval, or live-effect",
-                "  boundary in the role remains cooperative and must be stated honestly.",
+                "- This profile requests `sandbox_mode = \"workspace-write\"` for ordinary local",
+                "  workspace changes. Any narrower document-only, test-only, approval, or",
+                "  live-effect boundary remains cooperative and must be stated honestly.",
             ]
         )
     if _has_external_evidence_tools(fields):
@@ -747,12 +814,13 @@ def adapt_agent_security_reference(text: str, *, host: str) -> str:
   agent-scoped shell guard. Remove `execute` or isolate the role instead.
 - Keep private data, untrusted input, and outbound or write authority out of one context."""
     else:
-        tool_section = """## Sandbox and inherited tools are the actual security boundary
+        tool_section = """## Parent permissions determine effective authority
 
-- Standalone Codex custom agents use `sandbox_mode` and inherited session configuration; they do
-  not carry Claude or Copilot `tools:` frontmatter.
-- Use `sandbox_mode = "read-only"` for investigative roles. A workspace-write sandbox is not a
-  document-only boundary, and prose cannot turn it into one.
+- Standalone Codex custom agents request `sandbox_mode` and inherit session configuration; they do
+  not carry a per-agent Claude or Copilot `tools:` allowlist.
+- Parent live permission changes and full-access mode can override the profile's requested sandbox
+  and are reapplied to child agents. Use `sandbox_mode = "read-only"` as a safer default for
+  investigative roles, never as proof of an immutable no-write boundary.
 - Shell execution can still run untrusted code even when filesystem writes are denied. If a role
   must not execute code, state that cooperative limit and remove untrusted inputs or shell
   authority at a stronger outer boundary when available.
@@ -787,12 +855,13 @@ make the job possible and enumerate them explicitly. Unknown names are ignored. 
 investigator normally needs `read` and `search`, with no `edit`, `execute`, or `web`; pair each
 additional grant with its reason in the agent body."""
     else:
-        mandate_section = """## The sandbox and inherited configuration are the mandate
+        mandate_section = """## Parent permissions and inherited configuration are the mandate
 
 Codex custom-agent TOML does not use Claude or Copilot `tools:` frontmatter. Start investigative
-roles with `sandbox_mode = "read-only"`, review inherited MCP and skill configuration, and treat a
-workspace-write sandbox as broad workspace authority. Prose can narrow a mandate cooperatively, but
-it cannot remove a capability that the runtime still exposes."""
+roles with a requested `sandbox_mode = "read-only"`, review inherited shell, MCP, skill, and
+subagent authority, and remember that parent permission changes can override the profile default.
+Prose can narrow a mandate cooperatively, but it cannot remove a capability that the runtime still
+exposes."""
 
     text = re.sub(
         r"## The tool list is the mandate\n.*?(?=## When to promote a Bash invocation into a real "
@@ -903,12 +972,121 @@ def _is_runtime_byproduct(path: Path) -> bool:
     )
 
 
+def _is_link_or_reparse_point(path: Path) -> bool:
+    """Recognize links and Windows reparse points before any read or recursive removal."""
+
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if is_junction is not None and is_junction():
+        return True
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    reparse_attribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return bool(reparse_attribute and attributes & reparse_attribute)
+
+
+def _assert_canonical_source_path(path: Path, repository_root: Path) -> None:
+    """Reject a canonical resource that escapes through any link-like path component."""
+
+    resolved_root = repository_root.resolve()
+    lexical_path = Path(os.path.abspath(path))
+    if not lexical_path.is_relative_to(resolved_root):
+        raise ValueError(f"canonical source path is outside repository: {lexical_path}")
+
+    current = resolved_root
+    for part in lexical_path.relative_to(resolved_root).parts:
+        current /= part
+        if _is_link_or_reparse_point(current):
+            raise ValueError(
+                "canonical source path crosses a link, junction, or reparse point: "
+                f"{current}. Generation would read or package bytes from a different location."
+            )
+
+    resolved_path = lexical_path.resolve(strict=True)
+    if not resolved_path.is_relative_to(resolved_root):
+        raise ValueError(
+            f"canonical source path resolves outside repository: {lexical_path}"
+        )
+
+
+def _canonical_skill_files(root: Path) -> list[Path]:
+    """Enumerate canonical skill resources without following directory indirection."""
+
+    resolved_root = root.resolve()
+    skills_root = resolved_root / "skills"
+    _assert_canonical_source_path(skills_root, resolved_root)
+    if not skills_root.is_dir():
+        raise ValueError(f"{skills_root}: canonical skill root is not a directory")
+
+    files: list[Path] = []
+    for directory_name, directory_names, file_names in os.walk(
+        skills_root,
+        topdown=True,
+        followlinks=False,
+    ):
+        directory = Path(directory_name)
+        _assert_canonical_source_path(directory, resolved_root)
+        directory_names.sort()
+        for child_name in directory_names:
+            child = directory / child_name
+            _assert_canonical_source_path(child, resolved_root)
+            if not child.is_dir():
+                raise ValueError(f"{child}: canonical skill path is not a directory")
+        for file_name in sorted(file_names):
+            source = directory / file_name
+            _assert_canonical_source_path(source, resolved_root)
+            if not source.is_file():
+                raise ValueError(f"{source}: canonical skill resource is not a regular file")
+            files.append(source)
+    return files
+
+
+def _repository_tracked_files(root: Path) -> set[Path] | None:
+    """Return tracked paths, or None when Git cannot prove which residue is untracked."""
+
+    try:
+        top_level = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+        if top_level.returncode:
+            return None
+        discovered_root = Path(os.fsdecode(top_level.stdout).strip()).resolve()
+        if discovered_root != root.resolve():
+            return None
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode:
+        return None
+    return {
+        Path(os.fsdecode(raw_path))
+        for raw_path in result.stdout.split(b"\0")
+        if raw_path
+    }
+
+
 def expected_outputs(root: Path) -> dict[Path, bytes]:
     """Return every generated file, keyed by repository-relative path."""
 
+    root = root.resolve()
     outputs: dict[Path, bytes] = {}
     guarded_names = _guarded_names(root)
-    for source in sorted((root / "agents").glob("*.md")):
+    agents_root = root / "agents"
+    _assert_canonical_source_path(agents_root, root)
+    for source in sorted(agents_root.glob("*.md")):
+        _assert_canonical_source_path(source, root)
         outputs[COPILOT_AGENTS / f"{source.stem}.agent.md"] = render_copilot_agent(
             source, guarded_names=guarded_names
         ).encode("utf-8")
@@ -917,11 +1095,12 @@ def expected_outputs(root: Path) -> dict[Path, bytes]:
         )
 
     skills_root = root / "skills"
+    canonical_skill_files = _canonical_skill_files(root)
     for host, target_root in (
         ("copilot", COPILOT_SKILLS),
         ("codex", CODEX_SKILLS),
     ):
-        for source in sorted(path for path in skills_root.rglob("*") if path.is_file()):
+        for source in canonical_skill_files:
             relative = source.relative_to(skills_root)
             if _is_runtime_byproduct(relative):
                 continue
@@ -950,17 +1129,26 @@ def expected_outputs(root: Path) -> dict[Path, bytes]:
     return outputs
 
 
-def _actual_generated_files(root: Path) -> set[Path]:
+def _actual_generated_files(
+    root: Path,
+    *,
+    tracked_files: set[Path] | None,
+) -> set[Path]:
     paths: set[Path] = set()
     for relative_root in GENERATED_ROOTS:
         directory = root / relative_root
         if directory.is_dir():
-            paths.update(
-                path.relative_to(root)
-                for path in directory.rglob("*")
-                if path.is_file()
-                and not _is_runtime_byproduct(path.relative_to(directory))
-            )
+            for path in directory.rglob("*"):
+                if not path.is_file():
+                    continue
+                repository_relative = path.relative_to(root)
+                if (
+                    _is_runtime_byproduct(path.relative_to(directory))
+                    and tracked_files is not None
+                    and repository_relative not in tracked_files
+                ):
+                    continue
+                paths.add(repository_relative)
     return paths
 
 
@@ -976,7 +1164,10 @@ def validate_generated_outputs(root: Path) -> list[str]:
     except (OSError, ValueError) as exc:
         return [f"{root}: cannot render platform adapters from canonical sources: {exc}"]
 
-    actual = _actual_generated_files(root)
+    actual = _actual_generated_files(
+        root,
+        tracked_files=_repository_tracked_files(root),
+    )
     for relative in RETIRED_GENERATED_ROOTS:
         retired = root / relative
         if retired.exists():
@@ -1097,7 +1288,8 @@ def validate_platform_contracts(root: Path) -> list[str]:
     if "hooks" in codex:
         issues.append(
             f"{codex_path}: Codex must not load the Claude hook through a manifest override. Keep "
-            f"its nested plugin root hook-free and enforce agent write boundaries with sandbox_mode."
+            f"its nested plugin root hook-free and express requested agent sandbox defaults only "
+            f"in standalone TOML."
         )
 
     hook_value = copilot.get("hooks")
@@ -1202,16 +1394,28 @@ def validate_platform_support(root: Path) -> list[str]:
 
 
 def _safe_generated_root(root: Path, relative: Path) -> Path:
-    resolved_root = root.resolve()
-    target = (root / relative).resolve()
-    if target == resolved_root or not target.is_relative_to(resolved_root):
-        raise ValueError(f"refusing to replace generated path outside repository: {target}")
     if relative not in (*GENERATED_ROOTS, *RETIRED_GENERATED_ROOTS):
         raise ValueError(f"refusing to replace undeclared generated path: {relative}")
+
+    resolved_root = root.resolve()
+    target = resolved_root / relative
+    if target == resolved_root or not target.is_relative_to(resolved_root):
+        raise ValueError(f"refusing to replace generated path outside repository: {target}")
+
+    current = resolved_root
+    for part in relative.parts:
+        current /= part
+        if _is_link_or_reparse_point(current):
+            raise ValueError(
+                "refusing to replace generated path through a link, junction, or reparse point: "
+                f"{current}. Recursive replacement could delete a different tree."
+            )
     return target
 
 
 def write_generated_outputs(root: Path) -> int:
+    for relative_root in (*RETIRED_GENERATED_ROOTS, *GENERATED_ROOTS):
+        _safe_generated_root(root, relative_root)
     expected = expected_outputs(root)
     for relative_root in RETIRED_GENERATED_ROOTS:
         target = _safe_generated_root(root, relative_root)
