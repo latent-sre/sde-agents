@@ -147,11 +147,12 @@ python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
-plus literal must-match / must-not-match patterns per case. Three contracts are seeded, each a
-promise whose silent failure would be worst: the builder's review packet arrives complete with its
-verification claim actually evidenced; the reviewer **ignores and reports** an instruction embedded
-in the code under review (an adversarial prompt-injection case); and a live-lab change stops at its
-approval gate rather than being applied.
+plus literal must-match / must-not-match patterns per case. Twenty-one contracts are seeded. They
+cover packet completeness, reviewer approval boundaries, adversarial embedded instructions,
+live-change tier gates, incident and restore behavior, architecture handoffs, verification
+isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent validation.
+The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
+inventory.
 
 The packet linter deliberately **inverts** the scoring most self-evaluation tools use: honest
 labeled uncertainty (`[unverified] I could not check X`) passes, while a confident "tests pass" with
@@ -194,7 +195,7 @@ simple-stays-simple, and read-only-investigation seams:
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
-| `investigation.json` | researcher, code-reviewer, root-cause, application-security-auditor | read-only investigation: a question from sources vs a diff to judge vs a failure to diagnose |
+| `investigation.json` | researcher, repository-investigator, code-reviewer, root-cause, application-security-auditor | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
 | `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
 | `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
 

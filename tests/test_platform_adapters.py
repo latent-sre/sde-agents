@@ -44,6 +44,58 @@ def _remove_directory_link(link: Path) -> None:
 
 
 class PlatformAdapterTests(unittest.TestCase):
+    def test_text_resources_are_lf_normalized_but_binary_resources_are_exact(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            (root / "agents").mkdir(parents=True)
+            resources = root / "skills" / "example" / "assets"
+            resources.mkdir(parents=True)
+            text_resource = resources / "config.yaml"
+            binary_resource = resources / "fixture.bin"
+            text_resource.write_bytes(b"first: line\r\nsecond: value\r\n")
+            binary_bytes = b"\x89BIN\r\n\x00payload\r\n"
+            binary_resource.write_bytes(binary_bytes)
+
+            with mock.patch.object(
+                generate_platform_adapters,
+                "_guarded_names",
+                return_value=set(),
+            ):
+                outputs = generate_platform_adapters.expected_outputs(root)
+
+            relative = Path("example") / "assets"
+            for target_root in (
+                generate_platform_adapters.COPILOT_SKILLS,
+                generate_platform_adapters.CODEX_SKILLS,
+            ):
+                self.assertEqual(
+                    b"first: line\nsecond: value\n",
+                    outputs[target_root / relative / text_resource.name],
+                )
+                self.assertEqual(
+                    binary_bytes,
+                    outputs[target_root / relative / binary_resource.name],
+                )
+
+    def test_declared_text_resource_with_invalid_utf8_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            (root / "agents").mkdir(parents=True)
+            resources = root / "skills" / "example" / "assets"
+            resources.mkdir(parents=True)
+            (resources / "config.yaml").write_bytes(b"value: \xff\xfe\n")
+
+            with mock.patch.object(
+                generate_platform_adapters,
+                "_guarded_names",
+                return_value=set(),
+            ):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "declared text resource is not valid UTF-8",
+                ):
+                    generate_platform_adapters.expected_outputs(root)
+
     def test_tracked_generated_outputs_are_current(self) -> None:
         self.assertEqual(
             [],

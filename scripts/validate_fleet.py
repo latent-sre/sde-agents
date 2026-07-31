@@ -164,14 +164,43 @@ EVIDENCE_MCP_TOOLS = {
     "mcp__plugin_githits_githits__search_status",
 }
 FLEET_MCP_TOOLS = set(EVIDENCE_MCP_TOOLS)
-# These two agents promise current, primary, provenance-separated library and OSS evidence. Their
-# old built-in-only allowlists made that method impossible while every validator still passed.
-# Pin the authority to the role so removing one line cannot silently degrade them back to generic
-# web search. Keep this mapping narrow: an MCP tool adopted for another role should not
-# automatically flow into either evidence agent.
+LOCAL_REPOSITORY_TOOLS = {"Glob", "Grep", "Read"}
+EXTERNAL_RESEARCH_TOOLS = {"ToolSearch", "WebFetch", "WebSearch", *EVIDENCE_MCP_TOOLS}
+# Investigation roles are deliberately split at the tool layer. A role that holds private source
+# and fetched external content can leak one into the other through prompt injection even when its
+# prose says not to. Pin both required and forbidden authority so a one-line frontmatter edit cannot
+# silently collapse that trust boundary.
 REQUIRED_AGENT_TOOLS = {
-    "application-security-auditor": {"ToolSearch", *EVIDENCE_MCP_TOOLS},
-    "researcher": {"ToolSearch", *EVIDENCE_MCP_TOOLS},
+    "application-security-auditor": set(LOCAL_REPOSITORY_TOOLS),
+    "repository-investigator": set(LOCAL_REPOSITORY_TOOLS),
+    "researcher": set(EXTERNAL_RESEARCH_TOOLS),
+}
+FORBIDDEN_AGENT_TOOLS = {
+    "application-security-auditor": {
+        "Agent", "Bash", "Edit", "NotebookEdit", "ToolSearch", "WebFetch", "WebSearch", "Write",
+        *EVIDENCE_MCP_TOOLS,
+    },
+    "repository-investigator": {
+        "Agent", "Bash", "Edit", "NotebookEdit", "ToolSearch", "WebFetch", "WebSearch", "Write",
+        *EVIDENCE_MCP_TOOLS,
+    },
+    "researcher": {
+        "Agent", "Bash", "Edit", "Glob", "Grep", "NotebookEdit", "Read", "Write",
+    },
+}
+# These references connect cooperative role instructions to executable controls. A script can
+# remain present while the only agent or skill that should use it silently stops naming it; the
+# inverse is just as dangerous, because a stale prompt path reads like enforcement but resolves to
+# nothing at runtime. Pin both ends here and let generated-adapter byte checks cover translation.
+RUNTIME_CONTROL_WIRING = {
+    "scripts/verification_sandbox.py": "agents/verification-engineer.md",
+    "scripts/run_state.py": "skills/sre-tool/SKILL.md",
+    "scripts/effect_broker.py": "agents/homelab-platform.md",
+}
+RUNTIME_EVIDENCE_PRODUCERS = {
+    "scripts/verification_sandbox.py",
+    "scripts/run_state.py",
+    "scripts/effect_broker.py",
 }
 # Real tools that a SUBAGENT never receives, however they are listed, because they depend on the main
 # conversation's UI or session state (code.claude.com/docs/en/sub-agents). Everything in agents/ is a
@@ -456,8 +485,16 @@ def validate_agents(root: Path) -> tuple[list[str], list[str]]:
         if missing_required_tools:
             issues.append(
                 f"{path}: evidence role {name!r} is missing required tools "
-                f"{missing_required_tools}. Its method promises Context7 and GitHits evidence, so "
-                f"removing this authority silently degrades the role to generic web search"
+                f"{missing_required_tools}. Its investigation method depends on this exact side of "
+                f"the local-versus-external trust boundary, so removing authority silently makes "
+                f"the method impossible"
+            )
+        forbidden_tools = sorted(FORBIDDEN_AGENT_TOOLS.get(name, set()) & set(parsed_tools))
+        if forbidden_tools:
+            issues.append(
+                f"{path}: trust-separated role {name!r} holds forbidden tools {forbidden_tools}. "
+                f"Local/private repository access and external fetched content must not coexist in "
+                f"one subordinate role; prose cannot enforce that boundary"
             )
 
         # `skills:` is in KNOWN_AGENT_FIELDS, which only checks that the KEY is real -- it says
@@ -1106,6 +1143,153 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
     return issues
 
 
+def validate_host_conformance_manifest(root: Path) -> list[str]:
+    """Pin required host/static coverage and the operator-selected GPT-5.6 Sol baseline lane."""
+
+    if not (root / ".claude-plugin" / "plugin.json").is_file():
+        return []
+    path = root / "evals" / "conformance" / "hosts.json"
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [
+            f"{path}: host conformance manifest is missing or unreadable ({exc}). Without the "
+            f"versioned matrix, unavailable hosts and model lanes can silently disappear from the "
+            f"fleet's baseline."
+        ]
+    lanes = document.get("lanes") if isinstance(document, dict) else None
+    if not isinstance(lanes, list):
+        return [f"{path}: host conformance manifest has no lanes array"]
+    issues: list[str] = []
+    static_hosts = {
+        lane.get("host")
+        for lane in lanes
+        if isinstance(lane, dict) and lane.get("kind") == "static"
+    }
+    missing_hosts = sorted({"claude", "codex", "copilot", "vscode"} - static_hosts)
+    if missing_hosts:
+        issues.append(
+            f"{path}: static conformance lanes are missing hosts {missing_hosts}. A generated host "
+            f"surface could drift while the cross-host report still looks complete."
+        )
+    sol_lanes = [
+        lane
+        for lane in lanes
+        if isinstance(lane, dict) and lane.get("model") == "gpt-5.6-sol"
+    ]
+    if len(sol_lanes) != 1:
+        issues.append(
+            f"{path}: expected exactly one explicit gpt-5.6-sol baseline lane, found "
+            f"{len(sol_lanes)}. The operator selected Sol as a required, separately reported Codex "
+            f"baseline; an alias or omitted lane silently changes what was measured."
+        )
+    else:
+        lane = sol_lanes[0]
+        expected = {
+            "host": "codex",
+            "kind": "model-baseline",
+            "reasoning_effort": "high",
+            "sandbox": "read-only",
+            "required": True,
+        }
+        drift = {key: (lane.get(key), value) for key, value in expected.items() if lane.get(key) != value}
+        if drift:
+            issues.append(
+                f"{path}: gpt-5.6-sol baseline conditions drifted: {drift}. Model, effort, sandbox, "
+                f"and required status are one comparison contract; changing one invalidates the "
+                f"baseline rather than tuning it."
+            )
+    return issues
+
+
+def validate_runtime_control_wiring(root: Path) -> list[str]:
+    """Require every runtime control to exist, stay reachable, and retain typed evidence wiring."""
+
+    # Generic validator fixtures and downstream fleets need not implement this repository-specific
+    # control plane. Once any control, canonical consumer, or the README section declares it, the
+    # complete contract becomes mandatory so partial deletion cannot silently self-disable checks.
+    readme = root / "README.md"
+    try:
+        readme_declares_controls = (
+            readme.is_file()
+            and "## Runtime control plane" in readme.read_text(encoding="utf-8")
+        )
+    except (OSError, UnicodeError):
+        readme_declares_controls = False
+    control_paths = {
+        root / "scripts" / "evidence_envelope.py",
+        *(root / path for path in RUNTIME_CONTROL_WIRING),
+        *(root / path for path in RUNTIME_CONTROL_WIRING.values()),
+    }
+    if not readme_declares_controls and not any(path.exists() for path in control_paths):
+        return []
+
+    issues: list[str] = []
+    evidence_path = root / "scripts" / "evidence_envelope.py"
+    if not evidence_path.is_file():
+        issues.append(
+            "scripts/evidence_envelope.py: typed runtime evidence control is missing; state, "
+            "sandbox, and approval results would fall back to unauthenticated prose silently"
+        )
+
+    for script_relative, consumer_relative in RUNTIME_CONTROL_WIRING.items():
+        script = root / script_relative
+        consumer = root / consumer_relative
+        if not script.is_file():
+            issues.append(
+                f"{script_relative}: runtime control named by {consumer_relative} is missing; "
+                "the prompt would claim an enforcement path that resolves to nothing"
+            )
+            continue
+        if not consumer.is_file():
+            issues.append(
+                f"{consumer_relative}: runtime-control consumer is missing; {script_relative} "
+                "would remain shipped but unreachable from the fleet workflow"
+            )
+            continue
+        reference = f"${{CLAUDE_PLUGIN_ROOT}}/{script_relative}"
+        try:
+            consumer_text = consumer.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            issues.append(f"{consumer_relative}: cannot inspect runtime-control wiring: {exc}")
+            continue
+        if reference not in consumer_text:
+            issues.append(
+                f"{consumer_relative}: does not name `{reference}`; {script_relative} would "
+                "silently stop enforcing the role's runtime boundary"
+            )
+
+    for script_relative in sorted(RUNTIME_EVIDENCE_PRODUCERS):
+        script = root / script_relative
+        if not script.is_file():
+            continue
+        try:
+            source = script.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            issues.append(f"{script_relative}: cannot inspect typed-evidence wiring: {exc}")
+            continue
+        if "import evidence_envelope" not in source:
+            issues.append(
+                f"{script_relative}: no longer imports evidence_envelope; its result would "
+                "silently lose the fleet's typed evidence contract"
+            )
+
+    if readme.is_file():
+        try:
+            readme_text = readme.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            issues.append(f"README.md: cannot inspect runtime-control inventory: {exc}")
+        else:
+            documented = {"scripts/evidence_envelope.py", *RUNTIME_CONTROL_WIRING}
+            missing = sorted(path for path in documented if f"`{path}`" not in readme_text)
+            if missing:
+                issues.append(
+                    "README.md: runtime-control inventory omits "
+                    f"{missing}; shipped enforcement would be undiscoverable to operators"
+                )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
@@ -1114,6 +1298,8 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_platform_adapters(root))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
+    issues.extend(validate_host_conformance_manifest(root))
+    issues.extend(validate_runtime_control_wiring(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     if check_inventory:

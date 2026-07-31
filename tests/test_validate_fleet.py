@@ -626,6 +626,94 @@ class PluginWiringTests(unittest.TestCase):
             issues,
         )
 
+    def test_investigation_roles_cannot_collapse_the_local_external_boundary(self) -> None:
+        mutations = (
+            ("researcher", "  - Read\n"),
+            ("repository-investigator", "  - WebFetch\n"),
+            ("application-security-auditor", "  - WebSearch\n"),
+        )
+        for name, tool_line in mutations:
+            with self.subTest(agent=name):
+
+                def mutate(repo: Path) -> None:
+                    path = repo / "agents" / f"{name}.md"
+                    text = path.read_text(encoding="utf-8")
+                    path.write_text(
+                        text.replace("tools:\n", "tools:\n" + tool_line, 1),
+                        encoding="utf-8",
+                    )
+
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any(
+                        f"trust-separated role '{name}' holds forbidden tools" in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+
+    def test_required_gpt_5_6_sol_baseline_cannot_silently_disappear(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "conformance" / "hosts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["lanes"] = [
+                lane for lane in document["lanes"] if lane.get("model") != "gpt-5.6-sol"
+            ]
+            path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("exactly one explicit gpt-5.6-sol baseline lane" in issue for issue in issues),
+            issues,
+        )
+
+    def test_runtime_control_consumers_cannot_silently_lose_their_wiring(self) -> None:
+        wiring = (
+            ("agents/verification-engineer.md", "scripts/verification_sandbox.py"),
+            ("skills/sre-tool/SKILL.md", "scripts/run_state.py"),
+            ("agents/homelab-platform.md", "scripts/effect_broker.py"),
+        )
+        for consumer_relative, script_relative in wiring:
+            with self.subTest(consumer=consumer_relative):
+
+                def mutate(repo: Path) -> None:
+                    path = repo / consumer_relative
+                    reference = f"${{CLAUDE_PLUGIN_ROOT}}/{script_relative}"
+                    path.write_text(
+                        path.read_text(encoding="utf-8").replace(reference, script_relative),
+                        encoding="utf-8",
+                    )
+
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any(
+                        consumer_relative in issue
+                        and "silently stop enforcing" in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+
+    def test_runtime_control_cannot_silently_drop_typed_evidence(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "effect_broker.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "evidence_envelope", "untyped_result"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "scripts/effect_broker.py" in issue
+                and "typed evidence contract" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
     def test_dangling_namespace_reference_is_reported(self) -> None:
         # The corpus carries hundreds of `sde-agents:<name>` cross-references and nothing at
         # runtime resolves one: a renamed or deleted member leaves pointers that pass every gate

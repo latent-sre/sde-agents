@@ -20,8 +20,7 @@ not re-enter the queue unless the roadmap imports them.
 
 ## Current documents
 
-Only two classes are live: the roadmap, and the decision records. Everything else here is
-historical evidence.
+The roadmap and decision records are live. Everything else here is historical evidence.
 
 | Document | State | Read it for |
 |---|---|---|
@@ -29,6 +28,7 @@ historical evidence.
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
 | [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Proposed, parked | The junctions-vs-plugin trade table and its reopen triggers; DEPLOY-001 is undecided by choice |
 | [`decisions/2026-07-30-multi-platform-packaging.md`](decisions/2026-07-30-multi-platform-packaging.md) | Accepted | Canonical-source ownership, generated host adapters, per-host authority controls, and Codex's separate custom-agent sync |
+| [`archive/2026-07/p0-p1-safety-controls-outcomes-2026-07-31.md`](archive/2026-07/p0-p1-safety-controls-outcomes-2026-07-31.md) | Historical outcome record | SAFE-001's eight landed controls, exact verification and model baselines, current installation warnings, and residual trust assumptions |
 | [`archive/2026-07/fleet-program-outcomes-2026-07-29.md`](archive/2026-07/fleet-program-outcomes-2026-07-29.md) | Historical outcome record | What Round 1 and the role-expansion program landed, what was measured, and the lessons — including the DEF-001 defect analysis |
 | [`archive/2026-07/verification-round-outcomes-2026-07-29.md`](archive/2026-07/verification-round-outcomes-2026-07-29.md) | Historical outcome record | What the verification round landed (PRs #43–#45): the implemented ROLE-003 contract, the measured registration surface and its refuted contamination hypothesis, and the exercised porting method |
 | [`archive/2026-07/external-donor-graft-outcomes-2026-07-30.md`](archive/2026-07/external-donor-graft-outcomes-2026-07-30.md) | Historical outcome record | What the external-donor graft round landed (the twelve grafts), the before/after routing measurement and its suppressed positive side, and the lessons |
@@ -41,10 +41,9 @@ historical evidence.
 | [`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md) | Historical donor adjudication | Combined ECC comparison, component verdicts, accepted residue, and resolution ledger |
 | [`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md) | Historical roster design | Earlier component contracts and constraints, reconciled into the current decision and roadmap |
 
-`superpowers/specs/` and `superpowers/plans/` are **absent, and that is the correct state**: no
-round is active. They reappear when one starts and are retired to an outcome record when it
-finishes (rule 4) — a plan file lying around after its round is how a finished task keeps reading
-as pending work.
+`superpowers/specs/` and `superpowers/plans/` are empty when no round is active. SAFE-001 retired to
+its outcome record under rule 4 — a plan file lying around after its round is how a finished task
+keeps reading as pending work.
 
 ## Rules
 
