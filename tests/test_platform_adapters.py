@@ -22,6 +22,40 @@ class PlatformAdapterTests(unittest.TestCase):
         )
         self.assertFalse((REPO / "platforms" / "portable").exists())
 
+    def test_python_bytecode_caches_are_not_distribution_artifacts(self) -> None:
+        relative = (
+            Path("observability")
+            / "scripts"
+            / "__pycache__"
+            / "adapter-test.pyc"
+        )
+        paths = (
+            REPO / "skills" / relative,
+            REPO / "platforms" / "copilot" / "skills" / relative,
+            REPO / "plugins" / "sde-agents" / "skills" / relative,
+        )
+        try:
+            for path in paths:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"transient bytecode")
+
+            expected = generate_platform_adapters.expected_outputs(REPO)
+            self.assertFalse(
+                any("__pycache__" in path.parts for path in expected),
+                expected,
+            )
+            self.assertEqual(
+                [],
+                generate_platform_adapters.validate_generated_outputs(REPO),
+            )
+        finally:
+            for path in paths:
+                path.unlink(missing_ok=True)
+                try:
+                    path.parent.rmdir()
+                except OSError:
+                    pass
+
     def test_every_canonical_agent_has_both_host_adapters(self) -> None:
         names = {path.stem for path in (REPO / "agents").glob("*.md")}
         copilot = {

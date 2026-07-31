@@ -94,6 +94,7 @@ _CANONICAL_SKILL_PATH_RE = re.compile(
     r"`skills/(?P<name>[a-z0-9]+(?:-[a-z0-9]+)*)/"
     r"(?P<resource>[A-Za-z0-9_./<>*-]+)`"
 )
+_PYTHON_BYTECODE_SUFFIXES = {".pyc", ".pyo"}
 _FRONTMATTER_LINE_RE = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9_-]*):")
 
 
@@ -893,6 +894,15 @@ def _guarded_names(root: Path) -> set[str]:
     return set(validator.load_guard(root).GUARDED_AGENT_NAMES)
 
 
+def _is_runtime_byproduct(path: Path) -> bool:
+    """Return whether a path is execution residue rather than a distributable skill file."""
+
+    return (
+        "__pycache__" in path.parts
+        or path.suffix.lower() in _PYTHON_BYTECODE_SUFFIXES
+    )
+
+
 def expected_outputs(root: Path) -> dict[Path, bytes]:
     """Return every generated file, keyed by repository-relative path."""
 
@@ -913,6 +923,8 @@ def expected_outputs(root: Path) -> dict[Path, bytes]:
     ):
         for source in sorted(path for path in skills_root.rglob("*") if path.is_file()):
             relative = source.relative_to(skills_root)
+            if _is_runtime_byproduct(relative):
+                continue
             target = target_root / relative
             if source.name == "SKILL.md":
                 fields, _, _ = _definition_parts(source)
@@ -947,6 +959,7 @@ def _actual_generated_files(root: Path) -> set[Path]:
                 path.relative_to(root)
                 for path in directory.rglob("*")
                 if path.is_file()
+                and not _is_runtime_byproduct(path.relative_to(directory))
             )
     return paths
 
