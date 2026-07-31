@@ -159,6 +159,124 @@ class PlatformAdapterTests(unittest.TestCase):
                 issues,
             )
 
+    def test_validation_rejects_linked_generated_root_before_traversal(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "repo"
+            external = base / "external"
+            link = root / generate_platform_adapters.COPILOT_SKILLS
+            (root / ".claude-plugin").mkdir(parents=True)
+            (root / ".claude-plugin" / "plugin.json").write_text(
+                "{}\n",
+                encoding="utf-8",
+            )
+            external.mkdir()
+            sentinel = external / "outside-secret-name.txt"
+            sentinel.write_text("must remain outside\n", encoding="utf-8")
+            link.parent.mkdir(parents=True)
+            _create_directory_link(external, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "expected_outputs",
+                    return_value={},
+                ):
+                    issues = generate_platform_adapters.validate_generated_outputs(root)
+                self.assertTrue(
+                    any(
+                        "cannot inspect generated platform adapters" in issue
+                        and "link, junction, or reparse point" in issue
+                        and "Validation could read or certify a different tree." in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+                self.assertFalse(
+                    any(sentinel.name in issue for issue in issues),
+                    issues,
+                )
+            finally:
+                _remove_directory_link(link)
+
+    def test_validation_rejects_linked_generated_parent_before_traversal(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "repo"
+            external = base / "external"
+            redirected_target = external / "copilot" / "skills"
+            redirected_target.mkdir(parents=True)
+            (root / ".claude-plugin").mkdir(parents=True)
+            (root / ".claude-plugin" / "plugin.json").write_text(
+                "{}\n",
+                encoding="utf-8",
+            )
+            sentinel = redirected_target / "outside-secret-name.txt"
+            sentinel.write_text("must remain outside\n", encoding="utf-8")
+            link = root / "platforms"
+            _create_directory_link(external, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "expected_outputs",
+                    return_value={},
+                ):
+                    issues = generate_platform_adapters.validate_generated_outputs(root)
+                self.assertTrue(
+                    any(
+                        "cannot inspect generated platform adapters" in issue
+                        and "link, junction, or reparse point" in issue
+                        and "Validation could read or certify a different tree." in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+                self.assertFalse(
+                    any(sentinel.name in issue for issue in issues),
+                    issues,
+                )
+            finally:
+                _remove_directory_link(link)
+
+    def test_validation_rejects_linked_generated_descendant_before_traversal(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "repo"
+            external = base / "external"
+            generated_root = root / generate_platform_adapters.COPILOT_SKILLS
+            link = generated_root / "redirected"
+            (root / ".claude-plugin").mkdir(parents=True)
+            (root / ".claude-plugin" / "plugin.json").write_text(
+                "{}\n",
+                encoding="utf-8",
+            )
+            generated_root.mkdir(parents=True)
+            external.mkdir()
+            sentinel = external / "outside-secret-name.txt"
+            sentinel.write_text("must remain outside\n", encoding="utf-8")
+            _create_directory_link(external, link)
+            try:
+                with mock.patch.object(
+                    generate_platform_adapters,
+                    "expected_outputs",
+                    return_value={},
+                ):
+                    issues = generate_platform_adapters.validate_generated_outputs(root)
+                self.assertTrue(
+                    any(
+                        "cannot inspect generated platform adapters" in issue
+                        and "link, junction, or reparse point" in issue
+                        and "Validation could read or certify a different tree." in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+                self.assertFalse(
+                    any(sentinel.name in issue for issue in issues),
+                    issues,
+                )
+            finally:
+                _remove_directory_link(link)
+
     def test_write_rejects_linked_generated_root_without_touching_target(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repo"

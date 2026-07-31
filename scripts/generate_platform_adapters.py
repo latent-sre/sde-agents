@@ -989,6 +989,27 @@ def _is_link_or_reparse_point(path: Path) -> bool:
     return bool(reparse_attribute and attributes & reparse_attribute)
 
 
+def _assert_no_generated_path_indirection(path: Path, *, operation: str) -> None:
+    """Fail before a generated-tree operation can cross a filesystem boundary."""
+
+    if _is_link_or_reparse_point(path):
+        consequence = (
+            "Recursive replacement could delete a different tree."
+            if operation == "replace"
+            else "Validation could read or certify a different tree."
+        )
+        raise ValueError(
+            f"refusing to {operation} generated path through a link, junction, or reparse "
+            f"point: {path}. {consequence}"
+        )
+
+
+def _raise_directory_walk_error(error: OSError) -> None:
+    """Make an unreadable generated subtree fail validation instead of disappearing from it."""
+
+    raise error
+
+
 def _assert_canonical_source_path(path: Path, repository_root: Path) -> None:
     """Reject a canonical resource that escapes through any link-like path component."""
 
@@ -1134,11 +1155,29 @@ def _actual_generated_files(
     *,
     tracked_files: set[Path] | None,
 ) -> set[Path]:
+    root = root.resolve()
     paths: set[Path] = set()
     for relative_root in GENERATED_ROOTS:
-        directory = root / relative_root
-        if directory.is_dir():
-            for path in directory.rglob("*"):
+        directory = _safe_generated_root(root, relative_root, operation="inspect")
+        if not directory.is_dir():
+            continue
+        for directory_name, directory_names, file_names in os.walk(
+            directory,
+            topdown=True,
+            onerror=_raise_directory_walk_error,
+            followlinks=False,
+        ):
+            current = Path(directory_name)
+            _assert_no_generated_path_indirection(current, operation="inspect")
+            directory_names.sort()
+            for child_name in directory_names:
+                _assert_no_generated_path_indirection(
+                    current / child_name,
+                    operation="inspect",
+                )
+            for file_name in sorted(file_names):
+                path = current / file_name
+                _assert_no_generated_path_indirection(path, operation="inspect")
                 if not path.is_file():
                     continue
                 repository_relative = path.relative_to(root)
@@ -1164,10 +1203,13 @@ def validate_generated_outputs(root: Path) -> list[str]:
     except (OSError, ValueError) as exc:
         return [f"{root}: cannot render platform adapters from canonical sources: {exc}"]
 
-    actual = _actual_generated_files(
-        root,
-        tracked_files=_repository_tracked_files(root),
-    )
+    try:
+        actual = _actual_generated_files(
+            root,
+            tracked_files=_repository_tracked_files(root),
+        )
+    except (OSError, ValueError) as exc:
+        return [f"{root}: cannot inspect generated platform adapters: {exc}"]
     for relative in RETIRED_GENERATED_ROOTS:
         retired = root / relative
         if retired.exists():
@@ -1393,36 +1435,34 @@ def validate_platform_support(root: Path) -> list[str]:
     return validate_platform_contracts(root) + validate_generated_outputs(root)
 
 
-def _safe_generated_root(root: Path, relative: Path) -> Path:
+def _safe_generated_root(root: Path, relative: Path, *, operation: str) -> Path:
     if relative not in (*GENERATED_ROOTS, *RETIRED_GENERATED_ROOTS):
-        raise ValueError(f"refusing to replace undeclared generated path: {relative}")
+        raise ValueError(f"refusing to {operation} undeclared generated path: {relative}")
 
     resolved_root = root.resolve()
     target = resolved_root / relative
     if target == resolved_root or not target.is_relative_to(resolved_root):
-        raise ValueError(f"refusing to replace generated path outside repository: {target}")
+        raise ValueError(
+            f"refusing to {operation} generated path outside repository: {target}"
+        )
 
     current = resolved_root
     for part in relative.parts:
         current /= part
-        if _is_link_or_reparse_point(current):
-            raise ValueError(
-                "refusing to replace generated path through a link, junction, or reparse point: "
-                f"{current}. Recursive replacement could delete a different tree."
-            )
+        _assert_no_generated_path_indirection(current, operation=operation)
     return target
 
 
 def write_generated_outputs(root: Path) -> int:
     for relative_root in (*RETIRED_GENERATED_ROOTS, *GENERATED_ROOTS):
-        _safe_generated_root(root, relative_root)
+        _safe_generated_root(root, relative_root, operation="replace")
     expected = expected_outputs(root)
     for relative_root in RETIRED_GENERATED_ROOTS:
-        target = _safe_generated_root(root, relative_root)
+        target = _safe_generated_root(root, relative_root, operation="replace")
         if target.exists():
             shutil.rmtree(target)
     for relative_root in GENERATED_ROOTS:
-        target = _safe_generated_root(root, relative_root)
+        target = _safe_generated_root(root, relative_root, operation="replace")
         if target.exists():
             shutil.rmtree(target)
         target.mkdir(parents=True)
