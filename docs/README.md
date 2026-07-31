@@ -28,6 +28,7 @@ historical evidence.
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
 | [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Proposed, parked | The junctions-vs-plugin trade table and its reopen triggers; DEPLOY-001 is undecided by choice |
+| [`decisions/2026-07-30-multi-platform-packaging.md`](decisions/2026-07-30-multi-platform-packaging.md) | Accepted | Canonical-source ownership, generated host adapters, per-host authority controls, and Codex's separate custom-agent sync |
 | [`archive/2026-07/fleet-program-outcomes-2026-07-29.md`](archive/2026-07/fleet-program-outcomes-2026-07-29.md) | Historical outcome record | What Round 1 and the role-expansion program landed, what was measured, and the lessons — including the DEF-001 defect analysis |
 | [`archive/2026-07/verification-round-outcomes-2026-07-29.md`](archive/2026-07/verification-round-outcomes-2026-07-29.md) | Historical outcome record | What the verification round landed (PRs #43–#45): the implemented ROLE-003 contract, the measured registration surface and its refuted contamination hypothesis, and the exercised porting method |
 | [`archive/2026-07/external-donor-graft-outcomes-2026-07-30.md`](archive/2026-07/external-donor-graft-outcomes-2026-07-30.md) | Historical outcome record | What the external-donor graft round landed (the twelve grafts), the before/after routing measurement and its suppressed positive side, and the lessons |
@@ -56,5 +57,5 @@ as pending work.
 4. An active plan may be detailed and branch-specific. Once complete, its lasting decisions and
    evidence move to a short outcome record; Git history retains the exact execution payload.
 5. When a file moves or is consolidated, update every tracked reference in the same commit.
-6. Agent and skill definitions remain canonical in `agents/` and `skills/`; documentation never
-   overrides the files Claude Code loads.
+6. Agent and skill definitions remain canonical in `agents/` and `skills/`; documentation and
+   generated host adapters never override them.

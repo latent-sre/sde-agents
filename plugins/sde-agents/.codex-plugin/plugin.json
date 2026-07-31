@@ -1,0 +1,37 @@
+{
+  "name": "sde-agents",
+  "description": "A focused fleet of software-engineering and home-lab agents plus reusable skills.",
+  "version": "1.4.0",
+  "author": {
+    "name": "latent-sre",
+    "url": "https://github.com/latent-sre"
+  },
+  "homepage": "https://github.com/latent-sre/sde-agents",
+  "repository": "https://github.com/latent-sre/sde-agents",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "skills",
+    "code-review",
+    "sre",
+    "homelab"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SDE Agents",
+    "shortDescription": "Software engineering and home-lab workflows for Codex.",
+    "longDescription": "Portable engineering and home-lab skills adapted from the canonical sde-agents fleet for Codex.",
+    "developerName": "latent-sre",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/latent-sre/sde-agents",
+    "defaultPrompt": [
+      "Use the full-stack workflow to implement this change.",
+      "Review this design at the right engineering altitude.",
+      "Audit my home lab without making changes."
+    ]
+  }
+}

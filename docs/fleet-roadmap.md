@@ -40,7 +40,9 @@ Git history and archived reviews retain the implementation detail.
 GOV-001, EVAL-001, ROLE-001, and ROLE-002 land"; **all four landed on 2026-07-29 and the operator
 deferred again with no new condition**, so this item is parked rather than pending. Do not read it
 as ready-to-decide. The hard gates are unchanged and are the reopen triggers: it must be decided
-before any LABSEC-002 work, and before a second user installs the plugin.
+before any LABSEC-002 work or after a real junction-session boundary incident. Cross-host consumer
+installation is governed separately by the accepted
+[`multi-platform packaging decision`](decisions/2026-07-30-multi-platform-packaging.md).
 
 **Both options are executable when it reopens** (verified 2026-07-29, CLI 2.1.220): the CLI carries
 `claude plugin marketplace add <path>` and `claude plugin install`, so plugin mode needs no manual
