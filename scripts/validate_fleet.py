@@ -1006,6 +1006,38 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
     return issues
 
 
+def validate_platform_adapters(root: Path) -> list[str]:
+    """Load the repository's adapter generator and verify every non-Claude install surface.
+
+    Synthetic fixtures do not ship a Claude manifest and skip this rule. A real plugin must carry
+    the generator: otherwise generated copies can drift while the canonical fleet remains green.
+    """
+
+    if not (root / ".claude-plugin" / "plugin.json").is_file():
+        return []
+
+    source = root / "scripts" / "generate_platform_adapters.py"
+    if not source.is_file():
+        return [
+            f"{source}: missing platform adapter generator. The Copilot, VS Code, and Codex "
+            f"copies would have no mechanical link to the canonical Claude definitions."
+        ]
+
+    module_name = f"platform_adapters_{abs(hash(str(root.resolve())))}"
+    spec = importlib.util.spec_from_file_location(module_name, source)
+    if spec is None or spec.loader is None:
+        return [f"{source}: cannot load platform adapter generator"]
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        return module.validate_platform_support(root)
+    except Exception as exc:
+        return [
+            f"{source}: platform adapter validation crashed: {exc}. A broken checker must fail "
+            f"loudly rather than certifying stale host copies."
+        ]
+
+
 def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: list[str]) -> list[str]:
     """Schema integrity for evals/routing/*.json — the rules that keep the scorer honest.
 
@@ -1079,6 +1111,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
     issues.extend(validate_plugin(root, agent_names, skill_names))
+    issues.extend(validate_platform_adapters(root))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
     issues.extend(validate_bare_skill_references(root, skill_names))

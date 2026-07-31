@@ -1,9 +1,9 @@
 # SDE Agents
 
-A focused fleet of software-engineering and home-lab agents plus reusable skills, packaged as a
-Claude Code plugin. The definitions in `agents/` and `skills/` are the canonical source — and, since
-a plugin's components live at its root, they are also exactly what Claude Code loads. There is no
-generated copy and no second source of truth.
+A focused fleet of software-engineering and home-lab agents plus reusable skills, packaged for
+Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent Plugins. The definitions in `agents/` and
+`skills/` are the only authored source. Claude Code loads them directly; the other hosts load
+generated, host-specific adapters whose byte-for-byte currency is enforced by the validator.
 
 ## Fleet
 
@@ -12,26 +12,78 @@ generated copy and no second source of truth.
 - **Skills (19):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
-Refresh the generated block after adding, renaming, or removing an agent or skill:
+After any canonical agent or skill change, regenerate the host adapters. If the change adds,
+renames, or removes a component, refresh the README inventory too:
 
 ```bash
+python3 scripts/generate_platform_adapters.py --write
 python3 scripts/validate_fleet.py --write-inventory
 ```
 
 ## Install
+
+### Claude Code
 
 ```
 /plugin marketplace add latent-sre/sde-agents
 /plugin install sde-agents@latent-sre
 ```
 
-That is the whole installation. The agents, the skills, and the read-only guard all ship together;
-nothing is copied into `~/.claude`, and there is no separate setup script to forget.
+Claude installs the canonical agents, skills, and its read-only hook guard together. Nothing is
+copied into `~/.claude`.
 
 Components are **namespaced** by the plugin, so they are `sde-agents:code-reviewer`,
 `/sde-agents:backend-craft`, and so on. The fleet's own cross-references use those names; a bare
 backticked name appears only for content already in context (e.g. a skill the agent preloads via
 `skills:`).
+
+### GitHub Copilot CLI
+
+Install the repository directly:
+
+```bash
+copilot plugin install latent-sre/sde-agents
+```
+
+For a local development checkout, use `copilot plugin install .`. Copilot discovers the root
+`plugin.json`, generated `.github/agents/*.agent.md` profiles, and the Copilot-specific skill copy
+under `platforms/copilot/skills/`.
+
+### VS Code
+
+Run **Chat: Install Plugin From Source** from the Command Palette and supply this repository's Git
+URL. For a working-tree development loop, register the checkout in `settings.json`:
+
+```json
+"chat.pluginLocations": {
+  "/path/to/sde-agents": true
+}
+```
+
+Agent Plugins are a VS Code preview feature and can be disabled by the
+`chat.plugins.enabled` organization setting. VS Code selects the same root Copilot-format
+`plugin.json`.
+
+### Codex
+
+Install the repository marketplace and then the nested, isolated Codex plugin:
+
+```bash
+codex plugin marketplace add latent-sre/sde-agents
+codex plugin add sde-agents@latent-sre
+```
+
+That installs the generated Codex skill bundle. Codex plugins do not currently package custom
+agents, so this repository also carries project-scoped profiles in `.codex/agents/*.toml`. To make
+those roles available in the current user's other projects from a cloned checkout:
+
+```bash
+python3 scripts/install_codex_agents.py --user
+python3 scripts/install_codex_agents.py --user --check
+```
+
+The installer preflights the complete target, refuses to overwrite an unmanaged same-name agent,
+and removes only stale files that it previously marked as managed.
 
 ### Working on the fleet itself
 
@@ -81,33 +133,53 @@ always-visible routing tokens on something that never routes — the roadmap's c
 5. **The normal gates close it**: validator and tests always; the overlapping routing cluster
    before and after if any `description:` changed.
 
+## Host-specific authority
+
+The adapters translate authority as well as syntax. A prompt that says "read-only" is not a
+control, and the hosts do not expose equivalent hook payloads:
+
+| Host | Agents and skills | Read-only control | Important boundary |
+|---|---|---|---|
+| Claude Code | Canonical `agents/` and `skills/` | Session hook allowlists Bash for the guarded roles | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are Claude-only |
+| Copilot CLI / VS Code | Generated `.github/agents/` and `platforms/copilot/skills/` | Guarded roles receive no `execute` tool | Their `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused |
+| Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Every role without canonical write tools gets `sandbox_mode = "read-only"` | The plugin installs skills; custom-agent TOML needs project scope or the explicit sync helper |
+
+Claude-specific MCP tool identifiers are not promised on other hosts. Generated agents direct the
+host to use an equivalent connected evidence tool only when one is actually available and to label
+the evidence gap otherwise. Document-only and live-effect boundaries that are narrower than a
+host's write sandbox remain cooperative and are described as such.
+
+Claude `skills:` preloads are translated into explicit required-skill instructions. The generator
+also rewrites Claude-only claims about hooks, tool names, context inheritance, and frontmatter;
+keeping those sentences unchanged would make the adapter contradict its real host controls.
+
 ## Project context convention
 
-Claude Code natively loads `CLAUDE.md` (project, user, and managed levels) and passes it to
-subagents automatically — it does **not** read a bare `AGENTS.md`
-([memory docs](https://code.claude.com/docs/en/memory): "Claude Code reads `CLAUDE.md`, not
-`AGENTS.md`"). So for this fleet, whose agents run as Claude Code subagents, `CLAUDE.md` is the file
-that actually reaches a builder without being handed to it.
+Use the target repository's existing project-instruction file and do not create a competing one.
+For a new cross-host repository, prefer a portable root `AGENTS.md`.
 
-Agents should use the target repository's existing project-instruction file. Prefer `CLAUDE.md`. A
-repository that keeps its instructions in a portable `AGENTS.md` (shared across agent tools) must
-bridge it with a root `CLAUDE.md` containing a single `@AGENTS.md` import — on Windows the docs
-recommend the import over a symlink — or Claude Code never sees it. Record the environment card and
-mission block in whichever file Claude Code will actually load, and don't create a competing file
-next to an existing one.
+Claude Code natively loads `CLAUDE.md` (project, user, and managed levels) and passes it to
+subagents automatically; it does **not** read a bare `AGENTS.md`
+([memory docs](https://code.claude.com/docs/en/memory): "Claude Code reads `CLAUDE.md`, not
+`AGENTS.md`"). A repository using portable `AGENTS.md` therefore needs a root `CLAUDE.md` containing
+a single `@AGENTS.md` import — on Windows the docs recommend the import over a symlink — or Claude
+Code never sees it. Codex consumes `AGENTS.md` directly; Copilot and VS Code adapters are instructed
+to honor the active host's project-instruction equivalent. Record the environment card and mission
+block in the file the current host actually loads.
 
 This repository follows its own convention: guidance for working on the fleet lives in a portable
 root `AGENTS.md`, bridged by a `CLAUDE.md` containing that single import.
 
-Long-running work should use the progress file declared by that project context. When none is declared,
-use `.agents/PROGRESS.md` — and in a parallel batch, one shard per builder
+Long-running work should use the progress file declared by that project context. When none is
+declared, use `.agents/PROGRESS.md` — and in a parallel batch, one shard per builder
 (`.agents/progress/<component>.md`), one writer per file, with the orchestrator's plan file
-(`.agents/plan.md`) owned by the orchestrator alone. Progress files are coordination state, not a substitute for the final review
-packet or committed documentation.
+(`.agents/plan.md`) owned by the orchestrator alone. Progress files are coordination state, not a
+substitute for the final review packet or committed documentation.
 
-## The read-only guard
+## The Claude Code read-only guard
 
-`code-reviewer` holds `Bash` so it can run read-only inspection commands — `git diff`/`log`/`show`/
+On Claude Code, `code-reviewer` holds `Bash` so it can run read-only inspection commands —
+`git diff`/`log`/`show`/
 `blame`/`status`, `rg`/`grep`, `ls`/`cat`/`find`. A `PreToolUse` hook enforces that by **allowlist**:
 it permits an enumerated set of read-only commands and denies everything else, so "read-only" is
 enforced rather than promised.
@@ -168,16 +240,17 @@ privilege.
 ## Validation
 
 ```bash
+python3 scripts/generate_platform_adapters.py --check
 python3 scripts/validate_fleet.py
 python3 -m unittest discover -s tests -v
 claude plugin validate . --strict
 ```
 
-The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a known
-tool vocabulary), models, bundled skill references, the canonical evidence-label phrasing, the required
-end-of-task packet heading, README inventory drift, and drift in the repo's own agent guide — the
-`@AGENTS.md` bridge in `CLAUDE.md`, the paths `AGENTS.md` names, and its model-alias paraphrase. It is intentionally runtime-neutral and uses
-only the Python standard library.
+The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a
+known tool vocabulary), models, bundled skill references, the canonical evidence-label phrasing,
+the required end-of-task packet heading, README inventory drift, and drift in the repo's own agent
+guide — the `@AGENTS.md` bridge in `CLAUDE.md`, the paths `AGENTS.md` names, and its model-alias
+paraphrase. It is intentionally runtime-neutral and uses only the Python standard library.
 
 It also enforces the plugin invariants that fail *silently* at runtime: no agent may declare a field a
 plugin ignores; every read-only agent holding `Bash` must be registered with the guard; the guard's
@@ -188,12 +261,22 @@ backticked skill name in an agent body must be present in that agent's `skills:`
 free-form body prose remains convention-only. No definition may resolve a fleet file under
 `~/.claude`, which does not contain this fleet once it ships as a plugin.
 
-`claude plugin validate --strict` covers the other half — the platform contract, which the Python
-validator cannot see: manifest schema, frontmatter parsing, and hook JSON, with warnings as errors.
+The same validator loads the adapter generator as a library. It rejects missing, extra, or
+byte-drifted generated files; cross-host version or identity drift; the wrong manifest component
+paths; a Codex marketplace that misses the isolated plugin; and any attempt to reuse the Claude
+guard where the host cannot scope it. `scripts/generate_platform_adapters.py --check` exposes that
+gate directly.
 
-## Verifying the plugin
+`claude plugin validate --strict` independently covers Claude's platform contract: manifest
+schema, frontmatter parsing, and hook JSON, with warnings as errors. The Codex package is also kept
+compatible with the current Codex plugin ingestion validator; there is no `codex plugin validate`
+CLI subcommand at this time. Copilot and VS Code compatibility is exercised by the generated-schema
+tests and should receive a runtime smoke test whenever those host versions are upgraded.
 
-The validators prove the files are well-formed. They cannot prove the fleet actually *loads*, that
+## Verifying the host packages
+
+The validators prove the files are well-formed and internally consistent. They cannot prove the
+fleet actually *loads* on a particular installed host. For Claude Code, they also cannot prove that
 `${CLAUDE_PLUGIN_ROOT}` expands where the agents rely on it, or that the guard fires for the reviewer
 and only the reviewer. That takes a behavioral probe against a real session:
 

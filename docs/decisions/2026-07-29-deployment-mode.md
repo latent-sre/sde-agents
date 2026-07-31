@@ -9,6 +9,11 @@ this repository, and `sde-agents` appears in neither `installed_plugins.json` no
 `enabledPlugins`. Confirmed live the same day: agents register **bare** (un-namespaced) in a
 normal session, and a fleet edit deploys instantly through the junction.
 
+**Scope clarification (2026-07-30):** This record governs only the operator's daily Claude Code
+deployment. Consumer and cross-host packaging is governed by the accepted
+[`multi-platform packaging decision`](2026-07-30-multi-platform-packaging.md), so a new Codex,
+Copilot, VS Code, or plugin-mode Claude consumer does not force this machine-local choice.
+
 ## Decision question
 
 Should the fleet's daily deployment on this machine be the installed plugin (which arms the hook
@@ -53,6 +58,5 @@ after fleet edits, and probe/eval work already uses `--plugin-dir` regardless.
 
 - Before implementing LABSEC-002 (a guard-enforced agent must not ship into a deployment where
   the guard never runs).
-- Before any second user installs the plugin.
 - Any real incident in which a junction-session agent performed a write its guarded-mode contract
   would have denied.

@@ -42,6 +42,7 @@ genuinely does not apply and say so in one line; do not leave a heading with not
      above instead. -->
 
 - [ ] `python3 scripts/validate_fleet.py` — clean
+- [ ] `python3 scripts/generate_platform_adapters.py --check` — all host copies current
 - [ ] `python3 -m unittest discover -s tests` — all passing (count: )
 - [ ] `claude plugin validate . --strict` — passing
 
@@ -52,11 +53,12 @@ genuinely does not apply and say so in one line; do not leave a heading with not
 | a `description:` on any agent or skill | the overlapping routing cluster run **before and after**, with the rate diff (a near-miss that starts firing is a defect at any rate) |
 | `scripts/readonly-guard.py` or `hooks/hooks.json` | `python3 scripts/probe_plugin.py` re-run — the guard's contract rests on an undocumented payload field, so only the probe proves it still fires |
 | a validator rule | a fixture or mutation test that **fails without the change** (state that you checked it fails) |
-| an added, renamed, or removed component | `--write-inventory` re-run, and a routing cluster seeded or extended |
+| any canonical agent or skill | host adapters regenerated; no generated copy edited as the source |
+| an added, renamed, or removed component | `--write-inventory` re-run, host adapters regenerated, and a routing cluster seeded or extended |
 | text another file declares itself the owner of | which side you fixed — the paraphrase, never the source |
 | work that a doc tracks as open | that doc updated — a landed item still listed as pending sends the next session to redo it |
 | an always-loaded body (an agent file, or a `SKILL.md` core rather than a `references/` file) | roughly how much it adds, and why it isn't behind a predicate — always-loaded prose costs tokens on every session that loads it |
-| anything users install | whether `.claude-plugin/plugin.json` needs a version bump |
+| anything users install | whether every host manifest and marketplace needs the same version or cache update |
 | an import from another repo | provenance (`adapted from <repo>`, license) in the commit message |
 
 ## Risk

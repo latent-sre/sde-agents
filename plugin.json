@@ -1,0 +1,22 @@
+{
+  "name": "sde-agents",
+  "description": "A focused fleet of software-engineering and home-lab agents plus reusable skills.",
+  "version": "1.4.0",
+  "author": {
+    "name": "latent-sre",
+    "url": "https://github.com/latent-sre"
+  },
+  "homepage": "https://github.com/latent-sre/sde-agents",
+  "repository": "https://github.com/latent-sre/sde-agents",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "skills",
+    "code-review",
+    "sre",
+    "homelab"
+  ],
+  "agents": "./.github/agents/",
+  "skills": "./platforms/copilot/skills/",
+  "hooks": "./hooks/copilot-hooks.json"
+}

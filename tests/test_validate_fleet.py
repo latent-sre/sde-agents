@@ -534,6 +534,75 @@ class PluginWiringTests(unittest.TestCase):
         # The positive control. Without it, every test below could pass for the wrong reason.
         self.assertEqual([], self._issues_after(lambda _: None))
 
+    def test_stale_generated_platform_adapter_is_reported(self) -> None:
+        # The authored Claude definition is the source. A direct edit to a generated Codex copy
+        # otherwise creates host-dependent behavior with no load error and no obvious review clue.
+        def mutate(repo: Path) -> None:
+            path = repo / ".codex" / "agents" / "code-reviewer.toml"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\n# stale local edit\n",
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "code-reviewer.toml" in issue
+                and "generated platform adapter drifted" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
+    def test_codex_interface_contract_cannot_silently_disappear(self) -> None:
+        # Codex accepts the nested plugin only when its presentation contract is complete. A
+        # malformed marketplace card otherwise fails at install time outside this repo's CI.
+        def mutate(repo: Path) -> None:
+            path = (
+                repo
+                / "plugins"
+                / "sde-agents"
+                / ".codex-plugin"
+                / "plugin.json"
+            )
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            del manifest["interface"]
+            path.write_text(
+                json.dumps(manifest, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "Codex manifest interface" in issue
+                and "required presentation fields" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
+    def test_codex_marketplace_policy_cannot_silently_disappear(self) -> None:
+        # The repo-local marketplace is the Codex install entry point, not decorative metadata.
+        # Its required policy and category must fail here instead of during a user's installation.
+        def mutate(repo: Path) -> None:
+            path = repo / ".agents" / "plugins" / "marketplace.json"
+            marketplace = json.loads(path.read_text(encoding="utf-8"))
+            del marketplace["plugins"][0]["policy"]
+            path.write_text(
+                json.dumps(marketplace, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "Codex marketplace entry requires installation policy" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
     def test_evidence_agent_cannot_silently_lose_its_mcp_authority(self) -> None:
         # Both evidence agents used to promise Context7/GitHits while their tools allowlist removed
         # every MCP tool. Mutation is the right test because the invariant binds a real role's

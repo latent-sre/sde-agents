@@ -34,13 +34,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Validate agents, skills, and generated inventory
+      - name: Validate canonical fleet and generated host adapters
         run: ${{ matrix.py }} scripts/validate_fleet.py
 
       - name: Run validator unit tests
         run: ${{ matrix.py }} -m unittest discover -s tests -v
 
-  plugin-contract:
+  claude-plugin-contract:
     # validate_fleet.py enforces THIS FLEET's rules. It cannot see the PLATFORM
     # contract -- manifest schema, frontmatter parsing, hook JSON -- where an
     # unrecognized key is dropped silently at load time instead of failing. That

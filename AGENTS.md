@@ -1,8 +1,9 @@
 # Repository guide for coding agents
 
-This repository is a Claude Code **plugin**: the definitions in `agents/` and `skills/` at the root
-are both the canonical source and exactly what Claude Code loads. There is no generated copy and no
-second source of truth — edit those files directly, and never resolve a fleet file under
+This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent
+Plugins. The definitions in `agents/` and `skills/` are the only authored source and exactly what
+Claude Code loads. Codex, Copilot, and VS Code load generated host adapters. Edit the canonical
+files directly and regenerate; never edit a generated copy or resolve a Claude fleet file under
 `~/.claude`, which does not contain this fleet once it ships as a plugin.
 
 This file is the fleet's own instance of the project context convention that `README.md` defines
@@ -15,16 +16,22 @@ and the model-alias list are checked against the source and fail on drift.
 
 | Path | What it is |
 |---|---|
-| `agents/*.md` | The subagent definitions, loaded as-is. Filename must equal `name:`. |
-| `skills/<name>/SKILL.md` | The skills; `references/` (predicate-keyed deep dives) and `assets/` (templates) sit beside each. |
-| `hooks/hooks.json` | The **only** place a guard can attach — plugin agents cannot carry `hooks:`. |
+| `agents/*.md` | Canonical subagent definitions, loaded as-is by Claude. Filename must equal `name:`. |
+| `skills/<name>/SKILL.md` | Canonical skills; `references/` and `assets/` sit beside each. |
+| `.github/agents/`, `.codex/agents/` | Generated Copilot/VS Code and Codex agent adapters. Never edit them directly. |
+| `platforms/copilot/skills/`, `plugins/sde-agents/skills/` | Generated host-specific skill copies. Never edit them directly. |
+| `plugin.json`, `.claude-plugin/`, `.agents/plugins/marketplace.json`, `plugins/sde-agents/.codex-plugin/` | Host manifests. Identity and versions must remain aligned. |
+| `hooks/hooks.json` | The **Claude-only** session guard; plugin agents cannot carry `hooks:`. |
+| `hooks/copilot-hooks.json` | Empty override that prevents Copilot/VS Code from loading the Claude guard. |
 | `scripts/readonly-guard.py` | Allowlist guard for read-only agents that hold `Bash`. Read its docstring before touching it. |
+| `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
+| `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |
 | `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
 | `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file. |
-| `.claude-plugin/` | Plugin and marketplace manifests. The manifest `name` is the namespace; the guard cross-checks it. |
+| `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
 
 ## Validate before you push
 
@@ -32,13 +39,19 @@ CI (`.github/workflows/validate.yml`) runs the first two commands on Linux, macO
 the plugin contract check on Linux:
 
 ```bash
-python3 scripts/validate_fleet.py          # fleet rules — offline, stdlib only
-python3 -m unittest discover -s tests -v   # unit tests — offline, stdlib only
-claude plugin validate . --strict          # platform contract: manifest, frontmatter, hook JSON
+python3 scripts/generate_platform_adapters.py --check  # generated host copies and manifests
+python3 scripts/validate_fleet.py                       # fleet rules — offline, stdlib only
+python3 -m unittest discover -s tests -v                # unit tests — offline, stdlib only
+claude plugin validate . --strict                       # Claude platform contract
 ```
 
-After adding, renaming, or removing an agent or skill, refresh the generated README inventory or
-the validator fails on drift:
+After **any** canonical agent or skill edit, regenerate the host adapters:
+
+```bash
+python3 scripts/generate_platform_adapters.py --write
+```
+
+After adding, renaming, or removing a component, also refresh the README inventory:
 
 ```bash
 python3 scripts/validate_fleet.py --write-inventory
@@ -47,11 +60,17 @@ python3 scripts/validate_fleet.py --write-inventory
 ## Development loop
 
 Load the plugin from the working tree — `/plugin install` runs from a cached copy, which is the
-wrong loop when the plugin is what you are editing:
+wrong Claude loop when the plugin is what you are editing:
 
 ```bash
 claude --plugin-dir .
 ```
+
+For Copilot CLI, the equivalent local loop is `copilot plugin install .`. VS Code uses the
+working-tree path in `chat.pluginLocations`. Codex loads `.codex/agents/` at project scope; its
+nested plugin is installed through the repository marketplace, and
+`scripts/install_codex_agents.py --target <agents-directory>` exercises the standalone-agent sync
+without touching the real user scope.
 
 Two checks are manual and on demand, deliberately not CI gates (both drive real API sessions):
 
@@ -73,6 +92,11 @@ Two checks are manual and on demand, deliberately not CI gates (both drive real 
 
 **Any edit** — run the validator and the tests. If you touched text that paraphrases another file,
 find the declared owner and fix in the right direction (see "Owned conventions" below).
+
+**Editing any canonical agent or skill** — run
+`python3 scripts/generate_platform_adapters.py --write` after the canonical edit. Generated copies
+are consequences, never edit targets. The validator compares every generated byte and rejects
+missing, stale, extra, or hand-edited output.
 
 **Editing a description** (agent or skill) — descriptions drive routing. Run the overlapping
 cluster in `evals/routing/` before and after, and diff the rates. Cross-references to other fleet
@@ -100,8 +124,8 @@ a bare backticked name is only for content already in context, such as a preload
 - Holding `Bash` with no write tool (`Write`/`Edit`/`NotebookEdit`) makes it a read-only agent, and
   it **must** be added to `GUARDED_AGENT_NAMES` in `scripts/readonly-guard.py` or the validator
   fails: unguarded, its "read-only" is a promise, not a control.
-- Refresh the README inventory; seed or extend a routing cluster if the remit overlaps an existing
-  member (overlap is fine — unmeasured overlap is not).
+- Regenerate every host adapter and refresh the README inventory; seed or extend a routing cluster
+  if the remit overlaps an existing member (overlap is fine — unmeasured overlap is not).
 
 **Adding a skill** — directory name equals `name:`; every path a SKILL.md mentions under
 `references/`, `assets/`, or `scripts/` must exist, and every file under `references/` must be
@@ -109,14 +133,18 @@ linked from SKILL.md by a **skill-relative** path (an unlinked reference file is
 that looks shipped — the orphan check fails it). A skill with side effects sets
 `disable-model-invocation: true`, which also removes it from `Skill`-tool reach and from agent
 preloading — route to it via a slash command or an agent that works its checklist.
+Regenerate afterward: Copilot retains that explicit-invocation frontmatter, while Codex expresses
+the same policy through each skill's generated OpenAI agent-policy file.
 
-**Touching the guard or hook** — read the docstrings in `scripts/readonly-guard.py` and the README
-guard section first; then run the tests *and* the probe. Non-negotiables: the allowlist grows by
+**Touching the Claude guard or hook** — read the docstrings in `scripts/readonly-guard.py` and the
+README guard section first; then run the tests *and* the probe. Non-negotiables: the allowlist grows by
 adding a *reader*, never an interpreter (no `python`, `pytest`, `npm`, `make`, no exemption for
 this repo's own scripts); the hook resolves the guard through `${CLAUDE_PLUGIN_ROOT}` so a
 repository under review can never supply it; it fails closed for guarded agents and no-ops for
 everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
+Do not port that hook to Codex, Copilot, or VS Code: their `PreToolUse` payload does not supply the
+active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -134,16 +162,23 @@ register: each message says what broke *and why it would have failed silently*.
   reviewer can only disagree with a decision they can see.
 - **The conditional gates table is the part that catches things.** The expensive checks here are
   situational — a description edit owes a before/after routing run, a guard or hook edit owes the
-  probe, a validator rule owes a test proven to fail without it. Fill the rows you tripped.
+  probe, a validator rule owes a test proven to fail without it, and a canonical fleet edit owes
+  regenerated host adapters. Fill the rows you tripped.
 
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.
 
 ## Hard rules with no playbook exceptions
 
-- **Standard library only.** The validator, guard, hook, and tests use only the Python standard
-  library. Do not add dependencies.
-- **Plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
+- **Standard library only.** The validators, generators, installers, guard, hook, and tests use only
+  the Python standard library. Do not add dependencies.
+- **Generated adapters are not a second source.** Never hand-edit `.github/agents/`,
+  `.codex/agents/`, `platforms/copilot/skills/`, or `plugins/sde-agents/skills/`. Change the
+  canonical file or generator, regenerate, and let byte-drift validation prove the result.
+- **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
+  guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with
+  compatible-looking prose or load the Claude hook on a host whose payload cannot scope it.
+- **Claude plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
   silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
   armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
   not error at load time, it silently drops what it was meant to configure.
