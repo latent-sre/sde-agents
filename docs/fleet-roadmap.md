@@ -55,6 +55,39 @@ outcome record.
 [`pilot run note`](archive/2026-08/wf-001-pilot-run-2026-08.md)); merge the round's PR, then
 retire the spec and plan to an archived outcome record per `docs/README.md` rule 4.
 
+### Decision needed
+
+#### GRAPH-003 — reconcile the accepted graph boundary with the rival control-plane proposal
+
+**Status:** `decision-needed`
+
+**Outcome:** One coherent graph-boundary governance story: the operator either confirms the
+2026-08-01 acceptance of the revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) as the
+adjudication — recording the
+[`graph control-plane proposal`](decisions/2026-08-01-graph-control-plane.md) as rejected or
+absorbed — or reopens the acceptance to fold in the rival's distinct contributions, with the
+delta named.
+
+**Source:** A sequencing collision, stated plainly: the operator accepted the revised
+2026-07-31 record on 2026-08-01 during the WF-001 round, and PR #54 merged the independently
+authored rival proposal to `main` in the same window — the side-by-side adjudication its
+provenance section anticipated never happened. The two records converge on the load-bearing
+boundary (no repo-owned executor; derived topology is evidence, never a second authored fleet;
+execution belongs to host runtimes — the exact layer WF-001 adopted), so no shipped artifact
+conflicts with either record. The rival also carries verified findings the accepted record
+lacks, e.g. `contract_digest` as a dangling reference in `scripts/run_state.py`.
+
+**Prerequisites:** Operator review of the rival record against the accepted one. WF-001's
+artifacts stand on the recorded acceptance plus their own probe and pilot evidence either way.
+
+**Acceptance:** The rival record's status leaves Proposed (Rejected, Superseded-with-absorbed
+findings, or a revision of the accepted record), the README row and this item are updated, and
+any absorbed findings become roadmap items with owners.
+
+**Next action:** Operator reads the rival record beside the accepted one and rules; the
+`contract_digest` finding is a candidate SAFE-003 regardless of the ruling.
+
 ### Ready
 
 #### SAFE-002 — represent and reconcile unknown effect outcomes
