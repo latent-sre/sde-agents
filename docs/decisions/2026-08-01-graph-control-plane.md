@@ -52,11 +52,14 @@ All labels: [verified] means checked in this tree at `a445623` on 2026-08-01.
   (`scripts/run_state.py:174-177`), so extending the state store is a real, versioned decision,
   not an incremental patch.
 - [verified] The durable primitives are strong and event-shaped already: an append-only event log
-  enforced by triggers (`scripts/run_state.py:147-163`), a state database that must live outside
-  the worker workspace so workers cannot forge their own leases (`:68-76`), tamper-evident typed
-  evidence (`scripts/evidence_envelope.py`), and an effect broker whose reserve/finish nonce
-  ledger (`scripts/effect_broker.py:420-468`) makes a crash between reserve and finish legible as
-  an unknown-effect state instead of a silent maybe.
+  enforced by triggers (`scripts/run_state.py:147-163`), a state database whose path must be
+  outside the worker workspace (`:68-76`) — a check that is load-bearing only together with the
+  operator-owned OS-identity and ACL separation `README.md:172-175` names as the operator's
+  responsibility, since a worker identity that can write outside its checkout is not stopped by
+  path placement alone — tamper-evident typed evidence (`scripts/evidence_envelope.py`), and an
+  effect broker whose reserve/finish nonce ledger (`scripts/effect_broker.py:420-468`) makes a
+  crash between reserve and finish legible as an unknown-effect state instead of a silent maybe.
+  The one-ledger design below inherits that identity/ACL prerequisite; it does not replace it.
 - [verified] The fleet's context doctrine is prose-only. Least-context handoffs, "the final
   message is the interface," and budget rules live in `skills/prompt-craft/references/context.md`
   and `agents/multi-agent-architect.md` with no control-plane representation. Meanwhile
@@ -95,14 +98,17 @@ secondary coverage on 2026-08-01. [verified] means fetched directly on 2026-08-0
   measurably steers behavior. This grounds the recurring capability-overhang audit in Phase 3: a
   tool or control written for an older model generation can constrain a newer one, and only
   evidence should retire it.
-- [sourced] Session research base gathered 2026-07-31: the Claude-5-generation context-engineering
-  guidance (claude.com engineering blog, ~2026-07-24; >80% of Claude Code's system prompt removed
-  for the new tier with no eval loss, rules replaced by judgment, examples by typed interfaces),
-  the graph-engineering essay distinguishing the stable **org graph** from the ephemeral **work
-  graph** with context flowing only over designed edges, the AIEWF 2026 "Seeing like an agent"
-  talk (agent failures are usually interface failures), and the Claude Code team fireside
-  (2026-07-21, via simonwillison.net; examples removed because the model was "more creative than
-  the examples"). One meta-fact matters as much as any single claim: the 2025 guidance praised
+- [sourced] Four sources gathered 2026-07-31 in the scoping session; the publishing domains are
+  not fetchable from the authoring environment, so each is cited by exact title, venue, and date
+  for independent retrieval: *"The new rules of context engineering for Claude 5 generation
+  models"* (claude.com engineering blog, ~2026-07-24; >80% of Claude Code's system prompt removed
+  for the new tier with no eval loss, rules replaced by judgment, examples by typed interfaces);
+  *"Graph engineering"* (Thariq Shihipar, Anthropic, with Peter Steinberger, mid-2026),
+  distinguishing the stable **org graph** from the ephemeral **work graph**, with context flowing
+  only over designed edges; *"Seeing like an agent"* (AI Engineer World's Fair 2026 talk; agent
+  failures are usually interface failures); and the Claude Code team fireside (2026-07-21,
+  summarized on simonwillison.net; examples removed because the model was "more creative than the
+  examples"). One meta-fact matters as much as any single claim: the 2025 guidance praised
   worked examples and the 2026 guidance removed them — **context doctrine is model-generation
   dependent**, so anything this decision hard-codes must be dated and audit-retirable.
 - [verified] Claude Code Dynamic Workflows documentation (code.claude.com/docs/en/workflows,
@@ -174,7 +180,12 @@ the accepted packaging decision, where one authored source projects to per-host 
 **3. Host-native execution, one ledger.** On Claude, a work graph runs as a Dynamic Workflows
 script *generated from* the contract — a projection, with exactly the standing of a generated
 adapter; on hosts without a workflow executor, the same contract drives the existing `run_state`
-lease loop. Authority never moves: a step is "done" only when its evidence envelope is written to
+lease loop. That fallback carries a stated deployment prerequisite rather than an implied one:
+the generated Copilot, VS Code, and Codex artifacts deliberately do not package the
+runtime-control scripts and require an operator-provided trusted copy (`README.md:176-178`), so
+on those hosts the contract binds only where the operator has provisioned the control plane — a
+source checkout or a trusted copy — and the cross-host claim is bounded to exactly that.
+Authority never moves: a step is "done" only when its evidence envelope is written to
 the ledger, and workflow checkpoints are cache — which the host's own resume contract already
 enforces by making them session-scoped. This generalizes the effect broker's reserve/finish
 insight to every step: a crash between an agent finishing and its evidence landing must be
@@ -187,9 +198,15 @@ executor at all.)*
 
 **4. A judgment boundary, and an audit that can retire controls.** The anti-second-fleet rule,
 stated falsifiably: anything containing judgment — prompts, heuristics, branching rationale —
-lives in authored agents, skills, and contracts; generation is mechanical and `--check`-gated. A
-generated workflow whose prompt wording changes without a corresponding canonical-side change is
-a violation, detectable by the same byte-drift machinery. *(W4, second authored fleet: this rule
+lives in authored agents, skills, and contracts; generation is mechanical and `--check`-gated.
+Byte-drift alone cannot enforce this: it proves the tracked output matches the generator, and a
+generator that hard-codes new prompt wording regenerates cleanly — the adapter generator already
+carries authored text replacements, legitimately. So the rule needs two controls with different
+targets: generated workflow prompts are *assembled from canonical fields*, never from generator
+literals, and a provenance check fails generation when prompt text has no canonical source;
+byte-drift then covers only what it actually covers — out-of-band edits to generated files. A
+prompt-shaped literal appearing in a generator diff is the violation, and it is caught in review
+of the generator, not in validation of its output. *(W4, second authored fleet: this rule
 is the mitigation, and it is checkable, not aspirational.)* Alongside it, a recurring
 capability-overhang audit: each control-plane control carries the evidence that justifies it, and
 is retired only against measured non-failure (incidents become eval cases first), at
@@ -221,10 +238,13 @@ evidence before change — is also the honest answer to it.)*
 
 - **O3, the bespoke scheduler** — rejected above; recorded here so it is not re-derived.
 - **Third-party graph runtimes.** LangGraph is mature and production-proven, and is still
-  rejected: it violates the standard-library-only rule and installs a second orchestration
-  authority beside the hosts the fleet already targets — the multi-host analog of the rejected
-  "maintain four authored fleets." OpenAI AgentKit is additionally host-coupled. Neither
-  rejection required a deep read; both turn on repository invariants.
+  rejected — on the right ground: the standard-library-only rule scopes to the validators,
+  generators, installers, guard, hook, and tests, so it does not by itself ban a separate runtime
+  component. What rejects LangGraph is that it installs a second orchestration authority beside
+  the hosts the fleet already targets — the multi-host analog of the rejected "maintain four
+  authored fleets" — with the new dependency-and-maintenance surface counted as an additional
+  cost, not the disqualifier. OpenAI AgentKit is additionally host-coupled. Neither rejection
+  required a deep read.
 - **Compiling routing clusters into the artifact.** The clusters measure *behavior* (rates over
   runs); the artifact records *structure*. Folding one into the other would let a declaration
   stand in for a measurement — the exact failure the eval discipline exists to prevent. The
