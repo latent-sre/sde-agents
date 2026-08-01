@@ -23,6 +23,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `plugin.json`, `.claude-plugin/`, `.agents/plugins/marketplace.json`, `plugins/sde-agents/.codex-plugin/` | Host manifests. Identity and versions must remain aligned. |
 | `hooks/hooks.json` | The **Claude-only** session guard; plugin agents cannot carry `hooks:`. |
 | `hooks/copilot-hooks.json` | Empty override that prevents Copilot/VS Code from loading the Claude guard. |
+| `workflows/deep-review.js` | Claude-only plugin workflow (deterministic multi-agent review pipeline). `workflows/` is auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
 | `scripts/readonly-guard.py` | Allowlist guard for read-only agents that hold `Bash`. Read its docstring before touching it. |
 | `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
 | `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |

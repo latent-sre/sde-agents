@@ -251,6 +251,16 @@ EVIDENCE_LABEL_STEMS = (
     "**[unverified]** (assumption or couldn't check)",
 )
 EVIDENCE_LABEL_RE = re.compile(r"\*\*\[(?:un)?(?:verified|sourced)\]\*\*")
+# The workflow packet schemas carry the same evidence triad as the agents' prose packets, as a
+# bare enum. If either side drifts, nothing errors at load time -- the mismatch surfaces as a
+# schema-validation failure five retries deep inside a live workflow run, billed and late. Pin
+# the enum to the canonical stems so the drift is a validation failure at commit time instead.
+WORKFLOW_EVIDENCE_ENUM = tuple(
+    stem.split("[", 1)[1].split("]", 1)[0] for stem in EVIDENCE_LABEL_STEMS
+)  # ("verified", "sourced", "unverified"), derived so the triad has exactly one authoring point
+WORKFLOW_EVIDENCE_ENUM_RE = re.compile(
+    r"const\s+EVIDENCE\s*=\s*\[([^\]]*)\]"
+)
 PACKET_HEADING_RE = re.compile(
     r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
 )
@@ -1290,6 +1300,73 @@ def validate_runtime_control_wiring(root: Path) -> list[str]:
     return issues
 
 
+def validate_workflow_evidence_enums(root: Path) -> list[str]:
+    """Every workflow script that declares an EVIDENCE enum must match the canonical triad."""
+    issues: list[str] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return issues
+    for path in sorted(workflows_dir.glob("*.js")):
+        text = read_text(path)
+        matches = WORKFLOW_EVIDENCE_ENUM_RE.findall(text)
+        if "evidence" in text and not matches:
+            issues.append(
+                f"{path}: declares an evidence field without a parseable `const EVIDENCE = [...]` "
+                f"enum, so the canonical triad cannot be pinned and drift would be invisible "
+                f"until a live run fails schema validation."
+            )
+        for group in matches:
+            values = tuple(v.strip().strip("'\"") for v in group.split(",") if v.strip())
+            if values != WORKFLOW_EVIDENCE_ENUM:
+                issues.append(
+                    f"{path}: workflow evidence enum {values!r} does not match the canonical "
+                    f"triad {WORKFLOW_EVIDENCE_ENUM!r} from EVIDENCE_LABEL_STEMS; a drifted enum "
+                    f"ships a packet contract that fails five retries deep with no load-time error."
+                )
+    return issues
+
+
+# Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
+# that mentions one teaches an instruction that cannot execute there -- it reads as configured
+# and fails silently, the exact failure class the bare-skill-reference rule already catches for
+# skills. Match both the invocation form and the directory form. .py is included because the
+# generated skills trees ship script/asset .py files too, and a workflow reference buried in one
+# would be just as silently unexecutable as one in a .md or .yaml adapter.
+GENERATED_ADAPTER_TREES = (
+    ".github/agents",
+    ".codex/agents",
+    "platforms/copilot/skills",
+    "plugins/sde-agents/skills",
+)
+
+
+def validate_workflow_host_boundary(root: Path) -> list[str]:
+    """No generated non-Claude adapter may reference a plugin workflow."""
+    issues: list[str] = []
+    workflow_names = set()
+    workflows_dir = root / "workflows"
+    if workflows_dir.is_dir():
+        workflow_names = {p.stem for p in workflows_dir.glob("*.js")}
+    if not workflow_names:
+        return issues
+    for tree in GENERATED_ADAPTER_TREES:
+        base = root / tree
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix not in {".md", ".json", ".toml", ".yaml", ".yml", ".py"}:
+                continue
+            text = read_text(path)
+            for name in sorted(workflow_names):
+                if f"/sde-agents:{name}" in text or f"workflows/{name}" in text:
+                    issues.append(
+                        f"{path}: generated non-Claude adapter references the Claude-only "
+                        f"workflow {name!r}; that host has no workflow runtime, so the "
+                        f"instruction reads as available and fails silently at use time."
+                    )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
@@ -1302,6 +1379,8 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_runtime_control_wiring(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
+    issues.extend(validate_workflow_evidence_enums(root))
+    issues.extend(validate_workflow_host_boundary(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

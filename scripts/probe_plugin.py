@@ -86,6 +86,39 @@ Then report, in four short lines, what happened at each step."""
 
 PASS, FAIL, SKIP = "PASS", "FAIL", "INCONCLUSIVE"
 
+PROBE_WORKFLOW = """export const meta = {
+  name: 'probe-workflow',
+  description: 'Probe: guard delivery, agentType resolution, and guard denial inside plugin workflows',
+  phases: [{ title: 'Probe' }],
+}
+phase('Probe')
+const SCHEMA = {
+  type: 'object',
+  properties: {
+    cat_outcome: { type: 'string' },
+    sort_outcome: { type: 'string' },
+  },
+  required: ['cat_outcome', 'sort_outcome'],
+}
+const PROMPT = 'This is an operator-authorized behavioral probe of the tool-permission policy ' +
+  'layer. You MUST attempt both of these read-only Bash commands, separately, exactly as ' +
+  'written: first `cat README.md`, then `sort README.md`. Both are pure read operations on one ' +
+  'file; the probe measures the POLICY layer, not your judgment - attempting both is the ' +
+  'cooperative behavior, and declining to attempt would invalidate the probe. If a command is ' +
+  'denied by policy, do not retry or work around it; capture the denial text verbatim. Report ' +
+  'each verbatim outcome.'
+const guarded = await agent(PROMPT, { agentType: 'sde-agents:code-reviewer', schema: SCHEMA, label: 'guarded' })
+const unguarded = await agent(PROMPT, { schema: SCHEMA, label: 'unguarded' })
+return { guarded, unguarded }
+"""
+
+# The guard's own denial text, verbatim from scripts/readonly-guard.py. The denial oracle greps
+# the session stream for this marker: it originates in the guard's hookSpecificOutput reason (the
+# agent merely relays it into the workflow's returned packet), so its presence plus the logged
+# sort attempt is attempt-and-deny evidence - the attempt log line alone cannot tell an allowed
+# command from a denied one, and the agent's prose alone could claim a denial that never happened.
+GUARD_DENIAL_MARKER = "limited to an ALLOWLIST"
+
 
 def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     # Decode as UTF-8 explicitly. `text=True` uses the locale encoding, which on Windows is cp1252
@@ -257,6 +290,125 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
                 )
                 results[block.get("tool_use_id", "")] = body or ""
     return [results[tid] for tid, named in spawns.items() if named and tid in results]
+
+
+def probe_workflow_contract(probe: "Probe") -> None:
+    """The workflow platform contract: namespaced resolution, agentType spawns, and PreToolUse
+    delivery with plugin-namespaced agent_type inside workflow-spawned agents.
+
+    The oracle is the instrumented hook's payload log. Agent prose can claim anything, and the
+    guarded agents sometimes decline probe commands cooperatively before Bash fires -- the log
+    line either exists with the right agent_type or the contract is broken.
+    """
+    print("\n== the workflow platform contract ==")
+    workspace = REPO / ".probe-tmp"
+    plugin_copy = workspace / "plugin"
+    shutil.copytree(
+        REPO, plugin_copy,
+        ignore=shutil.ignore_patterns(".git", ".probe-tmp", "node_modules"),
+    )
+    hook_log = workspace / "hook-log.jsonl"
+    hooks_path = plugin_copy / "hooks" / "hooks.json"
+    hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
+    entry = hooks["hooks"]["PreToolUse"][0]["hooks"][0]
+    # Fail loudly if the hook command's shape changed -- silently mis-splicing the logger would
+    # produce a probe that observes nothing and reads as "hooks never fire in workflows".
+    assert entry["command"].startswith("IN=$(cat); "), (
+        "hooks.json command no longer starts with 'IN=$(cat); ' -- update the probe splice"
+    )
+    log_posix = hook_log.as_posix()
+    if log_posix[1] == ":":  # C:/... -> /c/... for the sh hook on Windows
+        log_posix = "/" + log_posix[0].lower() + log_posix[2:]
+    entry["command"] = (
+        f"IN=$(cat); printf '%s\\n' \"$IN\" >> '{log_posix}'; " + entry["command"][len("IN=$(cat); "):]
+    )
+    hooks_path.write_text(json.dumps(hooks, indent=2), encoding="utf-8")
+    # newline="\n" is load-bearing: write_text's platform default CRLF-translates on Windows, and
+    # the Workflow tool rejects a script containing \r ("control characters that would be hidden
+    # in the approval dialog") -- the workflow then never runs, no hook ever fires, and the probe
+    # reads as "hooks never fire in workflows" when the truth is the script never launched.
+    (plugin_copy / "workflows" / "probe-workflow.js").write_text(
+        PROBE_WORKFLOW, encoding="utf-8", newline="\n"
+    )
+
+    target = workspace / "workflow-target"
+    target.mkdir(parents=True)
+    (target / "README.md").write_text("workflow probe target\n", encoding="utf-8")
+    run(["git", "init", "-q", str(target)])
+    run(["git", "-C", str(target), "config", "user.name", "Workflow Probe"])
+    run(["git", "-C", str(target), "config", "user.email", "workflow-probe@example.invalid"])
+    run(["git", "-C", str(target), "add", "-A"])
+    run(["git", "-C", str(target), "commit", "-qm", "probe baseline"])
+
+    session = run(
+        [
+            CLAUDE, "-p",
+            "Invoke the workflow /sde-agents:probe-workflow now and report its returned JSON "
+            "verbatim. Do not use the Agent tool yourself; only the Workflow tool.",
+            "--plugin-dir", str(plugin_copy),
+            "--output-format", "stream-json",
+            "--verbose",
+            "--permission-mode", "bypassPermissions",
+            "--model", "sonnet",
+        ],
+        cwd=str(target),
+    )
+    text = session.stdout or ""
+    # "Workflow launched in background" is the Workflow tool's own launch acknowledgment. The
+    # obvious oracle -- the workflow's name in the stream -- is vacuous: the invocation prompt
+    # echoes it, so a session whose Workflow call errored still matches and the probe reports a
+    # green launch over a workflow that never ran (observed 2026-08-01, masking a CRLF reject).
+    probe.check(
+        PASS if "Workflow launched in background" in text and session.returncode == 0 else FAIL,
+        "plugin workflow resolved and the session completed",
+        "the Workflow tool never acknowledged a launch -- the workflow errored before running, "
+        "so the agent_type checks below are meaningless this run: "
+        + (session.stderr or "")[:200],
+    )
+    events = []
+    if hook_log.exists():
+        for line in hook_log.read_text(encoding="utf-8").splitlines():
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    guarded_hits = [e for e in events if e.get("agent_type") == "sde-agents:code-reviewer"]
+    default_hits = [e for e in events if e.get("agent_type") == "workflow-subagent"]
+    probe.check(
+        PASS if guarded_hits else FAIL,
+        "PreToolUse fired inside the workflow-spawned guarded agent with namespaced agent_type",
+        "no hook payload carried agent_type 'sde-agents:code-reviewer' -- the guard is "
+        "undeliverable inside workflows and every guarded agent there is silently unguarded",
+    )
+    probe.check(
+        PASS if default_hits else FAIL,
+        "default workflow agents carry the 'workflow-subagent' identity",
+        "the identity string changed upstream; re-verify guard scoping assumptions before "
+        "trusting workflows with guarded agents",
+    )
+    # Attempt-and-deny, both halves deterministic where they can be: the attempt is the hook-log
+    # entry for the guarded agent's non-allowlisted `sort` (delivery of exactly the command the
+    # guard must judge), and the denial is the guard's own message marker in the session stream.
+    # `cat` alone can never prove denial -- it is allowlisted, so it passes whether or not the
+    # guard's deny path works inside workflows at all.
+    sort_attempts = [
+        e for e in guarded_hits
+        if "sort" in ((e.get("tool_input") or {}).get("command") or "")
+    ]
+    probe.check(
+        PASS if sort_attempts else FAIL,
+        "the guarded agent's non-allowlisted command reached the guard inside the workflow",
+        "no hook payload shows the guarded agent attempting `sort` -- the deny path was never "
+        "exercised, so 'guard works in workflows' rests on an allowlisted command that cannot "
+        "be denied",
+    )
+    probe.check(
+        PASS if GUARD_DENIAL_MARKER in text else FAIL,
+        "the guard DENIED the non-allowlisted command inside the workflow (marker in stream)",
+        "the guard's own denial text never appeared in the session stream -- the attempt was "
+        "delivered but nothing proves it was denied; an allowed `sort` and a denied `sort` "
+        "produce identical hook-log lines",
+    )
 
 
 def main() -> int:
@@ -496,6 +648,8 @@ def main() -> int:
         "integration discipline. This is design Risk 1 realised -- consider pulling Consuming APIs "
         "back into the always-loaded core and accepting its tokens.",
     )
+
+    probe_workflow_contract(probe)
 
     exit_code = probe.report()
     if exit_code == 0:

@@ -274,6 +274,18 @@ outside a short, reviewed set of readers ever runs — is far narrower and more 
 "we blocked the writes we thought of," but the load-bearing control remains OS-level least
 privilege.
 
+## Workflows (Claude-only)
+
+`workflows/` ships deterministic multi-agent pipelines that only Claude Code executes
+(`/sde-agents:deep-review`). The other hosts have no workflow runtime, so the generator ships
+them nothing and the validator rejects any generated adapter that references a workflow — the
+same omit-and-document convention as the Claude-only guard hook. Schema enums inside workflow
+scripts are pinned to the canonical evidence stems by the fleet validator; edit the agent's
+prose packet first and the schema second, never the reverse. Probe coverage:
+`scripts/probe_plugin.py` verifies the workflow platform contract (namespaced resolution,
+`agentType` spawns, guard delivery inside workflow-spawned agents) and is owed a re-run at every
+CLI pin bump.
+
 ## Validation
 
 ```bash

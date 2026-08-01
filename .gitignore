@@ -11,3 +11,10 @@ evals/baselines/**/*.log
 # maintainer is least likely to notice them in `git status`.
 .probe-tmp/
 probe-transcript.jsonl
+
+# Acceptance-evidence run logs (probe and pilot-workflow sessions). Raw session streams can
+# carry repository content and belong beside the round's other transient evidence, never in
+# the tree; the distilled numbers live in the archived evidence note.
+.probe-run.log
+.pilot-run.jsonl
+.pilot-run.err

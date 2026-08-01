@@ -1,13 +1,14 @@
 # Fleet deployment mode on the operator's machine
 
-**Status:** Proposed — parked deliberately by the operator on 2026-07-29 (fresh-look session) and,
-the same day, deferred to the end of the current implementation queue (after GOV-001, EVAL-001,
-ROLE-001, ROLE-002); tracked as roadmap `DEPLOY-001`
-**Date:** 2026-07-29
-**Verified state at writing:** `~/.claude/skills` and `~/.claude/agents` are NTFS junctions into
-this repository, and `sde-agents` appears in neither `installed_plugins.json` nor
-`enabledPlugins`. Confirmed live the same day: agents register **bare** (un-namespaced) in a
-normal session, and a fleet edit deploys instantly through the junction.
+**Status:** Accepted — Option A (installed plugin, no active fleet junctions) on 2026-07-31
+**Date:** Proposed 2026-07-29; accepted and applied 2026-07-31
+**Previous state:** `~/.claude/skills` and `~/.claude/agents` were NTFS junctions into this
+repository, and `sde-agents` appeared in neither `installed_plugins.json` nor `enabledPlugins`.
+Agents therefore registered **bare** (un-namespaced) in a normal session and the plugin guard was
+dormant.
+**Current state:** `sde-agents@latent-sre` 1.4.0 is installed and enabled at user scope from the
+local marketplace. The active junction names are absent, so normal sessions load one namespaced
+fleet with its hook guard.
 
 **Scope clarification (2026-07-30):** This record governs only the operator's daily Claude Code
 deployment. Consumer and cross-host packaging is governed by the accepted
@@ -54,9 +55,44 @@ already assume it — Option B is coherent but means maintaining an honest "the 
 not worn" caveat everywhere the guard is described. The friction cost of A is one update command
 after fleet edits, and probe/eval work already uses `--plugin-dir` regardless.
 
+## Acceptance evidence — 2026-07-31
+
+The operator accepted Option A after PR #53 merged at `a445623`. The migration was rollback-first:
+
+- The pre-change Claude settings and plugin inventories were copied to
+  `~/.claude/deployment-backups/sde-agents-plugin-mode-2026-07-31/` with SHA-256 hashes recorded in
+  the operator transcript.
+- `claude plugin marketplace add C:\Users\hawkins\sde-agents --scope user` registered the
+  `latent-sre` directory marketplace, then
+  `claude plugin install sde-agents@latent-sre --scope user` installed and enabled version 1.4.0.
+  The cached copy contains the manifest, canonical agents and skills, hook registration, and
+  `scripts/readonly-guard.py`.
+- The active junction entries were renamed, not deleted, to
+  `~/.claude/agents.sde-agents-junction-backup-2026-07-31` and
+  `~/.claude/skills.sde-agents-junction-backup-2026-07-31`. Their targets remain this repository;
+  neither backup name is a Claude component-discovery root.
+- `scripts/fleet_doctor.py --json` reports `pass` for the Claude plugin, deployment, and read-only
+  guard checks. Its overall exit remains nonzero only because the separately tracked unmanaged
+  Codex-agent collision is outside this decision.
+- A normal session with `--agent sde-agents:code-reviewer`, user settings, explicit model `haiku`,
+  and **no** `--plugin-dir` resolved the namespaced agent and attempted the exact read-only search
+  `find . -name "*.md" -exec grep -l DEPLOY_REVIEWER_PROBE {} \;`. The plugin guard denied it with
+  its own `read-only agent` reason; Claude's permission layer did not block it first.
+- A second normal session, also explicit `haiku` and without `--plugin-dir`, ran the equivalent
+  `DEPLOY_MAINLOOP_PROBE` command in the main loop. It completed normally, proving the hook remained
+  scoped to guarded agents. These were deployment contract probes, not model baselines; no Opus
+  baseline was run.
+
+Rollback is intentionally recoverable: uninstall `sde-agents@latent-sre` at user scope, remove the
+`latent-sre` user marketplace, verify the active `~/.claude/agents` and `~/.claude/skills` names are
+absent, then rename the two backup junctions to those original names. The dated configuration
+copies are emergency evidence, not a standing restore source after unrelated settings change.
+
 ## Reopen triggers
 
-- Before implementing LABSEC-002 (a guard-enforced agent must not ship into a deployment where
-  the guard never runs).
-- Any real incident in which a junction-session agent performed a write its guarded-mode contract
-  would have denied.
+- A Claude CLI or plugin upgrade makes a normal-session namespaced agent fail to load or makes the
+  guard denial/main-loop scoping probes fail.
+- The active fleet junction names reappear, which would double-register bare and namespaced
+  components if the plugin remains enabled.
+- Update friction becomes operationally material enough to reconsider Option B. Option C remains
+  rejected: never enable the plugin and active fleet junctions together.

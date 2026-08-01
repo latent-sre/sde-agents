@@ -28,69 +28,145 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
-### Ready
+### Active
 
-## Deferred decisions
+#### WF-001 — host-workflow pilot round
 
-#### GRAPH-001 — decide the fleet's graph control-plane boundary
+**Status:** `active`
+
+**Outcome:** The plugin ships one probe-covered workflow (`/sde-agents:deep-review`) whose packet
+contracts are schema-typed and validator-pinned, with the Claude-only boundary enforced and the
+GRAPH-001 record revised to carry the probe evidence.
+
+**Source:** Accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (GRAPH-001
+accepted by the operator 2026-08-01; reopen trigger #2 partially fired) and the
+[`WF-001 spec`](superpowers/specs/2026-08-01-wf-001-host-workflow-pilot-design.md), as amended by
+the [`adversarial review`](archive/2026-08/wf-001-adversarial-review-2026-08-01.md).
+
+**Prerequisites:** None — the decision is accepted and the base branch carries the revised record.
+
+**Acceptance:** The spec's acceptance-evidence list: standard gates green, both new validator
+rules proven by tests that fail without them, the extended probe green on CLI 2.1.220, and one
+end-to-end pilot run on a real diff with session model and token cost recorded in the round's
+outcome record.
+
+**Next action:** The paired plan is executed through its pilot acceptance run (evidence:
+[`pilot run note`](archive/2026-08/wf-001-pilot-run-2026-08.md)); merge the round's PR, then
+retire the spec and plan to an archived outcome record per `docs/README.md` rule 4.
+
+### Decision needed
+
+#### GRAPH-003 — reconcile the accepted graph boundary with the rival control-plane proposal
 
 **Status:** `decision-needed`
 
-**Outcome:** An accepted boundary between what the fleet authors (graph contracts carrying
-judgment), what it derives (generated topology evidence), and what belongs to host runtimes
-(work-graph execution) — or a recorded rejection that keeps the implicit topology and flat
-durable task state deliberately.
+**Outcome:** One coherent graph-boundary governance story: the operator either confirms the
+2026-08-01 acceptance of the revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) as the
+adjudication — recording the
+[`graph control-plane proposal`](decisions/2026-08-01-graph-control-plane.md) as rejected or
+absorbed — or reopens the acceptance to fold in the rival's distinct contributions, with the
+delta named.
 
-**Source:** Two independently authored proposals, to be adjudicated side by side:
-[`graph control-plane proposal (Claude)`](decisions/2026-08-01-graph-control-plane.md), and an
-OpenAI/Codex-authored record (`decisions/2026-07-31-ai-graph-engineering.md`) on its own unmerged
-branch. Each was developed without responding to the other; the Claude record's provenance
-section declares the one prior cross-read.
+**Source:** A sequencing collision, stated plainly: the operator accepted the revised
+2026-07-31 record on 2026-08-01 during the WF-001 round, and PR #54 merged the independently
+authored rival proposal to `main` in the same window — the side-by-side adjudication its
+provenance section anticipated never happened. The two records converge on the load-bearing
+boundary (no repo-owned executor; derived topology is evidence, never a second authored fleet;
+execution belongs to host runtimes — the exact layer WF-001 adopted), so no shipped artifact
+conflicts with either record. The rival also carries verified findings the accepted record
+lacks, e.g. `contract_digest` as a dangling reference in `scripts/run_state.py`.
 
-**Prerequisites:** Operator adjudication. Neither record carries implementation authority while
-Proposed.
+**Prerequisites:** Operator review of the rival record against the accepted one. WF-001's
+artifacts stand on the recorded acceptance plus their own probe and pilot evidence either way.
 
-**Acceptance:** One record is Accepted (or both Rejected) and this item is updated to the
-accepted record's phased items — or removed with the rejection recorded in `docs/decisions/`.
+**Acceptance:** The rival record's status leaves Proposed (Rejected, Superseded-with-absorbed
+findings, or a revision of the accepted record), the README row and this item are updated, and
+any absorbed findings become roadmap items with owners.
 
-**Next action:** Review both proposals side by side and adjudicate. Do not extend
-`scripts/run_state.py` or add workflow files for this item until a boundary is accepted.
+**Next action:** Operator reads the rival record beside the accepted one and rules; the
+`contract_digest` finding is a candidate SAFE-003 regardless of the ruling.
 
-#### DEPLOY-001 — decide the fleet's daily deployment mode
+### Ready
 
-**Status:** `deferred` — indefinitely, by operator choice. The original deferral said "decide after
-GOV-001, EVAL-001, ROLE-001, and ROLE-002 land"; **all four landed on 2026-07-29 and the operator
-deferred again with no new condition**, so this item is parked rather than pending. Do not read it
-as ready-to-decide. The hard gates are unchanged and are the reopen triggers: it must be decided
-before any LABSEC-002 work or after a real junction-session boundary incident. Cross-host consumer
-installation is governed separately by the accepted
-[`multi-platform packaging decision`](decisions/2026-07-30-multi-platform-packaging.md).
+#### SAFE-002 — represent and reconcile unknown effect outcomes
 
-**Both options are executable when it reopens** (verified 2026-07-29, CLI 2.1.220): the CLI carries
-`claude plugin marketplace add <path>` and `claude plugin install`, so plugin mode needs no manual
-`settings.json` surgery; junction mode needs only the honest-posture note.
+**Status:** `ready` — a live defect in shipped code, independent of the GRAPH-001 decision.
 
-**Outcome:** The fleet's daily-use deployment matches what its guard, namespacing, and eval
-conditions assume — or the divergence is recorded and accepted in a governing decision record.
+**Outcome:** A crash between the broker's reservation, dispatch, and finalization no longer leaves
+an ambiguous `reserved` action: the state becomes an explicit `unknown` that blocks automatic
+replay, and an operator reconciliation path lists unresolved reservations with their exact
+approved action, target, and argv, recording the resolution as evidence.
 
-**Source:** Proposed [`deployment-mode decision`](decisions/2026-07-29-deployment-mode.md).
-Verified 2026-07-29: `~/.claude/{skills,agents}` are junctions into this repo and `sde-agents` is
-absent from the installed plugins, so components register bare and the read-only guard is dormant
-in every normal session.
+**Source:** Revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work);
+defect confirmed against `scripts/effect_broker.py` by the
+[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
 
-**Prerequisites:** Operator choice; parked deliberately on 2026-07-29.
+**Prerequisites:** None beyond SAFE-001's landed broker. No model baseline is owed.
 
-**Acceptance:** The decision record is accepted. If plugin-install is chosen: junctions dropped,
-install verified, and a reproducible normal-session (non `--plugin-dir`) check proves namespaced
-registration plus guarded-command denial. If junctions are kept: the README/AGENTS honest-posture
-note lands and LABSEC-002's value is re-adjudicated.
+**Acceptance:** Tests for a crash at each point between reservation, dispatch, and finalization;
+proof that an `unknown` action blocks replay and requires recorded operator resolution; existing
+broker tests and the deterministic gates stay green.
 
-**Next action:** Reopen after the current Ready queue lands; the operator then reviews the
-decision record's trade table and picks a mode.
+**Next action:** Add the `unknown` state and reconciliation listing to the broker's replay ledger
+with crash-point tests. Fail closed: unknown is terminal until an operator resolves it, and
+resolution is recorded evidence, never an automatic retry.
+
+#### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
+
+**Status:** `ready` — eval-gated experiment; the harness it needs already exists.
+
+**Outcome:** The fleet's 30 canonical definitions are audited against the six published shifts for
+Claude 5-generation models (rules→judgment, examples→interface design, upfront→progressive
+disclosure, repetition→tool definitions, manual memory→auto-memory, simple specs→rich references),
+and any edit is justified by paired before/after routing and behavioral evidence — or the audit
+records that the published claim did not transfer to this artifact class.
+
+**Source:** Revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work),
+grounded in the 2026-07-24 context-engineering rules; measurement basis (~190 prohibition-style
+lines across the fleet, `sde-fullstack` leading at 24) in the
+[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
+
+**Prerequisites:** EVAL-003's grading evidence governs the measurement design: agent-expecting
+routing positives under-fire in headless mode, so grade with negatives, clean-room conditions, and
+the pinned behavioral suite. One pilot definition before any fleet-wide edit.
+
+**Acceptance:** For every edited definition, paired before/after runs under identical recorded
+conditions with no negative-case regression and behavioral contracts green; a written stop rule if
+the pilot regresses; regenerated adapters and the deterministic gates green.
+
+**Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
+highest-density candidate) and the exact paired-measurement conditions before editing anything.
+
+#### GRAPH-002 — land the descriptive capability graph and contract validator
+
+**Status:** `ready`
+
+**Outcome:** The accepted GRAPH-001 descriptive layer exists: a derived machine-readable
+capability graph over the canonical definitions and a standard-library workflow-contract
+parser/validator, including the graph-level checks the decision names (unreferenced components,
+eval-uncovered routing edges, self-loops, hub concentration, prompt-surface→tool reachability).
+
+**Source:** Accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) — the
+"Accepted -- descriptive compiler and contract validator" work.
+
+**Prerequisites:** None hard. Sequence after WF-001 closes: both rounds edit
+`scripts/validate_fleet.py`, and serializing them keeps each round's mutation tests reviewable.
+
+**Acceptance:** The decision's descriptive-layer acceptance-evidence list (a fixture or mutation
+test per invariant; parser/validator tests for the negative contracts; no new runtime
+dependency), delivered under its own bounded spec and paired plan.
+
+**Next action:** Author the bounded spec and plan once WF-001 retires to its outcome record.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
-**Status:** `blocked`
+**Status:** `ready` — DEPLOY-001 accepted Option A on 2026-07-31, and normal-session probes proved
+namespaced registration, guarded-agent denial, and main-loop exclusion.
 
 **Outcome:** Add an optional read-only agent that can work the hygiene (`lab-audit`) or adversary
 (`security-audit`) checklist under guard enforcement, without taking change authority or combining
@@ -101,16 +177,19 @@ item is purely the enforcement shell.
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
 decision.
 
-**Prerequisites:** LABSEC-001 accepted; DEPLOY-001 accepted; GOV-001 landed; each proposed lab
-reader independently threat-reviewed and regression-tested; hook/guard roster synchronization
-retained; EVAL-001 landed.
+**Prerequisites:** Satisfied: LABSEC-001, DEPLOY-001, GOV-001, and EVAL-001 landed. The implementation
+must still independently threat-review the proposed reader, regression-test every allowlist
+addition, and retain hook/guard roster synchronization.
 
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
 `homelab-platform`.
 
-**Next action:** None until LABSEC-001, DEPLOY-001, and GOV-001 are complete.
+**Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
+read-only command surface and a threat review of every new verb/flag before changing the guard.
+
+## Deferred decisions
 
 #### EVAL-003 — capture a comparable full routing anchor
 
