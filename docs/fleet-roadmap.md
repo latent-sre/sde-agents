@@ -32,6 +32,30 @@ Git history and archived reviews retain the implementation detail.
 
 ## Deferred decisions
 
+#### GRAPH-001 — decide the fleet's graph control-plane boundary
+
+**Status:** `decision-needed`
+
+**Outcome:** An accepted boundary between what the fleet authors (graph contracts carrying
+judgment), what it derives (generated topology evidence), and what belongs to host runtimes
+(work-graph execution) — or a recorded rejection that keeps the implicit topology and flat
+durable task state deliberately.
+
+**Source:** Two independently authored proposals, to be adjudicated side by side:
+[`graph control-plane proposal (Claude)`](decisions/2026-08-01-graph-control-plane.md), and an
+OpenAI/Codex-authored record (`decisions/2026-07-31-ai-graph-engineering.md`) on its own unmerged
+branch. Each was developed without responding to the other; the Claude record's provenance
+section declares the one prior cross-read.
+
+**Prerequisites:** Operator adjudication. Neither record carries implementation authority while
+Proposed.
+
+**Acceptance:** One record is Accepted (or both Rejected) and this item is updated to the
+accepted record's phased items — or removed with the rejection recorded in `docs/decisions/`.
+
+**Next action:** Review both proposals side by side and adjudicate. Do not extend
+`scripts/run_state.py` or add workflow files for this item until a boundary is accepted.
+
 #### DEPLOY-001 — decide the fleet's daily deployment mode
 
 **Status:** `deferred` — indefinitely, by operator choice. The original deferral said "decide after
