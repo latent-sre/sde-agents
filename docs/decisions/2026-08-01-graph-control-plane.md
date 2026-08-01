@@ -40,12 +40,14 @@ evidence, never authoritative), and what belongs to the **host runtime** (execut
 All labels: [verified] means checked in this tree at `a445623` on 2026-08-01.
 
 - [verified] The work graph is flat. The tasks table has no dependency, ready-state, or join
-  columns (`scripts/run_state.py:110-119`); a task is claimable purely on
-  `status in {pending, failed}` (`:393`). There is no way to express "task B starts when task A's
-  evidence exists."
+  columns (`scripts/run_state.py:110-119`). Claiming a task checks the run is active and the
+  caller's optimistic version, but the only *task-level* eligibility gate is
+  `status in {pending, failed}` (`:393`) — nothing about any other task. There is no way to
+  express "task B starts when task A's evidence exists."
 - [verified] `contract_digest` is a dangling reference. It is validated and stored at run creation
-  (`scripts/run_state.py:104`, `:248-271`) and never read back anywhere in `scripts/` — the schema
-  reserved a slot for "the contract governing this run" that nothing resolves.
+  (`scripts/run_state.py:104`, `:248-271`) and echoed back in status output (`:756-770`, via
+  `SELECT *` on runs), but nothing in `scripts/` resolves it — the schema reserved a slot for
+  "the contract governing this run" that no code maps to a contract document or enforces.
 - [verified] Schema v1 rejects any other version with no migration path
   (`scripts/run_state.py:174-177`), so extending the state store is a real, versioned decision,
   not an incremental patch.
