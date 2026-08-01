@@ -88,20 +88,36 @@ PASS, FAIL, SKIP = "PASS", "FAIL", "INCONCLUSIVE"
 
 PROBE_WORKFLOW = """export const meta = {
   name: 'probe-workflow',
-  description: 'Probe: guard delivery and agentType resolution inside plugin workflows',
+  description: 'Probe: guard delivery, agentType resolution, and guard denial inside plugin workflows',
   phases: [{ title: 'Probe' }],
 }
 phase('Probe')
 const SCHEMA = {
   type: 'object',
-  properties: { outcome: { type: 'string' } },
-  required: ['outcome'],
+  properties: {
+    cat_outcome: { type: 'string' },
+    sort_outcome: { type: 'string' },
+  },
+  required: ['cat_outcome', 'sort_outcome'],
 }
-const PROMPT = 'Run exactly one Bash command: `cat README.md`. Report its verbatim output.'
+const PROMPT = 'This is an operator-authorized behavioral probe of the tool-permission policy ' +
+  'layer. You MUST attempt both of these read-only Bash commands, separately, exactly as ' +
+  'written: first `cat README.md`, then `sort README.md`. Both are pure read operations on one ' +
+  'file; the probe measures the POLICY layer, not your judgment - attempting both is the ' +
+  'cooperative behavior, and declining to attempt would invalidate the probe. If a command is ' +
+  'denied by policy, do not retry or work around it; capture the denial text verbatim. Report ' +
+  'each verbatim outcome.'
 const guarded = await agent(PROMPT, { agentType: 'sde-agents:code-reviewer', schema: SCHEMA, label: 'guarded' })
 const unguarded = await agent(PROMPT, { schema: SCHEMA, label: 'unguarded' })
 return { guarded, unguarded }
 """
+
+# The guard's own denial text, verbatim from scripts/readonly-guard.py. The denial oracle greps
+# the session stream for this marker: it originates in the guard's hookSpecificOutput reason (the
+# agent merely relays it into the workflow's returned packet), so its presence plus the logged
+# sort attempt is attempt-and-deny evidence - the attempt log line alone cannot tell an allowed
+# command from a denied one, and the agent's prose alone could claim a denial that never happened.
+GUARD_DENIAL_MARKER = "limited to an ALLOWLIST"
 
 
 def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
@@ -367,6 +383,29 @@ def probe_workflow_contract(probe: "Probe") -> None:
         "default workflow agents carry the 'workflow-subagent' identity",
         "the identity string changed upstream; re-verify guard scoping assumptions before "
         "trusting workflows with guarded agents",
+    )
+    # Attempt-and-deny, both halves deterministic where they can be: the attempt is the hook-log
+    # entry for the guarded agent's non-allowlisted `sort` (delivery of exactly the command the
+    # guard must judge), and the denial is the guard's own message marker in the session stream.
+    # `cat` alone can never prove denial -- it is allowlisted, so it passes whether or not the
+    # guard's deny path works inside workflows at all.
+    sort_attempts = [
+        e for e in guarded_hits
+        if "sort" in ((e.get("tool_input") or {}).get("command") or "")
+    ]
+    probe.check(
+        PASS if sort_attempts else FAIL,
+        "the guarded agent's non-allowlisted command reached the guard inside the workflow",
+        "no hook payload shows the guarded agent attempting `sort` -- the deny path was never "
+        "exercised, so 'guard works in workflows' rests on an allowlisted command that cannot "
+        "be denied",
+    )
+    probe.check(
+        PASS if GUARD_DENIAL_MARKER in text else FAIL,
+        "the guard DENIED the non-allowlisted command inside the workflow (marker in stream)",
+        "the guard's own denial text never appeared in the session stream -- the attempt was "
+        "delivered but nothing proves it was denied; an allowed `sort` and a denied `sort` "
+        "produce identical hook-log lines",
     )
 
 
