@@ -30,43 +30,10 @@ Git history and archived reviews retain the implementation detail.
 
 ### Ready
 
-## Deferred decisions
-
-#### DEPLOY-001 — decide the fleet's daily deployment mode
-
-**Status:** `deferred` — indefinitely, by operator choice. The original deferral said "decide after
-GOV-001, EVAL-001, ROLE-001, and ROLE-002 land"; **all four landed on 2026-07-29 and the operator
-deferred again with no new condition**, so this item is parked rather than pending. Do not read it
-as ready-to-decide. The hard gates are unchanged and are the reopen triggers: it must be decided
-before any LABSEC-002 work or after a real junction-session boundary incident. Cross-host consumer
-installation is governed separately by the accepted
-[`multi-platform packaging decision`](decisions/2026-07-30-multi-platform-packaging.md).
-
-**Both options are executable when it reopens** (verified 2026-07-29, CLI 2.1.220): the CLI carries
-`claude plugin marketplace add <path>` and `claude plugin install`, so plugin mode needs no manual
-`settings.json` surgery; junction mode needs only the honest-posture note.
-
-**Outcome:** The fleet's daily-use deployment matches what its guard, namespacing, and eval
-conditions assume — or the divergence is recorded and accepted in a governing decision record.
-
-**Source:** Proposed [`deployment-mode decision`](decisions/2026-07-29-deployment-mode.md).
-Verified 2026-07-29: `~/.claude/{skills,agents}` are junctions into this repo and `sde-agents` is
-absent from the installed plugins, so components register bare and the read-only guard is dormant
-in every normal session.
-
-**Prerequisites:** Operator choice; parked deliberately on 2026-07-29.
-
-**Acceptance:** The decision record is accepted. If plugin-install is chosen: junctions dropped,
-install verified, and a reproducible normal-session (non `--plugin-dir`) check proves namespaced
-registration plus guarded-command denial. If junctions are kept: the README/AGENTS honest-posture
-note lands and LABSEC-002's value is re-adjudicated.
-
-**Next action:** Reopen after the current Ready queue lands; the operator then reviews the
-decision record's trade table and picks a mode.
-
 #### LABSEC-002 — add a guard-enforced lab inspector
 
-**Status:** `blocked`
+**Status:** `ready` — DEPLOY-001 accepted Option A on 2026-07-31, and normal-session probes proved
+namespaced registration, guarded-agent denial, and main-loop exclusion.
 
 **Outcome:** Add an optional read-only agent that can work the hygiene (`lab-audit`) or adversary
 (`security-audit`) checklist under guard enforcement, without taking change authority or combining
@@ -77,16 +44,19 @@ item is purely the enforcement shell.
 [`roster expansion design`](archive/2026-07/roster-expansion-design.md), reconciled by the role
 decision.
 
-**Prerequisites:** LABSEC-001 accepted; DEPLOY-001 accepted; GOV-001 landed; each proposed lab
-reader independently threat-reviewed and regression-tested; hook/guard roster synchronization
-retained; EVAL-001 landed.
+**Prerequisites:** Satisfied: LABSEC-001, DEPLOY-001, GOV-001, and EVAL-001 landed. The implementation
+must still independently threat-review the proposed reader, regression-test every allowlist
+addition, and retain hook/guard roster synchronization.
 
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
 `homelab-platform`.
 
-**Next action:** None until LABSEC-001, DEPLOY-001, and GOV-001 are complete.
+**Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
+read-only command surface and a threat review of every new verb/flag before changing the guard.
+
+## Deferred decisions
 
 #### EVAL-003 — capture a comparable full routing anchor
 

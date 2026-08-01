@@ -26,7 +26,7 @@ The roadmap and decision records are live. Everything else here is historical ev
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
-| [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Proposed, parked | The junctions-vs-plugin trade table and its reopen triggers; DEPLOY-001 is undecided by choice |
+| [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Accepted | Option A governs daily Claude use: installed, namespaced plugin mode with no active fleet junctions; includes normal-session guard evidence and rollback |
 | [`decisions/2026-07-30-multi-platform-packaging.md`](decisions/2026-07-30-multi-platform-packaging.md) | Accepted | Canonical-source ownership, generated host adapters, per-host authority controls, and Codex's separate custom-agent sync |
 | [`archive/2026-07/p0-p1-safety-controls-outcomes-2026-07-31.md`](archive/2026-07/p0-p1-safety-controls-outcomes-2026-07-31.md) | Historical outcome record | SAFE-001's eight landed controls, exact verification and model baselines, current installation warnings, and residual trust assumptions |
 | [`archive/2026-07/fleet-program-outcomes-2026-07-29.md`](archive/2026-07/fleet-program-outcomes-2026-07-29.md) | Historical outcome record | What Round 1 and the role-expansion program landed, what was measured, and the lessons — including the DEF-001 defect analysis |
