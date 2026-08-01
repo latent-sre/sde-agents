@@ -28,6 +28,34 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
+### Decision needed
+
+#### GRAPH-001 -- choose the fleet's graph-control boundary
+
+**Status:** `decision-needed`
+
+**Outcome:** Decide whether to adopt the proposed repo-native, two-layer graph control plane: a
+derived capability graph plus versioned executable workflow contracts backed by the existing
+run-state, evidence, sandbox, and effect controls. The decision must also settle the first bounded
+pilot and preserve host-specific authority rather than claiming one universal runtime.
+
+**Source:** Proposed
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md), based on current
+OpenAI, Anthropic, Google, Microsoft, LangGraph, Berkeley, and agent-workflow research plus the
+current-tree control-plane inventory.
+
+**Prerequisites:** SAFE-001's durable state, typed evidence, verification sandbox, effect broker,
+trust-separated roles, and cross-host conformance controls have landed. No model baseline is owed
+for deciding the architecture; every later OpenAI/Codex model baseline in this program must use
+`gpt-5.6-sol` only.
+
+**Acceptance:** The decision record is accepted, rejected, or revised with the chosen authority
+boundary, first pilot, effect-reconciliation requirement, and cross-host limits explicit. If
+accepted, a bounded spec and paired plan define Phase 0 acceptance before implementation begins.
+
+**Next action:** Review the proposed decision, especially Option D and the `sre-tool` pilot. Do not
+extend `run_state.py` or add workflow files until that boundary is accepted.
+
 ### Ready
 
 #### LABSEC-002 — add a guard-enforced lab inspector

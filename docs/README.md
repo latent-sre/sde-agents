@@ -25,6 +25,7 @@ The roadmap and decision records are live. Everything else here is historical ev
 | Document | State | Read it for |
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
+| [`decisions/2026-07-31-ai-graph-engineering.md`](decisions/2026-07-31-ai-graph-engineering.md) | Proposed | Current provider, framework, OSS, and research evidence for a repo-native graph control plane; GRAPH-001 remains decision-needed |
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
 | [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Accepted | Option A governs daily Claude use: installed, namespaced plugin mode with no active fleet junctions; includes normal-session guard evidence and rollback |
 | [`decisions/2026-07-30-multi-platform-packaging.md`](decisions/2026-07-30-multi-platform-packaging.md) | Accepted | Canonical-source ownership, generated host adapters, per-host authority controls, and Codex's separate custom-agent sync |
