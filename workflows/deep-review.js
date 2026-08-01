@@ -28,7 +28,7 @@ const FINDING = {
     evidence: { type: 'string', enum: EVIDENCE },
     failure_scenario: { type: 'string', description: 'concrete inputs/state -> wrong outcome' },
   },
-  required: ['file', 'claim', 'severity', 'evidence', 'failure_scenario'],
+  required: ['file', 'line', 'claim', 'severity', 'evidence', 'failure_scenario'],
 }
 const PACKET = {
   type: 'object',
@@ -62,6 +62,16 @@ const SCOPE_SCHEMA = {
 // merge-base, rev-parse, ls-files (scripts/readonly-guard.py).
 phase('Scope')
 const requestedRef = typeof args === 'string' && args.trim() ? args.trim() : null
+if (requestedRef && (/^\-/.test(requestedRef) || /\s/.test(requestedRef))) {
+  return {
+    verdict: 'inconclusive',
+    failed_lane: 'scope',
+    error: 'workflow args must be a single git ref or revspec without leading "-" or whitespace',
+    review: null,
+    security: null,
+    scope: null,
+  }
+}
 let scope
 try {
   scope = await agent(
