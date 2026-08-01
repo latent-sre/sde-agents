@@ -185,7 +185,7 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Eight clusters are seeded — every overlap this README names, plus the altitude,
+Nine clusters are seeded — every overlap this README names, plus the altitude,
 simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
@@ -198,6 +198,7 @@ simple-stays-simple, and read-only-investigation seams:
 | `investigation.json` | researcher, repository-investigator, code-reviewer, root-cause, application-security-auditor | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
 | `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
 | `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
+| `retro-boundary.json` | self-improve-loop, postmortem | non-incident retros and lesson routing vs the resolved-incident write-up; "retro"/"postmortem" vocabulary collisions and a live outage must reach neither |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
