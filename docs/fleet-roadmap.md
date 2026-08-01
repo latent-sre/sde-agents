@@ -28,66 +28,6 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
-### Active
-
-#### WF-001 — host-workflow pilot round
-
-**Status:** `active`
-
-**Outcome:** The plugin ships one probe-covered workflow (`/sde-agents:deep-review`) whose packet
-contracts are schema-typed and validator-pinned, with the Claude-only boundary enforced and the
-GRAPH-001 record revised to carry the probe evidence.
-
-**Source:** Accepted
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (GRAPH-001
-accepted by the operator 2026-08-01; reopen trigger #2 partially fired) and the
-[`WF-001 spec`](superpowers/specs/2026-08-01-wf-001-host-workflow-pilot-design.md), as amended by
-the [`adversarial review`](archive/2026-08/wf-001-adversarial-review-2026-08-01.md).
-
-**Prerequisites:** None — the decision is accepted and the base branch carries the revised record.
-
-**Acceptance:** The spec's acceptance-evidence list: standard gates green, both new validator
-rules proven by tests that fail without them, the extended probe green on CLI 2.1.220, and one
-end-to-end pilot run on a real diff with session model and token cost recorded in the round's
-outcome record.
-
-**Next action:** The paired plan is executed through its pilot acceptance run (evidence:
-[`pilot run note`](archive/2026-08/wf-001-pilot-run-2026-08.md)); merge the round's PR, then
-retire the spec and plan to an archived outcome record per `docs/README.md` rule 4.
-
-### Decision needed
-
-#### GRAPH-003 — reconcile the accepted graph boundary with the rival control-plane proposal
-
-**Status:** `decision-needed`
-
-**Outcome:** One coherent graph-boundary governance story: the operator either confirms the
-2026-08-01 acceptance of the revised
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) as the
-adjudication — recording the
-[`graph control-plane proposal`](decisions/2026-08-01-graph-control-plane.md) as rejected or
-absorbed — or reopens the acceptance to fold in the rival's distinct contributions, with the
-delta named.
-
-**Source:** A sequencing collision, stated plainly: the operator accepted the revised
-2026-07-31 record on 2026-08-01 during the WF-001 round, and PR #54 merged the independently
-authored rival proposal to `main` in the same window — the side-by-side adjudication its
-provenance section anticipated never happened. The two records converge on the load-bearing
-boundary (no repo-owned executor; derived topology is evidence, never a second authored fleet;
-execution belongs to host runtimes — the exact layer WF-001 adopted), so no shipped artifact
-conflicts with either record. The rival also carries verified findings the accepted record
-lacks, e.g. `contract_digest` as a dangling reference in `scripts/run_state.py`.
-
-**Prerequisites:** Operator review of the rival record against the accepted one. WF-001's
-artifacts stand on the recorded acceptance plus their own probe and pilot evidence either way.
-
-**Acceptance:** The rival record's status leaves Proposed (Rejected, Superseded-with-absorbed
-findings, or a revision of the accepted record), the README row and this item are updated, and
-any absorbed findings become roadmap items with owners.
-
-**Next action:** Operator reads the rival record beside the accepted one and rules; the
-`contract_digest` finding is a candidate SAFE-003 regardless of the ruling.
-
 ### Ready
 
 #### SAFE-002 — represent and reconcile unknown effect outcomes
@@ -113,6 +53,30 @@ broker tests and the deterministic gates stay green.
 **Next action:** Add the `unknown` state and reconciliation listing to the broker's replay ledger
 with crash-point tests. Fail closed: unknown is terminal until an operator resolves it, and
 resolution is recorded evidence, never an automatic retry.
+
+#### SAFE-003 — resolve the dangling `contract_digest` reference
+
+**Status:** `ready` — a verified gap in shipped code, absorbed from the superseded control-plane
+proposal via the GRAPH-003 ruling.
+
+**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing:
+`run_state.py` either gains a resolver that maps the digest to a stored contract document (with
+a test proving digest → document), or the field's actual binding is documented and enforced at
+run creation — never left readable-as-enforcement while enforcing nothing.
+
+**Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
+(finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md).
+
+**Prerequisites:** None. Any schema change honors the version-1 hard-reject at
+`run_state.py:174-177` with an explicit migration decision, never a workaround.
+
+**Acceptance:** Tests for whichever repair is chosen (resolver round-trip, or
+creation-time enforcement of the documented binding); existing run-state tests and the
+deterministic gates stay green.
+
+**Next action:** Decide resolver-vs-document-and-enforce when SAFE-002 opens `run_state.py`
+anyway — same file, one review context.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -161,7 +125,9 @@ eval-uncovered routing edges, self-loops, hub concentration, prompt-surface→to
 test per invariant; parser/validator tests for the negative contracts; no new runtime
 dependency), delivered under its own bounded spec and paired plan.
 
-**Next action:** Author the bounded spec and plan once WF-001 retires to its outcome record.
+**Next action:** Author the bounded spec and plan — WF-001 retired to its
+[outcome record](archive/2026-08/wf-001-outcome-2026-08-01.md) on 2026-08-01, so the
+validator-churn sequencing gate is satisfied.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
@@ -190,6 +156,34 @@ roster and ignores the main session; routing preserves outage/change authority i
 read-only command surface and a threat review of every new verb/flag before changing the guard.
 
 ## Deferred decisions
+
+#### GRAPH-004 — typed edge-contract pilot
+
+**Status:** `deferred` — trigger-bound, absorbed from the superseded control-plane proposal via
+the GRAPH-003 ruling.
+
+**Outcome:** One real handoff (builder → reviewer is the natural candidate) expressed as a
+host-neutral typed contract, with `contract_digest` resolving to it — extending WF-001's packet
+schemas from workflow-edge validation to a ledger-bound contract, under the accepted record's
+retained node/edge design.
+
+**Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md);
+governed by the accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md), including its
+absorbed generated-prompt provenance control.
+
+**Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
+triggers: a second workflow conversion is decided (the pilot economics in the
+[`WF-001 pilot note`](archive/2026-08/wf-001-pilot-run-2026-08.md) are the baseline for that
+call), or SAFE-003's repair chooses the resolver path and needs a real contract document to
+resolve to.
+
+**Acceptance:** The contract document exists, `contract_digest` resolves to it with a test, the
+workflow (if any) consuming it validates against it, and no judgment text lives outside
+canonical files.
+
+**Next action:** None until a trigger fires; SAFE-003's resolver decision is the likeliest
+ignition.
 
 #### EVAL-003 — capture a comparable full routing anchor
 
