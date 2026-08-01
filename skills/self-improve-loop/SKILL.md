@@ -1,6 +1,6 @@
 ---
 name: self-improve-loop
-description: Use when output quality is measurable and iteration demonstrably improves it — hardening a draft against review findings, grinding code up against a failing test whose cause is already diagnosed, or improving the fleet's own agent/skill definitions — and for the micro-retro at the end of any task that needed a fix cycle. Covers generate→evaluate→refine, act→verify ordering, guardrails for unattended outer loops, and moving recurring lessons into deterministic checks. For any undiagnosed bug, test failure, or unexpected behavior, use sde-agents:root-cause first — this loop iterates on known gaps; it does not diagnose.
+description: Use when output quality is measurable and iteration demonstrably improves it — hardening a draft against review findings, grinding code up against a failing test whose cause is already diagnosed, or improving the fleet's own agent/skill definitions — and for retros outside incidents: the micro-retro after any task that needed a fix cycle, a session or round retro ("do a retro on this task", "capture the lessons learned", "what did we miss"), and routing a new discovery to its durable home (instructions file, skill, operating doc, memory, or a deterministic check). Covers generate→evaluate→refine, act→verify ordering, guardrails for unattended outer loops, discovery routing, and moving recurring lessons into deterministic checks. For the retro on a resolved lab incident or outage, use sde-agents:postmortem. For any undiagnosed bug, test failure, or unexpected behavior, use sde-agents:root-cause first — this loop iterates on known gaps; it does not diagnose.
 argument-hint: [what to improve, and the criteria or verifier]
 ---
 
@@ -88,6 +88,26 @@ trigger in the commit message so the check's origin is auditable. One lesson per
 that names ten things changes nothing (the same rule as `sde-agents:eng-ladder` growth feedback). No recurring
 failure means no lesson — don't invent one. Fleet definitions are in scope: an agent or skill that
 misroutes or misbehaves twice gets its definition fixed, not a workaround.
+
+## Retros beyond the micro-retro — the outer loop
+
+The micro-retro closes a single task. Three more triggers close the loop around the *system*, and
+all of them are events, never a calendar:
+
+- **Session retro** — on request ("do a retro on this task", "capture the lessons learned", "what
+  did we miss"): work [references/retro-protocol.md](references/retro-protocol.md).
+- **Round retro** — a fleet round retiring to its outcome record writes its lessons section by the
+  same protocol, one routing disposition per lesson, then asks the meta-question (which discovery
+  fit no routing row?).
+- **Model or CLI upgrade** — the platform shifted: beyond the probe and eval anchors `AGENTS.md`
+  already owes, the retro asks what the upgrade broke, obsoleted, or made newly possible.
+
+Wherever a retro finds something new, route it by
+[references/discovery-routing.md](references/discovery-routing.md) — every discovery is routed,
+filed as a gap, or dropped with a stated reason; silence is not a disposition. **Encode one, file
+many**: a retro still encodes at most one lesson (the micro-retro's own cap); everything else it
+finds becomes a filed gap or roadmap entry, not an edit. The retro on a resolved lab *incident*
+belongs to `sde-agents:postmortem`, whose fleet-caused findings come back here.
 
 ## Run the loop well
 
