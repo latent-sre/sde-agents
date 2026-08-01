@@ -38,6 +38,13 @@ script, executed by the Claude Code workflow runtime, never by Node in this repo
 
 ### Task 1: Revise GRAPH-001 and register the round in the docs map and roadmap
 
+> **Status: executed 2026-08-01** with the GRAPH-001 acceptance recording (adversarial-review
+> finding 1 — the round docs existed before the decision they rested on was accepted). Deviations
+> from the payloads below: WF-001 landed under a new `### Active` roadmap subsection rather than
+> `### Ready`; the GRAPH-001 decision-needed item left the roadmap on acceptance (its remaining
+> descriptive-layer work became GRAPH-002); and the decision's status line records the operator's
+> acceptance. Executors start at Task 2.
+
 **Files:**
 - Modify: `docs/decisions/2026-07-31-ai-graph-engineering.md`
 - Modify: `docs/fleet-roadmap.md`
@@ -165,25 +172,29 @@ git commit -m "docs: revise GRAPH-001 for WF-001 — trigger #2 partially fired,
 - Produces: the workflow name `deep-review` (invoked `/sde-agents:deep-review`); the
   `EVIDENCE` enum `["verified", "sourced", "unverified"]` and `FINDING`/`PACKET` schema shapes
   that Task 4's validator rule parses; the returned object shape
-  `{ verdict, confirmed_criticals, review, security, scope }`.
+  `{ verdict, head_sha, confirmed_criticals, review, security, scope }`, plus
+  `failed_lane`/`error` on inconclusive returns.
 
 - [ ] **Step 1: Write the workflow script exactly as below**
 
 ```javascript
 export const meta = {
   name: 'deep-review',
-  description: 'Parallel review + security audit of the working diff, schema-typed packets, deterministic merge verdict',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the working diff, schema-typed packets, deterministic merge record',
   phases: [
-    { title: 'Scope', detail: 'one agent enumerates the diff' },
-    { title: 'Review', detail: 'code review and security audit in parallel' },
+    { title: 'Scope', detail: 'guarded reviewer enumerates the diff' },
+    { title: 'Review', detail: 'correctness and security lanes in parallel' },
   ],
 }
 
-// The packet contracts mirror the agents' prose packets. The prose stays canonical
-// (agents/code-reviewer.md, agents/application-security-auditor.md); the validator pins the
-// evidence enum below to the canonical stems so schema and prose cannot drift silently.
-// Schema constrains only the final packet — agents reason in free prose first (format-tax
-// evidence in the WF-001 spec) — and validation retries at most 5 times before aborting.
+// The packet contract mirrors agents/code-reviewer.md's canonical packet: P0-P3 severities, the
+// [verified]/[sourced]/[unverified] evidence triad (validator-pinned), and the reviewer's own
+// verdict forms -- including the mutable-tree PROVISIONAL form, which is why the scope packet
+// records head_sha and tree_dirty: a merge record either binds to exact bytes or says it cannot.
+// Schema constrains only the final packet; the agents reason in free prose first (format-tax
+// evidence in the WF-001 spec). Validation retries at most 5 times, then the agent() call fails
+// -- every await below is fail-closed and returns a structured inconclusive verdict instead of
+// surfacing a bare runtime error.
 const EVIDENCE = ['verified', 'sourced', 'unverified']
 const FINDING = {
   type: 'object',
@@ -201,7 +212,11 @@ const PACKET = {
   type: 'object',
   properties: {
     findings: { type: 'array', items: FINDING },
-    verdict: { type: 'string', enum: ['merge', 'merge-with-fixes', 'do-not-merge'] },
+    verdict: {
+      type: 'string',
+      enum: ['approve', 'approve-with-nits', 'request-changes', 'provisional-commit-and-re-review'],
+      description: 'your canonical verdict; provisional whenever the tree was dirty',
+    },
     not_checked: { type: 'string', description: 'what this pass could not or did not examine' },
   },
   required: ['findings', 'verdict', 'not_checked'],
@@ -210,62 +225,91 @@ const SCOPE_SCHEMA = {
   type: 'object',
   properties: {
     base_ref: { type: 'string' },
+    head_sha: { type: 'string', description: 'git rev-parse HEAD -- the bytes any verdict binds to' },
+    tree_dirty: { type: 'boolean', description: 'true if git status --porcelain printed anything' },
     changed_files: { type: 'array', items: { type: 'string' } },
     diff_summary: { type: 'string', description: 'per-file one-line change summary' },
   },
-  required: ['base_ref', 'changed_files', 'diff_summary'],
+  required: ['base_ref', 'head_sha', 'tree_dirty', 'changed_files', 'diff_summary'],
 }
 
-// Workflow scripts cannot run git themselves (no filesystem or process access), so a cheap
-// default agent enumerates the diff; the reviewers then work a fixed file list instead of
-// re-deriving scope two different ways.
+// Scope runs under the guarded reviewer identity, not a default workflow agent: the read-only
+// boundary must be structural (the PreToolUse guard, probe-verified inside workflows), never the
+// prompt phrase "read-only" -- a prompt-injected or mistaken default agent could write into the
+// tree it is scoping. Everything scope needs is on the guard's git allowlist: diff, log, status,
+// merge-base, rev-parse, ls-files (scripts/readonly-guard.py).
 phase('Scope')
 const requestedRef = typeof args === 'string' && args.trim() ? args.trim() : null
-const scope = await agent(
-  'Enumerate the review scope. ' +
-  (requestedRef
-    ? `Diff the working tree against ${requestedRef}.`
-    : 'Diff the working tree against the merge base with main (git merge-base HEAD main).') +
-  ' Run git commands read-only. Report the resolved base ref, the changed file list, and a ' +
-  'one-line-per-file summary of what changed. If the diff is empty, return an empty file list.',
-  { label: 'scope', schema: SCOPE_SCHEMA },
-)
-if (!scope || scope.changed_files.length === 0) {
+let scope
+try {
+  scope = await agent(
+    'Enumerate the review scope using read-only git inspection only. ' +
+    (requestedRef
+      ? `Diff the working tree against ${requestedRef}.`
+      : 'Diff the working tree against the merge base with main (git merge-base HEAD main).') +
+    ' Report the resolved base ref, the head commit (git rev-parse HEAD), whether the working ' +
+    'tree is dirty (git status --porcelain), the changed file list, and a one-line-per-file ' +
+    'summary of what changed. If the diff is empty, return an empty file list.',
+    { agentType: 'sde-agents:code-reviewer', label: 'scope', schema: SCOPE_SCHEMA },
+  )
+} catch (err) {
+  return { verdict: 'inconclusive', failed_lane: 'scope', error: String(err), review: null, security: null, scope: null }
+}
+if (!scope) {
+  return { verdict: 'inconclusive', failed_lane: 'scope', review: null, security: null, scope: null }
+}
+if (scope.changed_files.length === 0) {
   return { verdict: 'no-diff', confirmed_criticals: 0, review: null, security: null, scope }
 }
 
 phase('Review')
 const context =
-  `Base ref: ${scope.base_ref}\nChanged files:\n- ${scope.changed_files.join('\n- ')}\n` +
-  `Summary:\n${scope.diff_summary}\n` +
-  'Work your normal checklist and reason in prose first; the schema constrains only your final packet. ' +
-  'Label evidence honestly: verified only for what you ran or observed.'
-const [review, security] = await parallel([
-  () => agent(
-    'Review this diff for correctness, safety, and convention adherence.\n' + context,
-    { agentType: 'sde-agents:code-reviewer', label: 'review', schema: PACKET, phase: 'Review' },
-  ),
-  () => agent(
-    'Audit this diff for security defects: source-to-sink reachability, authority changes, ' +
-    'injection surfaces, secrets.\n' + context,
-    { agentType: 'sde-agents:application-security-auditor', label: 'security', schema: PACKET, phase: 'Review' },
-  ),
-])
-
-// Gates are code, not prose: a missing packet fails the run, and any P0/P1 forces the verdict
-// down regardless of either agent's own verdict field.
-if (!review || !security) {
-  return { verdict: 'inconclusive-missing-packet', confirmed_criticals: 0, review, security, scope }
+  `Base ref: ${scope.base_ref}\nHead: ${scope.head_sha} (tree_dirty: ${scope.tree_dirty})\n` +
+  `Changed files:\n- ${scope.changed_files.join('\n- ')}\nSummary:\n${scope.diff_summary}\n` +
+  'Work your normal checklist and reason in prose first; the schema constrains only your final ' +
+  'packet. Label evidence honestly: verified only for what you ran or observed. If tree_dirty ' +
+  'is true, your verdict must be provisional-commit-and-re-review.'
+// The security lane is a second code-reviewer pass seeded with a security-only threat model --
+// the fallback sre-tool documents when the auditor cannot run. application-security-auditor is
+// deliberately NOT used: its own negative routing excludes branch diffs, and it holds no Bash.
+let lanes
+try {
+  lanes = await parallel([
+    () => agent(
+      'Review this diff for correctness, safety, and convention adherence.\n' + context,
+      { agentType: 'sde-agents:code-reviewer', label: 'review', schema: PACKET, phase: 'Review' },
+    ),
+    () => agent(
+      'Second review lane, security-only threat model: source-to-sink reachability of untrusted ' +
+      'input, authority and permission changes, injection surfaces, secret handling.\n' + context,
+      { agentType: 'sde-agents:code-reviewer', label: 'security', schema: PACKET, phase: 'Review' },
+    ),
+  ])
+} catch (err) {
+  return { verdict: 'inconclusive', failed_lane: 'parallel', error: String(err), review: null, security: null, scope }
 }
+const [review, security] = lanes
+// parallel() resolves a failed thunk to null (documented runtime contract) -- a null lane means
+// schema retries exhausted or the agent died. Fail closed and name the lane; never guess.
+if (!review || !security) {
+  return {
+    verdict: 'inconclusive',
+    failed_lane: !review ? 'review' : 'security',
+    confirmed_criticals: 0, review, security, scope,
+  }
+}
+// The merge record, gated in code: criticals or a request-changes force do-not-merge; a dirty
+// tree caps the record at the reviewer's own PROVISIONAL form; agent verdicts are preserved
+// verbatim inside their packets -- this record interprets, never rewrites, them.
 const criticals = [...review.findings, ...security.findings]
   .filter((f) => f.severity === 'P0' || f.severity === 'P1')
-const worst = [review.verdict, security.verdict].includes('do-not-merge')
-  ? 'do-not-merge'
-  : [review.verdict, security.verdict].includes('merge-with-fixes')
-    ? 'merge-with-fixes'
-    : 'merge'
-const verdict = criticals.length > 0 ? 'do-not-merge' : worst
-return { verdict, confirmed_criticals: criticals.length, review, security, scope }
+const verdicts = [review.verdict, security.verdict]
+let merged
+if (criticals.length > 0 || verdicts.includes('request-changes')) merged = 'do-not-merge'
+else if (scope.tree_dirty || verdicts.includes('provisional-commit-and-re-review')) merged = 'provisional-commit-and-re-review'
+else if (verdicts.includes('approve-with-nits')) merged = 'merge-with-nits'
+else merged = 'merge'
+return { verdict: merged, head_sha: scope.head_sha, confirmed_criticals: criticals.length, review, security, scope }
 ```
 
 - [ ] **Step 2: Verify the plugin contract still validates**
@@ -753,3 +797,9 @@ proven to fail without it** (Tasks 4-5); description edit -> **no** (no routing 
   aggregation point those tests exercise.
 - The probe's Windows path translation (`C:/` -> `/c/`) mirrors what the hook's `sh` runtime
   needs on this machine; on POSIX the branch is a no-op.
+- 2026-08-01 adversarial-review amendments: Task 1 was executed with the GRAPH-001 acceptance
+  recording; Task 2's payload was rewritten — guarded scope lane, twin `code-reviewer` lanes
+  (the auditor's negative routing excludes branch diffs and it holds no Bash), the reviewer's
+  canonical verdict enum with the mutable-tree PROVISIONAL form, head-SHA binding, and
+  fail-closed inconclusive returns. Dispositions:
+  [`adversarial review record`](../../archive/2026-08/wf-001-adversarial-review-2026-08-01.md).

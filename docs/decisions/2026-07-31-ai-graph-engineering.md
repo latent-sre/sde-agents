@@ -1,7 +1,7 @@
 # AI graph engineering boundary for the fleet
 
-**Status:** Proposed (revised) -- revised 2026-07-31 by an independent cross-model review;
-implementation authority pending
+**Status:** Accepted -- 2026-08-01 by the operator, amended the same day with the WF-001 probe
+evidence below; revised 2026-07-31 by an independent cross-model review
 **Date:** 2026-07-31
 **Evidence snapshot:** `c02d8e12cb2c3d086890b884942908d18bcdbd17`
 **Review evidence:**
@@ -153,11 +153,15 @@ Anthropic-side guidance that cuts against building new orchestration scaffolding
   [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
   resolve long-horizon work with compaction, structured note-taking, and role-based splits
   (initializer/coder, generator/evaluator) -- minimal structure, never a typed multi-node graph.
-- The host platform is converging on owning deterministic orchestration natively: current Claude
-  Code sessions ship a scripted workflow capability (deterministic pipeline/fan-out over subagents
-  with phases, budgets, and resume) plus durable task tracking. It is not yet a stable API a plugin
-  can pin to, so the reopen trigger below has not fully fired -- but a repo-owned scheduler built
-  now risks becoming a second source for exactly the layer the host is standardizing.
+- The host platform now owns deterministic orchestration in a form a plugin can pin: plugin-shipped
+  `workflows/` scripts are documented and GA (CLI v2.1.154, 2026-05-28), and were probe-verified on
+  CLI 2.1.220 (2026-08-01): namespaced resolution (`/sde-agents:<name>`), `agentType` spawning of
+  canonical fleet agents, PreToolUse delivery with plugin-namespaced `agent_type` inside
+  workflow-spawned agents (the read-only guard denied a non-allowlisted command there, including
+  under `bypassPermissions`), a distinct `workflow-subagent` identity for default workflow agents,
+  and schema-validated returns with a five-retry ceiling (CHANGELOG v2.1.186). Pinnable is
+  demonstrated; *stable* is not claimed -- the feature is two months old with an active bugfix
+  stream, resume does not survive session exit, and no first-party plugin ships one.
 
 ### Research direction
 
@@ -372,6 +376,10 @@ the first descriptive slice, not with the executor.
   terminals, cycle budgets, join policies, trust paths, and effect approval edges.
 - Export JSON and optional Mermaid as review evidence; generated output is not committed as a second
   source unless a later decision names a consumer that needs it.
+- The derived graph's checks include, at minimum: components no other member references, routing
+  edges no eval cluster covers, self-loops, hub-concentration reporting, and a reachability view
+  of which prompt surfaces can reach which tools (the 2026-08-01 independent research round
+  converged on the same check list from external evidence; see the WF-001 spec's research notes).
 
 This work does not execute models and therefore needs no model baseline.
 
@@ -392,6 +400,17 @@ degrades frontier-model output. The claim is testable with this repository's own
 before/after routing and behavioral runs under paired conditions, negatives-first per EVAL-003's
 grading evidence, one pilot definition before any fleet-wide edit. If the evals refute the
 published claim for this artifact class, the definitions stand and the result is recorded.
+
+### Accepted -- WF-001 host-workflow pilot (added 2026-08-01)
+
+One bounded adoption of the host's native workflow layer, governed by the
+[WF-001 round spec](../superpowers/specs/2026-08-01-wf-001-host-workflow-pilot-design.md):
+a plugin-shipped `deep-review` workflow (parallel guarded reviewer lanes with schema-typed packet
+contracts and deterministic merge gates), a probe extension codifying the verified platform
+contract, and the Claude-only platform boundary. The pilot does not write `run_state.py`; if the
+deferred execution phases reopen, that spec decides integration -- workflow scripts cannot touch
+the filesystem, so integration would route authority through agent prose, which invariant #8
+prohibits.
 
 ### Deferred -- graph execution (former Phases 1--3)
 
@@ -465,8 +484,12 @@ and the original acceptance-evidence list govern the spec.
 
 - A real multi-agent run in this repository demonstrates an ordering, join, or handoff failure
   that prose contracts plus `run_state.py` failed to prevent.
-- Claude Code's native workflow/task orchestration stabilizes into an API a plugin can pin to --
-  at which point the question becomes *adopting* the host layer, not building a parallel one.
+- ~~Claude Code's native workflow/task orchestration stabilizes into an API a plugin can pin to~~
+  **Partially fired 2026-08-01** (see the probe-verified facts above): pinnable via the CLI pin
+  plus probe, not yet mature. The authorized response is the bounded WF-001 host-layer pilot in
+  the accepted work above -- adopting the host layer, not the deferred repo-owned executor. The
+  remaining maturity conditions (resume surviving sessions, first-party dogfooding, a stable
+  documented hook contract for workflow agents) keep the rest of this trigger live.
 - An `sre-tool` run large enough that a gate (review, verification, approval) was actually
   skipped or attempted out of order.
 - A workflow framework becomes a host-neutral standard already present on all supported hosts.

@@ -28,39 +28,32 @@ Git history and archived reviews retain the implementation detail.
 
 ## Current work
 
-### Decision needed
+### Active
 
-#### GRAPH-001 -- choose the fleet's graph-control boundary
+#### WF-001 — host-workflow pilot round
 
-**Status:** `decision-needed` -- the proposal was revised 2026-07-31 by an independent cross-model
-review; the revised record awaits the operator's accept/reject.
+**Status:** `active`
 
-**Outcome:** Decide whether to adopt the **revised** boundary: a derived capability graph plus a
-workflow-contract *validator* now (descriptive only, no executor), the effect-broker
-unknown-outcome repair (SAFE-002) and the context-engineering round (CTX-001) as graph-independent
-companions, and graph *execution* deferred behind named reopen triggers -- an observed
-ordering/handoff failure, a pinnable host workflow API, or a real gate-skip in an `sre-tool` run.
+**Outcome:** The plugin ships one probe-covered workflow (`/sde-agents:deep-review`) whose packet
+contracts are schema-typed and validator-pinned, with the Claude-only boundary enforced and the
+GRAPH-001 record revised to carry the probe evidence.
 
-**Source:** Revised
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md); review evidence in
-[`graph decision independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
-The review verified the original's external citations and repo diagnosis, and added the Claude
-5-generation counterevidence (harness-staleness doctrine, the 2026-07-24 context-engineering
-rules, the no-orchestrator parallel-compiler result) that narrowed the boundary.
+**Source:** Accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (GRAPH-001
+accepted by the operator 2026-08-01; reopen trigger #2 partially fired) and the
+[`WF-001 spec`](superpowers/specs/2026-08-01-wf-001-host-workflow-pilot-design.md), as amended by
+the [`adversarial review`](archive/2026-08/wf-001-adversarial-review-2026-08-01.md).
 
-**Prerequisites:** SAFE-001's durable state, typed evidence, verification sandbox, effect broker,
-trust-separated roles, and cross-host conformance controls have landed. No model baseline is owed
-for deciding the architecture; every later OpenAI/Codex model baseline in this program must use
-`gpt-5.6-sol` only.
+**Prerequisites:** None — the decision is accepted and the base branch carries the revised record.
 
-**Acceptance:** The revised record is accepted, rejected, or further revised with the descriptive
-scope, the deferred-execution triggers, and the two companion items explicit. If accepted, a
-bounded spec and paired plan define the descriptive layer's acceptance before implementation
-begins, and CTX-001/SAFE-002 proceed as their own items.
+**Acceptance:** The spec's acceptance-evidence list: standard gates green, both new validator
+rules proven by tests that fail without them, the extended probe green on CLI 2.1.220, and one
+end-to-end pilot run on a real diff with session model and token cost recorded in the round's
+outcome record.
 
-**Next action:** Operator reviews the revised record's accepted/deferred split. Do not extend
-`run_state.py` or add workflow files until the boundary is accepted; SAFE-002 touches only the
-broker and CTX-001 touches only definitions behind paired evals, so neither waits on this decision.
+**Next action:** Execute the paired plan
+(`superpowers/plans/2026-08-01-wf-001-host-workflow-pilot.md`) from Task 2 — Task 1 was executed
+with the acceptance recording.
 
 ### Ready
 
@@ -114,6 +107,28 @@ the pilot regresses; regenerated adapters and the deterministic gates green.
 
 **Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
 highest-density candidate) and the exact paired-measurement conditions before editing anything.
+
+#### GRAPH-002 — land the descriptive capability graph and contract validator
+
+**Status:** `ready`
+
+**Outcome:** The accepted GRAPH-001 descriptive layer exists: a derived machine-readable
+capability graph over the canonical definitions and a standard-library workflow-contract
+parser/validator, including the graph-level checks the decision names (unreferenced components,
+eval-uncovered routing edges, self-loops, hub concentration, prompt-surface→tool reachability).
+
+**Source:** Accepted
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) — the
+"Accepted -- descriptive compiler and contract validator" work.
+
+**Prerequisites:** None hard. Sequence after WF-001 closes: both rounds edit
+`scripts/validate_fleet.py`, and serializing them keeps each round's mutation tests reviewable.
+
+**Acceptance:** The decision's descriptive-layer acceptance-evidence list (a fixture or mutation
+test per invariant; parser/validator tests for the negative contracts; no new runtime
+dependency), delivered under its own bounded spec and paired plan.
+
+**Next action:** Author the bounded spec and plan once WF-001 retires to its outcome record.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

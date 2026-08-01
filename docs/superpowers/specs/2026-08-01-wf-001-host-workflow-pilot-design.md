@@ -1,6 +1,10 @@
 # WF-001 — host-workflow pilot round (design spec)
 
-**Status:** Approved scope for the active round — governs what the paired plan may implement
+**Status:** Approved scope for the active round — governs what the paired plan may implement.
+Implementation authority: GRAPH-001 was **accepted by the operator 2026-08-01** (recorded in the
+decision record and roadmap) — the round did not begin executing until that acceptance landed.
+Amended 2026-08-01 after an adversarial review; dispositions in the
+[review record](../../archive/2026-08/wf-001-adversarial-review-2026-08-01.md)
 **Date:** 2026-08-01
 **Base:** branch `agent/accept-plugin-deployment-mode` (`ece06d6`); everything here builds on the
 revised [`GRAPH-001 decision`](../../decisions/2026-07-31-ai-graph-engineering.md) and the accepted
@@ -76,10 +80,23 @@ which invariant #8 already prohibits.
 
 ### D2 — pilot workflow: `workflows/deep-review.js`
 
-A multi-agent review pipeline: diff scope → parallel `sde-agents:code-reviewer` +
-`sde-agents:application-security-auditor` via `agentType` → schema-validated packets →
-deterministic merge and verdict in script code (a missing or invalid packet fails the verdict; a
-confirmed critical blocks a pass — gates are code, not prose).
+A multi-agent review pipeline: guarded diff scope → two parallel `sde-agents:code-reviewer`
+lanes via `agentType` — one correctness pass, one seeded with a security-only threat model —
+→ schema-validated packets → a deterministic merge record in script code (a missing or invalid
+packet yields a structured inconclusive verdict naming the failed lane; a confirmed P0/P1 forces
+do-not-merge; a dirty tree caps the record at the reviewer's own PROVISIONAL form — gates are
+code, not prose).
+
+Two structural rules the adversarial review forced explicit (both were defects in the first
+draft): **every stage with agency runs under the guarded reviewer identity** — the scope stage
+included, because default workflow agents are unguarded (`workflow-subagent`, probe run 5) and a
+prompt-level "read-only" instruction is authority by prose; and
+**`application-security-auditor` is deliberately not in the pipeline** — its own negative routing
+excludes branch diffs ("Not for a PR/branch diff — use `sde-agents:code-reviewer`") and it holds
+no Bash, so the security lane uses the second-reviewer fallback `sre-tool` already documents.
+Every agent await is fail-closed: schema-retry exhaustion or a lane crash returns a structured
+inconclusive verdict naming the failed lane, never a bare runtime error. The merge record binds
+to the scope stage's recorded head SHA.
 
 Why this pilot and not an `sre-tool` conversion: it is read-heavy and parallelizable (the one
 regime the multi-agent economics favor), short-lived (resume and compaction weaknesses cannot
@@ -95,9 +112,11 @@ small enough that the default medium size guideline is never approached.
 ### D3 — packet schemas
 
 JSON Schemas for the two review packets, derived from the canonical prose: findings array (file,
-line, claim, severity enum, evidence-label enum pinned verbatim to the canonical
-`[verified]/[sourced]/[unverified]` stems, failure scenario), verdict enum, and a required
-"what was not checked" field. Schema constrains only the final packet — the agents' free-prose
+line, claim, severity enum (P0–P3, the reviewer's canonical scale), evidence-label enum pinned
+verbatim to the canonical `[verified]/[sourced]/[unverified]` stems, failure scenario), the
+reviewer's canonical verdict enum — approve / approve-with-nits / request-changes /
+provisional-commit-and-re-review, so a dirty tree cannot receive an unconditional approval — and
+a required "what was not checked" field. Schema constrains only the final packet — the agents' free-prose
 reasoning stays untouched, matching both the fleet's existing pattern and the format-tax evidence.
 
 Schemas live as constants inside the workflow script — the runtime offers no shared-schema
