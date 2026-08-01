@@ -335,6 +335,8 @@ def probe_workflow_contract(probe: "Probe") -> None:
     target.mkdir(parents=True)
     (target / "README.md").write_text("workflow probe target\n", encoding="utf-8")
     run(["git", "init", "-q", str(target)])
+    run(["git", "-C", str(target), "config", "user.name", "Workflow Probe"])
+    run(["git", "-C", str(target), "config", "user.email", "workflow-probe@example.invalid"])
     run(["git", "-C", str(target), "add", "-A"])
     run(["git", "-C", str(target), "commit", "-qm", "probe baseline"])
 
