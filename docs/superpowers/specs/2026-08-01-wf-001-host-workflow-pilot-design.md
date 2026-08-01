@@ -141,6 +141,18 @@ items (descriptive layer; EVAL follow-ons), not silently dropped.
 - A second workflow. One pilot produces the evidence; the outcome record adjudicates whether more
   flows earn conversion.
 
+## Test modes and model policy
+
+- Unit tests and validator rules run offline — no sessions, no model, same as every existing gate.
+- Workflow probe sessions run headless with `--permission-mode bypassPermissions`: the interactive
+  workflow-review gate blocks plain `-p` sessions regardless of the settings allowlist (probe runs
+  2 vs 3), the probe target is a throwaway repository the harness creates and deletes, and run 5
+  proved the guard still enforces under bypass — bypass removes permission prompts, not hooks.
+  Existing non-workflow probe sections keep their current invocation unchanged.
+- Probe and pilot acceptance sessions launch on **sonnet**. Both pilot agents declare
+  `model: inherit`, so the session model is the control; Fable capacity is not spent on probes or
+  the pilot. The outcome record states the session model alongside the recorded token cost.
+
 ## Acceptance evidence
 
 - Standard gates green: `generate_platform_adapters.py --check`, `validate_fleet.py`, the unit
