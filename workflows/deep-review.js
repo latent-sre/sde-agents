@@ -7,10 +7,12 @@ export const meta = {
   ],
 }
 
-// The packet contract mirrors agents/code-reviewer.md's canonical packet: P0-P3 severities, the
-// [verified]/[sourced]/[unverified] evidence triad (validator-pinned), and the reviewer's own
-// verdict forms -- including the mutable-tree PROVISIONAL form, which is why the scope packet
-// records head_sha and tree_dirty: a merge record either binds to exact bytes or says it cannot.
+// Severities and verdict forms mirror agents/code-reviewer.md's canonical packet -- including the
+// mutable-tree PROVISIONAL form, which is why the scope packet records head_sha and tree_dirty: a
+// merge record either binds to exact bytes or says it cannot. The evidence enum reuses the
+// fleet's canonical [verified]/[sourced]/[unverified] triad (validator-pinned to
+// EVIDENCE_LABEL_STEMS), which is fleet convention rather than code-reviewer's own packet
+// vocabulary -- the prompt defines the labels inline for the reviewer.
 // Schema constrains only the final packet; the agents reason in free prose first (format-tax
 // evidence in the WF-001 spec). Validation retries at most 5 times, then the agent() call fails
 // -- every await below is fail-closed and returns a structured inconclusive verdict instead of

@@ -54,7 +54,7 @@ script, executed by the Claude Code workflow runtime, never by Node in this repo
 - Produces: the decision-record language later tasks cite ("WF-001", "partially fired"); the
   roadmap item WF-001 whose Acceptance list mirrors the spec's Acceptance evidence.
 
-- [ ] **Step 1: Apply the four spec-defined edits to the decision record**
+- [x] **Step 1: Apply the four spec-defined edits to the decision record**
 
 Edit 1 — replace the "live host fact" bullet (currently the last bullet of the
 "Claude 5-generation counterevidence" section, beginning "The host platform is converging on
@@ -110,7 +110,7 @@ append one bullet to the existing list:
   converged on the same check list from external evidence; see the WF-001 spec's research notes).
 ```
 
-- [ ] **Step 2: Add the WF-001 item to `docs/fleet-roadmap.md` under `### Ready`** (before
+- [x] **Step 2: Add the WF-001 item to `docs/fleet-roadmap.md` under `### Ready`** (before
 SAFE-002, since it is the active round):
 
 ```markdown
@@ -137,7 +137,7 @@ outcome record.
 (`superpowers/plans/2026-08-01-wf-001-host-workflow-pilot.md`).
 ```
 
-- [ ] **Step 3: Register the round documents in `docs/README.md`.** In the "Current documents"
+- [x] **Step 3: Register the round documents in `docs/README.md`.** In the "Current documents"
 table, insert two rows after the GRAPH-001 decision row:
 
 ```markdown
@@ -148,13 +148,13 @@ table, insert two rows after the GRAPH-001 decision row:
 Also update the GRAPH-001 row's "Read it for" cell to end with: "revised 2026-08-01 with the
 WF-001 probe evidence; trigger #2 partially fired".
 
-- [ ] **Step 4: Run the doc-facing gates**
+- [x] **Step 4: Run the doc-facing gates**
 
 Run: `py scripts/validate_fleet.py`
 Expected: `Validated 11 agents and 19 skills; inventory is current.` (exit 0 — the validator
 checks tracked doc references and AGENTS.md paths; failures here mean a link target typo).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/decisions/2026-07-31-ai-graph-engineering.md docs/fleet-roadmap.md docs/README.md
@@ -175,7 +175,7 @@ git commit -m "docs: revise GRAPH-001 for WF-001 — trigger #2 partially fired,
   `{ verdict, head_sha, confirmed_criticals, review, security, scope }`, plus
   `failed_lane`/`error` on inconclusive returns.
 
-- [ ] **Step 1: Write the workflow script exactly as below**
+- [x] **Step 1: Write the workflow script exactly as below**
 
 ```javascript
 export const meta = {
@@ -312,20 +312,20 @@ else merged = 'merge'
 return { verdict: merged, head_sha: scope.head_sha, confirmed_criticals: criticals.length, review, security, scope }
 ```
 
-- [ ] **Step 2: Verify the plugin contract still validates**
+- [x] **Step 2: Verify the plugin contract still validates**
 
 Run: `claude plugin validate . --strict`
 Expected: exit 0. (This is the only load-time check a workflow script gets; the runtime parses
 `meta` at invocation. `workflows/` is auto-discovered — do NOT add a field to `plugin.json`.)
 
-- [ ] **Step 3: Run the standard gates**
+- [x] **Step 3: Run the standard gates**
 
 Run: `py scripts/validate_fleet.py && py scripts/generate_platform_adapters.py --check`
 Expected: both exit 0 — the generator must not treat `workflows/` as adapter input; if `--check`
 reports drift or extra files, stop: that is a generator assumption to fix in Task 3, not to
 paper over.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add workflows/deep-review.js
@@ -346,13 +346,13 @@ git commit -m "feat: ship deep-review pilot workflow with schema-typed packets"
 **Interfaces:**
 - Produces: the AGENTS.md map row and README section Task 5's boundary rule message cites.
 
-- [ ] **Step 1: Bump all three manifest versions to `1.5.0`.** Then confirm no other manifest
+- [x] **Step 1: Bump all three manifest versions to `1.5.0`.** Then confirm no other manifest
 carries the old version:
 
 Run: `grep -rn '"1.4.0"' --include='*.json' .`
 Expected: no matches outside `docs/` or archives.
 
-- [ ] **Step 2: Add the Map row to `AGENTS.md`** after the `hooks/copilot-hooks.json` row:
+- [x] **Step 2: Add the Map row to `AGENTS.md`** after the `hooks/copilot-hooks.json` row:
 
 ```markdown
 | `workflows/deep-review.js` | Claude-only plugin workflow (deterministic multi-agent review pipeline). `workflows/` is auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
@@ -361,7 +361,7 @@ Expected: no matches outside `docs/` or archives.
 (Literal file path, deliberately: the validator checks every concrete multi-segment repo path in
 AGENTS.md against the tree, and a glob would either dodge that tripwire or trip it uselessly.)
 
-- [ ] **Step 3: Add a README section.** Place a short section after the guard section (locate the
+- [x] **Step 3: Add a README section.** Place a short section after the guard section (locate the
 heading that documents the read-only guard; insert the new `##`-level section immediately after
 it):
 
@@ -379,14 +379,14 @@ prose packet first and the schema second, never the reverse. Probe coverage:
 CLI pin bump.
 ```
 
-- [ ] **Step 4: Run the gates**
+- [x] **Step 4: Run the gates**
 
 Run: `py scripts/validate_fleet.py && py scripts/generate_platform_adapters.py --check && py -m unittest discover -s tests`
 Expected: all exit 0. The validator checks AGENTS.md's concrete repo paths — `workflows/*.js` is
 a glob, but if it flags the row, use the literal path `workflows/deep-review.js` in the row
 instead.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add plugin.json .claude-plugin/plugin.json plugins/sde-agents/.codex-plugin/plugin.json AGENTS.md README.md
@@ -407,7 +407,7 @@ git commit -m "feat: bump plugin to 1.5.0 and document the Claude-only workflow 
   `issues.extend(...)` registration pattern used by `validate_bundle_references` in `main`.
 - Produces: `validate_workflow_evidence_enums(root) -> list[str]`.
 
-- [ ] **Step 1: Write the failing mutation test.** This is the repo's real mutation pattern
+- [x] **Step 1: Write the failing mutation test.** This is the repo's real mutation pattern
 (`tests/test_validate_fleet.py:1118` — copy the repo, break one thing, assert through
 `validate_repo`). Add:
 
@@ -434,12 +434,12 @@ def test_workflow_evidence_enum_current_tree_is_clean(self) -> None:
     self.assertEqual(issues, [])
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `py -m unittest tests.test_validate_fleet -k workflow_evidence -v`
 Expected: FAIL / ERROR with `validate_workflow_evidence_enums` not existing.
 
-- [ ] **Step 3: Implement the rule in `scripts/validate_fleet.py`.** Near
+- [x] **Step 3: Implement the rule in `scripts/validate_fleet.py`.** Near
 `EVIDENCE_LABEL_STEMS`, add the derived enum; with the other validators, add the function:
 
 ```python
@@ -485,12 +485,12 @@ Register it in `validate_repo` alongside the other repo-level validators (that i
 aggregation point the tests exercise — a rule registered only in `main` would pass its unit test
 and never run in CI): `issues.extend(validate_workflow_evidence_enums(root))`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `py -m unittest tests.test_validate_fleet -k workflow_evidence -v`
 Expected: PASS (both tests).
 
-- [ ] **Step 5: Run the full gates and commit**
+- [x] **Step 5: Run the full gates and commit**
 
 Run: `py scripts/validate_fleet.py && py -m unittest discover -s tests`
 Expected: exit 0, all tests pass.
@@ -513,7 +513,7 @@ git commit -m "feat: pin workflow evidence enums to the canonical packet stems"
   (`.github/agents`, `.codex/agents`, `platforms/copilot/skills`, `plugins/sde-agents/skills`).
 - Produces: `validate_workflow_host_boundary(root) -> list[str]`.
 
-- [ ] **Step 1: Write the failing mutation test** (same repo-copy pattern as Task 4):
+- [x] **Step 1: Write the failing mutation test** (same repo-copy pattern as Task 4):
 
 ```python
 def test_adapter_referencing_workflow_is_reported(self) -> None:
@@ -534,12 +534,12 @@ def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
     self.assertEqual(issues, [])
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
-Run: `py -m unittest tests.test_validate_fleet -k host_boundary -v`
+Run: `py -m unittest tests.test_validate_fleet -k HostBoundary -v`
 Expected: FAIL / ERROR — function does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
@@ -585,14 +585,14 @@ Register in `validate_repo` (same reason as Task 4):
 `issues.extend(validate_workflow_host_boundary(root))`. Note the mutation test asserts on
 "no workflow runtime" — keep that phrase in the issue message or update both together.
 
-- [ ] **Step 4: Run to verify pass, then full gates**
+- [x] **Step 4: Run to verify pass, then full gates**
 
-Run: `py -m unittest tests.test_validate_fleet -k host_boundary -v`
+Run: `py -m unittest tests.test_validate_fleet -k HostBoundary -v`
 Expected: PASS.
 Run: `py scripts/validate_fleet.py && py -m unittest discover -s tests && py scripts/generate_platform_adapters.py --check`
 Expected: all exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/validate_fleet.py tests/test_validate_fleet.py
@@ -612,7 +612,7 @@ git commit -m "feat: reject generated adapters that reference Claude-only workfl
 - Produces: `probe_workflow_contract(probe) -> None`, called from `main` after the existing
   checks.
 
-- [ ] **Step 1: Add the workflow probe.** Design notes the code must honor (each maps to a
+- [x] **Step 1: Add the workflow probe.** Design notes the code must honor (each maps to a
 verified probe run from 2026-08-01): the shipped plugin stays clean, so the probe copies the repo
 tree to `.probe-tmp/plugin`, instruments the *copy's* `hooks/hooks.json` with a payload logger
 (prepended, guard logic retained), and adds a probe-only workflow there; `agent_type` delivery is
@@ -727,13 +727,13 @@ Call it from `main` after the existing session checks, before the final `probe.r
 `probe_workflow_contract(probe)`. Reuse the existing `.probe-tmp` cleanup (`shutil.rmtree` at
 start of `main` already clears the workspace; confirm the end-of-run cleanup also removes it).
 
-- [ ] **Step 2: Run the probe once to prove the section green**
+- [x] **Step 2: Run the probe once to prove the section green**
 
 Run: `py scripts/probe_plugin.py`
 Expected: all existing checks PASS plus the three new workflow checks PASS. This drives real
 sonnet sessions — it is the round's probe gate, not a CI job.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scripts/probe_plugin.py
@@ -751,25 +751,25 @@ git commit -m "feat: probe the workflow platform contract — resolution, agentT
 **Interfaces:**
 - Consumes: `/sde-agents:deep-review` from Task 2.
 
-- [ ] **Step 1: Run the pilot on a real diff.** From a **sonnet** session on this branch (the
+- [x] **Step 1: Run the pilot on a real diff.** From a **sonnet** session on this branch (the
 round's own commits are the diff):
 
 In an interactive `claude --plugin-dir .` session started with `--model sonnet`, invoke:
 `/sde-agents:deep-review main`
 Approve the workflow when prompted (interactive approval is the expected path outside probes).
 
-- [ ] **Step 2: Record the evidence note** with, verbatim from the run: the session model, total
+- [x] **Step 2: Record the evidence note** with, verbatim from the run: the session model, total
 tokens (from `/workflows` or the final usage line), wall time, the returned verdict object, and
 whether any schema retry fired (visible as repeated StructuredOutput calls in the workflow's
 transcript dir). Note explicitly if retries fired: per the spec, that means the schema is too
 strict or the packet prompt too loose — say which and file it for the outcome record.
 
-- [ ] **Step 3: Run every gate one final time**
+- [x] **Step 3: Run every gate one final time**
 
 Run: `py scripts/generate_platform_adapters.py --check && py scripts/validate_fleet.py && py -m unittest discover -s tests && claude plugin validate . --strict`
 Expected: all exit 0.
 
-- [ ] **Step 4: Commit and open the PR**
+- [x] **Step 4: Commit and open the PR**
 
 ```bash
 git add docs/archive/2026-08/wf-001-pilot-run-2026-08.md
@@ -803,3 +803,8 @@ proven to fail without it** (Tasks 4-5); description edit -> **no** (no routing 
   canonical verdict enum with the mutable-tree PROVISIONAL form, head-SHA binding, and
   fail-closed inconclusive returns. Dispositions:
   [`adversarial review record`](../../archive/2026-08/wf-001-adversarial-review-2026-08-01.md).
+- Previously-unrecorded spec deviation: the spec's acceptance evidence says each new validator
+  rule carries a fixture under `tests/fixtures/`, but both Task 4 and Task 5 ship repo-copy
+  mutation tests instead — the AGENTS.md-sanctioned alternative for invariants about the repo's
+  real wiring, deliberately chosen so the tests exercise the actual shipped workflow rather than
+  a synthetic shape.
