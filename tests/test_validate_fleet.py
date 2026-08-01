@@ -1134,5 +1134,28 @@ class RoutingClusterTests(unittest.TestCase):
         )
 
 
+class WorkflowEvidenceEnumTests(unittest.TestCase):
+    def test_workflow_evidence_enum_drift_is_reported(self) -> None:
+        # Proven against a COPY of the real repository so the test breaks the actual shipped
+        # workflow, not a synthetic shape that could drift away from it.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "const EVIDENCE = ['verified', 'sourced', 'unverified']",
+                    "const EVIDENCE = ['verified', 'cited', 'unverified']",
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(any("canonical" in i and "deep-review" in i for i in issues), issues)
+
+    def test_workflow_evidence_enum_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_evidence_enums(REPO)
+        self.assertEqual(issues, [])
+
+
 if __name__ == "__main__":
     unittest.main()

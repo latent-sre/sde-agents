@@ -251,6 +251,16 @@ EVIDENCE_LABEL_STEMS = (
     "**[unverified]** (assumption or couldn't check)",
 )
 EVIDENCE_LABEL_RE = re.compile(r"\*\*\[(?:un)?(?:verified|sourced)\]\*\*")
+# The workflow packet schemas carry the same evidence triad as the agents' prose packets, as a
+# bare enum. If either side drifts, nothing errors at load time -- the mismatch surfaces as a
+# schema-validation failure five retries deep inside a live workflow run, billed and late. Pin
+# the enum to the canonical stems so the drift is a validation failure at commit time instead.
+WORKFLOW_EVIDENCE_ENUM = tuple(
+    stem.split("[", 1)[1].split("]", 1)[0] for stem in EVIDENCE_LABEL_STEMS
+)  # ("verified", "sourced", "unverified"), derived so the triad has exactly one authoring point
+WORKFLOW_EVIDENCE_ENUM_RE = re.compile(
+    r"const\s+EVIDENCE\s*=\s*\[([^\]]*)\]"
+)
 PACKET_HEADING_RE = re.compile(
     r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
 )
@@ -1290,6 +1300,32 @@ def validate_runtime_control_wiring(root: Path) -> list[str]:
     return issues
 
 
+def validate_workflow_evidence_enums(root: Path) -> list[str]:
+    """Every workflow script that declares an EVIDENCE enum must match the canonical triad."""
+    issues: list[str] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return issues
+    for path in sorted(workflows_dir.glob("*.js")):
+        text = read_text(path)
+        matches = WORKFLOW_EVIDENCE_ENUM_RE.findall(text)
+        if "evidence" in text and not matches:
+            issues.append(
+                f"{path}: declares an evidence field without a parseable `const EVIDENCE = [...]` "
+                f"enum, so the canonical triad cannot be pinned and drift would be invisible "
+                f"until a live run fails schema validation."
+            )
+        for group in matches:
+            values = tuple(v.strip().strip("'\"") for v in group.split(",") if v.strip())
+            if values != WORKFLOW_EVIDENCE_ENUM:
+                issues.append(
+                    f"{path}: workflow evidence enum {values!r} does not match the canonical "
+                    f"triad {WORKFLOW_EVIDENCE_ENUM!r} from EVIDENCE_LABEL_STEMS; a drifted enum "
+                    f"ships a packet contract that fails five retries deep with no load-time error."
+                )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
@@ -1302,6 +1338,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_runtime_control_wiring(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
+    issues.extend(validate_workflow_evidence_enums(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names
