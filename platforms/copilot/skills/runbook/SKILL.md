@@ -35,5 +35,6 @@ Rules:
 - If you couldn't verify a command works (service not running, no access), mark it `unverified` rather than presenting it as tested.
 - Rehearse or it rots: re-run Health and Restart after any meaningful change to the service, and drill the Recovery path *before* you need it — a restore that has never been rehearsed is a hope, not a path. Update "Last verified" when you do.
 - Know which doc you're writing: this template operates ONE service (check, restart, recover). A repeating procedure that spans services (cert renewal, backup rotation) is a playbook — same rules, adapt the slots. What happened during an incident is a postmortem (`postmortem`); its distilled symptom → cause → fix line lands *here*, under Common failures.
+- Found wrong in use: a step this runbook prescribed that reality contradicted gets fixed in the same change when the fix is small and in scope — update "Last verified" only if you re-ran the steps — otherwise file the gap where the repo tracks work and say so in your handoff. Silently working around a wrong runbook guarantees the next reader hits it too.
 
 A complete filled example — including an honest "n/a" and an honest `unverified`: [references/example.md](references/example.md).

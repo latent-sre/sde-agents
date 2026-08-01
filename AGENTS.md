@@ -153,6 +153,11 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
 
+**Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
+wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
+before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
+disposition.
+
 ## Opening a pull request
 
 `.github/pull_request_template.md` is the shape. Two things about it are load-bearing:

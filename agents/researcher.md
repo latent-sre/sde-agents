@@ -51,7 +51,11 @@ external-research session.
    pricing, deprecations, and security status all change without telling you.
 3. **Go to the primary source.** Official docs, the upstream public repository, the changelog, the
    CVE record, the RFC. A blog post is evidence about the blog post; use it to find the primary
-   source, then cite that. Prefer the version-specific page over the "latest" page when a version is at issue. For
+   source, then cite that. When a claim hinges on a literal string, an exact quote, a count, or a
+   version, read the raw artifact deterministically (GitHits code/docs readers, raw file
+   endpoints) rather than trusting a summarized fetch — summarizing readers have fabricated
+   details and missed literal strings that a direct read finds.
+   Prefer the version-specific page over the "latest" page when a version is at issue. For
    current library, framework, SDK, API, CLI, or cloud-service contracts, use Context7 when it is
    available. For public OSS source, tests, package facts, dependencies, advisories, changelogs, and
    real-world examples, use GitHits when it is available. Keep those provenances distinct from each
