@@ -78,6 +78,28 @@ deterministic gates stay green.
 **Next action:** Decide resolver-vs-document-and-enforce when SAFE-002 opens `run_state.py`
 anyway — same file, one review context.
 
+#### LEARN-001 — land the fleet learning loop
+
+**Status:** `active`
+
+**Outcome:** Any discovery made mid-task has one documented routing destination with a threshold
+and a disposition rule; retros exist above the micro-retro (session, round, meta, model/CLI
+upgrade) with an encode-one-file-many cap; runbooks and operating docs found wrong get fixed or
+filed at the point of use; auto-memory has a consolidation procedure honoring its index budget.
+
+**Source:** [`LEARN-001 spec`](superpowers/specs/2026-08-01-learn-001-learning-loop-design.md),
+grounded in the 2026-08-01 four-lane research report (artifact `82a338a5…`); operator fork
+rulings recorded in the spec.
+
+**Prerequisites:** None. No validator rule changes, so no GRAPH-002 sequencing conflict.
+
+**Acceptance:** The spec's acceptance-evidence list: gates green, adapters regenerated, inventory
+refreshed, before/after `retro-boundary` captures under identical recorded sonnet conditions with
+zero negative fires and no positive regression beyond variance.
+
+**Next action:** Execute the paired plan; retire this item to an outcome record whose lessons
+section works the new routing table.
+
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
