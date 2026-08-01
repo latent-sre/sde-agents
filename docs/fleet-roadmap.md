@@ -32,31 +32,88 @@ Git history and archived reviews retain the implementation detail.
 
 #### GRAPH-001 -- choose the fleet's graph-control boundary
 
-**Status:** `decision-needed`
+**Status:** `decision-needed` -- the proposal was revised 2026-07-31 by an independent cross-model
+review; the revised record awaits the operator's accept/reject.
 
-**Outcome:** Decide whether to adopt the proposed repo-native, two-layer graph control plane: a
-derived capability graph plus versioned executable workflow contracts backed by the existing
-run-state, evidence, sandbox, and effect controls. The decision must also settle the first bounded
-pilot and preserve host-specific authority rather than claiming one universal runtime.
+**Outcome:** Decide whether to adopt the **revised** boundary: a derived capability graph plus a
+workflow-contract *validator* now (descriptive only, no executor), the effect-broker
+unknown-outcome repair (SAFE-002) and the context-engineering round (CTX-001) as graph-independent
+companions, and graph *execution* deferred behind named reopen triggers -- an observed
+ordering/handoff failure, a pinnable host workflow API, or a real gate-skip in an `sre-tool` run.
 
-**Source:** Proposed
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md), based on current
-OpenAI, Anthropic, Google, Microsoft, LangGraph, Berkeley, and agent-workflow research plus the
-current-tree control-plane inventory.
+**Source:** Revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md); review evidence in
+[`graph decision independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
+The review verified the original's external citations and repo diagnosis, and added the Claude
+5-generation counterevidence (harness-staleness doctrine, the 2026-07-24 context-engineering
+rules, the no-orchestrator parallel-compiler result) that narrowed the boundary.
 
 **Prerequisites:** SAFE-001's durable state, typed evidence, verification sandbox, effect broker,
 trust-separated roles, and cross-host conformance controls have landed. No model baseline is owed
 for deciding the architecture; every later OpenAI/Codex model baseline in this program must use
 `gpt-5.6-sol` only.
 
-**Acceptance:** The decision record is accepted, rejected, or revised with the chosen authority
-boundary, first pilot, effect-reconciliation requirement, and cross-host limits explicit. If
-accepted, a bounded spec and paired plan define Phase 0 acceptance before implementation begins.
+**Acceptance:** The revised record is accepted, rejected, or further revised with the descriptive
+scope, the deferred-execution triggers, and the two companion items explicit. If accepted, a
+bounded spec and paired plan define the descriptive layer's acceptance before implementation
+begins, and CTX-001/SAFE-002 proceed as their own items.
 
-**Next action:** Review the proposed decision, especially Option D and the `sre-tool` pilot. Do not
-extend `run_state.py` or add workflow files until that boundary is accepted.
+**Next action:** Operator reviews the revised record's accepted/deferred split. Do not extend
+`run_state.py` or add workflow files until the boundary is accepted; SAFE-002 touches only the
+broker and CTX-001 touches only definitions behind paired evals, so neither waits on this decision.
 
 ### Ready
+
+#### SAFE-002 — represent and reconcile unknown effect outcomes
+
+**Status:** `ready` — a live defect in shipped code, independent of the GRAPH-001 decision.
+
+**Outcome:** A crash between the broker's reservation, dispatch, and finalization no longer leaves
+an ambiguous `reserved` action: the state becomes an explicit `unknown` that blocks automatic
+replay, and an operator reconciliation path lists unresolved reservations with their exact
+approved action, target, and argv, recording the resolution as evidence.
+
+**Source:** Revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work);
+defect confirmed against `scripts/effect_broker.py` by the
+[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
+
+**Prerequisites:** None beyond SAFE-001's landed broker. No model baseline is owed.
+
+**Acceptance:** Tests for a crash at each point between reservation, dispatch, and finalization;
+proof that an `unknown` action blocks replay and requires recorded operator resolution; existing
+broker tests and the deterministic gates stay green.
+
+**Next action:** Add the `unknown` state and reconciliation listing to the broker's replay ledger
+with crash-point tests. Fail closed: unknown is terminal until an operator resolves it, and
+resolution is recorded evidence, never an automatic retry.
+
+#### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
+
+**Status:** `ready` — eval-gated experiment; the harness it needs already exists.
+
+**Outcome:** The fleet's 30 canonical definitions are audited against the six published shifts for
+Claude 5-generation models (rules→judgment, examples→interface design, upfront→progressive
+disclosure, repetition→tool definitions, manual memory→auto-memory, simple specs→rich references),
+and any edit is justified by paired before/after routing and behavioral evidence — or the audit
+records that the published claim did not transfer to this artifact class.
+
+**Source:** Revised
+[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work),
+grounded in the 2026-07-24 context-engineering rules; measurement basis (~190 prohibition-style
+lines across the fleet, `sde-fullstack` leading at 24) in the
+[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
+
+**Prerequisites:** EVAL-003's grading evidence governs the measurement design: agent-expecting
+routing positives under-fire in headless mode, so grade with negatives, clean-room conditions, and
+the pinned behavioral suite. One pilot definition before any fleet-wide edit.
+
+**Acceptance:** For every edited definition, paired before/after runs under identical recorded
+conditions with no negative-case regression and behavioral contracts green; a written stop rule if
+the pilot regresses; regenerated adapters and the deterministic gates green.
+
+**Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
+highest-density candidate) and the exact paired-measurement conditions before editing anything.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
