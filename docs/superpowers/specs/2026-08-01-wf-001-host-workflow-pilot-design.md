@@ -123,6 +123,10 @@ rule fails any non-Claude adapter that references a workflow; README and AGENTS.
 omit-and-document note. This extends the existing convention (Claude-only guard hook, Copilot
 execute-capability omission) rather than inventing a new one.
 
+Mechanics the probe settled: `workflows/` is auto-discovered at the plugin root — `plugin.json`
+needs no new field. The round ships a new component class, so plugin versions bump minor
+(1.4.0 → 1.5.0), aligned across every host manifest per the standing manifest rule.
+
 ### D6 — roadmap
 
 WF-001 enters the roadmap with this spec as its source and the acceptance evidence below. The
