@@ -311,8 +311,11 @@ Expected: no matches outside `docs/` or archives.
 - [ ] **Step 2: Add the Map row to `AGENTS.md`** after the `hooks/copilot-hooks.json` row:
 
 ```markdown
-| `workflows/*.js` | Claude-only plugin workflows (deterministic multi-agent pipelines). Auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
+| `workflows/deep-review.js` | Claude-only plugin workflow (deterministic multi-agent review pipeline). `workflows/` is auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
 ```
+
+(Literal file path, deliberately: the validator checks every concrete multi-segment repo path in
+AGENTS.md against the tree, and a glob would either dodge that tripwire or trip it uselessly.)
 
 - [ ] **Step 3: Add a README section.** Place a short section after the guard section (locate the
 heading that documents the read-only guard; insert the new `##`-level section immediately after
@@ -360,33 +363,32 @@ git commit -m "feat: bump plugin to 1.5.0 and document the Claude-only workflow 
   `issues.extend(...)` registration pattern used by `validate_bundle_references` in `main`.
 - Produces: `validate_workflow_evidence_enums(root) -> list[str]`.
 
-- [ ] **Step 1: Write the failing mutation test.** Follow the existing mutation-test pattern in
-`tests/test_validate_fleet.py` (copy the repo to a temp dir, break one thing, assert the
-validator reports it). Add:
+- [ ] **Step 1: Write the failing mutation test.** This is the repo's real mutation pattern
+(`tests/test_validate_fleet.py:1118` — copy the repo, break one thing, assert through
+`validate_repo`). Add:
 
 ```python
-def test_workflow_evidence_enum_drift_is_rejected(self):
-    root = self._copy_repo()
-    wf = root / "workflows" / "deep-review.js"
-    original = wf.read_text(encoding="utf-8")
-    wf.write_text(
-        original.replace(
-            "const EVIDENCE = ['verified', 'sourced', 'unverified']",
-            "const EVIDENCE = ['verified', 'cited', 'unverified']",
-        ),
-        encoding="utf-8",
-    )
-    issues = validate_fleet.validate_workflow_evidence_enums(root)
-    self.assertTrue(any("canonical" in issue for issue in issues), issues)
+def test_workflow_evidence_enum_drift_is_reported(self) -> None:
+    # Proven against a COPY of the real repository so the test breaks the actual shipped
+    # workflow, not a synthetic shape that could drift away from it.
+    with tempfile.TemporaryDirectory() as tmp:
+        dst = Path(tmp) / "repo"
+        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        wf = dst / "workflows" / "deep-review.js"
+        wf.write_text(
+            wf.read_text(encoding="utf-8").replace(
+                "const EVIDENCE = ['verified', 'sourced', 'unverified']",
+                "const EVIDENCE = ['verified', 'cited', 'unverified']",
+            ),
+            encoding="utf-8",
+        )
+        issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+    self.assertTrue(any("canonical" in i and "deep-review" in i for i in issues), issues)
 
-def test_workflow_evidence_enum_current_tree_is_clean(self):
-    issues = validate_fleet.validate_workflow_evidence_enums(validate_fleet_repo_root())
+def test_workflow_evidence_enum_current_tree_is_clean(self) -> None:
+    issues = validate_fleet.validate_workflow_evidence_enums(REPO)
     self.assertEqual(issues, [])
 ```
-
-Match the file's actual helper names for repo-copy and repo-root; if `_copy_repo` does not exist
-under that name, use whatever the neighboring mutation tests use — the two tests above define the
-required behavior, not the helper spelling.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -435,8 +437,9 @@ def validate_workflow_evidence_enums(root: Path) -> list[str]:
     return issues
 ```
 
-Register it in `main` alongside the other repo-level validators:
-`issues.extend(validate_workflow_evidence_enums(root))`.
+Register it in `validate_repo` alongside the other repo-level validators (that is the
+aggregation point the tests exercise — a rule registered only in `main` would pass its unit test
+and never run in CI): `issues.extend(validate_workflow_evidence_enums(root))`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -466,22 +469,24 @@ git commit -m "feat: pin workflow evidence enums to the canonical packet stems"
   (`.github/agents`, `.codex/agents`, `platforms/copilot/skills`, `plugins/sde-agents/skills`).
 - Produces: `validate_workflow_host_boundary(root) -> list[str]`.
 
-- [ ] **Step 1: Write the failing mutation test**
+- [ ] **Step 1: Write the failing mutation test** (same repo-copy pattern as Task 4):
 
 ```python
-def test_adapter_referencing_workflow_is_rejected(self):
-    root = self._copy_repo()
-    adapter = next((root / ".github" / "agents").glob("*.md"))
-    adapter.write_text(
-        adapter.read_text(encoding="utf-8")
-        + "\nRun /sde-agents:deep-review before merging.\n",
-        encoding="utf-8",
-    )
-    issues = validate_fleet.validate_workflow_host_boundary(root)
-    self.assertTrue(any("workflow" in issue.lower() for issue in issues), issues)
+def test_adapter_referencing_workflow_is_reported(self) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        dst = Path(tmp) / "repo"
+        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        adapter = next(iter(sorted((dst / ".github" / "agents").glob("*.md"))))
+        adapter.write_text(
+            adapter.read_text(encoding="utf-8")
+            + "\nRun /sde-agents:deep-review before merging.\n",
+            encoding="utf-8",
+        )
+        issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+    self.assertTrue(any("no workflow runtime" in i for i in issues), issues)
 
-def test_workflow_host_boundary_current_tree_is_clean(self):
-    issues = validate_fleet.validate_workflow_host_boundary(validate_fleet_repo_root())
+def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
+    issues = validate_fleet.validate_workflow_host_boundary(REPO)
     self.assertEqual(issues, [])
 ```
 
@@ -532,7 +537,9 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
     return issues
 ```
 
-Register in `main`: `issues.extend(validate_workflow_host_boundary(root))`.
+Register in `validate_repo` (same reason as Task 4):
+`issues.extend(validate_workflow_host_boundary(root))`. Note the mutation test asserts on
+"no workflow runtime" — keep that phrase in the issue message or update both together.
 
 - [ ] **Step 4: Run to verify pass, then full gates**
 
@@ -609,6 +616,11 @@ def probe_workflow_contract(probe: "Probe") -> None:
     hooks_path = plugin_copy / "hooks" / "hooks.json"
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
     entry = hooks["hooks"]["PreToolUse"][0]["hooks"][0]
+    # Fail loudly if the hook command's shape changed -- silently mis-splicing the logger would
+    # produce a probe that observes nothing and reads as "hooks never fire in workflows".
+    assert entry["command"].startswith("IN=$(cat); "), (
+        "hooks.json command no longer starts with 'IN=$(cat); ' -- update the probe splice"
+    )
     log_posix = hook_log.as_posix()
     if log_posix[1] == ":":  # C:/... -> /c/... for the sh hook on Windows
         log_posix = "/" + log_posix[0].lower() + log_posix[2:]
@@ -735,10 +747,9 @@ proven to fail without it** (Tasks 4-5); description edit -> **no** (no routing 
   drift rule) -> Tasks 2 and 4. D4 (probe extension) -> Task 6. D5 (platform boundary) -> Tasks
   3 and 5. D6 (roadmap) -> Task 1. Test modes and model policy -> Global Constraints, Tasks 6-7.
   Acceptance evidence -> Tasks 4-7.
-- Helper-name caveat: Task 4/5 tests reference `_copy_repo` / `validate_fleet_repo_root` as
-  *behavioral* placeholders for whatever the existing mutation tests in
-  `tests/test_validate_fleet.py` actually use — the implementer copies the neighboring pattern.
-  This is the one place the plan defers to the file because inventing names the file doesn't
-  have would be worse.
+- Task 4/5 test payloads use the repo's verified mutation pattern (`tempfile.TemporaryDirectory`
+  + `shutil.copytree(REPO, ...)` + `validate_fleet.validate_repo(dst, check_inventory=False)`,
+  per `tests/test_validate_fleet.py:1118`), and rules register in `validate_repo` — the
+  aggregation point those tests exercise.
 - The probe's Windows path translation (`C:/` -> `/c/`) mirrors what the hook's `sh` runtime
   needs on this machine; on POSIX the branch is a no-op.
