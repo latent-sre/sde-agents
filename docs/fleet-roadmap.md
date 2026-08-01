@@ -51,9 +51,9 @@ rules proven by tests that fail without them, the extended probe green on CLI 2.
 end-to-end pilot run on a real diff with session model and token cost recorded in the round's
 outcome record.
 
-**Next action:** Execute the paired plan
-(`superpowers/plans/2026-08-01-wf-001-host-workflow-pilot.md`) from Task 2 — Task 1 was executed
-with the acceptance recording.
+**Next action:** The paired plan is executed through its pilot acceptance run (evidence:
+[`pilot run note`](archive/2026-08/wf-001-pilot-run-2026-08.md)); merge the round's PR, then
+retire the spec and plan to an archived outcome record per `docs/README.md` rule 4.
 
 ### Ready
 
