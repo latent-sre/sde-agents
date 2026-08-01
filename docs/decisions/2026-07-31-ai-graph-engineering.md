@@ -403,14 +403,41 @@ published claim for this artifact class, the definitions stand and the result is
 
 ### Accepted -- WF-001 host-workflow pilot (added 2026-08-01)
 
-One bounded adoption of the host's native workflow layer, governed by the
-[WF-001 round spec](../superpowers/specs/2026-08-01-wf-001-host-workflow-pilot-design.md):
+One bounded adoption of the host's native workflow layer — executed and closed 2026-08-01; the
+governing spec retired with its round to the
+[WF-001 outcome record](../archive/2026-08/wf-001-outcome-2026-08-01.md):
 a plugin-shipped `deep-review` workflow (parallel guarded reviewer lanes with schema-typed packet
 contracts and deterministic merge gates), a probe extension codifying the verified platform
 contract, and the Claude-only platform boundary. The pilot does not write `run_state.py`; if the
 deferred execution phases reopen, that spec decides integration -- workflow scripts cannot touch
 the filesystem, so integration would route authority through agent prose, which invariant #8
 prohibits.
+
+### Absorbed from the superseded sibling record (2026-08-01, GRAPH-003 ruling)
+
+The independently authored
+[`graph control-plane proposal`](2026-08-01-graph-control-plane.md) was superseded by this
+record's acceptance; adjudication verified its repository evidence exactly and absorbed its
+distinct contributions rather than discarding them:
+
+- **The ledger/checkpoint boundary is settled by construction, not policy.** The host's own
+  resume contract makes workflow checkpoint state a session-scoped cache ("If you exit Claude
+  Code while a workflow is running, the next session starts the workflow fresh"), so a workflow
+  run can never be the durable record and `run_state.py` keeps ledger authority without a
+  design decision to defend. This sharpens the WF-001 boundary language above.
+- **`contract_digest` is a dangling reference** — stored, validated, and echoed by
+  `run_state.py` while nothing resolves it. A reserved slot that resolves to nothing reads as
+  enforcement and enforces nothing. Repair is SAFE-003 on the roadmap.
+- **A typed edge-contract pilot** (one real handoff as a host-neutral contract,
+  `contract_digest` made resolvable) is worthwhile but not yet consumer-proven — GRAPH-004,
+  trigger-bound per this record's own discipline.
+- **Generated-prompt provenance control**, adopted as a standing rule for any future
+  contract-to-workflow generation: byte-drift validation only proves generated output matches
+  its generator — a generator that hard-codes new prompt wording regenerates cleanly. Generated
+  workflow prompts must be assembled from canonical fields, never from generator literals, and a
+  prompt-shaped literal appearing in a generator diff is the violation, caught in review of the
+  generator. (WF-001's `deep-review.js` is authored, not generated, so the rule binds nothing
+  today; it exists so the first generated workflow inherits it rather than rediscovering it.)
 
 ### Deferred -- graph execution (former Phases 1--3)
 

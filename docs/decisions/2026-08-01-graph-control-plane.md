@@ -1,8 +1,16 @@
 # A graph control plane for the fleet — independent proposal (Claude)
 
-**Status:** Proposed — the second of two independently authored answers to roadmap `GRAPH-001`;
-adjudication against the OpenAI/Codex-authored record is pending, and this record carries no
-implementation authority until a boundary is accepted
+**Status:** Superseded (absorbed) — the operator ruled on 2026-08-01 (GRAPH-003) that the
+acceptance of the sibling record
+([`AI graph engineering decision`](2026-07-31-ai-graph-engineering.md)) stands as the
+adjudication. This record's distinct contributions were absorbed rather than discarded — the
+`contract_digest` dangling-reference finding (roadmap SAFE-003), the typed edge-contract pilot
+(roadmap GRAPH-004, trigger-bound), the by-construction ledger/checkpoint argument, and the
+generated-prompt provenance control (both folded into the accepted record). Every local claim
+verified during adjudication held exactly; verification evidence in the
+[`adjudication record`](../archive/2026-08/graph-003-adjudication-2026-08-01.md). This record
+carries no implementation authority; its absorbed items are governed by the accepted record and
+the roadmap
 **Date:** 2026-08-01
 **Verified state at writing:** `main` at `a445623`. The rival record
 (`docs/decisions/2026-07-31-ai-graph-engineering.md`) and its branch are absent from every ref
