@@ -1326,6 +1326,45 @@ def validate_workflow_evidence_enums(root: Path) -> list[str]:
     return issues
 
 
+# Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
+# that mentions one teaches an instruction that cannot execute there -- it reads as configured
+# and fails silently, the exact failure class the bare-skill-reference rule already catches for
+# skills. Match both the invocation form and the directory form.
+GENERATED_ADAPTER_TREES = (
+    ".github/agents",
+    ".codex/agents",
+    "platforms/copilot/skills",
+    "plugins/sde-agents/skills",
+)
+
+
+def validate_workflow_host_boundary(root: Path) -> list[str]:
+    """No generated non-Claude adapter may reference a plugin workflow."""
+    issues: list[str] = []
+    workflow_names = set()
+    workflows_dir = root / "workflows"
+    if workflows_dir.is_dir():
+        workflow_names = {p.stem for p in workflows_dir.glob("*.js")}
+    if not workflow_names:
+        return issues
+    for tree in GENERATED_ADAPTER_TREES:
+        base = root / tree
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix not in {".md", ".json", ".toml", ".yaml", ".yml"}:
+                continue
+            text = read_text(path)
+            for name in sorted(workflow_names):
+                if f"/sde-agents:{name}" in text or f"workflows/{name}" in text:
+                    issues.append(
+                        f"{path}: generated non-Claude adapter references the Claude-only "
+                        f"workflow {name!r}; that host has no workflow runtime, so the "
+                        f"instruction reads as available and fails silently at use time."
+                    )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
@@ -1339,6 +1378,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
+    issues.extend(validate_workflow_host_boundary(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

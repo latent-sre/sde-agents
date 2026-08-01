@@ -1157,5 +1157,24 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
 
+class WorkflowHostBoundaryTests(unittest.TestCase):
+    def test_adapter_referencing_workflow_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            adapter = next(iter(sorted((dst / ".github" / "agents").glob("*.md"))))
+            adapter.write_text(
+                adapter.read_text(encoding="utf-8")
+                + "\nRun /sde-agents:deep-review before merging.\n",
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(any("no workflow runtime" in i for i in issues), issues)
+
+    def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_host_boundary(REPO)
+        self.assertEqual(issues, [])
+
+
 if __name__ == "__main__":
     unittest.main()
