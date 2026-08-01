@@ -1,0 +1,66 @@
+{
+  "cluster": "retro-boundary",
+  "members": ["self-improve-loop", "postmortem"],
+  "notes": "Non-incident retros and lesson routing belong to self-improve-loop; the retro on a resolved incident belongs to postmortem. Negatives are vocabulary collisions (retro styling, sprint ceremonies, forensic postmortems) and a live outage, which must reach neither member.",
+  "cases": [
+    {
+      "id": "pos-task-retro",
+      "prompt": "That deploy script took three attempts before its tests went green. Before we close out, do a retro on this task and capture what kept failing.",
+      "polarity": "positive",
+      "expect_fires": ["self-improve-loop"],
+      "tags": ["retro", "task"]
+    },
+    {
+      "id": "pos-lessons-learned",
+      "prompt": "The migration is finished. Capture the lessons learned from the repeated review findings — and where should each one actually go so it sticks?",
+      "polarity": "positive",
+      "expect_fires": ["self-improve-loop"],
+      "tags": ["retro", "routing"]
+    },
+    {
+      "id": "pos-micro-retro",
+      "prompt": "My fix finally passed after two failed attempts — run the micro-retro and move one lesson left into a deterministic check.",
+      "polarity": "positive",
+      "expect_fires": ["self-improve-loop"],
+      "tags": ["retro", "existing-remit"]
+    },
+    {
+      "id": "pos-iterate-draft",
+      "prompt": "Here are the reviewer's findings on my draft doc. Iterate on it against the checklist until it passes.",
+      "polarity": "positive",
+      "expect_fires": ["self-improve-loop"],
+      "tags": ["existing-remit", "evaluator-optimizer"]
+    },
+    {
+      "id": "pos-outage-retro",
+      "prompt": "Last night's NAS outage is resolved and everything is healthy again. Do a retro on the outage and write it up properly.",
+      "polarity": "positive",
+      "expect_fires": ["postmortem"],
+      "tags": ["incident", "boundary"]
+    },
+    {
+      "id": "neg-sprint-retro",
+      "prompt": "Facilitate a sprint retrospective for my team's Tuesday ceremony — agenda, icebreaker, and a template for action items.",
+      "polarity": "negative",
+      "tags": ["near-miss", "ceremony"]
+    },
+    {
+      "id": "neg-retro-style",
+      "prompt": "Restyle this landing page with a retro 80s synthwave look — neon grid, chrome type, the works.",
+      "polarity": "negative",
+      "tags": ["near-miss", "vocabulary"]
+    },
+    {
+      "id": "neg-forensic-postmortem",
+      "prompt": "For a story I'm writing: what does a postmortem examination involve in forensic pathology, step by step?",
+      "polarity": "negative",
+      "tags": ["near-miss", "vocabulary"]
+    },
+    {
+      "id": "neg-live-outage",
+      "prompt": "Grafana is down right now — every dashboard is blank and the household is asking. Help.",
+      "polarity": "negative",
+      "tags": ["near-miss", "live-incident"]
+    }
+  ]
+}
