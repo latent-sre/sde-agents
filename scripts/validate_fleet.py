@@ -1329,7 +1329,9 @@ def validate_workflow_evidence_enums(root: Path) -> list[str]:
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
 # that mentions one teaches an instruction that cannot execute there -- it reads as configured
 # and fails silently, the exact failure class the bare-skill-reference rule already catches for
-# skills. Match both the invocation form and the directory form.
+# skills. Match both the invocation form and the directory form. .py is included because the
+# generated skills trees ship script/asset .py files too, and a workflow reference buried in one
+# would be just as silently unexecutable as one in a .md or .yaml adapter.
 GENERATED_ADAPTER_TREES = (
     ".github/agents",
     ".codex/agents",
@@ -1352,7 +1354,7 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*")):
-            if not path.is_file() or path.suffix not in {".md", ".json", ".toml", ".yaml", ".yml"}:
+            if not path.is_file() or path.suffix not in {".md", ".json", ".toml", ".yaml", ".yml", ".py"}:
                 continue
             text = read_text(path)
             for name in sorted(workflow_names):
