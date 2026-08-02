@@ -52,6 +52,7 @@ genuinely does not apply and say so in one line; do not leave a heading with not
 |---|---|
 | a `description:` on any agent or skill | the overlapping routing cluster run **before and after**, with the rate diff (a near-miss that starts firing is a defect at any rate) |
 | `scripts/readonly-guard.py` or `hooks/hooks.json` | `python3 scripts/probe_plugin.py` re-run — the guard's contract rests on an undocumented payload field, so only the probe proves it still fires |
+| `.claude/agents` generation or Codex import/adoption behavior | a disposable live `/import` run with the installed Codex version, detected/imported counts, and semantic parity result |
 | a validator rule | a fixture or mutation test that **fails without the change** (state that you checked it fails) |
 | any canonical agent or skill | host adapters regenerated; no generated copy edited as the source |
 | an added, renamed, or removed component | `--write-inventory` re-run, host adapters regenerated, and a routing cluster seeded or extended |

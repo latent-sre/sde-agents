@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Safely synchronize the generated Codex custom agents into another scope.
 
-Codex plugins currently load skills, hooks, and MCP servers, but not custom-agent TOML. The
-repository therefore keeps project-scoped agents under ``.codex/agents`` and provides this
-explicit installer for a user or alternate project scope.
+Codex plugins currently load skills, hooks, and MCP servers, but not custom-agent TOML. Codex's
+official ``/import`` command can perform an initial migration from ``.claude/agents`` but skips
+existing destinations, so it is not an update mechanism. The repository therefore keeps
+project-scoped agents under ``.codex/agents`` and provides this explicit synchronizer for a user or
+alternate project scope.
 
-The installer owns only files carrying ``INSTALL_MARKER``. It adopts an exact, unmarked copy of a
-current generated source, refuses every other name collision, and prunes only stale managed files.
-The complete plan is checked for conflicts before any write or removal occurs.
+The installer owns only files carrying ``INSTALL_MARKER``. It adopts an unmarked copy only when its
+parsed contract matches the current generated source, refuses every behaviorally different name
+collision, and prunes only stale managed files. The complete plan is checked for conflicts before
+any write or removal occurs.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ import argparse
 import os
 import sys
 import tempfile
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,6 +56,31 @@ def _is_managed(content: bytes) -> bool:
     return first_line == INSTALL_MARKER.encode("utf-8")
 
 
+def _normalized_contract(content: bytes) -> dict[str, object] | None:
+    """Parse one agent while ignoring only importer's terminal-newline formatting."""
+
+    try:
+        contract = tomllib.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return None
+    instructions = contract.get("developer_instructions")
+    if isinstance(instructions, str):
+        if instructions.endswith("\r\n"):
+            instructions = instructions[:-2]
+        elif instructions.endswith(("\r", "\n")):
+            instructions = instructions[:-1]
+        contract["developer_instructions"] = instructions
+    return contract
+
+
+def _matches_generated_contract(current: bytes, source: bytes) -> bool:
+    """Allow Codex importer formatting, but reject any field or authority difference."""
+
+    current_contract = _normalized_contract(current)
+    source_contract = _normalized_contract(source)
+    return current_contract is not None and current_contract == source_contract
+
+
 def build_sync_plan(source_directory: Path, target_directory: Path) -> SyncPlan:
     """Plan a safe synchronization without changing either directory."""
 
@@ -80,7 +109,11 @@ def build_sync_plan(source_directory: Path, target_directory: Path) -> SyncPlan:
         current = target.read_bytes()
         if current == desired:
             continue
-        if _is_managed(current) or current == source_content:
+        if (
+            _is_managed(current)
+            or current == source_content
+            or _matches_generated_contract(current, source_content)
+        ):
             writes.append((target, desired))
         else:
             conflicts.append(target)
