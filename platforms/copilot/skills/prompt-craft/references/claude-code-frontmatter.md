@@ -114,4 +114,7 @@ A plain (unquoted) `description:` containing `: ` followed by a colon-bearing to
 fails `claude plugin tag`/`validate` with "Unexpected token", blocking the release path — observed
 2026-08-02 on `code-craft` at CLI 2.1.220, while sibling descriptions with a simple `: ` passed.
 Double-quote the whole scalar when a description contains a namespaced reference after a colon;
-the rendered string is identical, so routing and evals are unaffected.
+the rendered string is identical, so routing and evals are unaffected. Quoting works only while
+the text needs no internal escapes: the adapter generator copies the raw value, so `\"` sequences
+land literally in generated copies (observed same day) — a description that would need escaped
+quotes gets a punctuation reword instead.
