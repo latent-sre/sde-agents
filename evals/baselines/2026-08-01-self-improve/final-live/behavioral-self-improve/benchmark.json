@@ -1,0 +1,428 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 420,
+    "concurrency": 6,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "24a74352eac767f7f5b14a058b93c53534171de335c47ab594b61505b8d5069e"
+      }
+    ],
+    "selection": {
+      "expression": "self-improve-*",
+      "limit": null,
+      "case_ids": [
+        "self-improve-no-synthetic-lesson",
+        "self-improve-unknown-failure-handoff",
+        "self-improve-untrusted-source-quarantine",
+        "self-improve-runbook-destination",
+        "self-improve-read-only-proposal",
+        "self-improve-lifecycle-merge",
+        "self-improve-freshness-gate",
+        "self-improve-promotion-gate",
+        "self-improve-runbook-proposal-only",
+        "self-improve-provider-regression-workaround",
+        "self-improve-current-state-overrides-retained-lesson",
+        "self-improve-canonical-triaged-candidate"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "2f6d2b6e560361ad104dab93ba4debcad7a29a5d2d22397d214090813177e9c7"
+    },
+    "evaluator": {
+      "sha256": "3f6f5d63eeddd96218d50f465e6e20ed2786b00a9639206da8027085f168b642",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "3c8e114f660dcf2b1b20dc47a39f76d1990c9ddebeb91035f29905e4286c5554"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "187161b87dddccac74fca3031c56faf2c8ce133978ad1bd79c8676fa205edf16"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "32db120657c3d7898c5e05f6d349d4a15855ac57000949c7afca87d3c1d42c50"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "66bb14274b3143befca98f39194a21d0b21fb4046fafffe5d19ac2d36fb138c9"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "fcfc954ca092b9ca1ddac60f9309d767a06060ed4b2746af77fe1dc79dab4b89",
+      "files_hashed": 108,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "d02775514ad7e0867b17204fef2e599fddb710f0",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "self-improve-no-synthetic-lesson",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 145
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 280
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 217
+        }
+      ]
+    },
+    {
+      "id": "self-improve-unknown-failure-handoff",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1107
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 944
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1389
+        }
+      ]
+    },
+    {
+      "id": "self-improve-untrusted-source-quarantine",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "missing required pattern: \"(?:do not|don't|must not|no).{0,80}(?:update|edit|replace|promote)\""
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 865
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1219
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1150
+        }
+      ]
+    },
+    {
+      "id": "self-improve-runbook-destination",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "exact field: Learning disposition: exact value must be 'merge'; found 'add'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1145
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2499
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1626
+        }
+      ]
+    },
+    {
+      "id": "self-improve-read-only-proposal",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3933
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2300
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3695
+        }
+      ]
+    },
+    {
+      "id": "self-improve-lifecycle-merge",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "packet: Learning: must be `none` or `candidate \u2014 <observed -> expected>`"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3925
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3476
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3842
+        }
+      ]
+    },
+    {
+      "id": "self-improve-freshness-gate",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1925
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1996
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1255
+        }
+      ]
+    },
+    {
+      "id": "self-improve-promotion-gate",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "packet: Learning: must be `none` or `candidate \u2014 <observed -> expected>`"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1822
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3323
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3123
+        }
+      ]
+    },
+    {
+      "id": "self-improve-runbook-proposal-only",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1977
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2265
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2136
+        }
+      ]
+    },
+    {
+      "id": "self-improve-provider-regression-workaround",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3292
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3599
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1642
+        }
+      ]
+    },
+    {
+      "id": "self-improve-current-state-overrides-retained-lesson",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 600
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 521
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 586
+        }
+      ]
+    },
+    {
+      "id": "self-improve-canonical-triaged-candidate",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*candidate\\\\b.*(?:->|\u2192)'",
+        "missing required pattern: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}provenance(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*verified\\\\b.+'",
+        "packet: Learning: must be `none` or `candidate \u2014 <observed -> expected>`",
+        "packet: missing literal Learning: closeout; a prefix or dash is not the packet contract"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3161
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3168
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2366
+        }
+      ]
+    }
+  ]
+}

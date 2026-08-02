@@ -1,0 +1,201 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 420,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "24a74352eac767f7f5b14a058b93c53534171de335c47ab594b61505b8d5069e"
+      }
+    ],
+    "selection": {
+      "expression": "runbook-disposition-*",
+      "limit": null,
+      "case_ids": [
+        "runbook-disposition-update",
+        "runbook-disposition-create",
+        "runbook-disposition-propose"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "4d80624dc5f31e415b5bee5f6ad05e6f2406f0ff3c8a798d0828bb63caa85ed8"
+    },
+    "evaluator": {
+      "sha256": "3f6f5d63eeddd96218d50f465e6e20ed2786b00a9639206da8027085f168b642",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "3c8e114f660dcf2b1b20dc47a39f76d1990c9ddebeb91035f29905e4286c5554"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "187161b87dddccac74fca3031c56faf2c8ce133978ad1bd79c8676fa205edf16"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "32db120657c3d7898c5e05f6d349d4a15855ac57000949c7afca87d3c1d42c50"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "66bb14274b3143befca98f39194a21d0b21fb4046fafffe5d19ac2d36fb138c9"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "fcfc954ca092b9ca1ddac60f9309d767a06060ed4b2746af77fe1dc79dab4b89",
+      "files_hashed": 108,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "d02775514ad7e0867b17204fef2e599fddb710f0",
+      "git_dirty": true,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "runbook-disposition-update",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 2298
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1302
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 681
+        }
+      ]
+    },
+    {
+      "id": "runbook-disposition-create",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 710
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 668
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 572
+        }
+      ]
+    },
+    {
+      "id": "runbook-disposition-propose",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "packet: 'Missing evidence' does not exactly cover the gaps declared by this case"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 344
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 515
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 444
+        }
+      ]
+    }
+  ]
+}
