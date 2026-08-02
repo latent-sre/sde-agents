@@ -52,6 +52,72 @@ class InstallCodexAgentsTests(unittest.TestCase):
         installed = (self.target / "reviewer.toml").read_text(encoding="utf-8")
         self.assertTrue(installed.startswith(install_codex_agents.INSTALL_MARKER))
 
+    def test_semantically_equal_imported_copy_is_safely_adopted(self) -> None:
+        self.target.mkdir()
+        (self.source / "reviewer.toml").write_text(
+            "# generated\n"
+            'name = "reviewer"\n'
+            'description = "Reviews code"\n'
+            'sandbox_mode = "read-only"\n'
+            "developer_instructions = '''\nReview carefully.\n'''\n",
+            encoding="utf-8",
+        )
+        imported = self.target / "reviewer.toml"
+        imported.write_text(
+            'name = "reviewer"\n'
+            "description = 'Reviews code'\n"
+            'sandbox_mode = "read-only"\n'
+            'developer_instructions = """Review carefully."""\n',
+            encoding="utf-8",
+        )
+
+        plan = install_codex_agents.build_sync_plan(self.source, self.target)
+
+        self.assertIn(imported, dict(plan.writes))
+        self.assertFalse(plan.conflicts)
+        install_codex_agents.apply_sync_plan(plan)
+        self.assertTrue(
+            imported.read_text(encoding="utf-8").startswith(
+                install_codex_agents.INSTALL_MARKER
+            )
+        )
+
+    def test_semantic_adoption_rejects_extra_or_changed_authority(self) -> None:
+        self.target.mkdir()
+        (self.source / "reviewer.toml").write_text(
+            'name = "reviewer"\n'
+            'description = "Reviews code"\n'
+            'sandbox_mode = "read-only"\n'
+            'developer_instructions = "Review carefully."\n',
+            encoding="utf-8",
+        )
+
+        for suffix in (
+            'skills = ["extra-authority"]\n',
+            'developer_instructions = "Different instructions."\n',
+        ):
+            with self.subTest(suffix=suffix):
+                target = self.target / "reviewer.toml"
+                base = (
+                    'name = "reviewer"\n'
+                    'description = "Reviews code"\n'
+                    'sandbox_mode = "read-only"\n'
+                )
+                target.write_text(
+                    base
+                    + (
+                        'developer_instructions = "Review carefully."\n' + suffix
+                        if suffix.startswith("skills")
+                        else suffix
+                    ),
+                    encoding="utf-8",
+                )
+
+                plan = install_codex_agents.build_sync_plan(self.source, self.target)
+
+                self.assertEqual((target,), plan.conflicts)
+                self.assertNotIn(target, dict(plan.writes))
+
     def test_unmanaged_collision_aborts_before_any_change(self) -> None:
         self.target.mkdir()
         conflict = self.target / "reviewer.toml"

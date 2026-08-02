@@ -373,6 +373,30 @@ class PlatformAdapterTests(unittest.TestCase):
             finally:
                 _remove_directory_link(link)
 
+    def test_write_replaces_claude_import_agents_without_touching_claude_siblings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            sibling = root / ".claude" / "worktrees" / "sentinel.txt"
+            stale = root / generate_platform_adapters.CLAUDE_IMPORT_AGENTS / "stale.md"
+            sibling.parent.mkdir(parents=True)
+            sibling.write_text("preserve me\n", encoding="utf-8")
+            stale.parent.mkdir(parents=True)
+            stale.write_text("stale\n", encoding="utf-8")
+            expected_path = (
+                generate_platform_adapters.CLAUDE_IMPORT_AGENTS / "reviewer.md"
+            )
+
+            with mock.patch.object(
+                generate_platform_adapters,
+                "expected_outputs",
+                return_value={expected_path: b"generated\n"},
+            ):
+                generate_platform_adapters.write_generated_outputs(root)
+
+            self.assertEqual("preserve me\n", sibling.read_text(encoding="utf-8"))
+            self.assertFalse(stale.exists())
+            self.assertEqual(b"generated\n", (root / expected_path).read_bytes())
+
     def test_canonical_source_links_are_rejected_before_resource_copy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -400,15 +424,19 @@ class PlatformAdapterTests(unittest.TestCase):
             finally:
                 _remove_directory_link(link)
 
-    def test_every_canonical_agent_has_both_host_adapters(self) -> None:
+    def test_every_canonical_agent_has_all_host_adapters(self) -> None:
         names = {path.stem for path in (REPO / "agents").glob("*.md")}
         copilot = {
             path.name.removesuffix(".agent.md")
             for path in (REPO / ".github" / "agents").glob("*.agent.md")
         }
         codex = {path.stem for path in (REPO / ".codex" / "agents").glob("*.toml")}
+        codex_import = {
+            path.stem for path in (REPO / ".claude" / "agents").glob("*.md")
+        }
         self.assertEqual(names, copilot)
         self.assertEqual(names, codex)
+        self.assertEqual(names, codex_import)
 
     def test_copilot_adapters_use_only_native_aliases(self) -> None:
         for path in sorted((REPO / ".github" / "agents").glob("*.agent.md")):
@@ -445,6 +473,7 @@ class PlatformAdapterTests(unittest.TestCase):
         paths = (
             REPO / ".github" / "agents" / "sde-fullstack.agent.md",
             REPO / ".codex" / "agents" / "sde-fullstack.toml",
+            REPO / ".claude" / "agents" / "sde-fullstack.md",
         )
         for path in paths:
             with self.subTest(path=path.relative_to(REPO)):
@@ -471,6 +500,43 @@ class PlatformAdapterTests(unittest.TestCase):
                 )
                 self.assertEqual(source.stem, generated["name"])
                 self.assertEqual(expected, generated["sandbox_mode"])
+                import_fields = validate_fleet.parse_frontmatter(
+                    REPO / ".claude" / "agents" / f"{source.stem}.md"
+                )
+                self.assertIsNotNone(import_fields)
+                self.assertEqual(
+                    "acceptEdits" if expected == "workspace-write" else "readOnly",
+                    import_fields["permissionMode"],
+                )
+
+    def test_codex_import_adapters_preserve_source_authority_and_toml_contract(self) -> None:
+        for source in sorted((REPO / "agents").glob("*.md")):
+            with self.subTest(agent=source.stem):
+                canonical = validate_fleet.parse_frontmatter(source)
+                import_path = REPO / ".claude" / "agents" / f"{source.stem}.md"
+                imported = validate_fleet.parse_frontmatter(import_path)
+                _, import_body, _ = generate_platform_adapters._definition_parts(import_path)
+                codex = tomllib.loads(
+                    (REPO / ".codex" / "agents" / f"{source.stem}.toml").read_text(
+                        encoding="utf-8"
+                    )
+                )
+
+                self.assertEqual(canonical["tools"], imported["tools"])
+                self.assertEqual(codex["name"], imported["name"])
+                self.assertEqual(codex["description"], imported["description"])
+                self.assertEqual(
+                    codex["sandbox_mode"],
+                    {
+                        "readOnly": "read-only",
+                        "acceptEdits": "workspace-write",
+                    }[imported["permissionMode"]],
+                )
+                self.assertEqual(
+                    codex["developer_instructions"].strip(),
+                    import_body.strip(),
+                )
+                self.assertNotIn("claude", f"{imported['description']}\n{import_body}".lower())
 
     def test_codex_adapters_do_not_claim_overridable_defaults_are_controls(self) -> None:
         for path in sorted((REPO / ".codex" / "agents").glob("*.toml")):
@@ -503,6 +569,7 @@ class PlatformAdapterTests(unittest.TestCase):
         paths = [
             *(REPO / ".github" / "agents").glob("*.agent.md"),
             *(REPO / ".codex" / "agents").glob("*.toml"),
+            *(REPO / ".claude" / "agents").glob("*.md"),
         ]
         for path in sorted(paths):
             with self.subTest(path=path.relative_to(REPO)):

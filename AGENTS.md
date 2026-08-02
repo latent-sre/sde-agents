@@ -18,6 +18,7 @@ and the model-alias list are checked against the source and fail on drift.
 |---|---|
 | `agents/*.md` | Canonical subagent definitions, loaded as-is by Claude. Filename must equal `name:`. |
 | `skills/<name>/SKILL.md` | Canonical skills; `references/` and `assets/` sit beside each. |
+| `.claude/agents/` | Generated, Claude-compatible staging profiles for Codex's official `/import` migration. Never edit them directly. |
 | `.github/agents/`, `.codex/agents/` | Generated Copilot/VS Code and Codex agent adapters. Never edit them directly. |
 | `platforms/copilot/skills/`, `plugins/sde-agents/skills/` | Generated host-specific skill copies. Never edit them directly. |
 | `plugin.json`, `.claude-plugin/`, `.agents/plugins/marketplace.json`, `plugins/sde-agents/.codex-plugin/` | Host manifests. Identity and versions must remain aligned. |
@@ -71,9 +72,13 @@ claude --plugin-dir .
 
 For Copilot CLI, the equivalent local loop is `copilot plugin install .`. VS Code uses the
 working-tree path in `chat.pluginLocations`. Codex loads `.codex/agents/` at project scope; its
-nested plugin is installed through the repository marketplace, and
-`scripts/install_codex_agents.py --target <agents-directory>` exercises the standalone-agent sync
-without touching the real user scope.
+nested plugin is installed through the repository marketplace. Generated `.claude/agents/`
+profiles exercise Codex's official `/import` conversion contract, while
+`scripts/install_codex_agents.py --target <agents-directory>` exercises repeatable standalone-agent
+sync without touching the real user scope. `/import` is an initial migration and skips an existing
+same-name Codex TOML; it is not an update mechanism. The synchronizer may adopt unmarked importer
+output only when its parsed contract exactly matches the current generated agent. Any extra or
+changed field remains an unmanaged conflict.
 
 Two checks are manual and on demand, deliberately not CI gates (both drive real API sessions):
 
@@ -180,8 +185,9 @@ enough to skim past stops working, and each section in it was added for an obser
 
 - **Standard library only.** The validators, generators, installers, guard, hook, and tests use only
   the Python standard library. Do not add dependencies.
-- **Generated adapters are not a second source.** Never hand-edit `.github/agents/`,
-  `.codex/agents/`, `platforms/copilot/skills/`, or `plugins/sde-agents/skills/`. Change the
+- **Generated adapters are not a second source.** Never hand-edit `.claude/agents/`,
+  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, or
+  `plugins/sde-agents/skills/`. Change the
   canonical file or generator, regenerate, and let byte-drift validation prove the result.
 - **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
   guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with

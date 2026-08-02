@@ -74,17 +74,39 @@ codex plugin add sde-agents@latent-sre
 ```
 
 That installs the generated Codex skill bundle. Codex plugins do not currently package custom
-agents, so this repository also carries project-scoped profiles in `.codex/agents/*.toml`. To make
-those roles available in the current user's other projects from a cloned checkout:
+agents, so this repository carries both project-scoped profiles in `.codex/agents/*.toml` and
+Claude-compatible migration sources in `.claude/agents/*.md`.
+
+For Codex's official one-time migration, start a **local** Codex TUI and enter `/import`. Select
+**Claude Code** and **Subagents**. Codex reads personal agents from `~/.claude/agents/*.md` into
+`~/.codex/agents/*.toml`, or project agents from `<repo>/.claude/agents/*.md` into that project's
+`.codex/agents/*.toml`. The generated Markdown in this checkout is safe staging input for that
+conversion: copy it into an empty or conflict-checked `~/.claude/agents` directory before running
+`/import` when user-wide roles are the goal. This creates personal Claude agents as the migration
+source; remove that staged copy afterward if Claude should continue using only the plugin.
+
+`/import` deliberately skips any same-name Codex TOML rather than overwriting it. In this checkout,
+the tracked `.codex/agents` files already satisfy project scope, so `/import` has nothing to add
+there. For user scope, move conflicting personal Codex TOMLs to a backup before importing. See the
+[official `/import` command](https://learn.chatgpt.com/docs/developer-commands?surface=cli#import-claude-code-configuration-with-import)
+and [agent import behavior](https://learn.chatgpt.com/docs/import).
+
+After a user-scope `/import`, adopt the imported agents into the repository's managed update path:
 
 ```bash
-python3 scripts/install_codex_agents.py --user
 python3 scripts/install_codex_agents.py --user --check
+python3 scripts/install_codex_agents.py --user
 ```
 
-The installer preflights the complete target, refuses to overwrite an unmanaged same-name agent,
-and removes only stale files that it previously marked as managed. `--user` writes to
-`$CODEX_HOME/agents` when `CODEX_HOME` is set and otherwise defaults to `~/.codex/agents`.
+The first command is expected to exit 1 and report pending updates; the second marks
+contract-identical imported files as managed. The installer compares parsed TOML rather than
+formatting, refuses any same-name agent with changed or extra authority, and removes only stale
+files it previously marked as managed. `--user` writes to `$CODEX_HOME/agents` when `CODEX_HOME` is
+set and otherwise defaults to `~/.codex/agents`.
+
+If the official migration is not needed, skip the staging and `/import` steps and run the same
+installer directly for the initial user-scope installation. In either case, use the installer for
+future updates; `/import` remains a one-time migration and never overwrites an existing TOML.
 
 ### Working on the fleet itself
 
@@ -141,7 +163,7 @@ control, and the hosts do not expose equivalent hook payloads:
 
 | Host | Agents and skills | Read-only posture | Important boundary |
 |---|---|---|---|
-| Claude Code | Canonical `agents/` and `skills/` | Session hook allowlists Bash for the guarded roles | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are Claude-only |
+| Claude Code | Canonical `agents/` and `skills/`; generated `.claude/agents/` also serves as Codex import staging | Session hook allowlists Bash for the guarded roles; staging profiles request project-scope permission modes | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are canonical-plugin-only |
 | Copilot CLI / VS Code | Generated `.github/agents/` and `platforms/copilot/skills/` | Guarded roles receive no `execute` tool | Their `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused |
 | Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Roles without canonical write tools request `sandbox_mode = "read-only"` | Parent permissions can override agent sandbox defaults, and custom-agent TOML has no per-agent tool allowlist |
 
@@ -311,10 +333,10 @@ free-form body prose remains convention-only. No definition may resolve a fleet 
 `~/.claude`, which does not contain this fleet once it ships as a plugin.
 
 The same validator loads the adapter generator as a library. It rejects missing, extra, or
-byte-drifted generated files; cross-host version or identity drift; the wrong manifest component
-paths; a Codex marketplace that misses the isolated plugin; and any attempt to reuse the Claude
-guard where the host cannot scope it. `scripts/generate_platform_adapters.py --check` exposes that
-gate directly.
+byte-drifted generated files, including the official-import Markdown under `.claude/agents`;
+cross-host version or identity drift; the wrong manifest component paths; a Codex marketplace that
+misses the isolated plugin; and any attempt to reuse the Claude guard where the host cannot scope
+it. `scripts/generate_platform_adapters.py --check` exposes that gate directly.
 
 `claude plugin validate --strict` independently covers Claude's platform contract: manifest
 schema, frontmatter parsing, and hook JSON, with warnings as errors. The Codex package is also kept

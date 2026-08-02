@@ -1,6 +1,6 @@
 # Multi-platform packaging and authority adapters
 
-**Status:** Accepted and implemented on 2026-07-30
+**Status:** Accepted and implemented on 2026-07-30; Codex import bridge amended 2026-08-02
 **Date:** 2026-07-30
 
 ## Context
@@ -42,6 +42,10 @@ Generated artifacts are:
 | Copilot CLI / VS Code | `.github/agents/*.agent.md` | `platforms/copilot/skills/*` | `plugin.json` |
 | Codex | `.codex/agents/*.toml` | `plugins/sde-agents/skills/*` | `.agents/plugins/marketplace.json` → nested `.codex-plugin/plugin.json` |
 
+Codex's official one-time `/import` route additionally consumes generated
+`.claude/agents/*.md`. Those files are an import bridge, not another authored fleet; the generator
+derives them from the same canonical `agents/*.md` sources and the validator checks their currency.
+
 The Codex plugin is nested deliberately. Its plugin root has no `hooks/hooks.json`, so default
 component discovery cannot load Claude's session hook.
 
@@ -76,8 +80,10 @@ unsupported value and generates `agents/openai.yaml` with
 
 Codex plugins currently do not package custom-agent TOML. The repository keeps `.codex/agents/`
 for project-scoped use and provides `scripts/install_codex_agents.py` for an explicit user or
-alternate project sync. The installer owns only marked files, adopts only an exact generated copy,
-preflights every conflict before mutation, and prunes only stale managed files. User-scope sync
+alternate project sync. The installer owns only marked files, adopts unmarked files only when their
+parsed contract matches the current generated agent, preflights every behaviorally different
+conflict before mutation, and prunes only stale managed files. This permits official importer
+formatting without treating changed instructions or extra authority as generated. User-scope sync
 uses `$CODEX_HOME/agents` when configured and otherwise defaults to `~/.codex/agents`.
 
 ## Rejected alternatives
@@ -108,6 +114,8 @@ uses `$CODEX_HOME/agents` when configured and otherwise defaults to `~/.codex/ag
   wording does not trigger a second routing-eval gate.
 - Copilot/VS Code and Codex runtime smoke tests remain version-specific manual checks; offline CI
   proves structure, parity, generated currency, and the authority mapping.
+- A change to the Codex import bridge or adoption rule owes a disposable live `/import` run; a
+  Codex CLI upgrade is the freshness trigger for repeating that check.
 
 ## Reopen triggers
 
