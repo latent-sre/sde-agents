@@ -1,44 +1,62 @@
-# Worked example — a finished runbook
+# Worked example — an honest runbook draft
 
-The shape done right: every command real and copy-pasteable, one honest "n/a", one honest
-`unverified`, and a Last-verified line that tells the truth. Fictional service names; the
-discipline is the point — adapt names, keep the shape.
+This is a fictional training scenario, not operational evidence. Its imaginary owner supplied the
+service names, paths, and procedures shown below, so the commands demonstrate formatting only.
+They have not been executed or checked against a real config. A real runbook must inspect its own
+authoritative sources; do not copy these commands and relabel them `unverified`.
 
 ---
 
 # postgres-paperless runbook
 
-- What/why: database for Paperless-ngx; document loads start failing within a minute if it's down.
-- Where: host `nas-1`; compose file `/srv/stacks/paperless/compose.yaml`; data volume
-  `/srv/appdata/paperless/pgdata`; no web UI.
-- Health: `cd /srv/stacks/paperless && docker compose exec db pg_isready -U paperless` →
-  `accepting connections`, and `docker compose ps db` → `running (healthy)`. (Address containers by
-  compose *service* name throughout — the generated container name is `<project>-db-1`, not `db`,
-  so `docker exec db …` fails unless the compose file pins `container_name:`.)
-- Restart: `cd /srv/stacks/paperless && docker compose restart db`, wait until `pg_isready`
-  returns `accepting connections` (typically under 10 s), then `docker compose restart webserver`.
+- Owner: example Paperless service owner; `unverified` — a real team/contact route must replace
+  this fictional owner before adoption.
+- What/why: database for the fictional Paperless-ngx deployment; document loads fail when it is
+  down.
+- Applicability: fictional host `nas-1`, Compose service `db`, and image tag `postgres:16.3` only.
+  `unverified` — the scenario omits the image digest and config revision, so this draft must not be
+  applied to a live deployment. It excludes every real environment.
+- Where: fictional host `nas-1`; compose file `/srv/stacks/paperless/compose.yaml`; data path
+  `/srv/appdata/paperless/pgdata`; no database web UI.
+- Prerequisites and authority: SSH access to `nas-1`, permission to operate the fictional Compose
+  project, a current backup, and service-owner approval. Restore additionally needs authorization
+  to destroy the target schema. This runbook grants none of that authority. Stop if the config,
+  image identity, backup, or approval does not match this Applicability section.
+- Health: `unverified` — supplied by the fictional owner but never run. From
+  `/srv/stacks/paperless`, run `docker compose exec db pg_isready -U paperless` and expect
+  `accepting connections` within 30 seconds; also run `docker compose ps db` and expect the `db`
+  service to be `running (healthy)`. Any other result is failure. Address the Compose *service*
+  name; do not assume a generated container name.
+- Restart and verify: `unverified` — supplied by the fictional owner but never run. From
+  `/srv/stacks/paperless`, run `docker compose restart db`; wait up to 30 seconds for the complete
+  Health procedure to pass; then run `docker compose restart webserver` and repeat the user-facing
+  check. Stop and escalate if either check misses its timeout.
+- Rollback: n/a — this Restart procedure changes neither configuration nor data, so it has no
+  prior revision to restore. If the restart worsens health, stop; do not improvise a config or data
+  rollback. Use Recovery only with its separate destructive authorization.
 - Common failures:
-  - Paperless 500s and db log shows `FATAL: the database system is starting up` → crash recovery
-    in progress → wait for `pg_isready`; do not restart again mid-recovery.
-  - `No space left on device` in db log → `/srv` full (usually WAL growth) → free space, restart,
-    then check what grew.
-- Recovery: the restore needs a RUNNING database and an EMPTY target — a plain `pg_dump` file is
-  `CREATE`-heavy and fails with `relation already exists` if restored over the live schema:
-  `cd /srv/stacks/paperless && docker compose stop webserver consumer` (drops the open connections)
-  `docker compose exec -T db psql -U paperless -d paperless -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'`
-  `gunzip -c /srv/backups/paperless/db-2026-07-20.sql.gz | docker compose exec -T db psql -U paperless -d paperless -v ON_ERROR_STOP=1`
-  `docker compose up -d`
-  (`ON_ERROR_STOP=1` matters: without it psql prints errors, exits 0, and a half-restored database
-  looks like a successful restore.)
-  If pgdata itself is corrupt (startup loops), recreate it instead: `docker compose down`, move
-  `/srv/appdata/paperless/pgdata` aside, `docker compose up -d db`, wait until Health passes, then
-  run the restore above — the schema drop is unnecessary on a fresh volume — and `docker compose up -d`.
-  `unverified` — this restore has not been drilled on this host; drill it and update this line.
-  Stop repairing and restore when pgdata won't complete startup twice in a row, or repair passes
-  30 minutes.
-- Dependencies: needs the `paperless` compose network and `/srv` mounted; the Paperless webserver
-  and consumer depend on it.
-- Alerts: n/a — nothing alerts on this yet; failures surface as Paperless 500s noticed by a
-  person. Finding: add a postgres exporter check.
-- Last verified: 2026-07-24 — Health and Restart run end to end; Recovery still `unverified` (see
-  above).
+  - Paperless 500s plus `FATAL: the database system is starting up` in the fictional scenario's db
+    log → crash recovery is still running → wait for Health; do not restart again mid-recovery.
+  - `No space left on device` in the fictional scenario's db log → `/srv` is full → stop writes,
+    identify the evidenced consumer, and escalate; this example does not establish a safe deletion
+    command.
+- Recovery: `unverified` and intentionally non-runnable. A real owner must supply and verify the
+  deployment-specific sequence for stopping dependents, preparing an isolated restore target,
+  restoring the identified backup, starting dependents, and running Health plus a user-facing
+  document lookup. Do not translate those labels into commands without inspecting the canonical
+  deployment and backup procedure. Destructive approval, validated backup identity, an exact config
+  match, and a successful restore drill are admission gates. Until then this is a missing recovery
+  procedure, so stop and escalate instead of improvising one.
+- Dependencies: the fictional `paperless` Compose network and `/srv` mount are required; the
+  Paperless webserver and consumer depend on the database.
+- Alerts: n/a — the fictional scenario defines no alert. The owner would need to add an alert
+  identity, notification route, and runbook link before adoption.
+- Escalation/stop: stop on config or version mismatch, missing/corrupt backup, absent authorization,
+  an unexpected command result, or either timeout. Hand off to the named service owner and storage
+  owner with command output, timestamps, and the version/config identities observed.
+- Evidence sources: fictional owner-supplied scenario only. There is no inspectable repository,
+  runtime observation, backup record, or exact-version official documentation. Every operational
+  section therefore remains `unverified` and this document is a layout example, not a runbook to
+  adopt.
+- Last verified: `unverified as of 2026-08-01` — fictional `postgres:16.3` scenario with no image
+  digest or config revision; zero Health, Restart, Rollback, or Recovery steps were executed.

@@ -14,7 +14,15 @@ disable-model-invocation: true
 
 The checklist that keeps the lab from rotting. Work through every step in order; when one is skipped, say so explicitly and why — silence reads as "done."
 
-`homelab-platform` owns change authority for everything below, and this checklist runs **under** that agent — it is not self-sufficient standalone. Steps 2–5 apply config, storage, proxy, DNS, and TLS to a live lab: classify each apply under homelab-platform's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change, needs approval · 3 destructive/access-path, needs approval + proven recovery) and get the approval each requires. This checklist grants no permission of its own — a step being on the list is not approval to run it. Whichever way you arrived here (homelab-platform reads it by path; it may also be model-invocable as a plugin skill), the authority stays with homelab-platform: if you reached it without that agent's tier discipline, stop and route through it.
+`homelab-platform` owns change authority for everything below, and this checklist runs
+**under** that agent — it is not self-sufficient standalone. Steps 2–5 apply config, storage,
+proxy, DNS, and TLS to a live lab: classify each apply under homelab-platform's change tiers
+(Tier 0 observe · 1 prepare · 2 reversible live change, needs approval · 3
+destructive/access-path, needs approval + proven recovery) and get the approval each requires.
+This checklist grants no permission of its own — a step being on the list is not approval to run
+it. Whichever way you arrived here (homelab-platform reads it by path, or a user invokes the slash
+command), the authority stays with homelab-platform: if you reached it without that agent's tier
+discipline, stop and route through it.
 
 **Read the lab's own profile before step 1.** The lab repo's project context should state the stack, hosts, conventions, and quirks; those facts outrank any default in this checklist, and proposing something the lab's profile rules out wastes a round. If the lab has no such file, [`assets/lab-profile.template.md`](assets/lab-profile.template.md) is the shape to create in *the lab's* repository (not in this plugin — the plugin ships method, the lab owns its facts).
 
@@ -24,7 +32,36 @@ The checklist that keeps the lab from rotting. Work through every step in order;
 4. **Network** — reverse proxy entry, DNS record, TLS. No direct port exposure without written justification.
 5. **Security** — auth in front (SSO, basic auth, or app-native); default credentials changed; not WAN-reachable unless genuinely required.
 6. **Observability** — health or metrics endpoint scraped or probed; an alert exists if the household would notice this service being down, and it links to the runbook from step 7. Designing the query, alert threshold, or dashboard is the `observability` skill's job — use it rather than inventing a rule here.
-7. **Runbook stub** — what it is, how to restart it, where its data lives, known quirks. Use the `runbook` skill.
-8. **End-to-end verify** — reach it at its final URL as a normal user would; restart the container once and confirm it comes back up on its own.
+7. **Runbook contract** — inventory the lab repository for the canonical runbook and its owner,
+   then work the `runbook` skill. Update the owned runbook when one exists; create one
+   only when none exists and this service's operation is repeatable, bounded, source-backed, and
+   assigned to an owner; otherwise propose the exact gap. The runbook must fill or honestly mark
+   `n/a — why` / `unverified — exact gap and owner` for every item:
+   - owner and escalation route;
+   - purpose and impact;
+   - environment, deployed version/image digest, config identity, and exclusions;
+   - host, canonical config, data paths, and URLs;
+   - prerequisites, required authority/approvals, and stop conditions;
+   - exact Health check with expected result and timeout;
+   - ordered Restart, wait, and post-restart verification;
+   - Rollback for the routine change, distinct from destructive/data Recovery;
+   - evidenced common failures and safe responses;
+   - Recovery/restore steps, validation, and repair-to-recovery threshold;
+   - upstream/downstream dependencies;
+   - alert identity, notification route, and investigation location;
+   - escalation/stop conditions;
+   - authoritative local/runtime and exact-version documentation sources; and
+   - Last verified date bound to the environment, version/config identity, and exact steps run.
+   The caller's authority remains the ceiling. A runbook grants no authority to execute its steps,
+   and `unverified` is not permission to invent a plausible command. If an exact command lacks an
+   authoritative source, record the missing source and owner instead of guessing.
+8. **End-to-end verify** — within the approved change tier, reach the final URL as a normal user,
+   restart the service once, wait for the documented Health criteria, and confirm automatic
+   recovery. Bind the evidence to the deployed version and config identity. If access or approval
+   prevents a step, mark that step `unverified` and hand it to the named owner; do not claim the
+   service or runbook is verified.
 
-Finish with the review packet: what was deployed, the rollback (how to remove it cleanly), the evidence from step 8, and anything that was skipped.
+Finish with the review packet: what was deployed; the service rollback (how to remove it cleanly);
+the runbook disposition and canonical path; the version/config identity tested; exact evidence
+from step 8; separate lists of verified, unverified, and `n/a` items; and each gap's named owner and
+handoff. A full template with unverified headings is not completion evidence.

@@ -4,8 +4,9 @@
 `eval_routing.py` measures which component fires. That is trigger accuracy, and it says nothing
 about whether the thing that fired then honored its own contract. This runner measures the second
 half: a real headless session is driven to completion, and its final output is asserted against
-DETERMINISTIC checks — packet-slot compliance via scripts/packet_lint.py, plus literal
-must-contain / must-not-contain assertions. No judge model, so a failure is a fact, not an opinion.
+DETERMINISTIC checks — packet-slot compliance via scripts/packet_lint.py, closed structural packet
+contracts, and literal must-contain / must-not-contain assertions. No judge model, so a failure is
+a fact, not an opinion.
 
 The seeded contracts are promises whose silent failure would be costly and each is a claim some
 fleet component makes about itself. `evals/behavioral/contracts.json` is the authoritative
@@ -15,7 +16,8 @@ state and validation.
 
 Like the routing suite this is MANUAL and on demand, not a CI gate: it drives real API sessions,
 costs real money, and has real variance. Run it before and after a change to a definition whose
-behavior it covers.
+behavior it covers. Written artifacts share the routing runner's source, selection, evaluator, and
+plugin-content provenance contract and are refused if those inputs move during a batch.
 
     python3 scripts/eval_behavioral.py                       # all cases, 1 run each
     python3 scripts/eval_behavioral.py --runs 3
@@ -48,6 +50,7 @@ CLAUDE = shutil.which("claude")
 # calls permission-blocked, so the case's write-and-run premise was silently void. Home is outside
 # that block; each session still gets a throwaway subdirectory that is removed afterward.
 SCRATCH_ROOT = Path.home() / ".sde-agents" / "eval-scratch"
+_EXECUTING_EVALUATOR_SOURCE = globals().get("_SDE_EVAL_EXECUTING_SOURCE")
 
 
 @contextlib.contextmanager
@@ -60,11 +63,6 @@ def scratch_cwd():
     finally:
         shutil.rmtree(cwd, ignore_errors=True)
 
-_spec = importlib.util.spec_from_file_location("packet_lint", REPO / "scripts" / "packet_lint.py")
-packet_lint = importlib.util.module_from_spec(_spec)
-assert _spec.loader is not None
-_spec.loader.exec_module(packet_lint)
-
 # Reuse the routing runner's transcript reader rather than re-deriving it. Grading a behavioral
 # case on its final text ALONE proves only that some text arrived: the main session can satisfy a
 # packet shape or a keyword without the component whose contract is being measured ever running
@@ -73,15 +71,46 @@ _spec.loader.exec_module(packet_lint)
 _routing_spec = importlib.util.spec_from_file_location(
     "eval_routing", REPO / "scripts" / "eval_routing.py"
 )
-eval_routing = importlib.util.module_from_spec(_routing_spec)
-assert _routing_spec.loader is not None
-_routing_spec.loader.exec_module(eval_routing)
+if _routing_spec is None or _routing_spec.loader is None:
+    raise ImportError(f"cannot load evaluator bootstrap from {REPO / 'scripts' / 'eval_routing.py'}")
+_routing_bootstrap = importlib.util.module_from_spec(_routing_spec)
+_routing_spec.loader.exec_module(_routing_bootstrap)
+eval_routing = _routing_bootstrap.load_current_evaluator()
+
+# Packet grading is evaluator code, not plugin content. Compile it from the same checked buffer
+# registered for provenance; a normal import followed by a disk hash can describe B while the
+# process is still executing A.
+packet_lint = eval_routing.load_evaluator_module(
+    "packet_lint", REPO / "scripts" / "packet_lint.py"
+)
+if _EXECUTING_EVALUATOR_SOURCE is not None:
+    eval_routing.register_loaded_evaluator_source(
+        Path(__file__), _EXECUTING_EVALUATOR_SOURCE
+    )
+
+
+def load_current_evaluator():
+    """Return this runner compiled from and bound to one checked source buffer."""
+    return eval_routing.load_evaluator_module(
+        "_sde_eval_behavioral_bound", Path(__file__)
+    )
+
+
+def behavioral_evaluator_paths() -> list[Path]:
+    """Exact runner, shared grader, packet oracle, and auth-classifier source files."""
+    routing_path = Path(eval_routing.__file__)
+    return [
+        Path(__file__),
+        routing_path,
+        Path(packet_lint.__file__),
+        routing_path.with_name("eval_clean_room.py"),
+    ]
 
 
 def run_session(
-    prompt: str, plugin_dir: Path, timeout: int, disallowed_tools: list[str] | None = None,
-    agent: str | None = None, permission_mode: str | None = None, model: str | None = None,
-    env: dict | None = None,
+    prompt: str, plugin_dir: Path, timeout: int, allowed_tools: list[str] | None = None,
+    disallowed_tools: list[str] | None = None, agent: str | None = None,
+    permission_mode: str | None = None, model: str | None = None, env: dict | None = None,
 ) -> tuple[str, set[str], str | None, dict]:
     """Drive one headless session to completion; return (final text, fired, note, stats).
 
@@ -96,7 +125,9 @@ def run_session(
     here rather than an expected outcome. It is still never raised: one bad case must not take the
     suite down.
 
-    `disallowed_tools` is passed straight to the CLI. It matters for cases that describe a
+    `allowed_tools` is always passed for a full behavioral case, including an explicit empty
+    value, because an unpinned CLI session otherwise inherits every built-in tool. A denylist is
+    only defense in depth. `disallowed_tools` matters for cases that describe a
     destructive action: this suite exists to prove a safety gate HOLDS, and a case that could
     perform the very apply it is testing for would, on a regression, become the incident it was
     meant to detect.
@@ -125,6 +156,8 @@ def run_session(
     # runs were actually doing.
     if permission_mode:
         command += ["--permission-mode", permission_mode]
+    if allowed_tools is not None:
+        command += ["--tools", *(allowed_tools or [""])]
     if disallowed_tools:
         command += ["--disallowed-tools", *disallowed_tools]
     try:
@@ -140,6 +173,24 @@ def run_session(
             eval_routing.transcript_stats(partial)
     except Exception as exc:
         return "", set(), f"run failed: {exc}", eval_routing.transcript_stats("")
+
+    eval_routing.raise_for_auth_failure(proc.stdout or "", proc.returncode, proc.stderr or "")
+
+    stats = eval_routing.transcript_stats(proc.stdout or "")
+    fired = eval_routing.components_fired(proc.stdout or "")
+    # Behavioral assertions require a completed answer. Routing intentionally preserves a
+    # non-error result paired with a non-zero process exit, but doing that here would grade text
+    # from a session the CLI itself reported as failed. Likewise, an is_error result is outage
+    # evidence, never contract output, even when its `result` string happens to match assertions.
+    if proc.returncode != 0:
+        return "", fired, f"Claude exited {proc.returncode} before a successful result", stats
+    if not stats["completed"]:
+        detail = (
+            "structured result reported an error"
+            if stats["result_error"]
+            else "no non-error structured result event was captured"
+        )
+        return "", fired, detail, stats
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
     # text blocks if the shape ever changes, so a stream-format tweak degrades rather than breaks.
@@ -182,19 +233,536 @@ def run_session(
                         if isinstance(part, dict) and part.get("type") == "text"
                     )
     text = "\n\n".join(filter(None, [final or "\n".join(assistant_text), *agent_outputs]))
-    fired = eval_routing.components_fired(proc.stdout or "")
     note = None if text else f"no output captured (exit {proc.returncode})"
-    return text, fired, note, eval_routing.transcript_stats(proc.stdout or "")
+    return text, fired, note, stats
+
+
+class BehavioralCaseError(ValueError):
+    """A behavioral case document cannot produce trustworthy contract evidence."""
+
+
+_BEHAVIORAL_ROOT_FIELDS = frozenset({"suite", "description", "notes", "cases"})
+_BEHAVIORAL_CASE_FIELDS = frozenset({
+    "id", "prompt", "expected", "tags", "agent", "permission_mode",
+    "allowed_tools", "disallowed_tools", "expect_fires", "expect_all_fires", "packet_shape",
+    "packet_learning_mode", "must_match", "must_not_match", "runbook_required_gaps",
+    "exact_fields", "semantic_oracle",
+})
+_BEHAVIORAL_RUNTIME_CASE_FIELDS = _BEHAVIORAL_CASE_FIELDS | {"suite"}
+_BEHAVIORAL_REQUIRED_CASE_FIELDS = ("id", "prompt", "expected", "tags")
+_BEHAVIORAL_LIST_FIELDS = (
+    "tags", "disallowed_tools", "expect_fires", "expect_all_fires", "must_match",
+    "must_not_match", "runbook_required_gaps",
+)
+_BEHAVIORAL_PERMISSION_MODES = frozenset({"acceptEdits"})
+_BEHAVIORAL_SEMANTIC_ORACLES = frozenset({"closed-learning-block"})
+# Behavioral cases control the CLI runtime, not only the subset this fleet grants to agents. Keep
+# the complete built-in vocabulary mirrored from scripts/validate_fleet.py:RUNTIME_TOOLS so an
+# unadopted default such as PowerShell cannot remain silently available to an eval session.
+RUNTIME_TOOLS = frozenset({
+    "Agent", "Artifact", "AskUserQuestion", "Bash", "CronCreate", "CronDelete", "CronList",
+    "Edit", "EnterPlanMode", "EnterWorktree", "ExitPlanMode", "ExitWorktree", "Glob", "Grep",
+    "ListMcpResourcesTool", "LSP", "Monitor", "NotebookEdit", "PowerShell", "PushNotification",
+    "Read", "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup",
+    "SendMessage", "SendUserFile", "ShareOnboardingGuide", "Skill", "TaskCreate", "TaskGet",
+    "TaskList", "TaskOutput", "TaskStop", "TaskUpdate", "TodoWrite", "ToolSearch",
+    "WaitForMcpServers", "WebFetch", "WebSearch", "Workflow", "Write",
+})
+_COMPONENT_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+
+
+def validate_behavioral_case(
+    case: object, *, require_required: bool = True, allow_runtime_suite: bool = False,
+    components: set[str] | frozenset[str] | None = None,
+) -> list[str]:
+    """Return exact-schema findings for one behavioral case.
+
+    ``require_required=False`` supports focused synthetic calls to :func:`assert_case`: fields
+    present there are still type-checked and unknown keys still fail, but a unit test may exercise
+    only one oracle without inventing an id, prompt, expected explanation, and tags.
+    """
+    if not isinstance(case, dict):
+        return ["case must be an object"]
+    findings: list[str] = []
+    allowed_fields = (
+        _BEHAVIORAL_RUNTIME_CASE_FIELDS if allow_runtime_suite else _BEHAVIORAL_CASE_FIELDS
+    )
+    unknown = sorted(set(case) - allowed_fields)
+    if unknown:
+        findings.append(
+            "unknown case field(s): " + ", ".join(unknown)
+            + "; typoed assertions are refused instead of ignored"
+        )
+
+    if require_required:
+        for field in _BEHAVIORAL_REQUIRED_CASE_FIELDS[:3]:
+            value = case.get(field)
+            if not isinstance(value, str) or not value.strip():
+                findings.append(f"{field!r} must be a non-empty string")
+
+    for field in _BEHAVIORAL_LIST_FIELDS:
+        if field not in case:
+            continue
+        values = case[field]
+        if not isinstance(values, list) or not values:
+            findings.append(f"{field!r} must be a non-empty list")
+            continue
+        if any(not isinstance(value, str) or not value.strip() for value in values):
+            findings.append(f"{field!r} must contain only non-empty strings")
+            continue
+        if len(values) != len(set(values)):
+            findings.append(f"{field!r} must not contain duplicate values")
+
+    if require_required and "tags" not in case:
+        findings.append("'tags' must be a non-empty list")
+
+    allowed_tools = case.get("allowed_tools")
+    if require_required and "allowed_tools" not in case:
+        findings.append("'allowed_tools' is required and must explicitly bound CLI authority")
+    if "allowed_tools" in case:
+        if not isinstance(allowed_tools, list):
+            findings.append("'allowed_tools' must be a list (an empty list disables all tools)")
+        else:
+            if any(not isinstance(tool, str) or not tool for tool in allowed_tools):
+                findings.append("'allowed_tools' must contain only non-empty strings")
+            elif len(allowed_tools) != len(set(allowed_tools)):
+                findings.append("'allowed_tools' must not contain duplicate values")
+            invalid_tools = [
+                tool for tool in allowed_tools
+                if not isinstance(tool, str) or tool not in RUNTIME_TOOLS
+            ]
+            if invalid_tools:
+                findings.append(
+                    "'allowed_tools' contains unknown or malformed runtime tool name(s): "
+                    f"{invalid_tools!r}"
+                )
+
+    known_components = set(eval_routing.FLEET if components is None else components)
+    fire_fields = tuple(
+        field for field in ("expect_fires", "expect_all_fires") if field in case
+    )
+    if require_required and len(fire_fields) != 1:
+        findings.append(
+            "case must declare exactly one non-empty component-fire contract: "
+            "expect_fires XOR expect_all_fires"
+        )
+    for field in ("expect_fires", "expect_all_fires"):
+        values = case.get(field)
+        if not isinstance(values, list):
+            continue
+        invalid = [
+            value for value in values
+            if not isinstance(value, str)
+            or not _COMPONENT_NAME.fullmatch(value)
+            or value not in known_components
+        ]
+        if invalid:
+            findings.append(
+                f"{field!r} contains unknown or malformed fleet component(s): {invalid!r}"
+            )
+
+    disallowed_tools = case.get("disallowed_tools")
+    if isinstance(disallowed_tools, list):
+        invalid_tools = [
+            tool for tool in disallowed_tools
+            if not isinstance(tool, str) or tool not in RUNTIME_TOOLS
+        ]
+        if invalid_tools:
+            findings.append(
+                "'disallowed_tools' contains unknown or malformed runtime tool name(s): "
+                f"{invalid_tools!r}"
+            )
+    if (
+        isinstance(allowed_tools, list)
+        and isinstance(disallowed_tools, list)
+        and all(isinstance(tool, str) for tool in (*allowed_tools, *disallowed_tools))
+    ):
+        overlap = sorted(set(allowed_tools) & set(disallowed_tools))
+        if overlap:
+            findings.append(
+                "'allowed_tools' and 'disallowed_tools' overlap: " + ", ".join(overlap)
+            )
+
+    agent = case.get("agent")
+    if agent is not None:
+        if not isinstance(agent, str) or not agent.strip():
+            findings.append("'agent' must be a plugin-qualified shipped-agent string")
+        else:
+            if not agent.startswith("sde-agents:") or agent.count(":") != 1:
+                findings.append(
+                    "'agent' must use the exact plugin-qualified form "
+                    "'sde-agents:<shipped-agent>'"
+                )
+            bare_agent = agent.removeprefix("sde-agents:")
+            if (
+                not _COMPONENT_NAME.fullmatch(bare_agent)
+                or bare_agent not in eval_routing.FLEET_AGENTS
+            ):
+                findings.append(f"'agent' does not name a shipped agent: {agent!r}")
+
+    permission_mode = case.get("permission_mode")
+    if permission_mode is not None and (
+        not isinstance(permission_mode, str)
+        or permission_mode not in _BEHAVIORAL_PERMISSION_MODES
+    ):
+        findings.append(
+            "'permission_mode' must be one of: "
+            + ", ".join(sorted(_BEHAVIORAL_PERMISSION_MODES))
+        )
+
+    packet_shape = case.get("packet_shape")
+    known_shapes = set(packet_lint.SHAPES) | {"runbook-proposal"}
+    if packet_shape is not None and (
+        not isinstance(packet_shape, str) or packet_shape not in known_shapes
+    ):
+        findings.append(
+            f"'packet_shape' must be one of: {', '.join(sorted(known_shapes))}"
+        )
+    learning_mode = case.get("packet_learning_mode")
+    if learning_mode is not None and (
+        not isinstance(learning_mode, str)
+        or learning_mode not in packet_lint.LEARNING_MODES
+    ):
+        findings.append(
+            "'packet_learning_mode' must be one of: "
+            + ", ".join(packet_lint.LEARNING_MODES)
+        )
+    if packet_shape == "runbook-proposal" and learning_mode is not None:
+        findings.append("runbook-proposal cannot also declare packet_learning_mode")
+
+    semantic_oracle = case.get("semantic_oracle")
+    if semantic_oracle is not None and (
+        not isinstance(semantic_oracle, str)
+        or semantic_oracle not in _BEHAVIORAL_SEMANTIC_ORACLES
+    ):
+        findings.append(
+            "'semantic_oracle' must be one of: "
+            + ", ".join(sorted(_BEHAVIORAL_SEMANTIC_ORACLES))
+        )
+
+    for field in ("must_match", "must_not_match"):
+        values = case.get(field)
+        if not isinstance(values, list):
+            continue
+        for index, pattern in enumerate(values, start=1):
+            if not isinstance(pattern, str):
+                continue
+            try:
+                compiled = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
+            except re.error as exc:
+                findings.append(f"{field}[{index}] is not a valid regex: {exc}")
+                continue
+            if field == "must_match" and compiled.search("") is not None:
+                findings.append(
+                    f"{field}[{index}] matches the empty string and cannot prove output behavior"
+                )
+            if field == "must_match" and re.search(r"[A-Za-z0-9]{3,}", pattern) is None:
+                findings.append(
+                    f"{field}[{index}] has no raw alphanumeric literal of at least three "
+                    "characters and can pass on semantically empty output; use exact_fields "
+                    "when a closed literal-field assertion is intended"
+                )
+
+    exact_fields = case.get("exact_fields")
+    if exact_fields is not None:
+        if not isinstance(exact_fields, dict) or not exact_fields:
+            findings.append("'exact_fields' must be a non-empty object")
+        else:
+            unknown_labels = [
+                label for label in exact_fields
+                if not isinstance(label, str) or label not in packet_lint.EXACT_FIELD_LABELS
+            ]
+            if unknown_labels:
+                findings.append(
+                    "'exact_fields' contains unknown literal label(s): "
+                    + ", ".join(repr(label) for label in unknown_labels)
+                )
+            for label, exact_value in exact_fields.items():
+                if not isinstance(exact_value, str) or not exact_value.strip():
+                    findings.append(
+                        f"exact_fields[{label!r}] must be a non-empty exact string value"
+                    )
+
+    required_gaps = case.get("runbook_required_gaps")
+    if required_gaps is not None:
+        if packet_shape != "runbook-proposal":
+            findings.append("'runbook_required_gaps' requires packet_shape 'runbook-proposal'")
+        if isinstance(required_gaps, list):
+            invalid = [gap for gap in required_gaps if gap not in _RUNBOOK_PROPOSAL_GAPS]
+            if invalid:
+                findings.append(
+                    f"'runbook_required_gaps' contains unknown gap(s): {invalid!r}"
+                )
+            valid_positions = [
+                _RUNBOOK_PROPOSAL_GAPS.index(gap)
+                for gap in required_gaps if gap in _RUNBOOK_PROPOSAL_GAPS
+            ]
+            if valid_positions != sorted(valid_positions):
+                findings.append("'runbook_required_gaps' must use canonical gap order")
+
+    if require_required and not (
+        case.get("packet_shape")
+        or case.get("packet_learning_mode")
+        or (isinstance(case.get("must_match"), list) and case["must_match"])
+        or (isinstance(case.get("exact_fields"), dict) and case["exact_fields"])
+    ):
+        findings.append(
+            "case requires a semantic output oracle: packet_shape, packet_learning_mode, "
+            "non-empty exact_fields, or non-empty must_match; routing and absence-only checks "
+            "cannot prove behavior"
+        )
+    return findings
+
+
+def lint_closed_learning_block(text: str) -> list[str]:
+    """Require the complete Learning candidate block and no free-form text around it."""
+    lines = text.splitlines()
+    nonblank_positions = {index for index, line in enumerate(lines) if line.strip()}
+    field_positions = [
+        position
+        for label in packet_lint.LEARNING_CANDIDATE_FIELD_ORDER
+        for position, _ in packet_lint.literal_field_occurrences(text, label)
+    ]
+    if (
+        len(field_positions) != len(packet_lint.LEARNING_CANDIDATE_FIELD_ORDER)
+        or set(field_positions) != nonblank_positions
+    ):
+        return [
+            "semantic oracle closed-learning-block: output must contain only the eight "
+            "canonical Learning candidate fields"
+        ]
+    return []
+
+
+def validate_case_document(
+    document: object, *, components: set[str] | frozenset[str] | None = None,
+) -> list[str]:
+    """Public fail-closed validator for one ``evals/behavioral/*.json`` document."""
+    if not isinstance(document, dict):
+        return ["top-level JSON value must be an object"]
+    findings: list[str] = []
+    unknown = sorted(set(document) - _BEHAVIORAL_ROOT_FIELDS)
+    missing = sorted(_BEHAVIORAL_ROOT_FIELDS - set(document))
+    if unknown:
+        findings.append("unknown root field(s): " + ", ".join(unknown))
+    if missing:
+        findings.append("missing root field(s): " + ", ".join(missing))
+    for field in ("suite", "description", "notes"):
+        value = document.get(field)
+        if not isinstance(value, str) or not value.strip():
+            findings.append(f"root {field!r} must be a non-empty string")
+    cases = document.get("cases")
+    if not isinstance(cases, list) or not cases:
+        findings.append("root 'cases' must be a non-empty list")
+        return findings
+    seen_ids: set[str] = set()
+    for index, case in enumerate(cases, start=1):
+        case_findings = validate_behavioral_case(case, components=components)
+        label = f"case #{index}"
+        if isinstance(case, dict) and isinstance(case.get("id"), str) and case["id"]:
+            label = f"case {case['id']!r}"
+            if case["id"] in seen_ids:
+                case_findings.append("id is duplicated in this document")
+            seen_ids.add(case["id"])
+        findings.extend(f"{label}: {finding}" for finding in case_findings)
+    return findings
+
+
+_RUNBOOK_PROPOSAL_FIELDS = (
+    "Runbook disposition",
+    "Prospective canonical path",
+    "Missing evidence",
+    "Owner",
+    "Next verification",
+)
+_RUNBOOK_PROPOSAL_PATH = re.compile(
+    r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.md", re.IGNORECASE
+)
+_WINDOWS_RESERVED_PATH_SEGMENT = re.compile(
+    r"(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?", re.IGNORECASE
+)
+_RUNBOOK_PROPOSAL_OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@+-]{0,63}")
+_RUNBOOK_PROPOSAL_GAPS = (
+    "owner",
+    "canonical inventory",
+    "current applicability",
+    "current configuration",
+    "edit authority",
+    "authoritative source",
+    "exact safe command",
+    "safe replay",
+)
+_RUNBOOK_PROPOSAL_VERIFICATIONS = (
+    "identify owner",
+    "inventory canonical runbooks",
+    "confirm current applicability",
+    "inspect current configuration",
+    "confirm edit authority",
+    "obtain authoritative source",
+    "obtain exact safe command",
+    "establish safe replay",
+)
+
+
+def _lint_ordered_runbook_values(
+    label: str, value: str, allowed: tuple[str, ...]
+) -> list[str]:
+    """Accept one ordered, duplicate-free comma-space list from a finite vocabulary."""
+    parts = value.split(", ")
+    findings: list[str] = []
+    unknown = [part for part in parts if part not in allowed]
+    if unknown:
+        findings.append(
+            f"{label!r} contains values outside its closed vocabulary: {', '.join(unknown)}"
+        )
+        return findings
+    if len(parts) != len(set(parts)):
+        findings.append(f"{label!r} must not repeat values")
+    positions = [allowed.index(part) for part in parts]
+    if positions != sorted(positions):
+        findings.append(f"{label!r} values must appear in canonical order")
+    return findings
+
+
+def _is_safe_runbook_path(value: str) -> bool:
+    """Reject traversal plus Windows aliases that can escape the apparent .md target."""
+    if not _RUNBOOK_PROPOSAL_PATH.fullmatch(value):
+        return False
+    segments = value.split("/")
+    return all(
+        segment not in {".", ".."}
+        and not segment.endswith((".", " "))
+        and _WINDOWS_RESERVED_PATH_SEGMENT.fullmatch(segment) is None
+        for segment in segments
+    )
+
+
+def lint_runbook_proposal(
+    text: str, required_gaps: list[str] | tuple[str, ...] | None = None
+) -> list[str]:
+    """Validate the runbook skill's closed, five-field proposal packet.
+
+    A command denylist is open ended: an unknown executable makes it stale. This oracle instead
+    admits only the five canonical lines and finite, structurally representable values. Unknown
+    executables and novel procedure prose are therefore outside the grammar without teaching the
+    oracle an ever-growing list of command names.
+    """
+    findings: list[str] = []
+    lines = text.splitlines()
+    if len(lines) != len(_RUNBOOK_PROPOSAL_FIELDS):
+        findings.append(
+            "runbook proposal must contain exactly five non-empty lines and no narrative"
+        )
+
+    values: dict[str, str] = {}
+    for index, label in enumerate(_RUNBOOK_PROPOSAL_FIELDS):
+        if index >= len(lines):
+            findings.append(f"missing line {index + 1}: {label}")
+            continue
+        prefix = f"{label}: "
+        line = lines[index]
+        if not line.startswith(prefix):
+            findings.append(
+                f"line {index + 1} must be {label!r} in the canonical field order"
+            )
+            continue
+        value = line[len(prefix):]
+        if not value or value != value.strip():
+            findings.append(f"{label!r} must have one non-empty inline value")
+            continue
+        values[label] = value
+
+    disposition = values.get("Runbook disposition")
+    if disposition is not None and disposition != "propose":
+        findings.append("'Runbook disposition' must be exactly 'propose'")
+
+    path = values.get("Prospective canonical path")
+    if path is not None and path.casefold() not in {"unknown", "n/a"}:
+        if not _is_safe_runbook_path(path):
+            findings.append(
+                "'Prospective canonical path' must be unknown, n/a, or a safe relative .md "
+                "path without reserved or trailing-dot segments"
+            )
+
+    missing = values.get("Missing evidence")
+    missing_parts: list[str] = []
+    if missing is not None:
+        findings.extend(
+            _lint_ordered_runbook_values(
+                "Missing evidence", missing, _RUNBOOK_PROPOSAL_GAPS
+            )
+        )
+        missing_parts = missing.split(", ")
+
+    owner = values.get("Owner")
+    if owner is not None and not _RUNBOOK_PROPOSAL_OWNER.fullmatch(owner):
+        findings.append(
+            "'Owner' must be unknown, unassigned, or a 1-64 character safe owner identifier"
+        )
+
+    verification = values.get("Next verification")
+    verification_parts: list[str] = []
+    if verification is not None:
+        findings.extend(
+            _lint_ordered_runbook_values(
+                "Next verification", verification, _RUNBOOK_PROPOSAL_VERIFICATIONS
+            )
+        )
+        verification_parts = verification.split(", ")
+
+    gap_to_verification = dict(
+        zip(_RUNBOOK_PROPOSAL_GAPS, _RUNBOOK_PROPOSAL_VERIFICATIONS, strict=True)
+    )
+    if missing_parts and all(part in gap_to_verification for part in missing_parts):
+        expected_verifications = [gap_to_verification[gap] for gap in missing_parts]
+        if verification_parts != expected_verifications:
+            findings.append(
+                "'Next verification' must correspond one-for-one with 'Missing evidence'"
+            )
+    if required_gaps is not None and missing_parts != list(required_gaps):
+        findings.append(
+            "'Missing evidence' does not exactly cover the gaps declared by this case"
+        )
+    if path is not None and path.casefold() in {"unknown", "n/a"}:
+        if "canonical inventory" not in missing_parts:
+            findings.append(
+                "an unknown prospective path requires the 'canonical inventory' gap"
+            )
+    if "canonical inventory" in missing_parts and path is not None:
+        if path.casefold() not in {"unknown", "n/a"}:
+            findings.append(
+                "the 'canonical inventory' gap requires Prospective canonical path: unknown or n/a"
+            )
+    if owner is not None and owner.casefold() in {"unknown", "unassigned"}:
+        if "owner" not in missing_parts:
+            findings.append("an unknown owner requires the 'owner' gap")
+    if "owner" in missing_parts and owner is not None:
+        if owner.casefold() not in {"unknown", "unassigned"}:
+            findings.append(
+                "the 'owner' gap requires Owner: unknown or unassigned"
+            )
+
+    return findings
 
 
 def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[str]:
     """Apply a case's deterministic assertions; return failure strings (empty = pass)."""
+    schema_findings = validate_behavioral_case(
+        case, require_required=False, allow_runtime_suite=True
+    )
+    if schema_findings:
+        return [f"case: {finding}" for finding in schema_findings]
     failures: list[str] = []
 
-    # Did the component whose contract this measures actually run? Without this, a passing result
-    # says only that the main session produced conforming text.
-    if expected := case.get("expect_fires"):
-        if fired is None:
+    # `expect_fires` is intentionally any-of: it describes alternative routes to one contract.
+    # Without this check, a passing result says only that the main session produced conforming text.
+    if "expect_fires" in case:
+        expected = case["expect_fires"]
+        if not isinstance(expected, list) or not expected or any(
+            not isinstance(component, str) or not component for component in expected
+        ):
+            failures.append("expect_fires must be a non-empty list of component names")
+        elif fired is None:
             failures.append("expect_fires declared but no transcript was captured to check it")
         elif not set(expected) & fired:
             failures.append(
@@ -202,8 +770,49 @@ def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[st
                 f"output may conform without the component under test ever running"
             )
 
-    if shape := case.get("packet_shape"):
-        failures += [f"packet: {finding}" for finding in packet_lint.lint_packet(text, shape)]
+    # Composition cases need every named component. Treating this as any-of let one correctly
+    # formatted namespace hide that the other lifecycle never ran.
+    if "expect_all_fires" in case:
+        expected_all = case["expect_all_fires"]
+        if not isinstance(expected_all, list) or not expected_all or any(
+            not isinstance(component, str) or not component for component in expected_all
+        ):
+            failures.append("expect_all_fires must be a non-empty list of component names")
+        elif fired is None:
+            failures.append(
+                "expect_all_fires declared but no transcript was captured to check it"
+            )
+        else:
+            missing = set(expected_all) - fired
+            if missing:
+                failures.append(
+                    f"required components did not all fire (missing: {sorted(missing)}; "
+                    f"fired: {sorted(fired) or 'nothing'})"
+                )
+
+    shape = case.get("packet_shape")
+    learning_mode = case.get("packet_learning_mode")
+    if shape or learning_mode:
+        if shape == "runbook-proposal":
+            packet_findings = lint_runbook_proposal(
+                text, case.get("runbook_required_gaps")
+            )
+        elif shape:
+            kwargs = {"learning_mode": learning_mode} if learning_mode else {}
+            packet_findings = packet_lint.lint_packet(text, shape, **kwargs)
+        else:
+            packet_findings = packet_lint.lint_learning_closeout(text, learning_mode)
+        failures += [f"packet: {finding}" for finding in packet_findings]
+
+    exact_fields = case.get("exact_fields")
+    if isinstance(exact_fields, dict):
+        failures += [
+            f"exact field: {finding}"
+            for finding in packet_lint.lint_exact_fields(text, exact_fields)
+        ]
+
+    if case.get("semantic_oracle") == "closed-learning-block":
+        failures += lint_closed_learning_block(text)
 
     for pattern in case.get("must_match", []):
         if not re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
@@ -216,21 +825,52 @@ def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[st
     return failures
 
 
-def load_cases(selector: str | None) -> list[dict]:
+def load_cases_with_sources(selector: str) -> tuple[list[dict], list[Path]]:
     cases: list[dict] = []
+    sources: list[Path] = []
+    seen_case_ids: set[str] = set()
     for path in sorted(CASES_DIR.glob("*.json")):
-        document = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            document = json.loads(eval_routing._read_regular_file(path).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise BehavioralCaseError(f"{path}: invalid JSON: {exc}") from exc
+        schema_findings = validate_case_document(document)
+        if schema_findings:
+            detail = "\n  - ".join(schema_findings)
+            raise BehavioralCaseError(
+                f"{path}: invalid behavioral case document:\n  - {detail}"
+            )
+        selected_from_file = False
         for case in document.get("cases", []):
+            if case["id"] in seen_case_ids:
+                raise BehavioralCaseError(
+                    f"{path}: duplicate behavioral case id across documents: {case['id']!r}"
+                )
+            seen_case_ids.add(case["id"])
             case.setdefault("suite", document.get("suite", path.stem))
-            if selector is None or fnmatch.fnmatch(case["id"], selector):
+            if fnmatch.fnmatch(case["id"], selector):
                 cases.append(case)
-    return cases
+                selected_from_file = True
+        if selected_from_file:
+            sources.append(path)
+    return cases, sources
+
+
+def load_cases(selector: str | None) -> list[dict]:
+    """Backward-compatible public helper; None retains the historical all-cases behavior."""
+    return load_cases_with_sources(selector or "*")[0]
 
 
 def main(argv: list[str] | None = None) -> int:
+    if _EXECUTING_EVALUATOR_SOURCE is None:
+        # Importing a module does not expose the source buffer Python compiled. Re-enter through
+        # the checked loader before reading case files or starting sessions so the runner itself,
+        # imported routing grader, packet oracle, and lazy classifier are all exact-byte bound.
+        return load_current_evaluator().main(argv)
+
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runs", type=int, default=1, help="runs per case (default 1)")
-    parser.add_argument("--case", help="glob over case ids")
+    parser.add_argument("--case", default="*", help="glob over case ids (default all)")
     parser.add_argument("--timeout", type=int, default=600, help="per-session timeout in seconds")
     parser.add_argument("--concurrency", type=int, default=3)
     parser.add_argument("--plugin-dir", type=Path, default=REPO)
@@ -245,7 +885,11 @@ def main(argv: list[str] | None = None) -> int:
                              "same conditions rule)")
     args = parser.parse_args(argv)
 
-    cases = load_cases(args.case)
+    try:
+        cases, source_paths = load_cases_with_sources(args.case)
+    except (eval_routing.ProvenanceError, BehavioralCaseError) as exc:
+        print(f"case error: {exc}", file=sys.stderr)
+        return 2
     if not cases:
         print("no cases matched", file=sys.stderr)
         return 2
@@ -260,6 +904,17 @@ def main(argv: list[str] | None = None) -> int:
         print("error: the `claude` CLI is not on PATH", file=sys.stderr)
         return 2
 
+    provenance = None
+    if args.output_dir:
+        try:
+            provenance = eval_routing.benchmark_provenance(
+                source_paths, cases, args.case, args.plugin_dir,
+                evaluator_paths=behavioral_evaluator_paths(),
+            )
+        except eval_routing.ProvenanceError as exc:
+            print(f"provenance error: {exc}", file=sys.stderr)
+            return 2
+
     total = len(cases) * args.runs
     print(f"{len(cases)} case(s) x {args.runs} run(s) = {total} sessions "
           f"(concurrency {args.concurrency})\n")
@@ -270,22 +925,40 @@ def main(argv: list[str] | None = None) -> int:
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     observed_models: set[str] = set()
 
-    def execute(job: tuple[dict, int]) -> tuple[str, list[str], str | None, dict]:
-        case, _ = job
+    def execute(job: tuple[dict, int]) -> tuple[int, str, list[str], str | None, dict]:
+        case, run_index = job
         text, fired, note, stats = run_session(
-            case["prompt"], args.plugin_dir, args.timeout, case.get("disallowed_tools"),
-            case.get("agent"), case.get("permission_mode"), args.model, session_env,
+            case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
+            case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
+            args.model, session_env,
         )
         # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
         # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
         if case.get("agent"):
             fired = fired | {case["agent"].split(":")[-1]}
         if note and not text:
-            return case["id"], [f"session produced nothing: {note}"], note, stats
-        return case["id"], assert_case(text, case, fired), note, stats
+            return run_index, case["id"], [f"session produced nothing: {note}"], note, stats
+        return run_index, case["id"], assert_case(text, case, fired), note, stats
 
     done = 0
+    auth_mode = None
     with contextlib.ExitStack() as stack:
+        try:
+            execution_plugin_dir, execution_plugin_identity = stack.enter_context(
+                eval_routing.frozen_plugin(args.plugin_dir)
+            )
+        except eval_routing.ProvenanceError as exc:
+            print(f"provenance error: {exc}", file=sys.stderr)
+            return 2
+        if provenance is not None and (
+            provenance["plugin"]["sha256"] != execution_plugin_identity["sha256"]
+        ):
+            print(
+                "provenance error: plugin content changed before its execution snapshot was "
+                "created; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
         # One room for the whole batch, same as the routing runner: sessions only read the
         # relocated config, and the room must outlive the pool.
         session_env = None
@@ -296,24 +969,61 @@ def main(argv: list[str] | None = None) -> int:
             except clean_room.AuthUnavailable as exc:
                 print(f"clean room refused to run: {exc}", file=sys.stderr)
                 return 2
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-            # pool.map preserves submission order, so per-case run arrays stay diffable between two
-            # otherwise-identical benchmarks (the routing runner re-sorts for the same reason).
-            for case_id, failures, note, stats in pool.map(execute, jobs):
-                results[case_id].append(failures)
+        auth_mode = eval_routing.auth_provider_mode(
+            session_env, clean_room_enabled=bool(args.clean_room)
+        )
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
+        futures = {pool.submit(execute, job): job for job in jobs}
+        completed: dict[str, dict[int, tuple[list[str], str | None, dict]]] = {
+            case["id"]: {} for case in cases
+        }
+        auth_failure: eval_routing.EvalAuthUnavailable | None = None
+        try:
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    run_index, case_id, failures, note, stats = future.result()
+                except eval_routing.EvalAuthUnavailable as exc:
+                    auth_failure = exc
+                    for pending in futures:
+                        pending.cancel()
+                    break
+                completed[case_id][run_index] = (failures, note, stats)
+                done += 1
+                print(f"  [{done}/{total}] complete", end="\r", flush=True)
+        finally:
+            # subprocess.run cannot interrupt work already started; pending sessions can still be
+            # cancelled, limiting the outage to at most the configured concurrency.
+            pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
+        try:
+            eval_routing.verify_frozen_plugin(
+                execution_plugin_dir, execution_plugin_identity
+            )
+        except (eval_routing.ProvenanceError, BehavioralCaseError) as exc:
+            print(f"case error after sessions: {exc}", file=sys.stderr)
+            return 2
+        if auth_failure is not None:
+            print(
+                f"\neval aborted: {auth_failure}; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
+
+        # Futures finish nondeterministically; restore submission order before serializing arrays.
+        for case in cases:
+            for run_index in range(args.runs):
+                failures, note, stats = completed[case["id"]][run_index]
+                results[case["id"]].append(failures)
                 if note:
-                    notes[case_id].append(note)
+                    notes[case["id"]].append(note)
                 # Usage is per RUN, None when the transcript carried none — a labeled absence,
                 # never a fabricated zero (the same rule packet_lint applies to unevidenced claims).
                 has_usage = stats["input_tokens"] is not None or stats["output_tokens"] is not None
-                usage[case_id].append(
+                usage[case["id"]].append(
                     {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
                     if has_usage else None
                 )
                 if stats["model"]:
                     observed_models.add(stats["model"])
-                done += 1
-                print(f"  [{done}/{total}] complete", end="\r", flush=True)
     print(" " * 40, end="\r")
 
     print(f"\n{'case':32s} {'verdict':8s} {'pass':>6s}  detail")
@@ -353,14 +1063,36 @@ def main(argv: list[str] | None = None) -> int:
             "models_observed": sorted(observed_models),
             "plugin_dir": "." if Path(args.plugin_dir).resolve() == REPO else str(args.plugin_dir),
             "timeout_s": args.timeout,
+            "concurrency": args.concurrency,
+            "auth_provider": auth_mode,
             # Same rule as the routing runner: isolation is a measurement condition, and two
             # artifacts differing on it are not comparable.
             "clean_room": bool(args.clean_room),
         }
+        try:
+            latest_cases, latest_sources = load_cases_with_sources(args.case)
+            latest_provenance = eval_routing.benchmark_provenance(
+                latest_sources, latest_cases, args.case, args.plugin_dir,
+                evaluator_paths=behavioral_evaluator_paths(),
+            )
+        except eval_routing.ProvenanceError as exc:
+            print(f"provenance error after sessions: {exc}", file=sys.stderr)
+            return 2
+        if not eval_routing._content_provenance_matches(provenance, latest_provenance):
+            print(
+                "provenance error: eval source, selected cases, evaluator, or plugin content "
+                "changed while the batch was running; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "benchmark.json").write_text(
-            json.dumps({"runs_per_case": args.runs, "conditions": conditions, "cases": payload},
-                       indent=2) + "\n",
+            json.dumps({
+                "runs_per_case": args.runs,
+                "conditions": conditions,
+                "provenance": provenance,
+                "cases": payload,
+            }, indent=2) + "\n",
             encoding="utf-8",
         )
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
@@ -368,5 +1100,12 @@ def main(argv: list[str] | None = None) -> int:
     return 0 if passed_cases == len(cases) else 1
 
 
+def _main_entry() -> int:
+    """Run the command from one captured source buffer, including the main runner itself."""
+    if _EXECUTING_EVALUATOR_SOURCE is None:
+        return load_current_evaluator().main()
+    return main()
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_main_entry())

@@ -44,13 +44,14 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # context. Four slots, all unconditional.
     "review-packet": ("changed", "assumptions", "verified", "not verified"),
     # sde-fullstack's own packet is different and must not be conflated with the above: it declares
-    # seven slots but explicitly SCALES — "a small, low-risk diff with no new assumptions and
-    # nothing left unverified earns three lines: Changed / Verified / Check first", and omitting a
-    # slot asserts it is empty. So only those three are guaranteed. Requiring `assumptions` and
-    # `not verified` here produced a false RED against an agent that was correctly compressing
-    # (observed on this suite's third real run) — the mirror of a false green, and just as harmful:
+    # eight slots but explicitly SCALES — "a small, low-risk diff with no new assumptions and
+    # nothing left unverified earns four lines: Changed / Verified / Check first / Learning", and
+    # omitting a slot asserts it is empty. So only those four are guaranteed. Requiring
+    # `assumptions` and `not verified` here produced a false RED against an agent that was correctly
+    # compressing (observed on this suite's third real run) — the mirror of a false green, and just
+    # as harmful:
     # it would train someone to "fix" a component that was following its own contract.
-    "sde-fullstack-packet": ("changed", "verified", "check first"),
+    "sde-fullstack-packet": ("changed", "verified", "check first", "learning"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),
@@ -109,6 +110,70 @@ _HEDGE_RE = re.compile("|".join(HEDGE_PATTERNS), re.IGNORECASE)
 _CLAIM_RE = re.compile("|".join(VERIFICATION_CLAIM_PATTERNS), re.IGNORECASE)
 _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
+LEARNING_CANDIDATE_FIELDS = (
+    "evidence",
+    "scope",
+    "provenance",
+    "learning disposition",
+    "promotion state",
+    "destination",
+    "owner",
+)
+LEARNING_CANDIDATE_FIELD_ORDER = ("learning", *LEARNING_CANDIDATE_FIELDS)
+EXACT_FIELD_LABELS = (
+    "Learning",
+    "Evidence",
+    "Scope",
+    "Provenance",
+    "Learning disposition",
+    "Promotion state",
+    "Destination",
+    "Owner",
+    "Runbook disposition",
+)
+LEARNING_NONE_VALUE = "none — no reusable signal"
+LEARNING_DISPOSITIONS = ("skip", "add", "merge", "supersede", "drop")
+LEARNING_PROVENANCE = ("verified", "sourced", "unverified")
+# scripts/learning_ledger.py:STATE_DISPOSITIONS owns this executable lifecycle contract. This
+# eval-time linter stays standalone instead of importing the ledger and its filesystem machinery,
+# so it deliberately mirrors the map. tests/test_packet_lint.py imports the owner and exhausts the
+# full cross-product; any ledger change must update this mirror and the lifecycle-owner prompts in
+# the same change. On disagreement, the ledger wins and this copy is drift.
+LEARNING_STATE_DISPOSITIONS = {
+    "proposed": frozenset({"add", "merge", "supersede"}),
+    "approved": frozenset({"add", "merge", "supersede"}),
+    "promoted": frozenset({"add", "merge", "supersede"}),
+    "inconclusive": frozenset({"skip"}),
+    "rejected": frozenset({"skip", "drop"}),
+    "retired": frozenset({"skip", "drop", "merge", "supersede"}),
+}
+LEARNING_POST_TRIAGE_STATES = tuple(LEARNING_STATE_DISPOSITIONS)
+LEARNING_MODES = ("intake", "lifecycle-owner")
+# A packet shape has one default because eval callers historically supplied only the shape. The
+# builder preloads self-improve-loop and therefore owns lifecycle triage; an explicit mode remains
+# available for testing another role's Learning block or linting a standalone transcript.
+LEARNING_MODE_BY_SHAPE = {"sde-fullstack-packet": "lifecycle-owner"}
+_ANGLE_METAVARIABLE_RE = re.compile(r"<[^<>\r\n]+>")
+# Angle brackets are not the only way a copied template leaks into a packet. Bare sentinels such
+# as ``TBD`` look non-empty to a structural check and can therefore turn an unfinished handoff
+# into apparently durable evidence. Keep this vocabulary deliberately small and unambiguous: each
+# token is an authoring sentinel, not ordinary uncertainty prose.
+_PLAIN_METAVARIABLE_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])(?:TBD|TBA|TODO|FIXME|PLACEHOLDER)(?![A-Za-z0-9_-])",
+    re.IGNORECASE,
+)
+# These values are syntactically non-empty but semantically empty when they occupy an entire
+# machine-readable field. Match the whole value only: ``Owner: pending`` is unfinished, while
+# ``Evidence: pending jobs reproduce the race`` is substantive evidence and remains valid.
+_SEMANTIC_PLACEHOLDER_RE = re.compile(
+    r"(?:unknown|pending|none|n/a|unassigned)", re.IGNORECASE
+)
+_LEARNING_CANDIDATE_RE = re.compile(
+    r"^candidate\s*(?:\N{EM DASH}|->|:)\s*"
+    r"(?P<observed>.+?)\s*(?:->|\N{RIGHTWARDS ARROW})\s*(?P<expected>.+)$",
+    re.IGNORECASE,
+)
+
 
 def _normalize(line: str) -> str:
     """Strip markdown decoration so a slot heading matches however it was formatted."""
@@ -137,13 +202,268 @@ def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
     return any(line.startswith(slot) for line in normalized_lines)
 
 
-def lint_packet(text: str, shape: str) -> list[str]:
+def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str]]:
+    """Return indexed exact ``Label: value`` lines, tolerating display-only Markdown.
+
+    Prefix matching is intentionally insufficient for Learning: ``Learning curve:`` and
+    ``Learning - none`` must not satisfy a machine-readable closeout merely because normalization
+    makes both begin with the word "learning".
+    """
+    literal_label = re.escape(label)
+    decoration = r"\*\*|__|\*|_|`"
+    pattern = re.compile(
+        r"^\s*(?:>\s*)*(?:(?:[-*+]|\d+[.)])\s+)?(?:#{1,6}\s+)?(?:"
+        rf"(?P<outside>{decoration}){literal_label}(?P=outside)\s*:|"
+        rf"(?P<inside>{decoration}){literal_label}\s*:(?P=inside)|"
+        rf"{literal_label}\s*:"
+        r")\s*(?P<value>.*?)\s*$",
+        re.IGNORECASE,
+    )
+    return [
+        (index, match.group("value").strip())
+        for index, line in enumerate(lines)
+        if (match := pattern.match(line))
+    ]
+
+
+def _literal_field_values(label: str, lines: list[str]) -> list[str]:
+    """Return values from exact ``Label: value`` lines."""
+    return [value for _, value in _literal_field_occurrences(label, lines)]
+
+
+def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
+    """Public exact-label reader shared by behavioral oracles.
+
+    The line index is zero-based and the value excludes display-only Markdown around the label.
+    Callers validate their label vocabulary separately so a typo cannot silently become a new
+    contract field.
+    """
+    return _literal_field_occurrences(label, text.splitlines())
+
+
+def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
+    """Require each declared literal field exactly once with its exact declared value."""
+    findings: list[str] = []
+    for label, exact_value in expected.items():
+        occurrences = literal_field_occurrences(text, label)
+        if len(occurrences) != 1:
+            findings.append(
+                f"{label}: must appear exactly once for exact-field grading; "
+                f"found {len(occurrences)}"
+            )
+            continue
+        actual = occurrences[0][1]
+        if actual != exact_value:
+            findings.append(
+                f"{label}: exact value must be {exact_value!r}; found {actual!r}"
+            )
+    return findings
+
+
+def _is_semantic_placeholder(value: str) -> bool:
+    return _SEMANTIC_PLACEHOLDER_RE.fullmatch(value.strip()) is not None
+
+
+def _has_substantive_token(value: str) -> bool:
+    """Distinguish evidence-bearing prose from punctuation-only unfinished fields."""
+    return re.search(r"[A-Za-z0-9]{2,}", value) is not None
+
+
+def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
+    """Validate Learning:none or the candidate variant authorized for ``learning_mode``."""
+    findings: list[str] = []
+    learning_occurrences = _literal_field_occurrences("learning", lines)
+    if not learning_occurrences:
+        return ["missing literal Learning: closeout; a prefix or dash is not the packet contract"]
+    if len(learning_occurrences) != 1:
+        return ["Learning: must appear exactly once with a non-empty value"]
+    _, value = learning_occurrences[0]
+    if not value:
+        return ["Learning: closeout has no disposition value"]
+
+    if value == LEARNING_NONE_VALUE:
+        present_candidate_fields = [
+            label for label in LEARNING_CANDIDATE_FIELDS
+            if _literal_field_values(label, lines)
+        ]
+        if present_candidate_fields:
+            findings.append(
+                "Learning: none contradicts candidate fields: "
+                + ", ".join(present_candidate_fields)
+            )
+        return findings
+
+    if re.match(r"^none\b", value, re.IGNORECASE):
+        return findings + [
+            f"Learning: no-signal closeout must be exactly `{LEARNING_NONE_VALUE}`"
+        ]
+
+    if _ANGLE_METAVARIABLE_RE.search(value):
+        findings.append(
+            "Learning candidate Learning: contains an unresolved angle-bracket metavariable"
+        )
+    if _PLAIN_METAVARIABLE_RE.search(value):
+        findings.append(
+            "Learning candidate Learning: contains an unresolved plain metavariable"
+        )
+    candidate_match = _LEARNING_CANDIDATE_RE.fullmatch(value)
+    if candidate_match is None:
+        return findings + [
+            "Learning: must be `none` or `candidate — <observed -> expected>`"
+        ]
+    for side in ("observed", "expected"):
+        side_value = candidate_match.group(side)
+        if _is_semantic_placeholder(side_value) or not _has_substantive_token(side_value):
+            findings.append(
+                f"Learning candidate {side} side is a semantic placeholder, not a reusable fact"
+            )
+
+    occurrences_by_label = {
+        label: _literal_field_occurrences(label, lines)
+        for label in LEARNING_CANDIDATE_FIELD_ORDER
+    }
+    field_values: dict[str, str] = {}
+    for label in LEARNING_CANDIDATE_FIELD_ORDER:
+        occurrences = occurrences_by_label[label]
+        if len(occurrences) != 1 or not occurrences[0][1]:
+            findings.append(
+                f"Learning candidate requires exactly one non-empty {label.title()}: field"
+            )
+            continue
+        field_values[label] = occurrences[0][1]
+        if label != "learning" and _ANGLE_METAVARIABLE_RE.search(occurrences[0][1]):
+            findings.append(
+                f"Learning candidate {label.title()}: contains an unresolved angle-bracket "
+                "metavariable"
+            )
+        if label != "learning" and _PLAIN_METAVARIABLE_RE.search(occurrences[0][1]):
+            findings.append(
+                f"Learning candidate {label.title()}: contains an unresolved plain metavariable"
+            )
+        if label in {"evidence", "scope", "destination", "owner"} and (
+            _is_semantic_placeholder(occurrences[0][1])
+            or not _has_substantive_token(occurrences[0][1])
+        ):
+            findings.append(
+                f"Learning candidate {label.title()}: is a semantic placeholder, not evidence"
+            )
+
+    if all(len(occurrences_by_label[label]) == 1 for label in LEARNING_CANDIDATE_FIELD_ORDER):
+        positions = [
+            occurrences_by_label[label][0][0]
+            for label in LEARNING_CANDIDATE_FIELD_ORDER
+        ]
+        expected_positions = list(range(positions[0], positions[0] + len(positions)))
+        if positions != expected_positions:
+            canonical_order = ", ".join(
+                label.title() for label in LEARNING_CANDIDATE_FIELD_ORDER
+            )
+            findings.append(
+                "Learning candidate fields must form one contiguous block in exact order: "
+                + canonical_order
+            )
+
+    provenance = field_values.get("provenance", "")
+    if provenance:
+        provenance_match = re.fullmatch(
+            rf"(?:{'|'.join(LEARNING_PROVENANCE)})\s*"
+            r"(?:\N{EM DASH}|->|:)\s*(?P<detail>\S(?:.*\S)?)",
+            provenance,
+            re.IGNORECASE,
+        )
+        if provenance_match is None:
+            findings.append(
+                "Provenance: must be verified, sourced, or unverified plus non-empty source or "
+                "freshness details"
+            )
+        elif (
+            _is_semantic_placeholder(provenance_match.group("detail"))
+            or not _has_substantive_token(provenance_match.group("detail"))
+        ):
+            findings.append(
+                "Learning candidate Provenance: detail is a semantic placeholder, not a source"
+            )
+
+    disposition = field_values.get("learning disposition", "")
+    disposition_values = "|".join(LEARNING_DISPOSITIONS)
+    if disposition:
+        if learning_mode == "intake" and not re.fullmatch(
+            rf"(?:{disposition_values})\s+\(proposed recommendation\)",
+            disposition,
+            re.IGNORECASE,
+        ):
+            findings.append(
+                "intake Learning disposition: must select one lifecycle value and mark it "
+                "exactly as a (proposed recommendation)"
+            )
+        elif learning_mode == "lifecycle-owner" and not re.fullmatch(
+            rf"(?:{disposition_values})", disposition, re.IGNORECASE
+        ):
+            findings.append(
+                "lifecycle-owner Learning disposition: must be one accepted lifecycle value "
+                "without the intake-only proposed recommendation marker"
+            )
+
+    promotion_state = field_values.get("promotion state", "")
+    if promotion_state:
+        if learning_mode == "intake" and not re.fullmatch(
+            "quarantined", promotion_state, re.IGNORECASE
+        ):
+            findings.append(
+                "intake Learning candidate must use Promotion state: quarantined"
+            )
+        elif learning_mode == "lifecycle-owner" and not re.fullmatch(
+            "|".join(LEARNING_POST_TRIAGE_STATES), promotion_state, re.IGNORECASE
+        ):
+            findings.append(
+                "lifecycle-owner Learning candidate must use a post-triage Promotion state: "
+                + ", ".join(LEARNING_POST_TRIAGE_STATES)
+            )
+
+    if learning_mode == "lifecycle-owner" and disposition and promotion_state:
+        normalized_disposition = disposition.casefold()
+        normalized_state = promotion_state.casefold()
+        allowed = LEARNING_STATE_DISPOSITIONS.get(normalized_state)
+        if (
+            normalized_disposition in LEARNING_DISPOSITIONS
+            and allowed is not None
+            and normalized_disposition not in allowed
+        ):
+            findings.append(
+                f"lifecycle-owner disposition {normalized_disposition!r} is not valid for "
+                f"Promotion state {normalized_state!r}; allowed: {', '.join(sorted(allowed))}"
+            )
+    return findings
+
+
+def _require_learning_mode(learning_mode: str) -> str:
+    if learning_mode not in LEARNING_MODES:
+        raise KeyError(
+            f"unknown Learning mode {learning_mode!r}; known: {', '.join(LEARNING_MODES)}"
+        )
+    return learning_mode
+
+
+def lint_learning_closeout(text: str, learning_mode: str) -> list[str]:
+    """Lint only the Learning block, without requiring an unrelated agent packet shape."""
+    return _lint_learning_closeout(text.splitlines(), _require_learning_mode(learning_mode))
+
+
+def lint_packet(
+    text: str, shape: str, *, learning_mode: str | None = None
+) -> list[str]:
     """Return a list of findings. Empty means the packet is compliant.
+
+    ``learning_mode`` distinguishes an intake-only handoff from a lifecycle owner's triaged
+    result. When omitted, the packet shape selects its canonical role mode.
 
     Findings are strings so a failing eval prints something a human can act on directly.
     """
     if shape not in SHAPES:
         raise KeyError(f"unknown packet shape {shape!r}; known: {', '.join(sorted(SHAPES))}")
+    if learning_mode is None:
+        learning_mode = LEARNING_MODE_BY_SHAPE.get(shape, "intake")
+    learning_mode = _require_learning_mode(learning_mode)
 
     findings: list[str] = []
     lines = text.splitlines()
@@ -154,6 +474,9 @@ def lint_packet(text: str, shape: str) -> list[str]:
     for slot in SHAPES[shape]:
         if not _slot_present(slot, normalized):
             findings.append(f"missing required packet slot: {slot!r}")
+
+    if "learning" in SHAPES[shape]:
+        findings.extend(lint_learning_closeout(text, learning_mode))
 
     for index, line in enumerate(lines):
         stripped = line.strip()
@@ -169,7 +492,11 @@ def lint_packet(text: str, shape: str) -> list[str]:
 
         # 3. Verification claims without evidence nearby. Missing evidence FAILS; it is never
         #    assumed correct.
-        if _CLAIM_RE.search(stripped):
+        # A canonical Learning `Provenance: verified — <source>` line is an enum plus its source,
+        # not a free-standing "verified" completion claim. Its shape is validated above; grading
+        # the enum again as prose would reject every honest candidate handoff.
+        is_learning_provenance = bool(_literal_field_values("provenance", [line]))
+        if _CLAIM_RE.search(stripped) and not is_learning_provenance:
             if not _EVIDENCE_RE.search(_window(lines, index)):
                 findings.append(
                     f"line {index + 1}: verification claim with no command or output cited: "
@@ -183,6 +510,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("path", nargs="?", help="file containing the packet (default: stdin)")
     parser.add_argument("--shape", default="review-packet", help="packet shape to require")
+    parser.add_argument(
+        "--learning-mode",
+        choices=LEARNING_MODES,
+        help="override the shape's Learning mode (intake or lifecycle-owner)",
+    )
     parser.add_argument("--list-shapes", action="store_true", help="print known shapes and exit")
     parser.add_argument("--json", action="store_true", help="emit findings as JSON on stdout")
     args = parser.parse_args(argv)
@@ -194,7 +526,7 @@ def main(argv: list[str] | None = None) -> int:
 
     text = Path(args.path).read_text(encoding="utf-8") if args.path else sys.stdin.read()
     try:
-        findings = lint_packet(text, args.shape)
+        findings = lint_packet(text, args.shape, learning_mode=args.learning_mode)
     except KeyError as exc:
         print(f"usage error: {exc}", file=sys.stderr)
         return 2

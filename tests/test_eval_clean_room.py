@@ -103,6 +103,20 @@ class CleanEnvironmentTest(unittest.TestCase):
                     self.assertNotIn("CLAUDE_CODE_DISABLE_POLICY_SKILLS", env)
                     self.assertEqual("1", env["CLAUDE_CODE_SKIP_PROMPT_HISTORY"])
 
+    def test_auth_provider_mode_records_kind_without_secret_value(self) -> None:
+        mode = eval_clean_room.auth_provider_mode({
+            "ANTHROPIC_API_KEY": "test-super-secret",
+            "CLAUDE_CODE_USE_VERTEX": "1",
+        })
+        self.assertEqual({"provider": "vertex", "auth": "api-key-env"}, mode)
+        self.assertNotIn("test-super-secret", json.dumps(mode))
+
+    def test_clean_room_without_environment_auth_records_credential_copy(self) -> None:
+        self.assertEqual(
+            {"provider": "anthropic", "auth": "credentials-file-copy"},
+            eval_clean_room.auth_provider_mode({}, clean_room=True),
+        )
+
 
 class RunValidationTest(unittest.TestCase):
     def event(self, *, error: bool = False, result: str = "done") -> str:
@@ -133,6 +147,28 @@ class RunValidationTest(unittest.TestCase):
         trace = '{"type":"system","subtype":"authentication_failed"}'
         with self.assertRaises(eval_clean_room.AuthUnavailable):
             eval_clean_room.validate_completed_run(trace, 1)
+
+    def test_structured_oauth_refresh_failure_is_auth_unavailable(self) -> None:
+        trace = "\n".join([
+            json.dumps({
+                "type": "assistant",
+                "error": "authentication_failed",
+                "message": {"content": []},
+            }),
+            json.dumps({
+                "type": "result",
+                "is_error": True,
+                "terminal_reason": "api_error",
+                "result": "Failed to authenticate: OAuth session expired and could not be refreshed",
+            }),
+        ])
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.validate_completed_run(trace, 1, "")
+
+    def test_auth_failure_markers_are_case_insensitive(self) -> None:
+        trace = self.event(error=True, result="FAILED TO AUTHENTICATE: OAuth Session Expired")
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.validate_completed_run(trace, 1, "")
 
     def test_successful_run_mentioning_auth_text_is_not_an_outage(self) -> None:
         event = eval_clean_room.validate_completed_run(

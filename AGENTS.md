@@ -30,6 +30,8 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
+| `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; it binds exact source, frozen plugin execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
+| `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
 | `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file. |
 | `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
@@ -152,6 +154,11 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 `tests/test_validate_fleet.py` that copies the repo and breaks the one link — plus a test that
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
+
+**Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
+wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
+before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
+disposition.
 
 ## Opening a pull request
 

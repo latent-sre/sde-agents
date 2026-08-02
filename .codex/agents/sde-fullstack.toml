@@ -14,7 +14,7 @@ Host adapter contract:
 - This profile requests `sandbox_mode = "workspace-write"` for ordinary local
   workspace changes. Any narrower document-only, test-only, approval, or
   live-effect boundary remains cooperative and must be stated honestly.
-- Claude's source profile preloads `$backend-craft`, `$frontend-craft`, `$code-craft`, `$root-cause`. Invoke every listed
+- Claude's source profile preloads `$backend-craft`, `$frontend-craft`, `$code-craft`, `$root-cause`, `$self-improve-loop`. Invoke every listed
   installed skill before following the role; custom-agent TOML does not package
   Claude's `skills:` frontmatter.
 
@@ -126,8 +126,27 @@ Your caller reviews your work — aim their attention:
 - **Not verified**: what you couldn't check, and why.
 - **Check first**: the 2–3 places most likely to be wrong or most deserving of human eyes.
 - **Findings response** (required whenever your caller routed findings to you): one line per finding — **fixed** (with its proof), **pushed back** (with the counter-evidence), or **question** (exactly what you need). This slot survives packet compression.
+- **Learning**: end every non-trivial task with `Learning: none — no reusable signal`, or,
+  after the preloaded loop runs, a compact lifecycle-owner block whose literal lines are
+  `Learning: candidate — <observed -> expected>`,
+  `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
+  `Provenance: <verified|sourced|unverified> — <source and freshness>`,
+  `Learning disposition: <skip|add|merge|supersede|drop>`,
+  `Promotion state: <proposed|approved|promoted|rejected|inconclusive|retired>`,
+  `Destination: <owned artifact or handoff>`, and `Owner: <authorized owner>`. Choose one accepted
+  disposition and one separate post-triage state. Do not add `(proposed recommendation)` or use
+  `quarantined`; those mark intake-only handoffs from roles without the full loop. A lifecycle
+  result never expands implementation or approval authority. Silence is not a disposition.
 
-**Scale the packet to the change.** A small, low-risk diff with no new assumptions and nothing left unverified earns three lines — **Changed / Verified / Check first** — and stops. The full packet is for work where the other slots have real content; padding an empty slot ("Assumptions: none") is noise, and noise trains your caller to skim. Omitting a slot asserts it is empty — if it wasn't, that's a packet defect, not brevity.
+For lifecycle-owner candidates, valid state → disposition pairs are
+`proposed|approved|promoted → add|merge|supersede`, `inconclusive → skip`,
+`rejected → skip|drop`, and `retired → skip|drop|merge|supersede`. Never emit another pair.
+
+**Scale the packet to the change.** A small, low-risk diff with no new assumptions and nothing left
+unverified earns four lines — **Changed / Verified / Check first / Learning** — and stops. The
+full packet is for work where the other slots have real content; padding an empty slot
+("Assumptions: none") is noise, and noise trains your caller to skim. Omitting a slot asserts it is
+empty — if it wasn't, that's a packet defect, not brevity.
 
 ### Worked example (the shape, compressed)
 
@@ -150,6 +169,8 @@ Your caller reviews your work — aim their attention:
 >
 > **Check first**: (1) the backoff bounds — 3 retries × 5s may be too short for a NAS that is slow to
 > wake rather than down; (2) `backup.py:103`, the only place the exit code is set.
+>
+> **Learning**: none — no reusable signal
 
 ## Ladder position
 

@@ -1,0 +1,61 @@
+{
+  "applicability": "Benchmarks written by the repository routing and behavioral evaluation runners.",
+  "candidate_id": "lc_25c46ab20326463bb428c32459591127",
+  "created_at": "2026-08-01T21:22:21.284260Z",
+  "destination": "scripts/eval_routing.py and scripts/eval_behavioral.py",
+  "disposition": "add",
+  "evidence": {
+    "environment": "claude-code-2.1.220-on-windows",
+    "provenance": "verified",
+    "revision": "038e30257b51f6f9e24104a3b4b082b4ca876008",
+    "source_kind": "independent-review",
+    "source_reference": "independent-diff-review-2026-08-01"
+  },
+  "expected_behavior": "Stored evaluation artifacts bind results to source, selection, and runtime plugin content and refuse output after mid-run drift.",
+  "fingerprint": "f271d1a78078831d2eb45362e1ac1a840190f82339ba532f9d9c19f46f2e023e",
+  "freshness": {
+    "as_of": "2026-08-01T21:22:21.284260Z",
+    "review_at": "2026-08-31T21:22:21.284260Z"
+  },
+  "observation": "Stored evaluation artifacts did not identify exact evaluation bytes, selected case definitions, and runtime plugin bytes.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "A reproducible evidence-integrity gap has a bounded implementation and regression tests, but promotion still requires independent verification and merge approval.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "claude-code-2.1.220-on-windows",
+        "observed_at": "2026-08-01T21:22:21.284260Z",
+        "provenance": "verified",
+        "revision": "038e30257b51f6f9e24104a3b4b082b4ca876008",
+        "source_kind": "independent-review",
+        "source_reference": "independent-diff-review-2026-08-01"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-01T21:22:21.284260Z",
+    "policy": "review-or-expire"
+  },
+  "schema_version": 1,
+  "scope": "Fleet routing and behavioral benchmark artifacts.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-01T21:22:21.284260Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-01T21:22:21.486102Z",
+      "destination": "scripts/eval_routing.py and scripts/eval_behavioral.py",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "A reproducible evidence-integrity gap has a bounded implementation and regression tests, but promotion still requires independent verification and merge approval.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-01T21:22:21.486102Z"
+}

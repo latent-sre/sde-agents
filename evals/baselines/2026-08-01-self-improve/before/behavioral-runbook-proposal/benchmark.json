@@ -1,0 +1,40 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "clean_room": true
+  },
+  "cases": [
+    {
+      "id": "self-improve-runbook-proposal-only",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "missing required pattern: '(propos|candidate|defer)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1768
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3251
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2845
+        }
+      ]
+    }
+  ]
+}

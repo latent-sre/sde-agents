@@ -1,0 +1,111 @@
+# Retro protocol — task, session, cross-task, round, and upgrade
+
+Read when the learning scan finds a trigger or the operator asks for a retrospective. Retros are
+event-triggered, not calendar claims: an agent cannot promise background work after its session ends.
+Every candidate flows through [discovery-routing.md](discovery-routing.md).
+
+## Task micro-retro
+
+Run after a task needed a correction, retry, review-fix round, failed verification, or abandoned
+approach:
+
+1. Read the task's actual evidence: corrections, commands and results, review findings, and changed
+   approaches. Do not reconstruct friction from a polished summary.
+2. State expected versus observed behavior and whether the cause is known. Unknown cause exits to
+   `sde-agents:root-cause`.
+3. Normalize the candidate into one scoped, testable rule. Separate repeated attempts caused by one
+   defect from independent recurrences.
+4. Inventory the current owner artifacts, choose one disposition, and name one destination.
+5. Promote at most one lesson inside the granted scope. Return other candidates as explicit
+   proposals or drop them with reasons; do not bury them in prose.
+
+## Session retro
+
+Use on an explicit request such as “what did this task miss?” or “capture the lessons learned.”
+
+- Scan for operator corrections, unexpected tool behavior, rejected approaches, wrong or missing
+  docs, verification gaps, scope surprises, and discoveries that never reached an owner.
+- Cluster by normalized behavior and boundary, not vocabulary. One anecdote remains quarantined
+  unless it is a verified material safety, authority, or deterministic-contract failure.
+- For each candidate, report evidence, disposition, destination, owner, and missing promotion gate.
+- Ask the meta-question: **which material discovery fits no destination or verifier?** That gap is a
+  candidate change to this lifecycle, not permission to improvise a new category silently.
+
+## Cross-task retro
+
+Use when the caller supplies several task packets, review rounds, incidents, or an evidence ledger.
+Do not claim access to tasks that are not present.
+
+1. Bind each occurrence to its artifact/revision, date, environment, and observed result.
+2. Check independence: several retries in one environment may be one failure, while the same cause
+   across different tasks, models, or operators is stronger transfer evidence.
+3. Compare rates and costs where available; do not turn a tiny delta inside run-to-run variance into
+   a success claim.
+4. Look for both missing controls and harmful existing guidance. The result may be merge,
+   supersede, or drop rather than add.
+5. Select at most one promotion candidate for the current change. Hand off the remainder with their
+   evidence intact.
+
+## Round or release retro
+
+Run when a bounded improvement round or release finishes. In addition to the cross-task steps, ask:
+
+- Which candidate improved targeted cases but regressed broad, negative, or transfer cases?
+- Which rejected candidate would otherwise be rediscovered?
+- Which manual check recurred enough to become deterministic?
+- Which runbook step was invented or found stale, and did it reach the canonical owner?
+- Which retained lesson is now redundant, over-specific, or unowned?
+- Which conclusion was tested only by its author or only against its training examples?
+- Which discovery did the routing table fail to classify?
+
+The round is not “learning complete” merely because it produced more instructions. Report
+quarantined, proposed, approved, promoted, rejected, inconclusive, and retired candidates
+separately.
+
+## Provider, model, or CLI upgrade retro
+
+Run when behavior or an adopted version changes:
+
+1. Re-check perishable facts against current official, version-specific sources.
+2. Exercise the exact installed/generated artifacts under pinned conditions.
+3. Ask what the upgrade made obsolete: workarounds, limitations, thresholds, or model-specific
+   instructions may need supersede or drop.
+4. Keep official contract evidence separate from upstream implementation and local observations;
+   call out disagreement rather than blending it away.
+5. Record the new applicability boundary and the next recheck trigger.
+
+## Maintenance and subtraction
+
+Maintenance runs when a lesson is used, contradicted, reviewed in a completed round, or affected by
+an upgrade. Work item by item:
+
+- **merge** duplicate rules into their canonical owner;
+- **supersede** stale facts with dated evidence and preserved lineage;
+- **drop** rules that are wrong, harmful, unused because they do not transfer, or no longer needed;
+- re-run the admission checks before an old lesson survives a contradiction;
+- keep rejected-candidate evidence long enough to avoid repeating the same failed optimization.
+
+Current repository and runtime evidence outrank the retained lesson. Never rewrite a whole store to
+make it look tidy; small reviewable deltas preserve provenance and make rollback possible.
+
+## Retro output
+
+```text
+Retro scope: <task/session/cross-task/round/upgrade and evidence available>
+Signals: <corrections, failures, stale guidance, discoveries>
+Candidates: <normalized candidate -> occurrence evidence>
+Learning: candidate — <selected observed -> expected divergence>
+Evidence: <occurrences and exact revision/version/environment>
+Scope: <applicability and exclusions>
+Provenance: <verified/sourced/unverified, source, and freshness>
+Learning disposition: <skip/add/merge/supersede/drop>
+Promotion state: <proposed/approved/promoted/rejected/inconclusive/retired>
+Destination: <exact artifact>
+Owner: <authorized owner>
+Promotion evidence: <targeted, regression/adverse, fresh evaluator, exact artifact>
+Residue: <each other candidate -> disposition + promotion state + destination/owner/reason>
+```
+
+`quarantined` is not a full-retro outcome: it is the intake state before the retro chooses a
+disposition. No recurring or material signal means `Learning: none — no reusable signal` and the
+retro ends. That is disciplined subtraction, not a failed retrospective.

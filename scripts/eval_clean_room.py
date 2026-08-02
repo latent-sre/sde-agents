@@ -54,7 +54,23 @@ CONTAMINATING_ENV_VARS = (
     "CLAUDE_CODE_TASK_LIST_ID",
     "CLAUDE_CODE_TEAM_NAME",
 )
-AUTH_MARKERS = ("authentication_failed", "Not logged in")
+AUTH_MARKERS = (
+    "authentication_failed",
+    "not logged in",
+    "failed to authenticate",
+    "oauth session expired",
+)
+
+PROVIDER_ENV_VARS = {
+    "bedrock": ("CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_ANTHROPIC_AWS"),
+    "vertex": ("CLAUDE_CODE_USE_VERTEX",),
+    "foundry": (
+        "CLAUDE_CODE_USE_FOUNDRY",
+        "ANTHROPIC_FOUNDRY_API_KEY",
+        "ANTHROPIC_FOUNDRY_AUTH_TOKEN",
+    ),
+    "mantle": ("CLAUDE_CODE_USE_MANTLE",),
+}
 
 
 class AuthUnavailable(RuntimeError):
@@ -71,6 +87,45 @@ def user_config_dir() -> Path:
 
 def has_environment_auth() -> bool:
     return any(os.environ.get(name) for name in AUTH_ENV_VARS)
+
+
+def auth_provider_mode(env: dict[str, str] | None = None, *, clean_room: bool = False) -> dict:
+    """Describe authentication/provider selection without copying credential values.
+
+    This is measurement metadata, not an authentication preflight. Claude can resolve credentials
+    inside its own configuration or a cloud provider chain, so an absent environment signal is
+    deliberately labeled rather than guessed. Multiple provider selectors are surfaced as
+    ambiguous instead of silently choosing one.
+    """
+    environment = os.environ if env is None else env
+    providers = sorted(
+        provider
+        for provider, names in PROVIDER_ENV_VARS.items()
+        if any(environment.get(name) for name in names)
+    )
+    provider = providers[0] if len(providers) == 1 else (
+        "anthropic" if not providers else f"ambiguous:{','.join(providers)}"
+    )
+
+    if any(environment.get(name) for name in (
+        "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN"
+    )):
+        auth = "oauth-token-env"
+    elif any(environment.get(name) for name in (
+        "ANTHROPIC_API_KEY", "ANTHROPIC_FOUNDRY_API_KEY"
+    )):
+        auth = "api-key-env"
+    elif any(environment.get(name) for name in (
+        "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_FOUNDRY_AUTH_TOKEN"
+    )):
+        auth = "auth-token-env"
+    elif providers:
+        auth = "provider-chain-env"
+    elif clean_room:
+        auth = "credentials-file-copy"
+    else:
+        auth = "cli-config-or-platform-chain"
+    return {"provider": provider, "auth": auth}
 
 
 def require_credentials() -> Path:
@@ -140,6 +195,25 @@ def result_event(transcript: str) -> dict | None:
     return result
 
 
+def raise_if_auth_failed(transcript: str, returncode: int, stderr: str = "") -> None:
+    """Raise AuthUnavailable when this failed CLI run carries an authentication signature.
+
+    This is narrower than ``validate_completed_run`` so routing can reuse the classification
+    without discarding its intentional measurement case: a non-error result event paired with a
+    non-zero CLI exit. It keys off the run's own stream; a separate auth-status preflight can be
+    stale relative to the API request.
+    """
+    event = result_event(transcript)
+    # Routing deliberately keeps a completed, non-error result as a measurement even when the CLI
+    # process exits non-zero afterward. Do not reclassify the model's successful result text or
+    # accompanying stderr as an auth outage merely because those strings mention authentication.
+    if event is not None and not event.get("is_error"):
+        return
+    evidence = "\n".join((json.dumps(event or {}), stderr or "", transcript or "")).casefold()
+    if any(marker in evidence for marker in AUTH_MARKERS):
+        raise AuthUnavailable("Claude authentication failed during the eval; refresh /login and rerun")
+
+
 def validate_completed_run(transcript: str, returncode: int, stderr: str = "") -> dict:
     """Return the successful result event or raise RunnerFailed/AuthUnavailable.
 
@@ -148,16 +222,9 @@ def validate_completed_run(transcript: str, returncode: int, stderr: str = "") -
     """
     event = result_event(transcript)
     event_text = json.dumps(event or {})
-    # A run that already failed is classified by scanning everything the CLI said, not only the
-    # result event: an auth failure can exit non-zero before any result event is emitted, or land
-    # only in stderr/transcript, and mislabeling it RunnerFailed erases the very distinction this
-    # helper exists to draw. Successful runs are never scanned — a model quoting "Not logged in"
-    # in its answer is a measurement, not an outage.
-    failed = returncode != 0 or event is None or bool(event.get("is_error"))
-    if failed and any(
-        marker in text for text in (event_text, stderr or "", transcript or "") for marker in AUTH_MARKERS
-    ):
-        raise AuthUnavailable("Claude authentication failed during the eval; refresh /login and rerun")
+    # Keep auth classification reusable by runners with different completion semantics rather than
+    # duplicating marker scans at each call site.
+    raise_if_auth_failed(transcript, returncode, stderr)
     if returncode != 0:
         raise RunnerFailed(f"Claude exited {returncode}: {(stderr or '')[:180]}")
     if event is None:
