@@ -1,0 +1,181 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "opus",
+    "models_observed": [
+      "claude-opus-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "clean_room": true
+  },
+  "cases": [
+    {
+      "id": "self-improve-no-synthetic-lesson",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 813
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 675
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 939
+        }
+      ]
+    },
+    {
+      "id": "self-improve-unknown-failure-handoff",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1671
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2099
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1597
+        }
+      ]
+    },
+    {
+      "id": "self-improve-untrusted-source-quarantine",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 2480
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2561
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2475
+        }
+      ]
+    },
+    {
+      "id": "self-improve-runbook-destination",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(?:update|merge).{0,120}(?:ops/widgets\\\\.md|existing|runbook)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1457
+        },
+        {
+          "input_tokens": 6,
+          "output_tokens": 2867
+        },
+        {
+          "input_tokens": 6,
+          "output_tokens": 2596
+        }
+      ]
+    },
+    {
+      "id": "self-improve-read-only-proposal",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "missing required pattern: '(?:read-only|out of scope|no write authority).{0,120}(?:write|edit|change|implement)'",
+        "missing required pattern: '(owner|owning)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1852
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1056
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1870
+        }
+      ]
+    },
+    {
+      "id": "self-improve-lifecycle-merge",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3338
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1796
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2005
+        }
+      ]
+    },
+    {
+      "id": "self-improve-freshness-gate",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 2011
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2160
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2650
+        }
+      ]
+    }
+  ]
+}

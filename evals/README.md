@@ -48,6 +48,11 @@ the narrowing rare and visible: it is a declared exemption, the runner prints th
 actually used, and every name in it must be a cluster member (a typo would forbid nothing and pass
 vacuously).
 
+The runner rejects any polarity other than literal `positive` or `negative`, a positive case with
+no valid `expect_fires` member, an explicitly empty or invalid negative target set, and a threshold
+outside `(0, 1]`. These are configuration errors, not low scores: each could otherwise make a case
+pass without testing the declared routing boundary.
+
 ## Running
 
 The runner takes **one cluster file per invocation**, and defaults to `prompt-tooling.json` when
@@ -81,10 +86,18 @@ child. This silently invalidated a comparison here: two runs of `craft-vs-fullst
 differ by model tier were both sonnet, so their near-identical results said nothing about the tier.
 
 Every `benchmark.json` therefore records a `conditions` block — `cli_version`, `model_requested`,
-`models_observed` (read off the transcripts, i.e. what actually ran), `timeout_s`, and
-`threshold`. A benchmark without it is
-not a baseline: it cannot state what it measured. If a single run mixes models, the runner says so
-loudly and that artifact should not be treated as one anchor.
+`models_observed` (read off the transcripts, i.e. what actually ran), `timeout_s`, `threshold`,
+concurrency, Python runtime, and non-secret authentication/provider mode. Its provenance separately
+hashes the exact eval definitions, selected cases, plugin under test, and executing evaluator and
+grader files. Both runners self-bootstrap from one checked source buffer and compile imported
+graders from likewise registered buffers, so those hashes name what executed rather than a later
+read of the same paths. Provenance schema v3 executes a private copy of the identified plugin bytes,
+so an A -> B -> A edit to the source checkout cannot make concurrent sessions load mixed content
+while leaving equal endpoint hashes. Persistent mutation of the private snapshot aborts the artifact. A
+same-user session can transiently mutate and restore that snapshot unless the host sandbox denies
+writes; endpoint hashing does not claim to detect that, so host write isolation remains part of the
+trust boundary. A benchmark without these identities is not a baseline: it cannot state what it
+measured. If a single run mixes models, the runner also says so loudly.
 
 ### `INCONCLUSIVE` is not a failure
 
@@ -94,11 +107,13 @@ reported `INCONCLUSIVE` rather than failed. A measurement failure and a routing 
 different facts, and conflating them sends you to audit descriptions when the problem is the clock.
 When you see it, raise `--timeout` and re-run those cases; they are evidence in neither direction.
 
-The test is usability, not silence. A session that reached its `result` event **is** graded even if
-the CLI then exited non-zero — it routed somewhere, possibly off the fleet entirely, and that is a
-real negative sample and a real positive miss. Dropping those would delete exactly the wrong-route
-evidence and could let a mostly-misrouting positive pass on its one surviving run. Runs graded
-despite trouble are listed in the output and kept in `benchmark.json` as `notes`.
+The test is usability, not silence. A session that reached a non-error `result` event **is** graded
+for routing even if the CLI then exited non-zero — it routed somewhere, possibly off the fleet
+entirely, and that is a real negative sample and a real positive miss. A structured error result is
+never a no-route sample; a component firing observed before that error may remain explicitly
+labeled partial evidence. Behavioral assertions are stricter: they require exit zero and a final
+non-error result. Authentication failure aborts the whole batch with exit 2 and writes no benchmark.
+These rules prevent quota, API, runner, or expired-session text from becoming a false green.
 
 The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
 longer than that before its first tool call, so **the timeout and the model are one decision** —
@@ -115,8 +130,9 @@ directory holding only credentials (`scripts/eval_clean_room.py`) and is recorde
 against each other. The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
 to also write a `benchmark.json` there for before/after diffing. Exit codes separate the two things
 you would do about them — `0` all passed, `1` a case failed (a routing verdict to investigate), `3`
-nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage
-error. You *can* gate on non-zero — but see the caveat.
+nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage or
+authentication error for which no benchmark was written. You *can* gate on non-zero — but see the
+caveat.
 
 ## How to read the results, and the caveat
 
@@ -147,12 +163,31 @@ python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
-plus literal must-match / must-not-match patterns per case. Twenty-one contracts are seeded. They
-cover packet completeness, reviewer approval boundaries, adversarial embedded instructions,
-live-change tier gates, incident and restore behavior, architecture handoffs, verification
-isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent validation.
+including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
+five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
+patterns per case. Forty-six contracts are seeded. They cover packet completeness, semantic
+Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
+instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
+learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
+verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
+validation.
 The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
 inventory.
+
+Behavioral documents are exact schemas, validated both by the runner before any session and by the
+ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
+wrongly typed lists, unknown components or denied-tool names, unqualified agent names, invalid
+packet modes or shapes, malformed or non-substantive positive regexes, and a case without exactly
+one non-empty `expect_fires` XOR `expect_all_fires` contract, an explicit runtime-tool allowlist,
+and a positive semantic output oracle are configuration errors. Typed `exact_fields` assertions
+require one literal label with one exact value; a matching substring or duplicate conflicting line
+cannot satisfy them. A
+`runbook_required_gaps` list additionally binds a proposal case to the exact prompt-declared gap
+set; every gap must have its corresponding closed-vocabulary verification, and missing owner or
+inventory evidence cannot coexist with an invented concrete owner or path. Learning candidate
+blocks likewise reject unresolved or punctuation-only values and provenance without
+source/freshness detail. Runbook paths reject traversal, trailing-dot aliases, and Windows reserved
+device names. These failures exit before model cost can produce a misleading benchmark.
 
 The packet linter deliberately **inverts** the scoring most self-evaluation tools use: honest
 labeled uncertainty (`[unverified] I could not check X`) passes, while a confident "tests pass" with
@@ -165,16 +200,24 @@ not hold (and a case with *no* runs fails rather than passing vacuously — `--r
 every contract green having started nothing). Same manual-and-on-demand posture, and same reason —
 real sessions, real cost, real variance.
 
-Two case fields keep the measurement honest, both added after review found the suite could pass
-without measuring what it claimed:
+Three case fields keep the measurement honest, added after review found the suite could pass
+without measuring what it claimed. Every full case declares exactly one of the first two:
 
 - **`expect_fires`** — the component whose contract is under test must actually have been invoked,
   read off the transcript with the same detection the routing suite uses. Without it, the main
   session can satisfy a packet shape or a keyword while the component never runs.
+- **`expect_all_fires`** — every named component must be observed. Use this for composition
+  contracts where an any-of assertion could pass after invoking only one half of the workflow.
+- **`allowed_tools`** — always passed through `--tools`, including an explicit empty value that
+  disables all tools. Planning-only skill cases allow only `Skill`; reasoning-only pinned agents
+  allow none; the three scratch build/verification cases allow only `Bash` and `Write`. Names are
+  validated against the CLI's full adopted runtime vocabulary, not merely the smaller fleet grant
+  set, so alternate built-ins such as `PowerShell` cannot arrive by default.
 - **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a
-  destructive action. The tier-gate case is the reason: it must never be able to perform the apply
-  it exists to prove was refused, so it names a non-existent path and is denied write and shell
-  tools. An eval that can cause the incident it tests for is not a test.
+  destructive action after the name is validated against the complete mirrored CLI runtime-tool
+  vocabulary, and forbidden from overlapping `allowed_tools`. It is defense in depth around the
+  positive allowlist. The tier-gate case is the reason: it must never be able to perform the apply
+  it exists to prove was refused. An eval that can cause the incident it tests for is not a test.
 
 ## Relationship to `claude plugin eval`
 
@@ -185,7 +228,7 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Nine clusters are seeded — every overlap this README names, plus the altitude,
+Ten clusters are seeded — every overlap this README names, plus the altitude,
 simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
@@ -199,6 +242,7 @@ simple-stays-simple, and read-only-investigation seams:
 | `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
 | `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
 | `retro-boundary.json` | self-improve-loop, postmortem | non-incident retros and lesson routing vs the resolved-incident write-up; "retro"/"postmortem" vocabulary collisions and a live outage must reach neither |
+| `continuous-improvement.json` | self-improve-loop, runbook, postmortem, root-cause, prompt-craft, prompt-engineer | learning intake, runbook-gap routing, lifecycle decisions, and negative boundaries against diagnosis, direct authoring, incidents, prompt repair, and ordinary builds |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases

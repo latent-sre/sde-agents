@@ -534,6 +534,278 @@ class PluginWiringTests(unittest.TestCase):
         # The positive control. Without it, every test below could pass for the wrong reason.
         self.assertEqual([], self._issues_after(lambda _: None))
 
+    def test_behavioral_assertion_typo_fails_the_ordinary_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["cases"][0]["must_macth"] = ["silent typo"]
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("must_macth" in issue for issue in issues), issues)
+
+    def test_behavioral_case_without_semantic_oracle_fails_the_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = document["cases"][1]
+            case.pop("must_match", None)
+            case.pop("packet_shape", None)
+            case.pop("packet_learning_mode", None)
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("semantic output oracle" in issue for issue in issues), issues)
+
+    def test_behavioral_invalid_regex_and_duplicate_id_fail_the_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["cases"][1]["id"] = document["cases"][0]["id"]
+            document["cases"][1]["must_match"] = ["("]
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("duplicated" in issue for issue in issues), issues)
+        self.assertTrue(any("valid regex" in issue for issue in issues), issues)
+
+    def test_behavioral_fire_contract_and_agent_namespace_fail_the_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = document["cases"][0]
+            case.pop("expect_fires")
+            case["agent"] = "sde-fullstack"
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("component-fire contract" in issue for issue in issues), issues)
+        self.assertTrue(any("plugin-qualified" in issue for issue in issues), issues)
+
+    def test_behavioral_denied_tool_typo_and_empty_positive_regex_fail_the_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = document["cases"][0]
+            case["disallowed_tools"] = ["BsaH"]
+            case["must_match"] = [".*"]
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("runtime tool" in issue and "BsaH" in issue for issue in issues), issues)
+        self.assertTrue(any("matches the empty string" in issue for issue in issues), issues)
+
+    def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
+        from scripts import eval_behavioral as behavioral_bootstrap
+
+        behavioral = behavioral_bootstrap.load_current_evaluator()
+        self.assertEqual(validate_fleet.RUNTIME_TOOLS, behavioral.RUNTIME_TOOLS)
+
+    def test_behavioral_allowed_tools_are_required_typed_and_nonoverlapping(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["cases"][0].pop("allowed_tools")
+            document["cases"][1]["allowed_tools"] = ["PwerShell"]
+            document["cases"][2]["allowed_tools"] = ["Bash"]
+            document["cases"][2]["disallowed_tools"] = ["Bash"]
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("allowed_tools" in issue and "required" in issue for issue in issues), issues)
+        self.assertTrue(any("PwerShell" in issue and "runtime tool" in issue for issue in issues), issues)
+        self.assertTrue(any("overlap" in issue and "Bash" in issue for issue in issues), issues)
+
+    def test_behavioral_vacuous_positive_regexes_fail_the_fleet_gate(self) -> None:
+        for pattern in (".", r"\S", r"\b", r"[\s\S]", "(?=x)", ".{1}"):
+            with self.subTest(pattern=pattern):
+                def mutate(repo: Path, pattern: str = pattern) -> None:
+                    path = repo / "evals" / "behavioral" / "contracts.json"
+                    document = json.loads(path.read_text(encoding="utf-8"))
+                    document["cases"][0]["must_match"] = [pattern]
+                    path.write_text(json.dumps(document), encoding="utf-8")
+
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any("raw alphanumeric literal" in issue for issue in issues), issues
+                )
+
+    def test_behavioral_exact_fields_schema_fails_through_the_fleet_gate(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["cases"][0]["exact_fields"] = {
+                "Promoton state": "inconclusive",
+                "Owner": 7,
+            }
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("Promoton state" in issue and "unknown literal" in issue for issue in issues), issues)
+        self.assertTrue(any("Owner" in issue and "non-empty exact string" in issue for issue in issues), issues)
+
+    def test_behavioral_non_string_enums_return_fleet_findings_not_loader_crashes(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = document["cases"][0]
+            case["permission_mode"] = []
+            case["packet_shape"] = {}
+            case["packet_learning_mode"] = []
+            case["agent"] = 17
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        for field in ("permission_mode", "packet_shape", "packet_learning_mode", "agent"):
+            with self.subTest(field=field):
+                self.assertTrue(any(field in issue for issue in issues), issues)
+
+    def test_learning_closeout_cannot_silently_leave_an_agent_packet(self) -> None:
+        # Use a non-preloaded evidence role: its lightweight handoff is mandatory even though the
+        # full improvement loop is intentionally absent from its context.
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            text = path.read_text(encoding="utf-8")
+            marker = validate_fleet.LEARNING_INTAKE_PACKET_SLOT
+            assert marker in text, "positive control: researcher must declare the Learning slot"
+            path.write_text(
+                text.replace(marker, "- **Observation**:", 1),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "researcher.md" in issue
+                and "Learning" in issue
+                and "disappear" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
+    def test_learning_closeout_wording_cannot_keep_the_marker_but_lose_durable_intake(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            text = path.read_text(encoding="utf-8")
+            old = "receiving coordinator verifies and triages them"
+            assert old in text, "positive control: researcher must declare durable intake"
+            path.write_text(
+                text.replace(old, "caller may mention them later", 1),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "researcher.md" in issue
+                and "Learning" in issue
+                and "drifted" in issue
+                for issue in issues
+            ),
+            issues,
+        )
+
+    def test_non_preloaded_agent_cannot_claim_lifecycle_owner_closeout(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            text = path.read_text(encoding="utf-8")
+            intake = validate_fleet.LEARNING_INTAKE_PACKET_SLOT
+            assert intake in text, "positive control: researcher must use intake-only Learning"
+            path.write_text(
+                text.replace(
+                    intake,
+                    validate_fleet.LEARNING_LIFECYCLE_OWNER_PACKET_SLOT,
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any(
+                "researcher.md" in issue
+                and "intake" in issue.lower()
+                and "lifecycle-owner" in issue.lower()
+                for issue in issues
+            ),
+            issues,
+        )
+
+    def test_each_lifecycle_owner_cannot_fall_back_to_intake_closeout(self) -> None:
+        lifecycle_owners = {
+            "prompt-engineer",
+            "sde-fullstack",
+            "verification-engineer",
+        }
+        self.assertEqual(
+            frozenset(lifecycle_owners),
+            validate_fleet.SELF_IMPROVE_LOOP_PRELOAD_AGENTS,
+        )
+        for name in sorted(lifecycle_owners):
+            with self.subTest(name=name):
+                def mutate(repo: Path) -> None:
+                    path = repo / "agents" / f"{name}.md"
+                    text = path.read_text(encoding="utf-8")
+                    lifecycle = validate_fleet.LEARNING_LIFECYCLE_OWNER_PACKET_SLOT
+                    assert lifecycle in text, (
+                        f"positive control: {name} must use lifecycle-owner Learning"
+                    )
+                    path.write_text(
+                        text.replace(
+                            lifecycle,
+                            validate_fleet.LEARNING_INTAKE_PACKET_SLOT,
+                            1,
+                        ),
+                        encoding="utf-8",
+                    )
+
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any(
+                        f"{name}.md" in issue
+                        and "lifecycle-owner" in issue.lower()
+                        and "intake" in issue.lower()
+                        for issue in issues
+                    ),
+                    issues,
+                )
+
+    def test_self_improve_loop_preload_roster_cannot_silently_drift(self) -> None:
+        # Exercise both halves of "only these three": dropping an owner loses full disposition;
+        # adding an evidence-only role spends context and can imply authority that role lacks.
+        def drop_required_preload(repo: Path) -> None:
+            path = repo / "agents" / "prompt-engineer.md"
+            text = path.read_text(encoding="utf-8")
+            anchor = "skills:\n  - self-improve-loop\n"
+            assert anchor in text, "positive control: prompt-engineer must preload the loop"
+            path.write_text(text.replace(anchor, "", 1), encoding="utf-8")
+
+        def add_unapproved_preload(repo: Path) -> None:
+            path = repo / "agents" / "researcher.md"
+            text = path.read_text(encoding="utf-8")
+            anchor = "model: inherit\n"
+            assert anchor in text, "positive control: researcher must declare its model"
+            path.write_text(
+                text.replace(
+                    anchor,
+                    "skills:\n  - self-improve-loop\n" + anchor,
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+        for label, mutate in (
+            ("missing required preload", drop_required_preload),
+            ("unexpected preload", add_unapproved_preload),
+        ):
+            with self.subTest(label=label):
+                issues = self._issues_after(mutate)
+                self.assertTrue(
+                    any("self-improve-loop preload roster drifted" in issue for issue in issues),
+                    issues,
+                )
+
     def test_stale_generated_platform_adapter_is_reported(self) -> None:
         # The authored Claude definition is the source. A direct edit to a generated Codex copy
         # otherwise creates host-dependent behavior with no load error and no obvious review clue.
@@ -1091,6 +1363,78 @@ class RoutingClusterTests(unittest.TestCase):
         ])
         self.assertEqual([], self._issues_with_cluster(doc))
 
+    def test_typoed_polarity_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "positve", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("polarity" in i and "positive or negative" in i for i in issues), issues)
+
+    def test_empty_positive_expectation_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "positive", "expect_fires": []},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("expect_fires" in i and "non-empty list" in i for i in issues), issues)
+
+    def test_empty_explicit_negative_forbidden_set_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "negative", "expect_not_fires": []},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("expect_not_fires" in i and "non-empty list" in i for i in issues), issues)
+
+    def test_expectation_fields_reject_wrong_types(self) -> None:
+        cases = [
+            {"id": "bad-pos", "prompt": "p", "polarity": "positive", "expect_fires": "craft"},
+            {"id": "bad-neg", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": "craft"},
+        ]
+        issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+        self.assertTrue(any("bad-pos" in i and "expect_fires" in i for i in issues), issues)
+        self.assertTrue(any("bad-neg" in i and "expect_not_fires" in i for i in issues), issues)
+
+    def test_required_case_fields_are_reported(self) -> None:
+        cases = [
+            {"prompt": "p", "polarity": "negative"},
+            {"id": "missing-prompt", "polarity": "negative"},
+            {"id": "missing-polarity", "prompt": "p"},
+            {"id": "missing-positive-targets", "prompt": "p", "polarity": "positive"},
+        ]
+        issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+        self.assertTrue(any("non-empty 'id'" in i for i in issues), issues)
+        self.assertTrue(any("missing-prompt" in i and "non-empty 'prompt'" in i for i in issues), issues)
+        self.assertTrue(any("missing-polarity" in i and "polarity" in i for i in issues), issues)
+        self.assertTrue(
+            any("missing-positive-targets" in i and "expect_fires" in i for i in issues),
+            issues,
+        )
+
+    def test_cases_must_be_a_non_empty_list(self) -> None:
+        for cases in (None, {}, []):
+            with self.subTest(cases=cases):
+                issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+                self.assertTrue(any("non-empty 'cases' list" in i for i in issues), issues)
+
+    def test_cluster_name_is_required(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "neg-a", "prompt": "p", "polarity": "negative"},
+        ])
+        del doc["cluster"]
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("non-empty 'cluster' string" in i for i in issues), issues)
+
+    def test_member_names_reject_wrong_types(self) -> None:
+        doc = dict(self.BASE, members=["craft", {"not": "a name"}], cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("member #2" in i and "component name" in i for i in issues), issues)
+
+    def test_each_case_must_be_an_object(self) -> None:
+        issues = self._issues_with_cluster(dict(self.BASE, cases=["not-an-object"]))
+        self.assertTrue(any("case #1 is not an object" in i for i in issues), issues)
+
     def test_unresolvable_member_is_reported(self) -> None:
         issues = self._issues_with_cluster(dict(self.BASE, members=["craft", "no-such-component"]))
         self.assertTrue(any("not a fleet component" in i for i in issues), issues)
@@ -1174,6 +1518,34 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
         issues = validate_fleet.validate_workflow_host_boundary(REPO)
         self.assertEqual(issues, [])
+
+
+class LearningLedgerWiringTests(unittest.TestCase):
+    def test_current_store_and_transactional_ignores_are_validated(self) -> None:
+        self.assertEqual([], validate_fleet.validate_learning_ledger(REPO))
+
+    def test_tracked_candidate_corruption_fails_the_ordinary_validator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            candidate = next((dst / "learning" / "candidates").glob("lc_*.json"))
+            candidate.write_text("{}\n", encoding="utf-8")
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
+
+    def test_transactional_ignore_drift_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            ignore = dst / ".gitignore"
+            ignore.write_text(
+                ignore.read_text(encoding="utf-8").replace(
+                    "learning/candidates/.learning-ledger.lock\n", ""
+                ),
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any(".learning-ledger.lock" in issue for issue in issues), issues)
 
 
 if __name__ == "__main__":

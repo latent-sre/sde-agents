@@ -82,23 +82,31 @@ anyway — same file, one review context.
 
 **Status:** `active`
 
-**Outcome:** Any discovery made mid-task has one documented routing destination with a threshold
-and a disposition rule; retros exist above the micro-retro (session, round, meta, model/CLI
-upgrade) with an encode-one-file-many cap; runbooks and operating docs found wrong get fixed or
-filed at the point of use; auto-memory has a consolidation procedure honoring its index budget.
+**Outcome:** Every non-trivial task has a lightweight Learning closeout; reusable discoveries have
+an evidence-bound disposition, lifecycle state, destination, and owner; cross-task recurrence is
+observable in a quarantined repository-local ledger; retros can find missing controls and stale
+guidance; and admitted runbook gaps update, create, or propose operating docs without inventing
+commands or granting a model permission to approve its own changes.
 
 **Source:** [`LEARN-001 spec`](superpowers/specs/2026-08-01-learn-001-learning-loop-design.md),
-grounded in the 2026-08-01 four-lane research report (artifact `82a338a5…`); operator fork
-rulings recorded in the spec.
+amended after an independent implementation and research pass that did not read the roadmap or
+round docs until the comparison stage. The public evidence ledger is
+`skills/self-improve-loop/references/research-basis.md`.
 
-**Prerequisites:** None. No validator rule changes, so no GRAPH-002 sequencing conflict.
+**Prerequisites:** None. The added validator rules are narrowly scoped to the Learning packet and
+preload roster and carry mutation tests; any overlap with GRAPH-002 must preserve these tripwires.
 
-**Acceptance:** The spec's acceptance-evidence list: gates green, adapters regenerated, inventory
-refreshed, before/after `retro-boundary` captures under identical recorded sonnet conditions with
-zero negative fires and no positive regression beyond variance.
+**Acceptance:** The spec's acceptance-evidence list: deterministic gates green; adapters current;
+ledger invariants tested in the ordinary validator; exact source/frozen-plugin/evaluator
+provenance; structured errors excluded from evidence; paired `retro-boundary` and
+`continuous-improvement` routing captures retain zero negative fires; and behavioral contracts
+show the Learning intake/lifecycle-owner split, promotion, provider-workaround, exact component
+firing, explicit runtime-tool authority, exact decision fields, and closed internally consistent
+runbook proposal boundaries.
 
-**Next action:** Execute the paired plan; retire this item to an outcome record whose lessons
-section works the new routing table.
+**Next action:** Refresh Claude `/login` and capture the exact final live after-evaluation.
+Independent static, prompt/eval, and executable re-review is complete; publication and retirement
+remain separate, explicitly authorized steps.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 

@@ -1,0 +1,264 @@
+{
+  "cluster": "retro-boundary",
+  "runs_per_case": 3,
+  "members": [
+    "postmortem",
+    "self-improve-loop"
+  ],
+  "conditions": {
+    "cli_version": "2.1.220 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "threshold": 0.5,
+    "timeout_s": 420,
+    "clean_room": false
+  },
+  "summary": {
+    "passed": 9,
+    "total": 9
+  },
+  "cases": [
+    {
+      "id": "pos-task-retro",
+      "polarity": "positive",
+      "tags": [
+        "retro",
+        "task"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['self-improve-loop'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-lessons-learned",
+      "polarity": "positive",
+      "tags": [
+        "retro",
+        "routing"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['self-improve-loop'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-micro-retro",
+      "polarity": "positive",
+      "tags": [
+        "retro",
+        "existing-remit"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['self-improve-loop'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-iterate-draft",
+      "polarity": "positive",
+      "tags": [
+        "existing-remit",
+        "evaluator-optimizer"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['self-improve-loop'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ],
+        [
+          "self-improve-loop"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "pos-outage-retro",
+      "polarity": "positive",
+      "tags": [
+        "incident",
+        "boundary"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 1.0,
+      "correct_rate": 1.0,
+      "detail": "expected ['postmortem'] fired in 3/3 runs",
+      "also_fired": [],
+      "fired_per_run": [
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ],
+        [
+          "postmortem"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-sprint-retro",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "ceremony"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-retro-style",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "vocabulary"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-forensic-postmortem",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "vocabulary"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [],
+      "fired_per_run": [
+        [],
+        [],
+        []
+      ],
+      "errors": [],
+      "notes": []
+    },
+    {
+      "id": "neg-live-outage",
+      "polarity": "negative",
+      "tags": [
+        "near-miss",
+        "live-incident"
+      ],
+      "passed": true,
+      "inconclusive": false,
+      "runs_excluded": 0,
+      "cluster_fire_rate": 0.0,
+      "correct_rate": 1.0,
+      "detail": "cluster fired in 0/3 runs (want 0)",
+      "also_fired": [
+        "homelab-platform",
+        "lab-incident"
+      ],
+      "fired_per_run": [
+        [
+          "lab-incident"
+        ],
+        [
+          "homelab-platform",
+          "lab-incident"
+        ],
+        [
+          "homelab-platform",
+          "lab-incident"
+        ]
+      ],
+      "errors": [],
+      "notes": []
+    }
+  ]
+}

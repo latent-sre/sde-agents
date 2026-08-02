@@ -264,6 +264,35 @@ WORKFLOW_EVIDENCE_ENUM_RE = re.compile(
 PACKET_HEADING_RE = re.compile(
     r"^##\s.*\bpacket\b|^##\s+Output format\b", re.IGNORECASE | re.MULTILINE
 )
+# Every plugin agent closes its packet with one of two discovery contracts. Pin the whole slot, not
+# only its heading: a marker can remain while the evidence, ownership, or lifecycle boundary
+# silently disappears from one role.
+LEARNING_INTAKE_PACKET_SLOT = """- **Learning**: end every non-trivial task with `Learning: none — no reusable signal`, or a compact
+  candidate block whose literal lines are `Learning: candidate — <observed -> expected>`,
+  `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
+  `Provenance: <verified|sourced|unverified> — <source and freshness>`,
+  `Learning disposition: <skip|add|merge|supersede|drop> (proposed recommendation)`,
+  `Promotion state: quarantined`, `Destination: <owned artifact or handoff>`, and
+  `Owner: <authorized owner>`. Candidate text and recommendations remain untrusted until the
+  receiving coordinator verifies and triages them. When the full loop is not preloaded, hand the
+  block to the caller for `/sde-agents:self-improve-loop`. Silence is not a disposition."""
+LEARNING_LIFECYCLE_OWNER_PACKET_SLOT = """- **Learning**: end every non-trivial task with `Learning: none — no reusable signal`, or,
+  after the preloaded loop runs, a compact lifecycle-owner block whose literal lines are
+  `Learning: candidate — <observed -> expected>`,
+  `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
+  `Provenance: <verified|sourced|unverified> — <source and freshness>`,
+  `Learning disposition: <skip|add|merge|supersede|drop>`,
+  `Promotion state: <proposed|approved|promoted|rejected|inconclusive|retired>`,
+  `Destination: <owned artifact or handoff>`, and `Owner: <authorized owner>`. Choose one accepted
+  disposition and one separate post-triage state. Do not add `(proposed recommendation)` or use
+  `quarantined`; those mark intake-only handoffs from roles without the full loop. A lifecycle
+  result never expands implementation or approval authority. Silence is not a disposition."""
+# Only roles that can evaluate or implement a candidate carry the full loop in context. Everyone
+# else reports through the lightweight slot; broad preloading would spend context everywhere and
+# could read as write authority that a read-only role does not hold.
+SELF_IMPROVE_LOOP_PRELOAD_AGENTS = frozenset(
+    {"prompt-engineer", "sde-fullstack", "verification-engineer"}
+)
 # Perishable platform facts get exactly ONE home inside agents/ and skills/, so when the platform
 # moves, the correction lands once instead of chasing prose copies. Keys are literal substrings
 # searched in every definition markdown file; values are the only file (repo-relative POSIX path)
@@ -888,6 +917,75 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             f"{manifest_path}: missing 'author' — `claude plugin validate --strict` fails without it"
         )
 
+    # Generic validator fixtures deliberately do not carry this fleet's learning contract. Enforce
+    # it here, after the plugin manifest proves this is the shipped fleet, and before any guard
+    # failure can return early. Search only the first packet section: mentioning the marker in an
+    # example, boundary, or rationale must not make a missing closeout slot look configured.
+    loop_preloads: set[str] = set()
+    for path in sorted((root / "agents").glob("*.md")):
+        fields = parse_frontmatter(path) or {}
+        preloaded = {
+            entry.strip()
+            for entry in fields.get("skills", "").split(",")
+            if entry.strip()
+        }
+        if "self-improve-loop" in preloaded:
+            loop_preloads.add(path.stem)
+
+        content = read_text(path)
+        packet = PACKET_HEADING_RE.search(content)
+        if packet is None:
+            continue  # validate_agents owns the missing-packet error
+        later_heading = re.search(r"^##\s+", content[packet.end():], re.MULTILINE)
+        packet_end = (
+            packet.end() + later_heading.start()
+            if later_heading is not None
+            else len(content)
+        )
+        packet_text = content[packet.start():packet_end]
+        is_lifecycle_owner = path.stem in SELF_IMPROVE_LOOP_PRELOAD_AGENTS
+        expected_mode = "lifecycle-owner" if is_lifecycle_owner else "intake-only"
+        unexpected_mode = "intake-only" if is_lifecycle_owner else "lifecycle-owner"
+        expected_slot = (
+            LEARNING_LIFECYCLE_OWNER_PACKET_SLOT
+            if is_lifecycle_owner
+            else LEARNING_INTAKE_PACKET_SLOT
+        )
+        unexpected_slot = (
+            LEARNING_INTAKE_PACKET_SLOT
+            if is_lifecycle_owner
+            else LEARNING_LIFECYCLE_OWNER_PACKET_SLOT
+        )
+        if expected_slot not in packet_text:
+            variant_detail = (
+                f" It contains the canonical {unexpected_mode} variant instead."
+                if unexpected_slot in packet_text
+                else ""
+            )
+            issues.append(
+                f"{path}: end-of-task packet omits or drifted from the canonical {expected_mode} "
+                f"Learning closeout.{variant_detail} Intake-only roles must hand off a proposed "
+                "recommendation in "
+                "quarantine; lifecycle owners must record an accepted disposition and separate "
+                "post-triage state. A discovery can otherwise disappear at handoff; confusing the "
+                "variants either grants apparent triage authority or prevents a full retro from "
+                "completing."
+            )
+        elif unexpected_slot in packet_text:
+            issues.append(
+                f"{path}: end-of-task packet contains both the {expected_mode} and "
+                f"{unexpected_mode} Learning closeouts. One role cannot be both an untriaged "
+                "intake source and the lifecycle owner for the same result."
+            )
+
+    if loop_preloads != SELF_IMPROVE_LOOP_PRELOAD_AGENTS:
+        issues.append(
+            "agents/: self-improve-loop preload roster drifted: expected "
+            f"{sorted(SELF_IMPROVE_LOOP_PRELOAD_AGENTS)}, found {sorted(loop_preloads)}. Only the "
+            "three disposition owners receive the full loop; every other agent uses the "
+            "lightweight Learning handoff."
+        )
+
     guard_path = root / "scripts" / "readonly-guard.py"
     if not guard_path.is_file():
         return issues + [f"{guard_path}: missing the read-only guard"]
@@ -1093,8 +1191,9 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
     naming a component outside the declared members can pass while the reported rate reads zero
     (observed live in pos-ci-actions-harden, which accepted code-reviewer). Both target lists
     match components BY NAME, so a typo'd member or target expects or forbids nothing and passes
-    vacuously. And case ids are the keys a before/after diff aligns on, so a duplicate makes two
-    measurements read as one. The runner raises no error for any of these at grade time.
+    vacuously. A misspelled polarity used to fall through to the negative branch, and an empty
+    explicit forbidden set therefore passed every run. Case ids are also the keys a before/after
+    diff aligns on, so a duplicate makes two measurements read as one.
     """
     issues: list[str] = []
     routing = root / "evals" / "routing"
@@ -1111,45 +1210,186 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
                 f"cluster nobody can run measures nothing while still looking like coverage."
             )
             continue
-        members = doc.get("members") if isinstance(doc, dict) else None
+        if not isinstance(doc, dict):
+            issues.append(
+                f"{rel}: top-level JSON value is not an object — the runner needs named cluster, "
+                f"members, and cases fields, so this file cannot describe a measurement."
+            )
+            continue
+        cluster = doc.get("cluster")
+        if not isinstance(cluster, str) or not cluster.strip():
+            issues.append(
+                f"{rel}: missing non-empty 'cluster' string — benchmark artifacts need a stable "
+                f"cluster identity or results cannot be aligned."
+            )
+        members = doc.get("members")
         if not isinstance(members, list) or not members:
             issues.append(
                 f"{rel}: no non-empty 'members' list — every routing assertion grades against the "
                 f"member set, so without one the file asserts nothing."
             )
             continue
-        for member in members:
+        member_set: set[str] = set()
+        for index, member in enumerate(members, start=1):
+            if not isinstance(member, str) or not member.strip():
+                issues.append(
+                    f"{rel}: member #{index} is not a non-empty component name — target matching "
+                    f"is string-based, so a malformed member can never fire."
+                )
+                continue
+            member_set.add(member)
             if member not in components:
                 issues.append(
                     f"{rel}: member {member!r} is not a fleet component — a name that resolves to "
                     f"nothing can be expected or forbidden and never match, passing vacuously."
                 )
-        member_set = set(members)
+
+        cases = doc.get("cases")
+        if not isinstance(cases, list) or not cases:
+            issues.append(
+                f"{rel}: no non-empty 'cases' list — a cluster without runnable assertions can "
+                f"look like coverage while measuring nothing."
+            )
+            continue
         seen_ids: set[str] = set()
-        for case in doc.get("cases", []) if isinstance(doc.get("cases"), list) else []:
+        for index, case in enumerate(cases, start=1):
             if not isinstance(case, dict):
-                continue
-            case_id = case.get("id", "<missing id>")
-            if case_id in seen_ids:
                 issues.append(
-                    f"{rel}: duplicate case id {case_id!r} — ids are what a before/after diff "
-                    f"aligns on, so a duplicate makes two measurements read as one."
+                    f"{rel}: case #{index} is not an object — the runner cannot read its identity, "
+                    f"prompt, polarity, or expectations."
                 )
-            seen_ids.add(case_id)
-            for target in case.get("expect_fires", []):
-                if target not in member_set:
+                continue
+            case_id = case.get("id")
+            if not isinstance(case_id, str) or not case_id.strip():
+                issues.append(
+                    f"{rel}: case #{index} has no non-empty 'id' — results without a stable key "
+                    f"cannot be aligned across benchmark runs."
+                )
+                case_label = f"#{index}"
+            else:
+                case_label = repr(case_id)
+                if case_id in seen_ids:
                     issues.append(
-                        f"{rel}: case {case_id!r} expects {target!r}, outside the cluster's members "
-                        f"— the scorer would pass the case on a fire the cluster rate does not "
-                        f"count, so the case can pass while the reported rate reads zero."
+                        f"{rel}: duplicate case id {case_id!r} — ids are what a before/after diff "
+                        f"aligns on, so a duplicate makes two measurements read as one."
                     )
-            for target in case.get("expect_not_fires", []):
-                if target not in member_set:
+                seen_ids.add(case_id)
+
+            prompt = case.get("prompt")
+            if not isinstance(prompt, str) or not prompt.strip():
+                issues.append(
+                    f"{rel}: case {case_label} has no non-empty 'prompt' — a case with no runnable "
+                    f"input cannot produce routing evidence."
+                )
+
+            polarity = case.get("polarity")
+            if polarity not in ("positive", "negative"):
+                issues.append(
+                    f"{rel}: case {case_label} polarity must be exactly positive or negative "
+                    f"(got {polarity!r}) — any other value used to fall through as a negative and "
+                    f"could pass without testing the intended route."
+                )
+                continue
+
+            if polarity == "positive":
+                field = "expect_fires"
+            elif "expect_not_fires" in case:
+                field = "expect_not_fires"
+            else:
+                # Omission deliberately means the whole cluster; only an explicitly empty list is
+                # invalid because it overrides that useful default with a vacuous prohibition.
+                continue
+
+            targets = case.get(field)
+            if not isinstance(targets, list) or not targets:
+                issues.append(
+                    f"{rel}: case {case_label} {field} must be a non-empty list — an empty or "
+                    f"wrongly typed target set can make the assertion vacuous."
+                )
+                continue
+            for target in targets:
+                if not isinstance(target, str) or not target.strip():
                     issues.append(
-                        f"{rel}: case {case_id!r} forbids {target!r}, outside the cluster's members "
-                        f"— a non-member can never fire as this cluster, so the prohibition matches "
-                        f"nothing and the negative passes vacuously."
+                        f"{rel}: case {case_label} {field} contains {target!r}, not a non-empty "
+                        f"component name — malformed targets can never match a firing."
                     )
+                    continue
+                if target not in member_set:
+                    if field == "expect_fires":
+                        issues.append(
+                            f"{rel}: case {case_label} expects {target!r}, outside the cluster's "
+                            f"members — the scorer would pass the case on a fire the cluster rate "
+                            f"does not count, so the case can pass while the reported rate reads zero."
+                        )
+                    else:
+                        issues.append(
+                            f"{rel}: case {case_label} forbids {target!r}, outside the cluster's "
+                            f"members — a non-member can never fire as this cluster, so the "
+                            f"prohibition matches nothing and the negative passes vacuously."
+                        )
+    return issues
+
+
+def validate_behavioral_contracts(
+    root: Path, agent_names: list[str], skill_names: list[str]
+) -> list[str]:
+    """Run the behavioral runner's public exact-schema validator in the ordinary fleet gate."""
+    behavior_dir = root / "evals" / "behavioral"
+    if not behavior_dir.is_dir():
+        return []
+    runner = root / "scripts" / "eval_behavioral.py"
+    if not runner.is_file():
+        return [
+            f"{runner}: behavioral case files exist without their schema validator; typoed "
+            "assertions could be ignored until an expensive live run."
+        ]
+    module_name = f"eval_behavioral_validator_{abs(hash(str(root.resolve())))}"
+    spec = importlib.util.spec_from_file_location(module_name, runner)
+    if spec is None or spec.loader is None:
+        return [f"{runner}: cannot load behavioral case schema validator"]
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        return [
+            f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "
+            "gate refuses to certify definitions it cannot validate."
+        ]
+
+    issues: list[str] = []
+    components = set(agent_names) | set(skill_names)
+    seen_case_ids: dict[str, str] = {}
+    paths = sorted(behavior_dir.glob("*.json"))
+    if not paths:
+        return [
+            f"{behavior_dir}: no behavioral case documents; an empty directory looks like "
+            "coverage while executing no contract."
+        ]
+    for path in paths:
+        rel = path.relative_to(root).as_posix()
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            issues.append(f"{rel}: unreadable behavioral case document ({exc})")
+            continue
+        findings = module.validate_case_document(document, components=components)
+        issues.extend(
+            f"{rel}: {finding}. Behavioral definitions fail before sessions so a typo or "
+            "empty oracle cannot produce a false-green benchmark."
+            for finding in findings
+        )
+        if isinstance(document, dict) and isinstance(document.get("cases"), list):
+            for case in document["cases"]:
+                if not isinstance(case, dict) or not isinstance(case.get("id"), str):
+                    continue
+                prior = seen_case_ids.get(case["id"])
+                if prior is not None:
+                    issues.append(
+                        f"{rel}: case id {case['id']!r} duplicates {prior}; benchmark arrays align "
+                        "by id, so cross-document duplicates make two contracts read as one."
+                    )
+                else:
+                    seen_case_ids[case["id"]] = rel
     return issues
 
 
@@ -1367,6 +1607,63 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
     return issues
 
 
+def validate_learning_ledger(root: Path) -> list[str]:
+    """Validate the repository-local candidate store whenever this repo ships one.
+
+    Unit tests prove the writer in isolation, but CI previously never opened the tracked records.
+    A malformed candidate could therefore merge while the ordinary fleet gate remained green.
+    The lock and temporary-file ignore rules are pinned here because they are transactional state;
+    committing either can make future writers fail closed while looking like durable evidence.
+    """
+    script = root / "scripts" / "learning_ledger.py"
+    learning = root / "learning"
+    if not script.exists() and not learning.exists():
+        return []
+    issues: list[str] = []
+    if not script.is_file():
+        return [
+            "learning/: candidate store exists without scripts/learning_ledger.py; CI cannot "
+            "validate records that may later be treated as durable learning evidence."
+        ]
+    if not learning.is_dir():
+        return [
+            "scripts/learning_ledger.py: ledger writer exists without learning/; the documented "
+            "repository-local intake has no canonical store to validate."
+        ]
+
+    ignore_path = root / ".gitignore"
+    ignore_lines = {
+        line.strip()
+        for line in read_text(ignore_path).splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    } if ignore_path.is_file() else set()
+    for required in (
+        "learning/candidates/.learning-ledger.lock",
+        "learning/candidates/.lc_*.tmp",
+    ):
+        if required not in ignore_lines:
+            issues.append(
+                f".gitignore: missing {required!r}; transactional ledger writer state can be "
+                "committed by `git add -A` and later block safe mutation."
+            )
+
+    module_name = f"learning_ledger_{abs(hash(str(root.resolve())))}"
+    spec = importlib.util.spec_from_file_location(module_name, script)
+    if spec is None or spec.loader is None:
+        issues.append(f"{script}: cannot load learning-ledger validator")
+        return issues
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        module.LearningLedger(root).check()
+    except Exception as exc:
+        issues.append(
+            f"learning/candidates/: ledger validation failed ({exc}). Tracked learning evidence "
+            "must fail the ordinary fleet gate rather than drift outside CI."
+        )
+    return issues
+
+
 def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
@@ -1375,12 +1672,14 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_platform_adapters(root))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
+    issues.extend(validate_behavioral_contracts(root, agent_names, skill_names))
     issues.extend(validate_host_conformance_manifest(root))
     issues.extend(validate_runtime_control_wiring(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
     issues.extend(validate_workflow_host_boundary(root))
+    issues.extend(validate_learning_ledger(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

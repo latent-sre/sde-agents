@@ -11,6 +11,9 @@ import importlib.util
 import unittest
 from pathlib import Path
 
+from scripts import learning_ledger
+
+
 REPO = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("packet_lint", REPO / "scripts" / "packet_lint.py")
 packet_lint = importlib.util.module_from_spec(_spec)
@@ -31,6 +34,370 @@ $ pytest -q
 
 **Not verified**: behavior against the real upstream; no credentials in this environment.
 """
+
+LEARNING_PACKET_BASE = (
+    "Changed: scripts/packet_lint.py:1\n"
+    "Verified: `python -m unittest tests.test_packet_lint -v` -> 1 passed\n"
+    "Check first: learning lifecycle boundary\n"
+    "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting\n"
+    "Evidence: review finding at revision worktree in Windows\n"
+    "Scope: learning packet linting; excludes ledger transitions\n"
+    "Provenance: verified — current source inspection on 2026-08-01\n"
+)
+INTAKE_LEARNING_PACKET = (
+    LEARNING_PACKET_BASE
+    + "Learning disposition: add (proposed recommendation)\n"
+    + "Promotion state: quarantined\n"
+    + "Destination: scripts/packet_lint.py\n"
+    + "Owner: fleet-maintainer\n"
+)
+LIFECYCLE_OWNER_LEARNING_PACKET = (
+    LEARNING_PACKET_BASE
+    + "Learning disposition: add\n"
+    + "Promotion state: proposed\n"
+    + "Destination: scripts/packet_lint.py\n"
+    + "Owner: fleet-maintainer\n"
+)
+
+
+def lifecycle_owner_packet(disposition: str, promotion_state: str) -> str:
+    return (
+        LEARNING_PACKET_BASE
+        + f"Learning disposition: {disposition}\n"
+        + f"Promotion state: {promotion_state}\n"
+        + "Destination: scripts/packet_lint.py\n"
+        + "Owner: fleet-maintainer\n"
+    )
+
+
+def lifecycle_owner_learning_block(disposition: str, promotion_state: str) -> str:
+    return (
+        "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting\n"
+        "Evidence: review finding at revision worktree in Windows\n"
+        "Scope: learning packet linting; excludes ledger transitions\n"
+        "Provenance: verified — current source inspection on 2026-08-01\n"
+        f"Learning disposition: {disposition}\n"
+        f"Promotion state: {promotion_state}\n"
+        "Destination: scripts/packet_lint.py\n"
+        "Owner: fleet-maintainer\n"
+    )
+
+
+class LearningCloseoutPublicAPI(unittest.TestCase):
+    def test_canonical_none_passes_directly_in_both_modes(self) -> None:
+        for mode in packet_lint.LEARNING_MODES:
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    [],
+                    packet_lint.lint_learning_closeout(
+                        "Learning: none — no reusable signal\n", mode
+                    ),
+                )
+
+    def test_shorthand_none_fails_directly_in_both_modes(self) -> None:
+        for mode in packet_lint.LEARNING_MODES:
+            with self.subTest(mode=mode):
+                findings = packet_lint.lint_learning_closeout("Learning:none\n", mode)
+                self.assertTrue(
+                    any("none — no reusable signal" in item for item in findings), findings
+                )
+
+    def test_candidate_compatibility_is_enforced_without_a_packet_shape(self) -> None:
+        self.assertEqual(
+            [],
+            packet_lint.lint_learning_closeout(
+                lifecycle_owner_learning_block("add", "proposed"),
+                "lifecycle-owner",
+            ),
+        )
+        findings = packet_lint.lint_learning_closeout(
+            lifecycle_owner_learning_block("add", "inconclusive"),
+            "lifecycle-owner",
+        )
+        self.assertTrue(any("not valid for Promotion state" in item for item in findings), findings)
+
+    def test_candidate_rejects_the_shipped_retro_template_order(self) -> None:
+        # REGRESSION (review-reported): the retro template put a top-level Scope before Learning,
+        # while the linter collected labels globally. That unrelated Scope therefore satisfied the
+        # candidate field and let a non-contiguous, wrong-order handoff pass.
+        packet = (
+            "Scope: task retro and supplied evidence\n"
+            "Signals: one review correction\n"
+            "Candidates: packet fields need structural validation\n"
+            "Learning: candidate — global field search -> one canonical block\n"
+            "Evidence: review finding at revision worktree in Windows\n"
+            "Provenance: verified — current source inspection on 2026-08-01\n"
+            "Learning disposition: add\n"
+            "Promotion state: proposed\n"
+            "Destination: scripts/packet_lint.py\n"
+            "Owner: fleet-maintainer\n"
+        )
+        findings = packet_lint.lint_learning_closeout(packet, "lifecycle-owner")
+        self.assertTrue(any("contiguous block" in item for item in findings), findings)
+
+    def test_candidate_rejects_scattered_global_fields(self) -> None:
+        packet = (
+            "Evidence: review finding at revision worktree in Windows\n"
+            "Scope: learning packet linting; excludes ledger transitions\n"
+            "Owner: fleet-maintainer\n"
+            "Narrative: the fields above describe the whole report, not this candidate.\n"
+            "Learning: candidate — global field search -> one canonical block\n"
+            "Provenance: verified — current source inspection on 2026-08-01\n"
+            "Learning disposition: add\n"
+            "Promotion state: proposed\n"
+            "Destination: scripts/packet_lint.py\n"
+        )
+        findings = packet_lint.lint_learning_closeout(packet, "lifecycle-owner")
+        self.assertTrue(any("contiguous block" in item for item in findings), findings)
+
+    def test_candidate_rejects_unresolved_template_metavariables_in_every_value(self) -> None:
+        packet = (
+            "Learning: candidate — <observed -> expected divergence>\n"
+            "Evidence: <occurrences and exact revision/version/environment>\n"
+            "Scope: <applicability and exclusions>\n"
+            "Provenance: <verified/sourced/unverified and source>\n"
+            "Learning disposition: <skip/add/merge/supersede/drop>\n"
+            "Promotion state: <proposed/approved/promoted/rejected/inconclusive/retired>\n"
+            "Destination: <exact artifact>\n"
+            "Owner: <authorized owner>\n"
+        )
+        findings = packet_lint.lint_learning_closeout(packet, "lifecycle-owner")
+        for label in packet_lint.LEARNING_CANDIDATE_FIELD_ORDER:
+            with self.subTest(label=label):
+                self.assertTrue(
+                    any(label.title() in item and "metavariable" in item for item in findings),
+                    findings,
+                )
+
+    def test_candidate_rejects_plain_template_sentinels_in_every_value(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        replacements = {
+            "learning": (
+                "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting",
+                "Learning: candidate — TBD -> mode-aware lifecycle linting",
+            ),
+            "evidence": (
+                "Evidence: review finding at revision worktree in Windows",
+                "Evidence: TBD",
+            ),
+            "scope": (
+                "Scope: learning packet linting; excludes ledger transitions",
+                "Scope: TODO",
+            ),
+            "provenance": (
+                "Provenance: verified — current source inspection on 2026-08-01",
+                "Provenance: verified — TBA",
+            ),
+            "learning disposition": (
+                "Learning disposition: add",
+                "Learning disposition: FIXME",
+            ),
+            "promotion state": (
+                "Promotion state: proposed",
+                "Promotion state: PLACEHOLDER",
+            ),
+            "destination": (
+                "Destination: scripts/packet_lint.py",
+                "Destination: TBD",
+            ),
+            "owner": (
+                "Owner: fleet-maintainer",
+                "Owner: TODO",
+            ),
+        }
+        for label, (old, new) in replacements.items():
+            with self.subTest(label=label):
+                findings = packet_lint.lint_learning_closeout(
+                    valid.replace(old, new), "lifecycle-owner"
+                )
+                self.assertTrue(
+                    any(
+                        label.title() in item and "plain metavariable" in item
+                        for item in findings
+                    ),
+                    findings,
+                )
+
+    def test_candidate_learning_rejects_plain_sentinel_on_either_side_of_arrow(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        learning = "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting"
+        for replacement in (
+            "Learning: candidate — TBD -> mode-aware lifecycle linting",
+            "Learning: candidate — untriaged-only linting -> TBD",
+        ):
+            with self.subTest(replacement=replacement):
+                findings = packet_lint.lint_learning_closeout(
+                    valid.replace(learning, replacement), "lifecycle-owner"
+                )
+                self.assertTrue(
+                    any(
+                        "Learning candidate Learning:" in item
+                        and "plain metavariable" in item
+                        for item in findings
+                    ),
+                    findings,
+                )
+
+    def test_candidate_rejects_whole_value_semantic_sentinels(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        replacements = (
+            (
+                "Evidence: review finding at revision worktree in Windows",
+                "Evidence: unknown",
+            ),
+            (
+                "Scope: learning packet linting; excludes ledger transitions",
+                "Scope: pending",
+            ),
+            (
+                "Provenance: verified — current source inspection on 2026-08-01",
+                "Provenance: unverified -> none",
+            ),
+            ("Destination: scripts/packet_lint.py", "Destination: n/a"),
+            ("Owner: fleet-maintainer", "Owner: unassigned"),
+        )
+        for old, new in replacements:
+            with self.subTest(new=new):
+                findings = packet_lint.lint_learning_closeout(
+                    valid.replace(old, new), "lifecycle-owner"
+                )
+                self.assertTrue(any("semantic placeholder" in item for item in findings), findings)
+
+    def test_candidate_rejects_every_semantic_sentinel_on_either_arrow_side(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        original = (
+            "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting"
+        )
+        for sentinel in ("unknown", "pending", "none", "n/a", "unassigned"):
+            for replacement in (
+                f"Learning: candidate — {sentinel} -> mode-aware lifecycle linting",
+                f"Learning: candidate — untriaged-only linting -> {sentinel}",
+            ):
+                with self.subTest(replacement=replacement):
+                    findings = packet_lint.lint_learning_closeout(
+                        valid.replace(original, replacement), "lifecycle-owner"
+                    )
+                    self.assertTrue(
+                        any("semantic placeholder" in item for item in findings), findings
+                    )
+
+    def test_semantic_sentinel_words_inside_substantive_values_remain_valid(self) -> None:
+        text = lifecycle_owner_learning_block("add", "proposed")
+        text = text.replace(
+            "Evidence: review finding at revision worktree in Windows",
+            "Evidence: pending jobs reproduce the unknown-state race",
+        ).replace(
+            "Scope: learning packet linting; excludes ledger transitions",
+            "Scope: unknown-version handling only; excludes normal startup",
+        ).replace(
+            "Provenance: verified — current source inspection on 2026-08-01",
+            "Provenance: verified — pending jobs inspected on 2026-08-01",
+        ).replace(
+            "Destination: scripts/packet_lint.py",
+            "Destination: learning/unknown-candidates.md",
+        ).replace(
+            "Owner: fleet-maintainer",
+            "Owner: unassigned-reviewer",
+        )
+        self.assertEqual(
+            [], packet_lint.lint_learning_closeout(text, "lifecycle-owner")
+        )
+
+    def test_candidate_rejects_punctuation_only_fields_and_arrow_sides(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        replacements = (
+            (
+                "Evidence: review finding at revision worktree in Windows",
+                "Evidence:?",
+            ),
+            (
+                "Scope: learning packet linting; excludes ledger transitions",
+                "Scope:.",
+            ),
+            (
+                "Provenance: verified — current source inspection on 2026-08-01",
+                "Provenance: unverified -> -",
+            ),
+            (
+                "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting",
+                "Learning: candidate — ? -> mode-aware lifecycle linting",
+            ),
+            (
+                "Learning: candidate — untriaged-only linting -> mode-aware lifecycle linting",
+                "Learning: candidate — untriaged-only linting -> .",
+            ),
+        )
+        for old, new in replacements:
+            with self.subTest(new=new):
+                findings = packet_lint.lint_learning_closeout(
+                    valid.replace(old, new), "lifecycle-owner"
+                )
+                self.assertTrue(any("semantic placeholder" in item for item in findings), findings)
+
+    def test_candidate_provenance_requires_details_after_the_enum(self) -> None:
+        valid = lifecycle_owner_learning_block("add", "proposed")
+        detailed = "Provenance: verified — current source inspection on 2026-08-01"
+        for bare in packet_lint.LEARNING_PROVENANCE:
+            with self.subTest(bare=bare):
+                findings = packet_lint.lint_learning_closeout(
+                    valid.replace(detailed, f"Provenance: {bare}"), "lifecycle-owner"
+                )
+                self.assertTrue(
+                    any("source or freshness details" in item for item in findings), findings
+                )
+
+    def test_candidate_rejects_duplicate_or_conflicting_fields(self) -> None:
+        duplicate = lifecycle_owner_learning_block("add", "proposed") + (
+            "Evidence: a conflicting report-level evidence field\n"
+        )
+        findings = packet_lint.lint_learning_closeout(duplicate, "lifecycle-owner")
+        self.assertTrue(
+            any("exactly one non-empty Evidence:" in item for item in findings), findings
+        )
+
+        conflicting = lifecycle_owner_learning_block("add", "proposed").replace(
+            "Owner: fleet-maintainer\n",
+            "Owner: fleet-maintainer\nOwner: prompt-maintainer\n",
+        )
+        findings = packet_lint.lint_learning_closeout(conflicting, "lifecycle-owner")
+        self.assertTrue(
+            any("exactly one non-empty Owner:" in item for item in findings), findings
+        )
+
+    def test_markdown_decorated_contiguous_candidate_passes(self) -> None:
+        packets = (
+            (
+                "> **Learning**: candidate — global field search -> one canonical block\n"
+                "> **Evidence**: review finding at revision worktree in Windows\n"
+                "> **Scope**: learning packet linting; excludes ledger transitions\n"
+                "> **Provenance**: verified — current source inspection on 2026-08-01\n"
+                "> **Learning disposition**: add\n"
+                "> **Promotion state**: proposed\n"
+                "> **Destination**: scripts/packet_lint.py\n"
+                "> **Owner**: fleet-maintainer\n"
+            ),
+            (
+                "- **Learning:** candidate — global field search -> one canonical block\n"
+                "- **Evidence:** review finding at revision worktree in Windows\n"
+                "- **Scope:** learning packet linting; excludes ledger transitions\n"
+                "- **Provenance:** verified — current source inspection on 2026-08-01\n"
+                "- **Learning disposition:** add\n"
+                "- **Promotion state:** proposed\n"
+                "- **Destination:** scripts/packet_lint.py\n"
+                "- **Owner:** fleet-maintainer\n"
+            ),
+        )
+        for packet in packets:
+            with self.subTest(packet=packet):
+                self.assertEqual(
+                    [], packet_lint.lint_learning_closeout(packet, "lifecycle-owner")
+                )
+
+    def test_unknown_mode_fails_directly(self) -> None:
+        with self.assertRaises(KeyError):
+            packet_lint.lint_learning_closeout(
+                "Learning: none — no reusable signal\n", "untriaged-owner"
+            )
 
 
 class RequiredSlots(unittest.TestCase):
@@ -81,9 +448,9 @@ class RequiredSlots(unittest.TestCase):
 
     def test_sde_fullstack_shape_requires_only_that_agent_s_guaranteed_slots(self) -> None:
         # The agent's packet SCALES: a small change legitimately ships Changed / Verified /
-        # Check first and stops. A shape demanding the conditional slots would fail a compliant
-        # agent, so the required set is pinned to the declared minimum — and to the agent file, so
-        # a future edit to either surfaces here rather than as a mystery eval failure.
+        # Check first / Learning and stops. A shape demanding the conditional slots would fail a
+        # compliant agent, so the required set is pinned to the declared minimum — and to the agent
+        # file, so a future edit to either surfaces here rather than as a mystery eval failure.
         packet_section = (REPO / "agents" / "sde-fullstack.md").read_text()
         for slot in packet_lint.SHAPES["sde-fullstack-packet"]:
             self.assertIn(slot, packet_section.lower(), f"{slot!r} is no longer a declared slot")
@@ -91,8 +458,215 @@ class RequiredSlots(unittest.TestCase):
             "**Changed**: duration.py:1-20, test_duration.py:1-30\n"
             "**Verified**: `pytest -q` -> 6 passed\n"
             "**Check first**: the 2h boundary case\n"
+            "**Learning**: none — no reusable signal\n"
         )
         self.assertEqual([], packet_lint.lint_packet(compressed, "sde-fullstack-packet"))
+
+    def test_learning_closeout_rejects_blank_whitespace_and_misleading_prefixes(self) -> None:
+        base = (
+            "**Changed**: duration.py:1\n"
+            "**Verified**: `pytest -q` -> 1 passed\n"
+            "**Check first**: boundary\n"
+        )
+        for closeout in ("Learning:\n", "Learning:   \n", "Learning curve: none\n", "Learning - none\n"):
+            with self.subTest(closeout=closeout):
+                findings = packet_lint.lint_packet(base + closeout, "sde-fullstack-packet")
+                self.assertTrue(any("Learning" in finding for finding in findings), findings)
+
+    def test_learning_closeout_rejects_unknown_status_and_incomplete_candidate(self) -> None:
+        base = (
+            "Changed: duration.py:1\n"
+            "Verified: `pytest -q` -> 1 passed\n"
+            "Check first: boundary\n"
+        )
+        malformed = packet_lint.lint_packet(
+            base + "Learning: maybe later\n", "sde-fullstack-packet"
+        )
+        self.assertTrue(any("must be `none` or `candidate" in finding for finding in malformed))
+
+        incomplete = packet_lint.lint_packet(
+            base + "Learning: candidate — observed -> expected\nEvidence: issue-1\n",
+            "sde-fullstack-packet",
+        )
+        self.assertTrue(any("Scope:" in finding for finding in incomplete), incomplete)
+        self.assertTrue(any("Owner:" in finding for finding in incomplete), incomplete)
+
+    def test_canonical_learning_none_passes_in_both_modes(self) -> None:
+        packet = (
+            "Changed: duration.py:1\n"
+            "Verified: `pytest -q` -> 1 passed\n"
+            "Check first: boundary\n"
+            "Learning: none — no reusable signal\n"
+        )
+        for mode in packet_lint.LEARNING_MODES:
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    [],
+                    packet_lint.lint_packet(
+                        packet, "sde-fullstack-packet", learning_mode=mode
+                    ),
+                )
+
+    def test_noncanonical_learning_none_fails_in_both_modes(self) -> None:
+        base = (
+            "Changed: duration.py:1\n"
+            "Verified: `pytest -q` -> 1 passed\n"
+            "Check first: boundary\n"
+        )
+        for mode in packet_lint.LEARNING_MODES:
+            for closeout in (
+                "Learning:none\n",
+                "Learning: none\n",
+                "Learning: none.\n",
+                "Learning: none - no reusable signal\n",
+                "Learning: none — no reusable signal.\n",
+            ):
+                with self.subTest(mode=mode, closeout=closeout):
+                    findings = packet_lint.lint_packet(
+                        base + closeout,
+                        "sde-fullstack-packet",
+                        learning_mode=mode,
+                    )
+                    self.assertTrue(
+                        any("none — no reusable signal" in finding for finding in findings),
+                        findings,
+                    )
+
+    def test_intake_candidate_passes_only_intake_mode(self) -> None:
+        self.assertEqual(
+            [],
+            packet_lint.lint_packet(
+                INTAKE_LEARNING_PACKET,
+                "sde-fullstack-packet",
+                learning_mode="intake",
+            ),
+        )
+        findings = packet_lint.lint_packet(
+            INTAKE_LEARNING_PACKET,
+            "sde-fullstack-packet",
+            learning_mode="lifecycle-owner",
+        )
+        self.assertTrue(any("lifecycle-owner" in finding for finding in findings), findings)
+
+    def test_lifecycle_owner_candidate_passes_only_lifecycle_owner_mode(self) -> None:
+        self.assertEqual(
+            [],
+            packet_lint.lint_packet(
+                LIFECYCLE_OWNER_LEARNING_PACKET,
+                "sde-fullstack-packet",
+                learning_mode="lifecycle-owner",
+            ),
+        )
+
+        findings = packet_lint.lint_packet(
+            LIFECYCLE_OWNER_LEARNING_PACKET,
+            "sde-fullstack-packet",
+            learning_mode="intake",
+        )
+        self.assertTrue(any("intake" in finding for finding in findings), findings)
+
+    def test_lifecycle_matrix_mirrors_ledger_owner(self) -> None:
+        # scripts/learning_ledger.py owns the executable persistence contract. The packet linter is
+        # a standalone eval tool, so it mirrors the map; equality here turns drift into a loud test
+        # failure instead of letting a transcript pass a pair the ledger later refuses to store.
+        expected = {
+            state: frozenset(dispositions)
+            for state, dispositions in learning_ledger.STATE_DISPOSITIONS.items()
+        }
+        self.assertEqual(expected, packet_lint.LEARNING_STATE_DISPOSITIONS)
+        self.assertEqual(
+            set(learning_ledger.DISPOSITIONS), set(packet_lint.LEARNING_DISPOSITIONS)
+        )
+
+    def test_every_ledger_compatible_lifecycle_pair_passes(self) -> None:
+        for state, allowed in sorted(learning_ledger.STATE_DISPOSITIONS.items()):
+            for disposition in sorted(allowed):
+                with self.subTest(state=state, disposition=disposition):
+                    packet = lifecycle_owner_packet(disposition, state)
+                    self.assertEqual(
+                        [],
+                        packet_lint.lint_packet(
+                            packet,
+                            "sde-fullstack-packet",
+                            learning_mode="lifecycle-owner",
+                        ),
+                    )
+
+    def test_every_ledger_incompatible_lifecycle_pair_fails(self) -> None:
+        for state, allowed in sorted(learning_ledger.STATE_DISPOSITIONS.items()):
+            for disposition in sorted(learning_ledger.DISPOSITIONS - allowed):
+                with self.subTest(state=state, disposition=disposition):
+                    packet = lifecycle_owner_packet(disposition, state)
+                    findings = packet_lint.lint_packet(
+                        packet,
+                        "sde-fullstack-packet",
+                        learning_mode="lifecycle-owner",
+                    )
+                    self.assertTrue(
+                        any("not valid for Promotion state" in finding for finding in findings),
+                        findings,
+                    )
+
+    def test_modes_reject_each_wrong_boundary_field_independently(self) -> None:
+        cases = (
+            (
+                "intake accepted disposition",
+                INTAKE_LEARNING_PACKET.replace(" (proposed recommendation)", ""),
+                "intake",
+                "Learning disposition",
+            ),
+            (
+                "intake post-triage state",
+                INTAKE_LEARNING_PACKET.replace("quarantined", "proposed"),
+                "intake",
+                "Promotion state",
+            ),
+            (
+                "owner proposed recommendation",
+                LIFECYCLE_OWNER_LEARNING_PACKET.replace(
+                    "Learning disposition: add",
+                    "Learning disposition: add (proposed recommendation)",
+                ),
+                "lifecycle-owner",
+                "Learning disposition",
+            ),
+            (
+                "owner quarantined state",
+                LIFECYCLE_OWNER_LEARNING_PACKET.replace("proposed", "quarantined"),
+                "lifecycle-owner",
+                "Promotion state",
+            ),
+        )
+        for label, packet, mode, expected in cases:
+            with self.subTest(label=label):
+                findings = packet_lint.lint_packet(
+                    packet, "sde-fullstack-packet", learning_mode=mode
+                )
+                self.assertTrue(any(expected in finding for finding in findings), findings)
+
+    def test_sde_fullstack_shape_defaults_to_lifecycle_owner_mode(self) -> None:
+        self.assertEqual(
+            [],
+            packet_lint.lint_packet(
+                LIFECYCLE_OWNER_LEARNING_PACKET, "sde-fullstack-packet"
+            ),
+        )
+
+    def test_unknown_learning_mode_raises(self) -> None:
+        with self.assertRaises(KeyError):
+            packet_lint.lint_packet(
+                LIFECYCLE_OWNER_LEARNING_PACKET,
+                "sde-fullstack-packet",
+                learning_mode="untriaged-owner",
+            )
+
+    def test_learning_none_cannot_hide_candidate_fields(self) -> None:
+        packet = (
+            "Changed: x.py:1\nVerified: `pytest -q` -> 1 passed\nCheck first: x.py:1\n"
+            "Learning: none — no reusable signal\nOwner: fleet-maintainer\n"
+        )
+        findings = packet_lint.lint_packet(packet, "sde-fullstack-packet")
+        self.assertTrue(any("contradicts candidate fields" in finding for finding in findings), findings)
 
     def test_postmortem_shape_matches_the_shipped_template(self) -> None:
         # The shape's slots are the headings the asset actually emits; drift between them would
@@ -156,6 +730,51 @@ class OtherShapes(unittest.TestCase):
         # A shape nobody can name is a shape nobody can assert against.
         self.assertIn("review-packet", packet_lint.SHAPES)
         self.assertTrue(all(slots for slots in packet_lint.SHAPES.values()))
+
+
+class CanonicalLearningPrompts(unittest.TestCase):
+    OWNER_AGENTS = ("prompt-engineer", "sde-fullstack", "verification-engineer")
+    MATRIX_FRAGMENTS = (
+        "proposed|approved|promoted → add|merge|supersede",
+        "inconclusive → skip",
+        "rejected → skip|drop",
+        "retired → skip|drop|merge|supersede",
+    )
+
+    def test_each_lifecycle_owner_is_taught_the_compatibility_matrix(self) -> None:
+        for name in self.OWNER_AGENTS:
+            content = (REPO / "agents" / f"{name}.md").read_text(encoding="utf-8")
+            with self.subTest(name=name):
+                for fragment in self.MATRIX_FRAGMENTS:
+                    self.assertIn(fragment, content)
+
+    def test_worked_examples_use_the_canonical_none_closeout(self) -> None:
+        for name in ("prompt-engineer", "sde-fullstack"):
+            content = (REPO / "agents" / f"{name}.md").read_text(encoding="utf-8")
+            example = content.split("### Worked example", 1)[1]
+            with self.subTest(name=name):
+                self.assertIn("> **Learning**: none — no reusable signal", example)
+
+    def test_self_improve_loop_declares_the_matrix_owner_and_drift_rule(self) -> None:
+        content = (REPO / "skills" / "self-improve-loop" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("scripts/learning_ledger.py:STATE_DISPOSITIONS", content)
+        self.assertIn("owns that executable matrix", content)
+        self.assertIn("treat the mirrors as drift", content)
+
+    def test_retro_template_separates_retro_scope_from_candidate_scope(self) -> None:
+        content = (
+            REPO / "skills" / "self-improve-loop" / "references" / "retro-protocol.md"
+        ).read_text(encoding="utf-8")
+        template = content.split("```text", 1)[1].split("```", 1)[0]
+        lines = [line for line in template.splitlines() if line]
+        self.assertTrue(lines[0].startswith("Retro scope:"), lines)
+        learning_index = next(
+            index for index, line in enumerate(lines) if line.startswith("Learning:")
+        )
+        self.assertEqual("Evidence:", lines[learning_index + 1].split(" ", 1)[0])
+        self.assertEqual("Scope:", lines[learning_index + 2].split(" ", 1)[0])
 
 
 if __name__ == "__main__":

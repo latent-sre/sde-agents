@@ -28,6 +28,13 @@ inherits everything under the user's CLAUDE_CONFIG_DIR (personal agents, skills,
 CLAUDE.md), and a junction deployment makes the fleet register twice — bare and namespaced — in
 every run. `--clean-room` (scripts/eval_clean_room.py) is the isolation switch, and it is recorded
 in `conditions` because two artifacts that differ on it are not comparable.
+
+Every written artifact also carries `provenance`: hashes of the exact cluster bytes, canonical
+selected cases, evaluator/grader sources, and runtime-relevant plugin content. Sessions execute a
+private copy of the identified plugin bytes, closing source-checkout A -> B -> A drift and detecting
+a private-snapshot mutation that remains at the endpoint. Same-user session code can transiently
+mutate and restore that copy unless the host sandbox denies writes; endpoint hashing is not an
+immutability boundary.
 """
 from __future__ import annotations
 
@@ -35,9 +42,14 @@ import argparse
 import concurrent.futures
 import contextlib
 import fnmatch
+import hashlib
 import importlib.util
 import json
+import os
+import platform
+import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -50,6 +62,509 @@ CLAUDE = shutil.which("claude")
 FLEET_AGENTS = frozenset(p.stem for p in (REPO / "agents").glob("*.md"))
 FLEET_SKILLS = frozenset(p.name for p in (REPO / "skills").iterdir() if p.is_dir()) if (REPO / "skills").is_dir() else frozenset()
 FLEET = FLEET_AGENTS | FLEET_SKILLS
+
+PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v3"
+
+# `claude --plugin-dir` discovers these authored/runtime surfaces. The allowlist is deliberate:
+# test fixtures, eval outputs, repository docs, generated host adapters, and operator scratch state
+# are not inputs to the Claude plugin being measured, so hashing the whole checkout would make a
+# benchmark identity move for irrelevant reasons. Runtime text may name additional files through
+# ${CLAUDE_PLUGIN_ROOT} or a safe backticked repository-relative path; those exact references are
+# discovered and included below (the fleet's read-only guard and learning ledger are examples).
+PLUGIN_RUNTIME_DIRS = (".claude-plugin", "agents", "commands", "hooks", "skills", "workflows")
+PLUGIN_RUNTIME_FILES = ("plugin.json", ".mcp.json")
+PLUGIN_HASH_EXCLUSIONS = (
+    ".git/**",
+    "evals/**",
+    "unreferenced docs/**",
+    "tests/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".codex-plugin/**",
+    ".github/**",
+    ".probe-tmp/**",
+    ".superpowers/**",
+    "platforms/**",
+    "plugins/**",
+    "unreferenced repository-only root documents",
+    "all other top-level entries outside the runtime allowlist",
+    "**/__pycache__/**, **/*.pyc, editor and OS transient files",
+)
+_HARD_EXCLUDED_REFERENCE_ROOTS = frozenset({
+    ".git", "evals", "tests", ".agents", ".claude", ".codex", ".codex-plugin",
+    ".github", ".probe-tmp", ".superpowers", "platforms", "plugins",
+})
+_TRANSIENT_DIR_NAMES = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".cache"})
+_TRANSIENT_FILE_NAMES = frozenset({".DS_Store", "Thumbs.db", ".coverage"})
+_PLUGIN_ROOT_REFERENCE = re.compile(
+    rb"\$\{CLAUDE_PLUGIN_ROOT\}[\\/]+([A-Za-z0-9_.\\/\-]+)"
+)
+_BACKTICK_CONTENT = re.compile(rb"(?<!`)`([^`\r\n]+)`(?!`)")
+_SAFE_RELATIVE_PART = re.compile(r"(?=.*[A-Za-z0-9_-])[A-Za-z0-9_.-]+\Z")
+
+
+class ProvenanceError(RuntimeError):
+    """The eval input cannot be identified without following an unsafe filesystem entry."""
+
+
+class EvalAuthUnavailable(RuntimeError):
+    """A model session could not authenticate, so the batch produced no valid benchmark."""
+
+
+_CLEAN_ROOM_MODULE = None
+_LOADED_EVALUATOR_SOURCES: dict[str, bytes] = {}
+_EXECUTING_EVALUATOR_SOURCE = globals().get("_SDE_EVAL_EXECUTING_SOURCE")
+
+
+def _is_link_or_reparse(file_stat) -> bool:
+    """True for POSIX symlinks and every Windows reparse-point kind, including junctions."""
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return stat.S_ISLNK(file_stat.st_mode) or bool(
+        getattr(file_stat, "st_file_attributes", 0) & reparse_flag
+    )
+
+
+def _absolute_without_resolving(path: Path) -> Path:
+    """Return an absolute lexical path; `resolve()` is forbidden because it follows links."""
+    return Path(os.path.abspath(os.fspath(path.expanduser())))
+
+
+def _checked_stat(path: Path):
+    try:
+        file_stat = path.lstat()
+    except OSError as exc:
+        raise ProvenanceError(f"cannot inspect provenance path {path}: {exc}") from exc
+    if _is_link_or_reparse(file_stat):
+        raise ProvenanceError(
+            f"unsafe provenance path {path}: symlinks, junctions, and reparse points are refused"
+        )
+    return file_stat
+
+
+def _check_existing_ancestors(path: Path) -> None:
+    """Reject a link in any existing path component before opening the target."""
+    absolute = _absolute_without_resolving(path)
+    current = Path(absolute.anchor)
+    parts = absolute.parts[1:] if absolute.anchor else absolute.parts
+    for part in parts:
+        current /= part
+        _checked_stat(current)
+
+
+def _read_regular_file(path: Path) -> bytes:
+    """Read bytes without accepting links, special files, or a file changed during the read."""
+    path = _absolute_without_resolving(path)
+    _check_existing_ancestors(path)
+    before = _checked_stat(path)
+    if not stat.S_ISREG(before.st_mode):
+        raise ProvenanceError(f"provenance input is not a regular file: {path}")
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        raise ProvenanceError(f"cannot read provenance input {path}: {exc}") from exc
+    after = _checked_stat(path)
+    before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+    if before_identity != after_identity:
+        raise ProvenanceError(f"provenance input changed while it was being read: {path}")
+    return content
+
+
+def _portable_path_label(path: Path) -> str:
+    absolute = _absolute_without_resolving(path)
+    try:
+        return absolute.relative_to(_absolute_without_resolving(REPO)).as_posix() or "."
+    except ValueError:
+        return absolute.as_posix()
+
+
+def _sha256(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def source_identity(paths: list[Path]) -> list[dict]:
+    """SHA-256 records for exact eval-source bytes, sorted by portable path label."""
+    records = [
+        {"path": _portable_path_label(path), "sha256": _sha256(_read_regular_file(path))}
+        for path in paths
+    ]
+    return sorted(records, key=lambda record: record["path"])
+
+
+def register_loaded_evaluator_source(path: Path, content: bytes) -> None:
+    """Bind one evaluator path to the exact source bytes compiled in this process."""
+    absolute = _absolute_without_resolving(path)
+    key = os.fspath(absolute)
+    prior = _LOADED_EVALUATOR_SOURCES.get(key)
+    if prior is not None and prior != content:
+        raise ProvenanceError(
+            f"evaluator source {absolute} was loaded from two different byte sequences"
+        )
+    _LOADED_EVALUATOR_SOURCES[key] = bytes(content)
+
+
+def load_evaluator_module(name: str, path: Path):
+    """Compile one evaluator module from the exact checked bytes registered for provenance.
+
+    Import machinery compiles a source buffer before module code starts. Re-reading ``__file__``
+    from inside that module can therefore observe disk B even though the process is executing A.
+    Evaluator modules use this loader so compilation and provenance consume one byte buffer.
+    """
+    absolute = _absolute_without_resolving(path)
+    source = _read_regular_file(absolute)
+    spec = importlib.util.spec_from_file_location(name, absolute)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load evaluator module {name!r} from {absolute}")
+    module = importlib.util.module_from_spec(spec)
+    module.__dict__["_SDE_EVAL_EXECUTING_SOURCE"] = source
+    exec(compile(source, str(absolute), "exec"), module.__dict__)
+    register_loaded_evaluator_source(absolute, source)
+    return module
+
+
+def load_current_evaluator():
+    """Return this runner compiled from and bound to one checked source buffer.
+
+    The public helper is also the script's self-bootstrap. It lets tests and imported callers run
+    the same exact-source path as ``python scripts/eval_routing.py`` instead of relying on a later
+    disk read to guess which bytes Python originally compiled.
+    """
+    return load_evaluator_module("_sde_eval_routing_bound", Path(__file__))
+
+
+if _EXECUTING_EVALUATOR_SOURCE is not None:
+    register_loaded_evaluator_source(Path(__file__), _EXECUTING_EVALUATOR_SOURCE)
+
+
+def routing_evaluator_paths() -> list[Path]:
+    """Exact executable and imported classifier/grader sources for this runner."""
+    runner = Path(__file__)
+    return [runner, runner.with_name("eval_clean_room.py")]
+
+
+def evaluator_identity(paths: list[Path]) -> dict:
+    """Content identity for the code that turns transcripts into benchmark verdicts."""
+    if not paths:
+        raise ProvenanceError("evaluator provenance requires at least one source file")
+    clean_room_path = _absolute_without_resolving(Path(__file__).with_name("eval_clean_room.py"))
+    records: list[dict[str, str]] = []
+    for path in paths:
+        absolute = _absolute_without_resolving(path)
+        # This module used to load lazily after the endpoint hash. Loading it here from one checked
+        # byte buffer and hashing that same buffer closes the pre-first-load A -> B -> A race.
+        if absolute == clean_room_path:
+            _load_clean_room()
+        content = _LOADED_EVALUATOR_SOURCES.get(os.fspath(absolute))
+        if content is None:
+            content = _read_regular_file(absolute)
+        records.append({
+            "path": _portable_path_label(absolute),
+            "sha256": _sha256(content),
+        })
+    records.sort(key=lambda record: record["path"])
+    labels = [record["path"] for record in records]
+    if len(labels) != len(set(labels)):
+        raise ProvenanceError("evaluator provenance contains the same source file more than once")
+    canonical = json.dumps(
+        records, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    ).encode("utf-8")
+    return {
+        "sha256": _sha256(canonical),
+        "files": records,
+        "runtime": {
+            "implementation": platform.python_implementation(),
+            "python_version": platform.python_version(),
+        },
+    }
+
+
+def selection_identity(expression: str, cases: list[dict], limit: int | None = None) -> dict:
+    """Hash selected definitions and the exact selection operation as canonical JSON."""
+    case_ids = [case["id"] for case in cases]
+    selected = {
+        "expression": expression,
+        "limit": limit,
+        "case_ids": case_ids,
+        "definitions": cases,
+    }
+    canonical = json.dumps(
+        selected, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    ).encode("utf-8")
+    return {
+        "expression": expression,
+        "limit": limit,
+        "case_ids": case_ids,
+        "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+        "sha256": _sha256(canonical),
+    }
+
+
+def _is_transient(path: Path) -> bool:
+    return (
+        path.name in _TRANSIENT_DIR_NAMES
+        or path.name in _TRANSIENT_FILE_NAMES
+        or path.suffix in {".pyc", ".pyo", ".tmp", ".swp"}
+        or path.name.endswith("~")
+    )
+
+
+def _collect_runtime_path(root: Path, path: Path, files: dict[str, bytes]) -> None:
+    file_stat = _checked_stat(path)
+    if _is_transient(path):
+        return
+    if stat.S_ISREG(file_stat.st_mode):
+        relative = path.relative_to(root).as_posix()
+        files[relative] = _read_regular_file(path)
+        return
+    if not stat.S_ISDIR(file_stat.st_mode):
+        raise ProvenanceError(f"unsafe non-file entry in plugin provenance scope: {path}")
+    try:
+        children = sorted(path.iterdir(), key=lambda child: child.name.replace("\\", "/"))
+    except OSError as exc:
+        raise ProvenanceError(f"cannot traverse plugin provenance path {path}: {exc}") from exc
+    for child in children:
+        _collect_runtime_path(root, child, files)
+
+
+def _reference_parts(raw: bytes, source: str) -> tuple[str, ...]:
+    referenced = raw.decode("ascii").replace("\\", "/").rstrip("/")
+    parts = tuple(part for part in referenced.split("/") if part not in ("", "."))
+    if not parts or ".." in parts:
+        raise ProvenanceError(f"unsafe repository-relative reference in {source}: {referenced!r}")
+    return parts
+
+
+def _backticked_repo_paths(content: bytes, source: str) -> list[tuple[str, ...]]:
+    """Extract bounded, safe relative-path tokens from inline-code spans.
+
+    Runtime instructions conventionally backtick paths. Restricting discovery to those spans and
+    existing regular files lets an explicitly directed dependency affect identity without turning
+    every prose word—or the whole repository—into plugin content.
+    """
+    paths: set[tuple[str, ...]] = set()
+    for span_match in _BACKTICK_CONTENT.finditer(content):
+        for raw_token in re.split(rb"\s+", span_match.group(1)):
+            token = raw_token.strip(b"'\"(),;[]{}")
+            if token.startswith(b"./") or token.startswith(b".\\"):
+                token = token[2:]
+            if not token or token.startswith((b"/", b"\\")):
+                continue
+            try:
+                normalized = token.decode("ascii").replace("\\", "/").rstrip("/")
+            except UnicodeDecodeError:
+                continue
+            # A plain component name is usually an agent, skill, command, or flag rather than a
+            # path. A dotted root file such as README.md remains eligible.
+            if "/" not in normalized:
+                if normalized in (".", "..", "...") or "." not in normalized:
+                    continue
+            parts = tuple(normalized.split("/"))
+            if ".." in parts:
+                raise ProvenanceError(
+                    f"unsafe repository-relative reference in {source}: {normalized!r}"
+                )
+            if any(not _SAFE_RELATIVE_PART.fullmatch(part) for part in parts):
+                continue
+            if parts[0] in _HARD_EXCLUDED_REFERENCE_ROOTS:
+                continue
+            if any(part in _TRANSIENT_DIR_NAMES or part in _TRANSIENT_FILE_NAMES for part in parts):
+                continue
+            paths.add(parts)
+    return sorted(paths)
+
+
+def _git_identity(root: Path) -> tuple[str | None, bool | None]:
+    git = shutil.which("git")
+    if git is None:
+        return None, None
+    quiet_env = dict(os.environ)
+    quiet_env["GIT_OPTIONAL_LOCKS"] = "0"
+    common = {"capture_output": True, "encoding": "utf-8", "errors": "replace",
+              "timeout": 30, "env": quiet_env}
+    try:
+        head = subprocess.run(
+            [git, "-C", str(root), "rev-parse", "--verify", "HEAD"], **common
+        )
+        status_result = subprocess.run(
+            [git, "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"],
+            **common,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    if head.returncode != 0 or status_result.returncode != 0:
+        return None, None
+    return head.stdout.strip() or None, bool(status_result.stdout)
+
+
+def _plugin_runtime_files(plugin_dir: Path) -> tuple[Path, dict[str, bytes], set[str]]:
+    """Read one complete, link-safe snapshot of every runtime-relevant plugin file."""
+    root = _absolute_without_resolving(plugin_dir)
+    _check_existing_ancestors(root)
+    root_stat = _checked_stat(root)
+    if not stat.S_ISDIR(root_stat.st_mode):
+        raise ProvenanceError(f"plugin directory is not a directory: {root}")
+
+    files: dict[str, bytes] = {}
+    included: set[str] = set()
+    for name in (*PLUGIN_RUNTIME_DIRS, *PLUGIN_RUNTIME_FILES):
+        path = root / name
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ProvenanceError(f"cannot inspect plugin provenance path {path}: {exc}") from exc
+        _collect_runtime_path(root, path, files)
+        included.add(name)
+
+    # Runtime text can name supporting files outside the conventional plugin directories. Include
+    # exact plugin-root references and existing safe paths in inline-code spans recursively, without
+    # interpreting or executing content. A missing backticked path may be a worked example; it is
+    # ignored. `${CLAUDE_PLUGIN_ROOT}` is authoritative, so its missing target fails closed.
+    instruction_files = set(files)
+    scanned: set[str] = set()
+    while pending := sorted(set(files) - scanned):
+        relative = pending[0]
+        scanned.add(relative)
+        for match in _PLUGIN_ROOT_REFERENCE.finditer(files[relative]):
+            parts = _reference_parts(match.group(1), relative)
+            if parts[0] in _HARD_EXCLUDED_REFERENCE_ROOTS:
+                continue
+            target = root.joinpath(*parts)
+            try:
+                target.lstat()
+            except OSError as exc:
+                raise ProvenanceError(
+                    f"runtime dependency named by {relative} cannot be inspected: {target}: {exc}"
+                ) from exc
+            _collect_runtime_path(root, target, files)
+            included.add("/".join(parts))
+        for parts in (
+            _backticked_repo_paths(files[relative], relative)
+            if relative in instruction_files else ()
+        ):
+            target = root.joinpath(*parts)
+            try:
+                target.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise ProvenanceError(
+                    f"repo-relative dependency named by {relative} cannot be inspected: "
+                    f"{target}: {exc}"
+                ) from exc
+            target_stat = _checked_stat(target)
+            if not stat.S_ISREG(target_stat.st_mode):
+                continue
+            files[target.relative_to(root).as_posix()] = _read_regular_file(target)
+            included.add("/".join(parts))
+
+    if not files:
+        raise ProvenanceError(
+            f"no plugin runtime files found under {root}; refusing an identity for an empty scope"
+        )
+    return root, files, included
+
+
+def _plugin_identity_from_files(
+    root: Path, files: dict[str, bytes], included: set[str],
+) -> dict:
+    """Identify the exact in-memory snapshot returned by `_plugin_runtime_files`."""
+    digest = hashlib.sha256()
+    digest.update(b"sde-agents-plugin-content-v1\0")
+    for relative in sorted(files):
+        name_bytes = relative.encode("utf-8")
+        content = files[relative]
+        digest.update(len(name_bytes).to_bytes(8, "big"))
+        digest.update(name_bytes)
+        digest.update(len(content).to_bytes(8, "big"))
+        digest.update(content)
+
+    git_head, git_dirty = _git_identity(root)
+    return {
+        "sha256": digest.hexdigest(),
+        "files_hashed": len(files),
+        "scope": {
+            "strategy": "runtime allowlist plus referenced repository-local dependencies",
+            "included": sorted(included),
+            "excluded": list(PLUGIN_HASH_EXCLUSIONS),
+        },
+        "git_head": git_head,
+        "git_dirty": git_dirty,
+        "git_scope": "containing worktree" if git_head is not None else None,
+    }
+
+
+def plugin_identity(plugin_dir: Path) -> dict:
+    """Content-derived identity for the plugin surfaces a Claude eval can load.
+
+    Paths and bytes are length-framed before hashing, so concatenation cannot make two different
+    trees collide at the serialization layer. Only digests and scope metadata enter benchmark.json;
+    raw repository content never does.
+    """
+    root, files, included = _plugin_runtime_files(plugin_dir)
+    return _plugin_identity_from_files(root, files, included)
+
+
+@contextlib.contextmanager
+def frozen_plugin(plugin_dir: Path):
+    """Yield a private execution copy whose bytes cannot follow edits to the source checkout.
+
+    Endpoint hashing alone cannot detect A -> B -> A edits made while concurrent sessions are
+    loading a source checkout. The eval therefore executes the exact bytes collected for one
+    content identity from an unadvertised temporary directory. A final identity check detects a
+    session-side mutation left in place. It cannot detect a same-user session mutating and restoring
+    the snapshot between checks; preventing that is a host-sandbox boundary, not a hash claim.
+    """
+    source_root, files, included = _plugin_runtime_files(plugin_dir)
+    source_identity = _plugin_identity_from_files(source_root, files, included)
+    with tempfile.TemporaryDirectory(prefix="sde-agents-eval-plugin-") as temp_dir:
+        frozen_root = Path(temp_dir) / "plugin"
+        frozen_root.mkdir()
+        for relative, content in files.items():
+            target = frozen_root / Path(relative)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        frozen_identity = plugin_identity(frozen_root)
+        if source_identity["sha256"] != frozen_identity["sha256"]:
+            raise ProvenanceError(
+                "frozen plugin snapshot does not match the source bytes collected for execution"
+            )
+        yield frozen_root, source_identity
+
+
+def verify_frozen_plugin(plugin_dir: Path, expected_identity: dict) -> None:
+    """Fail when a private-snapshot mutation remains observable at the endpoint."""
+    actual = plugin_identity(plugin_dir)
+    if actual["sha256"] != expected_identity["sha256"]:
+        raise ProvenanceError("frozen plugin content changed while the batch was running")
+
+
+def benchmark_provenance(
+    source_paths: list[Path], cases: list[dict], expression: str, plugin_dir: Path,
+    limit: int | None = None, *, evaluator_paths: list[Path],
+) -> dict:
+    return {
+        "schema": PROVENANCE_SCHEMA,
+        "eval_sources": source_identity(source_paths),
+        "selection": selection_identity(expression, cases, limit),
+        # This is deliberately separate from the plugin under test. A copied or external plugin
+        # directory does not identify the local runner and deterministic graders that interpreted
+        # its transcripts.
+        "evaluator": evaluator_identity(evaluator_paths),
+        "plugin": plugin_identity(plugin_dir),
+    }
+
+
+def _content_provenance_matches(before: dict, after: dict) -> bool:
+    """Git dirtiness may move for excluded files; measurement inputs and evaluator may not."""
+    return (
+        before["eval_sources"] == after["eval_sources"]
+        and before["selection"] == after["selection"]
+        and before["evaluator"] == after["evaluator"]
+        and before["plugin"]["sha256"] == after["plugin"]["sha256"]
+    )
 
 
 def strip_ns(name: str) -> str:
@@ -122,7 +637,7 @@ def _string_values(obj) -> list[str]:
 
 def transcript_stats(stdout: str) -> dict:
     """Measurement conditions read off one stream-json transcript:
-    {input_tokens, output_tokens, duration_ms, model, completed}.
+    {input_tokens, output_tokens, duration_ms, model, completed, result_error}.
 
     Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
     baseline, and two parsers would eventually disagree about one transcript — so this is the one
@@ -131,6 +646,7 @@ def transcript_stats(stdout: str) -> dict:
     """
     input_tokens = output_tokens = duration = model = None
     completed = False
+    result_error = False
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -141,9 +657,10 @@ def transcript_stats(stdout: str) -> dict:
             input_tokens = usage.get("input_tokens", input_tokens)
             output_tokens = usage.get("output_tokens", output_tokens)
             duration = event.get("duration_ms")
-            # A `result` event means the session RAN TO ITS END — the transcript is whole, so its
-            # routing (or its silence) is an observation rather than a blank.
-            completed = True
+            # Only a non-error final result makes silence an observation. Reassign on every result
+            # so the final structured result controls the classification.
+            result_error = bool(event.get("is_error"))
+            completed = not result_error
         # Record the model the session ACTUALLY ran on, read off the transcript rather than
         # assumed — routing behavior varies by tier, so an artifact that omits it cannot be validly
         # diffed against another. Deliberately independent of any REQUESTED model: reusing the
@@ -155,24 +672,26 @@ def transcript_stats(stdout: str) -> dict:
             if isinstance(candidate, str) and candidate:
                 model = candidate
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
-            "duration_ms": duration, "model": model, "completed": completed}
+            "duration_ms": duration, "model": model, "completed": completed,
+            "result_error": result_error}
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
              env: dict | None = None) -> dict:
     """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
-    Never raises: this drives a flaky, sometimes long-running subprocess, and a routing eval only
-    needs the FIRST routing decision, not a completed session. A timeout is therefore expected, not
-    exceptional — the transcript captured up to that point almost always already contains the Skill
-    or Agent call we grade on. (An earlier version let TimeoutExpired propagate out of the thread
-    pool, and one prompt that induced a long agentic build took the whole 16-case suite down with
-    it.) So: parse whatever stdout exists whether the run exits, times out, or errors, and set
-    `error` only when the transcript cannot support a routing verdict (see the usability comment
-    below). `note` keeps the trouble visible even for runs that were graded anyway, so an artifact
-    can still say a rate came from cut or non-zero sessions.
+    Ordinary runner trouble never raises: this drives a flaky, sometimes long-running subprocess,
+    and a routing eval only needs the FIRST routing decision, not a completed session. Authentication
+    failure is the exception because it invalidates the whole batch and raises EvalAuthUnavailable.
+    A timeout is expected rather than exceptional — the transcript captured up to that point almost
+    always already contains the Skill or Agent call we grade on. So: parse whatever stdout exists
+    whether the run exits, times out, or errors, and set `error` only when the transcript cannot
+    support a routing verdict (see the usability comment below). `note` keeps the trouble visible
+    even for runs that were graded anyway, so an artifact can still say a rate came from cut or
+    non-zero sessions.
     """
     stdout, stderr, note = "", "", None
+    returncode: int | None = None
     try:
         with tempfile.TemporaryDirectory() as cwd:
             proc = subprocess.run(
@@ -186,29 +705,44 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
                 env=env,
             )
             stdout, stderr = proc.stdout or "", proc.stderr or ""
+            returncode = proc.returncode
             if proc.returncode != 0:
                 note = f"exit {proc.returncode}: {stderr[:150]}"
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout or ""
         if isinstance(stdout, bytes):
             stdout = stdout.decode("utf-8", "replace")
+        stderr = exc.stderr or ""
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", "replace")
+        returncode = 1
         note = f"timed out after {timeout}s (partial transcript graded)"
     except Exception as exc:  # a broken spawn must not crash the suite
         note = f"run failed: {exc}"
+
+    if returncode is not None:
+        raise_for_auth_failure(stdout, returncode, stderr)
 
     stats = transcript_stats(stdout)
     tokens = ((stats["input_tokens"] or 0) + (stats["output_tokens"] or 0)) or None
     duration, observed_model = stats["duration_ms"], stats["model"]
     session_completed = stats["completed"]
 
+    if stats["result_error"]:
+        result_note = "structured result reported an error"
+        note = f"{note}; {result_note}" if note else result_note
+
     fired = sorted(components_fired(stdout))
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
-    # reached its `result` event routed somewhere — possibly off the fleet entirely, which is a real
-    # negative sample and a real positive miss — even if the CLI then exited non-zero; discarding it
+    # reached its non-error `result` event routed somewhere — possibly off the fleet entirely, which
+    # is a real negative sample and a real positive miss — even if the CLI then exited non-zero;
+    # discarding it
     # because no FLEET component fired drops exactly the wrong-route evidence, and dropping misses
     # from a positive's denominator can turn mostly-wrong routing into a PASS. A run cut by the
     # TIMEOUT is different: its silence is not a decision, only an unfinished one, so it still counts
-    # as a measurement failure unless something already fired.
+    # as a measurement failure unless something already fired. The same narrow partial-evidence
+    # rule applies to an error result: a component call observed before the error is real, but the
+    # error result's silence can never green a negative.
     usable = bool(fired) or session_completed
     error = note if (note and not usable) else None
     return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": observed_model,
@@ -219,16 +753,37 @@ def _load_clean_room():
     """Load scripts/eval_clean_room.py by path. A plain import spells differently in this file's
     two runtime contexts (script vs `from scripts import eval_routing`); path loading works in both,
     and it happens lazily so only `--clean-room` runs pay for or depend on it."""
+    global _CLEAN_ROOM_MODULE
+    if _CLEAN_ROOM_MODULE is not None:
+        return _CLEAN_ROOM_MODULE
     path = Path(__file__).resolve().parent / "eval_clean_room.py"
-    spec = importlib.util.spec_from_file_location("eval_clean_room", path)
-    # An assert here would vanish under `python -O` and surface later as an opaque AttributeError;
-    # a --clean-room run must instead fail loudly at the point the isolation module went missing.
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load the clean-room module from {path}; without it --clean-room "
-                          "cannot isolate the run, so refusing rather than measuring a dirty room")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    try:
+        module = load_evaluator_module("eval_clean_room", path)
+    except ImportError as exc:
+        raise ImportError(
+            f"cannot load the clean-room module from {path}; without it --clean-room cannot "
+            "isolate the run, so refusing rather than measuring a dirty room"
+        ) from exc
+    # Every worker reuses this already-loaded module. Otherwise an A -> B -> A source edit during
+    # a concurrent batch could make different sessions use different auth classifiers while the
+    # endpoint provenance hashes still match.
+    _CLEAN_ROOM_MODULE = module
+    return _CLEAN_ROOM_MODULE
+
+
+def raise_for_auth_failure(transcript: str, returncode: int, stderr: str = "") -> None:
+    """Translate the shared clean-room classifier into a runner-stable batch exception."""
+    clean_room = _load_clean_room()
+    try:
+        clean_room.raise_if_auth_failed(transcript, returncode, stderr)
+    except clean_room.AuthUnavailable as exc:
+        raise EvalAuthUnavailable(str(exc)) from exc
+
+
+def auth_provider_mode(env: dict | None, *, clean_room_enabled: bool) -> dict:
+    """Return non-secret auth/provider measurement metadata from the shared classifier."""
+    clean_room = _load_clean_room()
+    return clean_room.auth_provider_mode(env, clean_room=clean_room_enabled)
 
 
 def cli_version() -> str | None:
@@ -257,6 +812,58 @@ def plugin_dir_label(plugin_dir: Path) -> str:
         return str(plugin_dir)
 
 
+def _validated_threshold(threshold: float) -> float:
+    """Return a usable positive-case threshold or reject a false-green configuration."""
+    if (
+        isinstance(threshold, bool)
+        or not isinstance(threshold, (int, float))
+        or not 0 < threshold <= 1
+    ):
+        raise ValueError(f"threshold must be > 0 and <= 1 (got {threshold!r})")
+    return float(threshold)
+
+
+def _scoring_targets(case: dict, members: set[str]) -> tuple[str, set[str]]:
+    """Validate the polarity-specific contract and return the set used by the scorer."""
+    case_id = case.get("id", "<missing id>") if isinstance(case, dict) else "<invalid case>"
+    if not isinstance(case, dict):
+        raise ValueError(f"case {case_id!r} must be an object")
+    if not members or any(
+        not isinstance(member, str) or not member.strip() for member in members
+    ):
+        raise ValueError("cluster members must be a non-empty set of component names")
+
+    polarity = case.get("polarity")
+    if polarity not in ("positive", "negative"):
+        raise ValueError(
+            f"case {case_id!r} polarity must be exactly 'positive' or 'negative' "
+            f"(got {polarity!r})"
+        )
+
+    if polarity == "positive":
+        field = "expect_fires"
+        raw_targets = case.get(field)
+    elif "expect_not_fires" in case:
+        field = "expect_not_fires"
+        raw_targets = case[field]
+    else:
+        # Omission is the documented broad negative: no member of the cluster may fire.
+        return polarity, set(members)
+
+    if not isinstance(raw_targets, list) or not raw_targets:
+        raise ValueError(f"case {case_id!r} {field} must be a non-empty list")
+    invalid = [
+        target
+        for target in raw_targets
+        if not isinstance(target, str) or not target.strip() or target not in members
+    ]
+    if invalid:
+        raise ValueError(
+            f"case {case_id!r} {field} contains invalid cluster member(s): {invalid!r}"
+        )
+    return polarity, set(raw_targets)
+
+
 def score_case(case: dict, runs: list[dict], members: set[str], threshold: float) -> dict:
     """Aggregate a case's runs into rates and a pass/fail verdict.
 
@@ -271,17 +878,18 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
     If every run of a case is invalid, the case is INCONCLUSIVE and never counts as passed -- an
     unmeasured case must not be reported as a result in either direction.
     """
+    threshold = _validated_threshold(threshold)
+    polarity, scoring_targets = _scoring_targets(case, members)
     valid = [r for r in runs if not r.get("error")]
     excluded = len(runs) - len(valid)
     n = len(valid)
     inconclusive = n == 0
     member_hits = [bool(set(r["fired"]) & members) for r in valid]
     fire_rate = sum(member_hits) / n if n else 0.0
-    polarity = case["polarity"]
     suffix = f" [{excluded} run(s) excluded: no usable transcript]" if excluded else ""
 
     if polarity == "positive":
-        expected = set(case.get("expect_fires", members))
+        expected = scoring_targets
         correct = [bool(set(r["fired"]) & expected) for r in valid]
         correct_rate = sum(correct) / n if n else 0.0
         passed = (not inconclusive) and correct_rate >= threshold
@@ -294,7 +902,7 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
         # neg-resolved-not-incident forbids the mitigation skills on an already-resolved outage while
         # `postmortem` — a cluster member, and the correct destination — is expected to fire.
         # Defaults to every member, so a plain near-miss case behaves exactly as before.
-        forbidden = set(case.get("expect_not_fires", members))
+        forbidden = scoring_targets
         hits = [bool(set(r["fired"]) & forbidden) for r in valid]
         correct_rate = sum(not h for h in hits) / n if n else 0.0  # rate of NOT firing
         # A negative fails if a forbidden component fires even once -- but an INCONCLUSIVE negative
@@ -331,7 +939,13 @@ def score_case(case: dict, runs: list[dict], members: set[str], threshold: float
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    if _EXECUTING_EVALUATOR_SOURCE is None:
+        # The ordinary Python loader does not expose the exact source buffer it compiled. Delegate
+        # before any eval input is read or session is started, so all grading and provenance run
+        # from one checked buffer registered by ``load_current_evaluator``.
+        return load_current_evaluator().main(argv)
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("cluster", nargs="?", default=str(REPO / "evals" / "routing" / "prompt-tooling.json"),
                         help="path to a cluster JSON file")
@@ -342,7 +956,10 @@ def main() -> int:
     parser.add_argument("--concurrency", type=int, default=4, help="parallel runs (default 4)")
     parser.add_argument("--timeout", type=int, default=180,
                         help="per-run seconds before the session is cut and its partial transcript graded (default 180)")
-    parser.add_argument("--threshold", type=float, default=0.5, help="positive passes at this fire rate (default 0.5)")
+    parser.add_argument(
+        "--threshold", type=float, default=0.5,
+        help="positive passes at this fire rate; must be > 0 and <= 1 (default 0.5)",
+    )
     parser.add_argument("--output-dir", type=Path, default=None, help="write benchmark.json here")
     # Without this the subprocesses take whatever model the CLI defaults to, which is NOT the model
     # of the session that launched them: a `/model` change in an interactive session does not
@@ -357,23 +974,81 @@ def main() -> int:
                              "every session, so personal components and a junction-deployed fleet "
                              "cannot enter the routing surface (see scripts/eval_clean_room.py). "
                              "Recorded in conditions: artifacts differing on it are not comparable")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.runs < 1:
         print(f"--runs must be >= 1 (got {args.runs}); 0 would make every negative pass vacuously", file=sys.stderr)
+        return 2
+    try:
+        args.threshold = _validated_threshold(args.threshold)
+    except ValueError as exc:
+        print(f"--{exc}", file=sys.stderr)
         return 2
     if CLAUDE is None:
         print("claude CLI not found on PATH", file=sys.stderr)
         return 2
 
-    spec = json.loads(Path(args.cluster).read_text(encoding="utf-8"))
-    members = set(spec["members"])
-    cases = [c for c in spec["cases"] if fnmatch.fnmatch(c["id"], args.case)]
+    cluster_path = Path(args.cluster)
+    try:
+        spec = json.loads(_read_regular_file(cluster_path).decode("utf-8"))
+    except (ProvenanceError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        print(f"cluster error: {exc}", file=sys.stderr)
+        return 2
+    if not isinstance(spec, dict):
+        print("cluster error: top-level JSON value must be an object", file=sys.stderr)
+        return 2
+    if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
+        print("cluster error: 'cluster' must be a non-empty string", file=sys.stderr)
+        return 2
+    raw_members = spec.get("members")
+    if (
+        not isinstance(raw_members, list)
+        or not raw_members
+        or any(not isinstance(member, str) or not member.strip() for member in raw_members)
+    ):
+        print("cluster error: 'members' must be a non-empty list of component names", file=sys.stderr)
+        return 2
+    raw_cases = spec.get("cases")
+    if not isinstance(raw_cases, list) or not raw_cases:
+        print("cluster error: 'cases' must be a non-empty list", file=sys.stderr)
+        return 2
+
+    members = set(raw_members)
+    cases = []
+    for index, case in enumerate(raw_cases, start=1):
+        if not isinstance(case, dict):
+            print(f"cluster error: case #{index} must be an object", file=sys.stderr)
+            return 2
+        case_id = case.get("id")
+        if not isinstance(case_id, str) or not case_id.strip():
+            print(f"cluster error: case #{index} must have a non-empty 'id'", file=sys.stderr)
+            return 2
+        if not isinstance(case.get("prompt"), str) or not case["prompt"].strip():
+            print(f"cluster error: case {case_id!r} must have a non-empty 'prompt'", file=sys.stderr)
+            return 2
+        try:
+            _scoring_targets(case, members)
+        except ValueError as exc:
+            print(f"cluster error: {exc}", file=sys.stderr)
+            return 2
+        if fnmatch.fnmatch(case_id, args.case):
+            cases.append(case)
     if args.limit:
         cases = cases[:args.limit]
     if not cases:
         print("no cases matched", file=sys.stderr)
         return 2
+
+    provenance = None
+    if args.output_dir:
+        try:
+            provenance = benchmark_provenance(
+                [cluster_path], cases, args.case, args.plugin_dir, args.limit,
+                evaluator_paths=routing_evaluator_paths(),
+            )
+        except ProvenanceError as exc:
+            print(f"provenance error: {exc}", file=sys.stderr)
+            return 2
 
     # Flatten to (case, run_index) work items so all runs across all cases share the pool.
     work = [(c, i) for c in cases for i in range(args.runs)]
@@ -384,7 +1059,24 @@ def main() -> int:
     # One room for the whole batch: the sessions only read the relocated config, and per-session
     # rooms would copy credentials once per run for no added isolation. The room must outlive the
     # pool, so the ExitStack closes after the last future resolves.
+    auth_mode = None
     with contextlib.ExitStack() as stack:
+        try:
+            execution_plugin_dir, execution_plugin_identity = stack.enter_context(
+                frozen_plugin(args.plugin_dir)
+            )
+        except ProvenanceError as exc:
+            print(f"provenance error: {exc}", file=sys.stderr)
+            return 2
+        if provenance is not None and (
+            provenance["plugin"]["sha256"] != execution_plugin_identity["sha256"]
+        ):
+            print(
+                "provenance error: plugin content changed before its execution snapshot was "
+                "created; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
         session_env = None
         if args.clean_room:
             clean_room = _load_clean_room()
@@ -395,18 +1087,45 @@ def main() -> int:
                 # produce 24 vacuously-passing negatives, not 24 measurements.
                 print(f"clean room refused to run: {exc}", file=sys.stderr)
                 return 2
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-            futures = {
-                pool.submit(run_once, c["prompt"], args.plugin_dir, args.timeout, args.model,
-                            session_env): (c["id"], i)
-                for c, i in work
-            }
-            done = 0
+        auth_mode = auth_provider_mode(
+            session_env, clean_room_enabled=bool(args.clean_room)
+        )
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
+        futures = {
+            pool.submit(run_once, c["prompt"], execution_plugin_dir, args.timeout, args.model,
+                        session_env): (c["id"], i)
+            for c, i in work
+        }
+        done = 0
+        auth_failure: EvalAuthUnavailable | None = None
+        try:
             for future in concurrent.futures.as_completed(futures):
                 case_id, run_index = futures[future]
-                results_by_case[case_id].append((run_index, future.result()))
+                try:
+                    result = future.result()
+                except EvalAuthUnavailable as exc:
+                    auth_failure = exc
+                    for pending in futures:
+                        pending.cancel()
+                    break
+                results_by_case[case_id].append((run_index, result))
                 done += 1
                 print(f"  [{done}/{len(work)}] runs complete", end="\r")
+        finally:
+            # subprocess.run cannot interrupt work already started; pending sessions can still be
+            # cancelled, limiting the outage to at most the configured concurrency.
+            pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
+        try:
+            verify_frozen_plugin(execution_plugin_dir, execution_plugin_identity)
+        except ProvenanceError as exc:
+            print(f"provenance error after sessions: {exc}", file=sys.stderr)
+            return 2
+        if auth_failure is not None:
+            print(
+                f"\neval aborted: {auth_failure}; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
     print()
 
     # Sort back into submission order. Sessions finish in whatever order they finish, and the
@@ -463,6 +1182,8 @@ def main() -> int:
         # and therefore moves every rate in the artifact. Two benchmarks taken at different timeouts
         # are not comparable, and without this recorded they look identical in their conditions.
         "timeout_s": args.timeout,
+        "concurrency": args.concurrency,
+        "auth_provider": auth_mode,
         # Whether the sessions saw only this plugin (clean room) or the operator's whole
         # configuration surface. Two artifacts differing here measured different competitions
         # for every routing decision — diffing them reads contamination as a description change.
@@ -477,10 +1198,32 @@ def main() -> int:
         "runs_per_case": args.runs,
         "members": sorted(members),
         "conditions": conditions,
+        "provenance": provenance,
         "summary": {"passed": passed, "total": len(scored)},
         "cases": scored,
     }
     if args.output_dir:
+        try:
+            latest_spec = json.loads(_read_regular_file(cluster_path).decode("utf-8"))
+            latest_cases = [
+                case for case in latest_spec["cases"] if fnmatch.fnmatch(case["id"], args.case)
+            ]
+            if args.limit:
+                latest_cases = latest_cases[:args.limit]
+            latest_provenance = benchmark_provenance(
+                [cluster_path], latest_cases, args.case, args.plugin_dir, args.limit,
+                evaluator_paths=routing_evaluator_paths(),
+            )
+        except ProvenanceError as exc:
+            print(f"provenance error after sessions: {exc}", file=sys.stderr)
+            return 2
+        if not _content_provenance_matches(provenance, latest_provenance):
+            print(
+                "provenance error: eval source, selected cases, evaluator, or plugin content "
+                "changed while the batch was running; benchmark.json was not written",
+                file=sys.stderr,
+            )
+            return 2
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "benchmark.json").write_text(json.dumps(benchmark, indent=2), encoding="utf-8")
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
@@ -494,5 +1237,12 @@ def main() -> int:
     return 3 if inconc else 0
 
 
+def _main_entry() -> int:
+    """Run the command from one captured source buffer, including the main runner itself."""
+    if _EXECUTING_EVALUATOR_SOURCE is None:
+        return load_current_evaluator().main()
+    return main()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_main_entry())

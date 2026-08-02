@@ -1,0 +1,62 @@
+{
+  "applicability": "Claude Code structured-stream runs graded by this repository.",
+  "candidate_id": "lc_fd3b05d6e03c4aa69d28f511dad32b11",
+  "created_at": "2026-08-02T01:03:57.055251Z",
+  "destination": "scripts/eval_routing.py, scripts/eval_behavioral.py, and their regression tests",
+  "disposition": "add",
+  "evidence": {
+    "environment": "claude-code-2.1.220-on-windows-clean-room",
+    "provenance": "verified",
+    "revision": "da40e615a13abe295d6185e3cbc184261739a8ab",
+    "source_kind": "independent-review",
+    "source_reference": "structured-error-grading-boundary-review-2026-08-01"
+  },
+  "expected_behavior": "A structured error result supplies neither no-fire nor final-output evidence. Routing may retain only an explicitly labeled component firing observed before the error; authentication aborts the batch with exit 2 and no benchmark.",
+  "fingerprint": "7ed97052b7765ba5d9a4eb9426eaf5420ebc8560d04d99a34379bfe42af4f876",
+  "freshness": {
+    "as_of": "2026-08-02T01:03:57.055251Z",
+    "review_at": "2026-09-01T01:03:57.055251Z"
+  },
+  "observation": "Evaluation runners could treat a structured error result as ordinary no-fire or final-output evidence and write a misleading verdict.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Independent review refined the error boundary to preserve only labeled pre-error component evidence while excluding error results from ordinary scoring.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "claude-code-2.1.220-on-windows-clean-room",
+        "observed_at": "2026-08-02T01:03:57.055251Z",
+        "provenance": "verified",
+        "revision": "da40e615a13abe295d6185e3cbc184261739a8ab",
+        "source_kind": "independent-review",
+        "source_reference": "structured-error-grading-boundary-review-2026-08-01"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-02T01:03:57.055251Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Fleet routing and behavioral evaluation result grading.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-02T01:03:57.055251Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-02T01:04:05.485683Z",
+      "destination": "scripts/eval_routing.py, scripts/eval_behavioral.py, and their regression tests",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Independent review refined the error boundary to preserve only labeled pre-error component evidence while excluding error results from ordinary scoring.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-02T01:04:05.485683Z"
+}
