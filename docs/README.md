@@ -26,8 +26,7 @@ else here is historical evidence.
 | Document | State | Read it for |
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
-| [`superpowers/specs/2026-08-01-learn-001-learning-loop-design.md`](superpowers/specs/2026-08-01-learn-001-learning-loop-design.md) | Active | LEARN-001 scope, safety boundaries, measurement contract, and the independent end-stage comparison |
-| [`superpowers/plans/2026-08-01-learn-001-learning-loop.md`](superpowers/plans/2026-08-01-learn-001-learning-loop.md) | Active | LEARN-001 execution state and remaining review/publication gates |
+| [`archive/2026-08/learn-001-outcome-2026-08-02.md`](archive/2026-08/learn-001-outcome-2026-08-02.md) | Historical outcome record | What LEARN-001 landed (PR #57): the learning lifecycle, ledger, packet closeouts, eval provenance v3, the measured regression and its fix, corrections, and the routed lessons |
 | [`decisions/2026-07-31-ai-graph-engineering.md`](decisions/2026-07-31-ai-graph-engineering.md) | Accepted | The graph boundary: descriptive layer, SAFE-002, CTX-001, and the WF-001 pilot accepted; graph execution trigger-bound. Accepted 2026-08-01, amended with the WF-001 probe evidence, and extended with the absorbed sibling-record contributions per the GRAPH-003 ruling |
 | [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md) | Accepted in part | ROLE-001, ROLE-002, and LABSEC-001 accepted and implemented; ROLE-003 parked trigger-bound |
 | [`decisions/2026-07-29-deployment-mode.md`](decisions/2026-07-29-deployment-mode.md) | Accepted | Option A governs daily Claude use: installed, namespaced plugin mode with no active fleet junctions; includes normal-session guard evidence and rollback |

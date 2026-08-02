@@ -78,35 +78,30 @@ deterministic gates stay green.
 **Next action:** Decide resolver-vs-document-and-enforce when SAFE-002 opens `run_state.py`
 anyway — same file, one review context.
 
-#### LEARN-001 — land the fleet learning loop
+#### LEARN-002 — close the Learning-contract compliance gap
 
-**Status:** `active`
+**Status:** `ready` — the measured residual of the merged LEARN-001 round.
 
-**Outcome:** Every non-trivial task has a lightweight Learning closeout; reusable discoveries have
-an evidence-bound disposition, lifecycle state, destination, and owner; cross-task recurrence is
-observable in a quarantined repository-local ledger; retros can find missing controls and stale
-guidance; and admitted runbook gaps update, create, or propose operating docs without inventing
-commands or granting a model permission to approve its own changes.
+**Outcome:** Each of the seven behavioral contracts failing 0/3 under the final closed graders
+(`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
+`self-improve-canonical-triaged-close`, `runbook-disposition-propose`,
+`learning-slot-readonly-agent`, `learning-slot-operational-agent`,
+`learning-runbook-namespaces`) either holds 3/3 across two consecutive clean-room sonnet batches
+or has its grammar amended with a recorded rationale — settling empirically whether the closed
+contracts or the skill text carried the defect. No grader is silently loosened.
 
-**Source:** [`LEARN-001 spec`](superpowers/specs/2026-08-01-learn-001-learning-loop-design.md),
-amended after an independent implementation and research pass that did not read the roadmap or
-round docs until the comparison stage. The public evidence ledger is
-`skills/self-improve-loop/references/research-basis.md`.
+**Source:** [`LEARN-001 outcome record`](archive/2026-08/learn-001-outcome-2026-08-02.md);
+live rates in `evals/baselines/2026-08-01-self-improve/final-live/`.
 
-**Prerequisites:** None. The added validator rules are narrowly scoped to the Learning packet and
-preload roster and carry mutation tests; any overlap with GRAPH-002 must preserve these tripwires.
+**Prerequisites:** None — the behavioral harness and pinned conditions are ready. Description
+edits, if any emerge, owe the overlapping routing cluster before/after per standing law.
 
-**Acceptance:** The spec's acceptance-evidence list: deterministic gates green; adapters current;
-ledger invariants tested in the ordinary validator; exact source/frozen-plugin/evaluator
-provenance; structured errors excluded from evidence; paired `retro-boundary` and
-`continuous-improvement` routing captures retain zero negative fires; and behavioral contracts
-show the Learning intake/lifecycle-owner split, promotion, provider-workaround, exact component
-firing, explicit runtime-tool authority, exact decision fields, and closed internally consistent
-runbook proposal boundaries.
+**Acceptance:** Per-contract paired before/after behavioral runs under identical recorded
+conditions; deterministic gates green; the two 2/3-flaky contracts re-measured alongside; the
+watch-metrics (Learning-slot `none`-rate, ledger organic-candidate count) reported at close.
 
-**Next action:** Refresh Claude `/login` and capture the exact final live after-evaluation.
-Independent static, prompt/eval, and executable re-review is complete; publication and retirement
-remain separate, explicitly authorized steps.
+**Next action:** Start with the three self-improve packet-grammar cases — same failure shape, so
+one grammar-vs-skill-text decision sets the pattern for the rest.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
