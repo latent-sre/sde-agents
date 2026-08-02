@@ -9,7 +9,7 @@
     {
       "name": "sde-agents",
       "source": "./",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "description": "A focused fleet of software-engineering and home-lab agents plus reusable skills."
     }
   ]

@@ -106,3 +106,16 @@ Fields the fleet deliberately does not use — considered, not overlooked. Reope
 - **`memory`** — agents are stateless by design; durable lab knowledge lives in the repo (runbooks,
   `CLAUDE.md`). And setting `memory` auto-enables Read/Write/Edit, so it must never be added to
   `sde-agents:code-reviewer`.
+
+## Plain-scalar descriptions and the CLI's stricter parser
+
+A plain (unquoted) `description:` containing `: ` followed by a colon-bearing token (e.g.
+`skills: sde-agents:backend-craft`) parses in the runtime and in `scripts/validate_fleet.py` but
+fails `claude plugin tag` with "Unexpected token", blocking the release path — observed 2026-08-02
+on `code-craft` at CLI 2.1.220, while `claude plugin validate --strict` and sibling descriptions
+with a simple `: ` passed.
+Double-quote the whole scalar when a description contains a namespaced reference after a colon;
+the rendered string is identical, so routing and evals are unaffected. Quoting works only while
+the text needs no internal escapes: the adapter generator copies the raw value, so `\"` sequences
+land literally in generated copies (observed same day) — a description that would need escaped
+quotes gets a punctuation reword instead.
