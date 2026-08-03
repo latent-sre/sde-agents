@@ -14,7 +14,7 @@
   "expected_behavior": "Concurrent agent sessions in one repository each work in an isolated git worktree so edits and measurements bind to a stable tree.",
   "fingerprint": "786365680733000de2fd71c4a23bdb1841965470b21ac642f7165521e4e20480",
   "freshness": {
-    "as_of": "2026-08-02T08:13:49.312574Z",
+    "as_of": "2026-08-03T20:01:04.005854Z",
     "review_at": "2026-09-01T08:13:49.312574Z"
   },
   "observation": "Two agent sessions edited and measured the same working tree concurrently: an eval capture ran against a moving tree and produced an unattributable benchmark, and an uncommitted description iteration was overwritten mid-flight.",
@@ -22,7 +22,7 @@
   "promotion_state": "quarantined",
   "reason": null,
   "recurrence": {
-    "count": 1,
+    "count": 2,
     "sources": [
       {
         "environment": "operator workstation, two concurrent agent sessions",
@@ -31,6 +31,14 @@
         "revision": "8c2fca3",
         "source_kind": "session-incident",
         "source_reference": "LEARN-001 reconciliation 2026-08-01: concurrent sessions shared one checkout; a pre-v3 eval capture loaded a moving tree; artifact removed with lineage note in evals/baselines/2026-08-01-learn-001/README.md"
+      },
+      {
+        "environment": "Single Claude Code session, two tree-sharing background Bash jobs",
+        "observed_at": "2026-08-03T20:01:04.005854Z",
+        "provenance": "verified",
+        "revision": "3939a3e",
+        "source_kind": "session-incident",
+        "source_reference": "2026-08-03 session: probe_plugin.py and the full unittest suite launched as concurrent background jobs in one session shared the working tree; the suite's repo-copy reads raced the probe's workspace removal and invalidated the probe run. Refines the candidate's scope: single-session concurrent background jobs reproduce the behavior, not only multiple agent sessions."
       }
     ]
   },
@@ -42,11 +50,11 @@
   "schema_version": 2,
   "scope": "Fleet-repo development with more than one concurrent agent session; single-session work unaffected.",
   "sensitivity_review": {
-    "attestation_count": 1,
+    "attestation_count": 2,
     "attested": true,
-    "last_attested_at": "2026-08-02T08:13:49.312574Z",
+    "last_attested_at": "2026-08-03T20:01:04.005854Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [],
-  "updated_at": "2026-08-02T08:13:49.312574Z"
+  "updated_at": "2026-08-03T20:01:04.005854Z"
 }
