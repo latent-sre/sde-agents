@@ -2,7 +2,7 @@
   "name": "sde-agents",
   "displayName": "SDE Agents",
   "description": "A focused fleet of software-engineering and home-lab agents plus reusable skills.",
-  "version": "1.6.0",
+  "version": "1.6.10",
   "author": {
     "name": "latent-sre",
     "url": "https://github.com/latent-sre"
