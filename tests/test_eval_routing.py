@@ -496,7 +496,7 @@ class ProvenanceTest(unittest.TestCase):
     def test_clean_room_identity_hashes_the_exact_compiled_source_buffer(self) -> None:
         eval_routing._load_clean_room()
         path = Path(eval_routing.__file__).with_name("eval_clean_room.py")
-        key = os.fspath(eval_routing._absolute_without_resolving(path))
+        key = eval_routing._evaluator_source_key(path)
         loaded = eval_routing._LOADED_EVALUATOR_SOURCES[key]
         with mock.patch.object(
             eval_routing,
@@ -506,9 +506,30 @@ class ProvenanceTest(unittest.TestCase):
             identity = eval_routing.evaluator_identity([path])
         self.assertEqual(eval_routing._sha256(loaded), identity["files"][0]["sha256"])
 
+    @unittest.skipUnless(os.name == "nt", "path casing collapses only on Windows filesystems")
+    def test_registry_survives_drive_letter_case_drift(self) -> None:
+        # The #69 field failure: registration under one cwd casing, lookup under another —
+        # the same file, two dict keys, and identity silently re-reads the bytes it promised
+        # were the compiled ones. Fails without _evaluator_source_key normcasing both ends.
+        eval_routing._load_clean_room()
+        path = Path(eval_routing.__file__).with_name("eval_clean_room.py")
+        drive_swapped = Path(str(path)[0].swapcase() + str(path)[1:])
+        self.assertEqual(
+            eval_routing._evaluator_source_key(path),
+            eval_routing._evaluator_source_key(drive_swapped),
+        )
+        with mock.patch.object(
+            eval_routing,
+            "_read_regular_file",
+            side_effect=AssertionError("case-drifted path must still hit the registry"),
+        ):
+            identity = eval_routing.evaluator_identity([drive_swapped])
+        loaded = eval_routing._LOADED_EVALUATOR_SOURCES[eval_routing._evaluator_source_key(path)]
+        self.assertEqual(eval_routing._sha256(loaded), identity["files"][0]["sha256"])
+
     def test_standalone_runner_is_bound_to_its_actual_compiled_source_buffer(self) -> None:
         path = Path(eval_routing.__file__)
-        key = os.fspath(eval_routing._absolute_without_resolving(path))
+        key = eval_routing._evaluator_source_key(path)
         loaded = eval_routing._LOADED_EVALUATOR_SOURCES[key]
         self.assertIsNotNone(eval_routing._EXECUTING_EVALUATOR_SOURCE)
         with mock.patch.object(

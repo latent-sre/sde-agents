@@ -192,10 +192,18 @@ def source_identity(paths: list[Path]) -> list[dict]:
     return sorted(records, key=lambda record: record["path"])
 
 
+def _evaluator_source_key(path: Path) -> str:
+    """Registry key for one evaluator path. normcase is load-bearing on Windows: the filesystem
+    treats c:\\repo and C:\\repo as one file, but a case-preserving dict does not — a process whose
+    cwd was spelled lowercase then registers and looks up different keys for the same bytes, and
+    the provenance read silently falls back to re-reading the file it promised not to (#69)."""
+    return os.path.normcase(os.fspath(_absolute_without_resolving(path)))
+
+
 def register_loaded_evaluator_source(path: Path, content: bytes) -> None:
     """Bind one evaluator path to the exact source bytes compiled in this process."""
     absolute = _absolute_without_resolving(path)
-    key = os.fspath(absolute)
+    key = _evaluator_source_key(path)
     prior = _LOADED_EVALUATOR_SOURCES.get(key)
     if prior is not None and prior != content:
         raise ProvenanceError(
@@ -255,7 +263,7 @@ def evaluator_identity(paths: list[Path]) -> dict:
         # byte buffer and hashing that same buffer closes the pre-first-load A -> B -> A race.
         if absolute == clean_room_path:
             _load_clean_room()
-        content = _LOADED_EVALUATOR_SOURCES.get(os.fspath(absolute))
+        content = _LOADED_EVALUATOR_SOURCES.get(_evaluator_source_key(absolute))
         if content is None:
             content = _read_regular_file(absolute)
         records.append({
