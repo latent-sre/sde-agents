@@ -116,6 +116,16 @@ _CLEAN_ROOM_MODULE = None
 _LOADED_EVALUATOR_SOURCES: dict[str, bytes] = {}
 _EXECUTING_EVALUATOR_SOURCE = globals().get("_SDE_EVAL_EXECUTING_SOURCE")
 
+# macOS mounts /var, /tmp, and /etc as symlinks to /private/* by OS design, so every
+# tempfile-derived path fails the ancestor link-walk below on that platform alone — ten
+# provenance tests red on the macOS CI job from the day the walk shipped, green everywhere
+# else. Canonicalizing the temp ROOT once at import fixes every present and future
+# tempfile call site in one place; the walk stays fully strict below the base, so a link
+# planted inside the harness's own scratch tree still refuses. Process-global on purpose:
+# any process that loads this provenance layer needs canonical scratch paths or its own
+# temp dirs are unreadable to it.
+tempfile.tempdir = os.path.realpath(tempfile.gettempdir())
+
 
 def _is_link_or_reparse(file_stat) -> bool:
     """True for POSIX symlinks and every Windows reparse-point kind, including junctions."""
