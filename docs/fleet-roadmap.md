@@ -180,6 +180,97 @@ roster and ignores the main session; routing preserves outage/change authority i
 **Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
 read-only command surface and a threat review of every new verb/flag before changing the guard.
 
+### Decision-needed
+
+#### LANE-001 — Codex-lane onboarding discoverability
+
+**Status:** `decision-needed` — spec drafted 2026-08-02 and awaiting operator approval;
+implementation is additionally gated on the Phase-0 host evidence the spec names.
+
+**Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
+intent yields a model recommendation of the explicit onboarding workflow — never an implicit
+execution — and the Claude lane's measured routing rates do not regress.
+
+**Source:** [`LANE-001 spec`](superpowers/specs/lane-001-codex-onboarding-discoverability.md);
+issue #61 (failure layer identified 2026-08-02: skills hard-hidden from the model, agent
+delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited lane, smallest
+mechanism); learning-ledger candidate `lc_c361b3d3`.
+
+**Prerequisites:** `codex --version` and the unmanaged-TOML check from the SEC-01 Linux host
+(the spec's Phase 0 — a v1 spawn schema returns the spec to review); a fresh `homelab-ops`
+routing baseline before any canonical edit.
+
+**Acceptance:** The spec's acceptance list; headline gates are no regression in the before/after
+`homelab-ops` diff, adapter parity, and one recorded Codex smoke run.
+
+**Next action:** Operator reviews the spec and runs the two Phase-0 one-liners on the Linux
+host; on approval, author the paired plan and capture the Phase-1 baseline.
+
+#### REV-001 — advisory/approval split and the review-to-verify envelope
+
+**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval.
+
+**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
+and never transfers to changed bytes; the verifier requires that envelope and fails closed on
+mismatch; reviewer and verifier share one material-risk matrix; caller-reported and
+independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
+remain legal as advisory mode.
+
+**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md); issue #62
+with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
+GRAPH-004-compatible field names — GRAPH-004 stays deferred).
+
+**Prerequisites:** None hard; behavioral-contract additions ride the pinned harness.
+
+**Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
+no change to working-diff lane behavior.
+
+**Next action:** Operator reviews the spec; on approval, author the paired plan.
+
+#### HANDOFF-001 — evidence-bound onboarding handoff packet
+
+**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval;
+**sequenced after REV-001** so the packet reuses that round's envelope idiom.
+
+**Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
+carry failed assumptions, verification-method validity, the executable-transport contract,
+irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
+— and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
+
+**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
+issue #60 with three-occurrence recurrence evidence and its field-derived section list.
+
+**Prerequisites:** REV-001's settled idiom.
+
+**Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
+
+**Next action:** Hold for REV-001; operator may pre-approve the spec meanwhile.
+
+#### GATE-001 — gate-owner attribution and same-effect approval consolidation
+
+**Status:** `decision-needed` — no spec yet; scope is settled by field evidence but the design
+interacts with the effect broker and belongs in one bounded spec.
+
+**Outcome:** Every pause in a lab workflow names its gate owner (repository confirmation, host
+sandbox, plugin transport, reviewer, credential custody, irreversible action); an unavailable
+broker after exact approval yields an integration diagnosis and the supported host-native
+continuation rather than implying approval is missing; same-effect approvals consolidate across
+reversible corrections while initialization, credential destruction, recovery-material
+retirement, and teardown keep distinct unavoidable gates.
+
+**Source:** Issue #61 closeout criteria 2–5; ledger candidate `lc_6b36cf5d` (broker shipped
+without consumable transport); adjacent to SAFE-002 but distinct from its crash-ambiguity
+states.
+
+**Prerequisites:** SAFE-002 sequencing decision (both touch broker semantics; serialize or
+combine deliberately, not by accident).
+
+**Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
+scenario and an approval-consolidation case that leaves irreversible gates intact.
+
+**Next action:** Author a bounded spec once REV-001 is ruled on, deciding the SAFE-002
+sequencing question in the same pass.
+
 ## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot
