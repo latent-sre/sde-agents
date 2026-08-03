@@ -1501,6 +1501,26 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
 
+class WorkflowLineEndingTests(unittest.TestCase):
+    def test_crlf_workflow_is_reported(self) -> None:
+        # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way
+        # Windows checkout translation did on installed 1.6.10 (#75) — the failure the rule
+        # exists to catch — rather than a synthetic file that could drift from the real shape.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_bytes(wf.read_bytes().replace(b"\n", b"\r\n"))
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("carriage returns" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_workflow_line_endings_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_line_endings(REPO)
+        self.assertEqual(issues, [])
+
+
 class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_adapter_referencing_workflow_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

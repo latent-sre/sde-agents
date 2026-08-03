@@ -1566,6 +1566,30 @@ def validate_workflow_evidence_enums(root: Path) -> list[str]:
     return issues
 
 
+def validate_workflow_line_endings(root: Path) -> list[str]:
+    """No workflow script may contain a carriage return in the bytes actually on disk.
+
+    The Workflow tool rejects any script containing \\r ("control characters that would be
+    hidden in the approval dialog") BEFORE execution, so a CRLF workflow ships as configured
+    and fails on first invocation with no load-time error -- proven on installed 1.6.10, where
+    Windows checkout translation made the fleet's only workflow unrunnable (#75) while the
+    probe passed against its own LF-written fixture. `.gitattributes` pins `*.js text eol=lf`;
+    this rule is the tripwire for that pin regressing or for a CR reaching the blob itself.
+    """
+    issues: list[str] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return issues
+    for path in sorted(workflows_dir.glob("*.js")):
+        if b"\r" in path.read_bytes():
+            issues.append(
+                f"{path}: contains carriage returns; the Workflow tool refuses \\r-bearing "
+                f"scripts before execution, so this workflow would install everywhere and run "
+                f"nowhere -- check the `*.js text eol=lf` line in .gitattributes."
+            )
+    return issues
+
+
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
 # that mentions one teaches an instruction that cannot execute there -- it reads as configured
 # and fails silently, the exact failure class the bare-skill-reference rule already catches for
@@ -1679,6 +1703,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
+    issues.extend(validate_workflow_line_endings(root))
     issues.extend(validate_workflow_host_boundary(root))
     issues.extend(validate_learning_ledger(root))
     if check_inventory:
