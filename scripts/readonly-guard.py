@@ -178,8 +178,13 @@ _RG_EXECUTION_FLAGS = frozenset({"--pre", "--hostname-bin", "--search-zip", "-z"
 _GIT_READ = frozenset({
     "diff", "log", "show", "blame", "status", "shortlog", "describe", "rev-parse", "rev-list",
     "ls-files", "ls-tree", "cat-file", "show-ref", "grep", "whatchanged", "diff-tree",
-    "merge-base", "name-rev", "version",
+    "merge-base", "name-rev", "version", "check-ignore",
 })
+# `check-ignore` earns its slot the way every reader must: a review NEED (proving a secret/key
+# path is actually gitignored, negation rules included — reconstructing that from .gitignore by
+# hand is where a reviewer silently gets it wrong) and a clean surface (it prints ignore status
+# and the matching rule; per git-check-ignore(1) it has no exec-capable or output-redirect flag,
+# so neither _GIT_READ_WRITE_FLAGS nor a `-O`-style gate applies).
 # `help` was here and is deliberately GONE: `git help -w/--web` hands off to `git web--browse`,
 # which runs the command named by the `web.browser`/`browser.<tool>.cmd` config, and `-i` shells
 # out to an info reader. Removing the SUBCOMMAND closes every spelling at once, where denying the

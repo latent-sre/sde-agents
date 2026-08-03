@@ -95,6 +95,8 @@ ALLOWED = [
     "git shortlog -sn",
     "git ls-files",
     "git diff-tree --no-commit-id --name-only -r HEAD",
+    "git check-ignore -v secrets/tls/key.pem",
+    "git check-ignore --stdin",
     # git subcommands that read only under the right verb or flag
     "git config --get user.email",
     "git config --list",
@@ -154,6 +156,9 @@ ALLOWED = [
 
 DENIED = [
     # --- git writes -------------------------------------------------------------------------
+    # check-attr stays off _GIT_READ until a review need earns it (the check-ignore bar) —
+    # this pin proves adding check-ignore did not silently open its sibling.
+    "git check-attr -a scripts/readonly-guard.py",
     "git push origin main",
     "git commit -m 'x'",
     "git add -A",
