@@ -34,7 +34,9 @@ as one: those are reported INCONCLUSIVE (exit 2), never PASS.
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -292,6 +294,34 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
     return [results[tid] for tid, named in spawns.items() if named and tid in results]
 
 
+def _remove_workspace(workspace: Path, note: str | None = None) -> None:
+    """Fully remove the probe workspace, loudly, or abort.
+
+    The workspace contains real `git init` repos, and git writes object files read-only — which
+    plain rmtree cannot delete on Windows. With ignore_errors that became a silent PARTIAL clean
+    on every run (success cleanup included), and the next run crashed on the leftover
+    `workflow-target` in a way that read as "probe broken" mid-guard-verification (#70). So:
+    make everything writable first, then remove, and fail loud if anything still survives —
+    at that point something genuinely holds the tree, and probing against half-cleared state
+    would misreport the contract.
+    """
+    if not workspace.exists():
+        return
+    if note:
+        print(note)
+    for entry in workspace.rglob("*"):
+        try:
+            os.chmod(entry, stat.S_IWRITE)
+        except OSError:
+            pass
+    shutil.rmtree(workspace, ignore_errors=True)
+    if workspace.exists():
+        raise SystemExit(
+            f"stale {workspace} survived removal even after clearing read-only attributes — "
+            "something still holds the tree open. Delete the directory and re-run."
+        )
+
+
 def probe_workflow_contract(probe: "Probe") -> None:
     """The workflow platform contract: namespaced resolution, agentType spawns, and PreToolUse
     delivery with plugin-namespaced agent_type inside workflow-spawned agents.
@@ -428,7 +458,9 @@ def main() -> int:
     # NOT the OS temp dir: Claude Code refuses to create files there, which would block the probe's
     # own oracle and get misread as the guard doing its job.
     workspace = REPO / ".probe-tmp"
-    shutil.rmtree(workspace, ignore_errors=True)
+    _remove_workspace(
+        workspace, note=f"removing stale {workspace} kept by a previous run"
+    )
     project = workspace / "target-repo"
     (project / ".claude").mkdir(parents=True)
     run(["git", "init", "-q", str(project)])
@@ -653,7 +685,7 @@ def main() -> int:
 
     exit_code = probe.report()
     if exit_code == 0:
-        shutil.rmtree(workspace, ignore_errors=True)
+        _remove_workspace(workspace)
     else:
         kept = REPO / "probe-transcript.jsonl"
         kept.write_text(text, encoding="utf-8")

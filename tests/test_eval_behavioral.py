@@ -1161,7 +1161,7 @@ class BenchmarkConditionsTest(unittest.TestCase):
         paths = eval_behavioral.behavioral_evaluator_paths()
         first = eval_routing.evaluator_identity(paths)
         for path in paths:
-            key = str(eval_routing._absolute_without_resolving(path))
+            key = eval_routing._evaluator_source_key(path)
             self.assertIn(key, eval_routing._LOADED_EVALUATOR_SOURCES)
         with mock.patch.object(
             eval_routing,

@@ -1,0 +1,52 @@
+{
+  "applicability": "Branch protection settings for validate jobs; also LOOP-001 spec territory (release gates); recheck when branch protection changes.",
+  "candidate_id": "lc_36adb3d0d10542eba6fc969c575590c7",
+  "created_at": "2026-08-03T21:01:23.188870Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "GitHub Actions, latent-sre/sde-agents main branch, 2026-08-02 to 2026-08-03",
+    "provenance": "verified",
+    "revision": "3939a3e",
+    "source_kind": "session-incident",
+    "source_reference": "gh run list on main 2026-08-03: merges #57, #58, #59, #68 all landed with validate(macos) failing; first green run restored by PR #72"
+  },
+  "expected_behavior": "A red check on main either blocks merging via branch protection or is surfaced at merge time; a check that can be silently merged over provides no gate at all.",
+  "fingerprint": "6128530bc0e102a8f183b73a7b575814abd892337a1458e1b2ab58f648319af7",
+  "freshness": {
+    "as_of": "2026-08-03T21:01:23.188870Z",
+    "review_at": "2026-09-02T21:01:23.188870Z"
+  },
+  "observation": "Four consecutive merges landed over a failing required-intent CI check (macOS validate job red since #57) with no branch-protection enforcement and no reviewer noticing; the breakage was discovered only when an unrelated PR inherited the red check.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "GitHub Actions, latent-sre/sde-agents main branch, 2026-08-02 to 2026-08-03",
+        "observed_at": "2026-08-03T21:01:23.188870Z",
+        "provenance": "verified",
+        "revision": "3939a3e",
+        "source_kind": "session-incident",
+        "source_reference": "gh run list on main 2026-08-03: merges #57, #58, #59, #68 all landed with validate(macos) failing; first green run restored by PR #72"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-03T21:01:23.188870Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Repository merge discipline and branch protection; not the content of any individual check.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-03T21:01:23.188870Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-03T21:01:23.188870Z"
+}
