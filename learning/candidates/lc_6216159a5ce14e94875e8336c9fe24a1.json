@@ -1,0 +1,52 @@
+{
+  "applicability": "researcher agent Method deterministic-reads guidance; recheck if the docs host changes.",
+  "candidate_id": "lc_6216159a5ce14e94875e8336c9fe24a1",
+  "created_at": "2026-08-02T22:07:43.341733Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "External docs research from this workstation",
+    "provenance": "sourced",
+    "revision": null,
+    "source_kind": "subagent-report",
+    "source_reference": "researcher subagent 2026-08-02: WebFetch of developers.openai.com/codex/subagents and /codex/skills"
+  },
+  "expected_behavior": "Researcher method notes that developers.openai.com/codex/* is a redirect shell for learn.chatgpt.com so callers target the real host directly and treat summarized quotes from these pages as low-confidence.",
+  "fingerprint": "b4a13b3ba38663e77f35452056c3440f8598275b49b93f13d902f9bddb7a8e83",
+  "freshness": {
+    "as_of": "2026-08-02T22:07:43.341733Z",
+    "review_at": "2026-09-01T22:07:43.341733Z"
+  },
+  "observation": "WebFetch on developers.openai.com/codex/* pages 308-redirects to learn.chatgpt.com/docs/*, and the summarizing fetch occasionally produces plausible paraphrase not traceable to a literal doc sentence.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "External docs research from this workstation",
+        "observed_at": "2026-08-02T22:07:43.341733Z",
+        "provenance": "sourced",
+        "revision": null,
+        "source_kind": "subagent-report",
+        "source_reference": "researcher subagent 2026-08-02: WebFetch of developers.openai.com/codex/subagents and /codex/skills"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-02T22:07:43.341733Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "External research against official OpenAI Codex CLI documentation.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-02T22:07:43.341733Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-02T22:07:43.341733Z"
+}

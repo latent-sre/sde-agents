@@ -67,3 +67,7 @@ keeps reading as pending work.
 5. When a file moves or is consolidated, update every tracked reference in the same commit.
 6. Agent and skill definitions remain canonical in `agents/` and `skills/`; documentation and
    generated host adapters never override them.
+7. GitHub issues are evidence-bound intake, never a second work tracker. An issue adds work only
+   when the roadmap imports it (the roadmap entry names the source issue); an issue that is not
+   imported is field evidence awaiting triage, and letting the two lists drift is how the same
+   work gets tracked twice or dropped once.

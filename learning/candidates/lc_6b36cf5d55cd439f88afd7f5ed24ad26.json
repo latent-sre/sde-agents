@@ -1,0 +1,52 @@
+{
+  "applicability": "Effect broker and onboarding workflows on non-Claude hosts; recheck when SAFE-002 lands or broker transport changes; third instance of the controls-ship-without-their-lane pattern.",
+  "candidate_id": "lc_6b36cf5d55cd439f88afd7f5ed24ad26",
+  "created_at": "2026-08-03T05:00:47.253373Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "SEC-01 live host-onboard on Codex/Linux host, SDE Agents 1.6.0",
+    "provenance": "verified",
+    "revision": null,
+    "source_kind": "field-report",
+    "source_reference": "Issue #60 and #61 comments 2026-08-03 (operator-published sanitized Hera live-build evidence)"
+  },
+  "expected_behavior": "Before offering Tier-2 execution the workflow identifies the host-native broker or mediator entry point; absence yields an actionable integration diagnosis attributing the gate to plugin transport rather than missing operator approval, preserving request identity and approval evidence across a host-native continuation, with gate states (recommended, activated, guard-satisfied, broker-consumed, effect-verified) attributed distinctly.",
+  "fingerprint": "c520e11c39423d7dbafec7ff36297050fe3e55c304b999d563cbf4599977e75b",
+  "freshness": {
+    "as_of": "2026-08-03T05:00:47.253373Z",
+    "review_at": "2026-09-02T05:00:47.253373Z"
+  },
+  "observation": "The plugin's effect-broker code shipped to a host exposing no operator mediator, signing-key flow, or replay-ledger interface: an exact approved Tier-2 request was generated and approved but could not be consumed, forcing an operator-authorized one-action bypass through host-native approval; the layered repository guard, host approval, and absent broker transport read to the user as one unexplained gate.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "SEC-01 live host-onboard on Codex/Linux host, SDE Agents 1.6.0",
+        "observed_at": "2026-08-03T05:00:47.253373Z",
+        "provenance": "verified",
+        "revision": null,
+        "source_kind": "field-report",
+        "source_reference": "Issue #60 and #61 comments 2026-08-03 (operator-published sanitized Hera live-build evidence)"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-03T05:00:47.253373Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Effect-broker consumability and gate attribution on hosts without mediator integration; distinct from SAFE-002's crash-ambiguity states.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-03T05:00:47.253373Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-03T05:00:47.253373Z"
+}

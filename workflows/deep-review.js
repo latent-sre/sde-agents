@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the working diff, schema-typed packets, deterministic merge record',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff' },
     { title: 'Review', detail: 'correctness and security lanes in parallel' },
@@ -61,12 +61,31 @@ const SCOPE_SCHEMA = {
 // tree it is scoping. Everything scope needs is on the guard's git allowlist: diff, log, status,
 // merge-base, rev-parse, ls-files (scripts/readonly-guard.py).
 phase('Scope')
+// Two arg shapes fail closed with an error that names the actual contract (issues #63/#64: the
+// natural invocations -- a prose review brief, or a range like main..Y -- previously burned a
+// full round-trip on a message that said neither what IS accepted nor that focus text is
+// ignored). Prose can never become a silent no-op default, and a range can never produce the
+// conflated working-tree-vs-range diff observed under concurrent worktrees.
 const requestedRef = typeof args === 'string' && args.trim() ? args.trim() : null
 if (requestedRef && (/^\-/.test(requestedRef) || /\s/.test(requestedRef))) {
   return {
     verdict: 'inconclusive',
     failed_lane: 'scope',
-    error: 'workflow args must be a single git ref or revspec without leading "-" or whitespace',
+    error: 'args must be a single git ref to use as the diff base (e.g. "main", "HEAD~3"); ' +
+      'review focus text is not accepted -- deep-review always reviews the ambient working ' +
+      'tree, with no args defaulting the base to the merge base with main',
+    review: null,
+    security: null,
+    scope: null,
+  }
+}
+if (requestedRef && requestedRef.includes('..')) {
+  return {
+    verdict: 'inconclusive',
+    failed_lane: 'scope',
+    error: 'args must be a single base ref, not a range -- deep-review reviews the ambient ' +
+      'working tree against the given base and cannot review a commit range; to review branch ' +
+      'Y, check Y out and pass its base (or no args for the merge base with main)',
     review: null,
     security: null,
     scope: null,
@@ -77,7 +96,10 @@ try {
   scope = await agent(
     'Enumerate the review scope using read-only git inspection only. ' +
     (requestedRef
-      ? `Diff the working tree against ${requestedRef}.`
+      ? `Resolve the diff base as the merge base of HEAD and ${requestedRef} ` +
+        `(git merge-base HEAD ${requestedRef}) and diff the working tree against that -- ` +
+        'resolving through the merge base means a base on a diverged branch yields the fork ' +
+        'point rather than a diff that conflates two unrelated change sets.'
       : 'Diff the working tree against the merge base with main (git merge-base HEAD main).') +
     ' Report the resolved base ref, the head commit (git rev-parse HEAD), whether the working ' +
     'tree is dirty (git status --porcelain), the changed file list, and a one-line-per-file ' +
