@@ -24,6 +24,13 @@ it. Whichever way you arrived here (homelab-platform reads it by path, or a user
 command), the authority stays with homelab-platform: if you reached it without that agent's tier
 discipline, stop and route through it.
 
+**Discovery output is part of the blast radius.** The placement and conflict checks below read
+inventories and resolved configuration, and read-only is not capture-safe: a broad variable or
+inventory dump can expand decrypted secrets (exporter credentials, backup keys, bind passwords,
+break-glass material) into operator-visible output and from there into packets and evidence.
+Query the specific fields a step needs, redact resolved secret values, and never paste a resolved
+variable map into output — field-proven during a real onboarding, not hypothetical.
+
 **Read the lab's own profile before step 1.** The lab repo's project context should state the stack, hosts, conventions, and quirks; those facts outrank any default in this checklist, and proposing something the lab's profile rules out wastes a round. If the lab has no such file, [`assets/lab-profile.template.md`](assets/lab-profile.template.md) is the shape to create in *the lab's* repository (not in this plugin — the plugin ships method, the lab owns its facts).
 
 1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names). A host that is itself new to the lab first works `host-onboard`; this checklist assumes the machine under it is already a lab citizen.
