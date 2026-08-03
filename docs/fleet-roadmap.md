@@ -271,6 +271,29 @@ scenario and an approval-consolidation case that leaves irreversible gates intac
 **Next action:** Author a bounded spec once REV-001 is ruled on, deciding the SAFE-002
 sequencing question in the same pass.
 
+#### LOOP-001 — released-version retest closes the field-feedback loop
+
+**Status:** `decision-needed` — no spec yet; the scope is issue #67's lightweight contract.
+
+**Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
+through triage, owner and target release, paired evaluation, canonical change with adapter
+parity, released plugin version, and a retest of the originating scenario on the released
+artifact — and cannot close as successful without that retest or an owner-approved reason it is
+impossible. Source-eval PASS is never reportable as released-artifact PASS. No scheduler,
+daemon, transcript store, or self-modifying loop.
+
+**Source:** Issue #67; ledger candidate `lc_74f04730`; the release-tail record (a merged bump
+demonstrably not reaching live sessions) as independent evidence of the merged≠released gap.
+
+**Prerequisites:** A shared-ownership ruling for the five-tier risk/effect classification, which
+issue #67 and GATE-001 both carry — one spec must own it, the other reference it.
+
+**Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
+duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
+
+**Next action:** Author the bounded spec extending `self-improve-loop` and the ledger states —
+alongside GATE-001's spec so the classification ownership is decided once.
+
 ## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot
