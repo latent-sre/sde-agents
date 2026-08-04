@@ -1501,6 +1501,50 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
 
+class WorkflowLineEndingTests(unittest.TestCase):
+    def test_crlf_workflow_is_reported(self) -> None:
+        # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way
+        # Windows checkout translation did on installed 1.6.10 (#75) — the failure the rule
+        # exists to catch — rather than a synthetic file that could drift from the real shape.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_bytes(wf.read_bytes().replace(b"\n", b"\r\n"))
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("carriage returns" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_missing_gitattributes_js_eol_rule_is_reported(self) -> None:
+        # Removing the `*.js text eol=lf` rule from .gitattributes is a configuration
+        # regression: any subsequent fresh Windows checkout would translate workflows to CRLF
+        # and the Workflow tool would refuse to run them. The byte check alone cannot catch
+        # this because the file on disk stays LF until the next checkout. Verify that the
+        # validator fires when only the rule is removed (bytes left intact).
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            ga = dst / ".gitattributes"
+            ga.write_text(
+                "\n".join(
+                    line
+                    for line in ga.read_text(encoding="utf-8").splitlines()
+                    if "*.js text eol=lf" not in line
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_line_endings(dst)
+        self.assertTrue(
+            any("missing" in i and "*.js text eol=lf" in i for i in issues), issues
+        )
+
+    def test_workflow_line_endings_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_line_endings(REPO)
+        self.assertEqual(issues, [])
+
+
 class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_adapter_referencing_workflow_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

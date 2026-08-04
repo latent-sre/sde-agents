@@ -1566,6 +1566,50 @@ def validate_workflow_evidence_enums(root: Path) -> list[str]:
     return issues
 
 
+def validate_workflow_line_endings(root: Path) -> list[str]:
+    """No workflow script may contain a carriage return in the bytes actually on disk, and
+    `.gitattributes` must carry the `*.js text eol=lf` rule that prevents Windows checkout
+    translation from re-introducing them.
+
+    The Workflow tool rejects any script containing \\r ("control characters that would be
+    hidden in the approval dialog") BEFORE execution, so a CRLF workflow ships as configured
+    and fails on first invocation with no load-time error -- proven on installed 1.6.10, where
+    Windows checkout translation made the fleet's only workflow unrunnable (#75) while the
+    probe passed against its own LF-written fixture. Checking only checkout bytes misses the
+    configuration regression: a fresh Windows clone after the rule is removed would get CRLF
+    and fail silently, and the byte check would pass on any machine where the file was already
+    LF. Both conditions must hold -- no \\r bytes AND the pin must be present.
+    """
+    issues: list[str] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return issues
+
+    # Check that the eol pin is present in .gitattributes -- the byte check below passes on
+    # any machine where files were already checked out as LF, so removing the rule would not
+    # be caught by bytes alone. A fresh Windows clone after the rule is removed gets CRLF and
+    # fails on first workflow invocation, exactly the silent failure class this rule closes.
+    gitattributes = root / ".gitattributes"
+    if gitattributes.is_file():
+        content = gitattributes.read_text(encoding="utf-8", errors="replace")
+        if "*.js text eol=lf" not in content:
+            issues.append(
+                f"{gitattributes}: missing `*.js text eol=lf` rule; without it, Windows "
+                f"checkout translation will convert workflows/*.js to CRLF and the Workflow "
+                f"tool will refuse to run them -- the byte check alone cannot catch this "
+                f"because it passes on any machine where the files are already LF on disk."
+            )
+
+    for path in sorted(workflows_dir.glob("*.js")):
+        if b"\r" in path.read_bytes():
+            issues.append(
+                f"{path}: contains carriage returns; the Workflow tool refuses \\r-bearing "
+                f"scripts before execution, so this workflow would install everywhere and run "
+                f"nowhere -- check the `*.js text eol=lf` line in .gitattributes."
+            )
+    return issues
+
+
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
 # that mentions one teaches an instruction that cannot execute there -- it reads as configured
 # and fails silently, the exact failure class the bare-skill-reference rule already catches for
@@ -1679,6 +1723,7 @@ def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
+    issues.extend(validate_workflow_line_endings(root))
     issues.extend(validate_workflow_host_boundary(root))
     issues.extend(validate_learning_ledger(root))
     if check_inventory:
