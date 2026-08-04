@@ -37,16 +37,16 @@ jobs:
       - name: Validate canonical fleet and generated host adapters
         run: ${{ matrix.py }} scripts/validate_fleet.py
 
-      - name: Run validator unit tests
+      - name: Run repository unit tests
         run: ${{ matrix.py }} -m unittest discover -s tests -v
 
   ledger-drift:
-    # Advisory, never blocking. A pending learning candidate whose destination file keeps
-    # receiving commits is the signal that its repair may already have landed -- the exact
-    # state that left seven LEARN-001 candidates reading as pending work for two days after
-    # PR #57 merged them. Deliberately not a gate: an unrelated commit to a shared file is
-    # the common case, and packet_lint.py documents why a hard check on a judgement call
-    # trains the shape rather than the work. This surfaces it where the decision is made.
+    # Findings are advisory; inability to inspect the repository is blocking. A pending learning
+    # candidate whose destination keeps receiving commits is a signal that its lifecycle decision
+    # may need another look. It cannot infer a repair that predates or shares the candidate commit.
+    # An unrelated commit to a shared file is common, so drift itself remains a judgement prompt
+    # rather than a gate. A checker crash or unreadable Git history is different: exit 2 keeps that
+    # unknown state from being certified as clean.
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

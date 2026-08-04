@@ -1540,6 +1540,18 @@ class WorkflowLineEndingTests(unittest.TestCase):
             any("missing" in i and "*.js text eol=lf" in i for i in issues), issues
         )
 
+    def test_missing_gitattributes_file_is_reported(self) -> None:
+        # Deleting the whole file is the same configuration regression as deleting its JS
+        # rule. An existence guard must not turn the more severe mutation into a false green.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            (dst / ".gitattributes").unlink()
+            issues = validate_fleet.validate_workflow_line_endings(dst)
+        self.assertTrue(
+            any("missing" in i and "*.js text eol=lf" in i for i in issues), issues
+        )
+
     def test_workflow_line_endings_current_tree_is_clean(self) -> None:
         issues = validate_fleet.validate_workflow_line_endings(REPO)
         self.assertEqual(issues, [])
@@ -1558,6 +1570,33 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
             )
             issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
         self.assertTrue(any("no workflow runtime" in i for i in issues), issues)
+
+    def test_generated_script_resource_referencing_workflow_is_reported(self) -> None:
+        # Generated skill resources are not limited to the prose/config suffixes originally
+        # scanned here. A shell asset carrying the same unusable instruction must not bypass
+        # the host boundary merely because its extension was absent from a validator tuple.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            resource = dst / "platforms" / "copilot" / "skills" / "probe" / "scripts" / "run.sh"
+            resource.parent.mkdir(parents=True)
+            resource.write_text("Run /sde-agents:deep-review before merging.\n", encoding="utf-8")
+            issues = validate_fleet.validate_workflow_host_boundary(dst)
+        self.assertTrue(any("no workflow runtime" in i and "run.sh" in i for i in issues), issues)
+
+    def test_untracked_python_cache_is_not_treated_as_a_shipped_workflow_reference(self) -> None:
+        # The adapter generator already excludes runtime bytecode from distributable outputs.
+        # A local import must not make the host-boundary scan certify a different file set.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            byproduct = (
+                dst / "platforms" / "copilot" / "skills" / "probe" / "__pycache__" / "probe.pyc"
+            )
+            byproduct.parent.mkdir(parents=True)
+            byproduct.write_bytes(b"runtime cache /sde-agents:deep-review")
+            issues = validate_fleet.validate_workflow_host_boundary(dst)
+        self.assertEqual([], issues)
 
     def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
         issues = validate_fleet.validate_workflow_host_boundary(REPO)

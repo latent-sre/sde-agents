@@ -321,6 +321,12 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def is_runtime_byproduct(path: Path) -> bool:
+    """Return whether a path is Python execution residue, not distributable fleet source."""
+
+    return "__pycache__" in path.parts or path.suffix.lower() in {".pyc", ".pyo"}
+
+
 def parse_frontmatter(path: Path) -> dict[str, str] | None:
     """Parse the small YAML subset used by the fleet frontmatter."""
 
@@ -1590,15 +1596,18 @@ def validate_workflow_line_endings(root: Path) -> list[str]:
     # be caught by bytes alone. A fresh Windows clone after the rule is removed gets CRLF and
     # fails on first workflow invocation, exactly the silent failure class this rule closes.
     gitattributes = root / ".gitattributes"
-    if gitattributes.is_file():
-        content = gitattributes.read_text(encoding="utf-8", errors="replace")
-        if "*.js text eol=lf" not in content:
-            issues.append(
-                f"{gitattributes}: missing `*.js text eol=lf` rule; without it, Windows "
-                f"checkout translation will convert workflows/*.js to CRLF and the Workflow "
-                f"tool will refuse to run them -- the byte check alone cannot catch this "
-                f"because it passes on any machine where the files are already LF on disk."
-            )
+    content = (
+        gitattributes.read_text(encoding="utf-8", errors="replace")
+        if gitattributes.is_file()
+        else ""
+    )
+    if "*.js text eol=lf" not in content:
+        issues.append(
+            f"{gitattributes}: missing `*.js text eol=lf` rule; without it, Windows "
+            f"checkout translation will convert workflows/*.js to CRLF and the Workflow "
+            f"tool will refuse to run them -- the byte check alone cannot catch this "
+            f"because it passes on any machine where the files are already LF on disk."
+        )
 
     for path in sorted(workflows_dir.glob("*.js")):
         if b"\r" in path.read_bytes():
@@ -1613,9 +1622,9 @@ def validate_workflow_line_endings(root: Path) -> list[str]:
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
 # that mentions one teaches an instruction that cannot execute there -- it reads as configured
 # and fails silently, the exact failure class the bare-skill-reference rule already catches for
-# skills. Match both the invocation form and the directory form. .py is included because the
-# generated skills trees ship script/asset .py files too, and a workflow reference buried in one
-# would be just as silently unexecutable as one in a .md or .yaml adapter.
+# skills. Match both the invocation form and the directory form. Generated skill resources may
+# use any extension, so scan bytes rather than maintaining a text-suffix allowlist that lets the
+# same unusable instruction bypass the rule when it moves from Markdown into a shell asset.
 GENERATED_ADAPTER_TREES = (
     ".github/agents",
     ".codex/agents",
@@ -1639,11 +1648,18 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*")):
-            if not path.is_file() or path.suffix not in {".md", ".json", ".toml", ".yaml", ".yml", ".py"}:
+            if not path.is_file():
                 continue
-            text = read_text(path)
+            relative = path.relative_to(base)
+            # The generator consumes this same predicate and never distributes these paths. A
+            # local Python import therefore cannot make this scan inspect bytes no recipient gets.
+            if is_runtime_byproduct(relative):
+                continue
+            content = path.read_bytes()
             for name in sorted(workflow_names):
-                if f"/sde-agents:{name}" in text or f"workflows/{name}" in text:
+                invocation = f"/sde-agents:{name}".encode("ascii")
+                directory_reference = f"workflows/{name}".encode("ascii")
+                if invocation in content or directory_reference in content:
                     issues.append(
                         f"{path}: generated non-Claude adapter references the Claude-only "
                         f"workflow {name!r}; that host has no workflow runtime, so the "

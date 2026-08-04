@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Report learning candidates whose destination changed after they were filed.
+"""Report pending learning candidates whose destination changed after their ledger record.
 
 WHY THIS EXISTS. The ledger's `promoted` state means "a separately authorized change was
-accepted" -- but nothing observes that acceptance. Seven LEARN-001 candidates sat at
-`proposed` from 2026-08-02 while the repairs they describe had already merged in PR #57 on
-2026-08-01, so the ledger reported seven closed repairs as pending work until a manual audit
-found them. The signal was available the whole time and no process was watching it: each
-candidate names a `destination`, and that destination kept receiving commits.
+accepted" -- but nothing observes that acceptance. A pending record can therefore outlive the
+work it describes. Each candidate names a `destination`, and later changes to that destination
+are a cheap, reviewable signal that the lifecycle decision may need another look.
 
 This is that watch. For every pending candidate it asks one question -- has the destination
-been touched since the candidate was filed or last transitioned? -- and reports the ones
+been touched since the candidate's latest committed ledger state? -- and reports the ones
 where the answer is yes. A hit is not a defect; it is a prompt to run the transition the
 lifecycle already requires, or to record why the change was unrelated.
+
+LIMIT. History is not a semantic repair detector. A destination change already ancestral to,
+or committed together with, the candidate's latest state is part of the baseline and is not
+reported. This checker finds later activity; it does not decide whether earlier work satisfied
+the candidate.
 
 DELIBERATELY ADVISORY BY DEFAULT. `packet_lint.py` documents why a live gate is the wrong
 instrument for a judgement call: it trains the shape rather than the work. Drift here is
@@ -33,15 +36,23 @@ import json
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-# States that still expect action. `promoted`, `rejected`, and `retired` are closed: drift
-# against a closed record is just ordinary maintenance of a file the record once named.
-PENDING_STATES = {"quarantined", "proposed", "approved", "inconclusive"}
+# The lifecycle module owns this vocabulary. Keeping a second literal here would let the drift
+# job silently stop watching a newly added pending state even while the ledger accepted it.
+if __package__:
+    from .learning_ledger import PENDING_STATES
+else:
+    from learning_ledger import PENDING_STATES
 
 # `destination` is free text -- it may name several files, or a non-path sink such as
-# "learning:candidate:lc_...". Extract only things shaped like a tracked repo path.
-PATH_PATTERN = re.compile(r"\b((?:[\w.-]+/)+[\w.-]+\.\w+)\b")
+# "learning:candidate:lc_...". Extract only things shaped like a tracked repo path. The
+# boundaries deliberately include slash and dot: otherwise matching restarts inside `../foo.py`
+# or strips the leading dot from `.github/agents/foo.md`, turning both into a different path.
+# A slash is optional because top-level manifests such as `plugin.json` are valid destinations.
+PATH_PATTERN = re.compile(
+    r"(?<![\w./-])([\w.-]+(?:/[\w.-]+)*\.\w+)(?![\w./-])"
+)
 
 
 class GitError(RuntimeError):
@@ -67,20 +78,30 @@ def candidate_paths(destination: str, root: Path) -> list[str]:
     named = dict.fromkeys(PATH_PATTERN.findall(destination or ""))
     kept = []
     for p in named:
+        # The regex admits dot-prefixed names such as `.github`, but `.` and `..` are path
+        # operators rather than repository names. Reject them before joining to the root so
+        # free-text evidence can never make this read history outside the repository.
+        if any(part in {".", ".."} for part in PurePosixPath(p).parts):
+            continue
         if (root / p).exists() or git(root, "log", "-1", "--format=%h", "--", p):
             kept.append(p)
     return kept
 
 
 def last_activity(record: dict) -> str:
-    """The timestamp after which a destination commit is interesting."""
-    history = record.get("transition_history") or []
-    if history:
-        stamps = [entry.get("at") or entry.get("timestamp") for entry in history]
-        stamps = [s for s in stamps if s]
-        if stamps:
-            return max(stamps)
-    return record.get("updated_at") or record.get("created_at") or ""
+    """The latest ledger activity timestamp, used for human-readable reporting."""
+    stamps = [record.get("created_at"), record.get("updated_at")]
+    for field in ("transition_history", "review_history"):
+        for entry in record.get(field) or []:
+            stamps.append(entry.get("at") or entry.get("timestamp"))
+    valid_stamps = [stamp for stamp in stamps if stamp]
+    return max(valid_stamps, default="")
+
+
+def candidate_revision(root: Path, path: Path) -> str:
+    """The first-parent commit that integrated the candidate's current state."""
+    relative = path.relative_to(root).as_posix()
+    return git(root, "log", "--first-parent", "-1", "--format=%H", "--", relative)
 
 
 def inspect(root: Path) -> list[dict]:
@@ -93,15 +114,20 @@ def inspect(root: Path) -> list[dict]:
         paths = candidate_paths(record.get("destination") or "", root)
         if not paths or not since:
             continue
+        baseline = candidate_revision(root, path)
+        if not baseline:
+            # An uncommitted candidate has no durable graph point from which later changes can
+            # be measured. Treat it as local work-in-progress rather than inventing a baseline.
+            continue
         commits = []
         # One commit touching several destination paths is one change, not several: count
         # distinct SHAs so the report cannot imply more independent activity than happened.
         shas = set()
         for target in paths:
-            # `--full-history` keeps merge commits that touched the path: a repair authored
-            # before the candidate's last transition but merged after it is exactly the case
-            # this watch exists for, and ordinary history simplification hides it.
-            log = git(root, "log", f"--since={since}", "--full-history",
+            # Reachability is the contract: a repair authored or backdated before the candidate
+            # can still become reachable afterward through a merge. A timestamp filter silently
+            # misses that case, while the candidate-state revision gives Git an exact graph range.
+            log = git(root, "log", f"{baseline}..HEAD", "--full-history",
                       "--format=%h %ad %s", "--date=short", "--", target)
             for line in log.splitlines():
                 commits.append({"path": target, "commit": line})
@@ -122,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
     parser.add_argument("--fail-on-drift", action="store_true",
-                        help="exit 1 when any pending candidate's destination has changed")
+                        help="exit 1 when a pending candidate changed after its ledger state")
     parser.add_argument("--json", action="store_true", help="emit findings as JSON")
     parser.add_argument("--annotate", action="store_true",
                         help="also emit GitHub Actions ::warning:: lines, so a drifted "
@@ -144,9 +170,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps(findings, indent=2))
     elif not findings:
-        print("OK - no pending candidate's destination has changed since it was filed.")
+        print("OK - no pending candidate's destination changed after its ledger state.")
     else:
-        print(f"{len(findings)} pending candidate(s) whose destination changed since filing.")
+        print(
+            f"{len(findings)} pending candidate(s) whose destination changed "
+            "after ledger activity."
+        )
         print("Each may need a `learning_ledger.py transition`, or a note that the change was")
         print("unrelated. This is a prompt to look, not a defect.\n")
         for finding in findings:
