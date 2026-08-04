@@ -6,6 +6,7 @@
 *.yaml text eol=lf
 *.json text eol=lf
 *.toml text eol=lf
+*.js text eol=lf
 
 .codex/agents/** linguist-generated=true
 .claude/agents/** linguist-generated=true
