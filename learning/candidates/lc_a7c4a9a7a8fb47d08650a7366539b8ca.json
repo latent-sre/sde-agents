@@ -19,8 +19,8 @@
   },
   "observation": "Behavioral sessions without an explicit tools allowlist inherited all CLI built-ins while denial validation knew only fleet-granted tools, leaving alternate effect tools such as PowerShell available.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Independent prompt review traced a high-severity runtime authority mismatch; exact-current final review remains required before promotion.",
+  "promotion_state": "promoted",
+  "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Independent prompt review traced a high-severity runtime authority mismatch; exact-current final review remains required before promotion.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-04T01:07:18.810439Z",
+      "destination": "scripts/eval_behavioral.py, evals/behavioral/contracts.json, and associated tests",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Exact-current final review executed 2026-08-04 - the gate this record's prior reason named as outstanding. Expected behaviour verified present in the current tree: eval_behavioral.py:262-270 (RUNTIME_TOOLS including PowerShell), :319-338 (allowlist required, typed, membership-checked), :364-374 (denylist), :375-384 (overlap rejected), :159-160 (--tools always passed, empty list honoured); contracts.json 46 cases / 46 allowed_tools keys; tests test_eval_behavioral.py:350, test_validate_fleet.py:598,604",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-04T01:07:18.865468Z",
+      "destination": "scripts/eval_behavioral.py, evals/behavioral/contracts.json, and associated tests",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-02T02:31:25.664180Z"
+  "updated_at": "2026-08-04T01:07:18.865468Z"
 }

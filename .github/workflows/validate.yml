@@ -40,6 +40,23 @@ jobs:
       - name: Run validator unit tests
         run: ${{ matrix.py }} -m unittest discover -s tests -v
 
+  ledger-drift:
+    # Advisory, never blocking. A pending learning candidate whose destination file keeps
+    # receiving commits is the signal that its repair may already have landed -- the exact
+    # state that left seven LEARN-001 candidates reading as pending work for two days after
+    # PR #57 merged them. Deliberately not a gate: an unrelated commit to a shared file is
+    # the common case, and packet_lint.py documents why a hard check on a judgement call
+    # trains the shape rather than the work. This surfaces it where the decision is made.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0 # git log over destination paths needs real history
+
+      - name: Report learning candidates whose destination has changed
+        run: python3 scripts/ledger_drift.py --annotate
+
   claude-plugin-contract:
     # validate_fleet.py enforces THIS FLEET's rules. It cannot see the PLATFORM
     # contract -- manifest schema, frontmatter parsing, hook JSON -- where an

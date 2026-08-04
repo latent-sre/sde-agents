@@ -19,8 +19,8 @@
   },
   "observation": "Behavioral eval definitions silently ignored unknown keys and empty oracle lists, so misspelled assertions could produce a false pass.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Two independent review lanes reproduced a deterministic false-pass path; the repair still requires exact-current re-review.",
+  "promotion_state": "promoted",
+  "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
   "recurrence": {
     "count": 4,
     "sources": [
@@ -80,7 +80,25 @@
       "owner": "fleet-maintainer",
       "reason": "Two independent review lanes reproduced a deterministic false-pass path; the repair still requires exact-current re-review.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-04T01:07:19.029576Z",
+      "destination": "scripts/eval_behavioral.py, scripts/validate_fleet.py, and associated tests",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Exact-current final review executed 2026-08-04 - the gate this record's prior reason named as outstanding. Expected behaviour verified present in the current tree: eval_behavioral.py:244-256 (closed field sets), :290-295 (unknown keys refused), :503-513 (semantic-oracle requirement), :537-568 (validate_case_document), :828-856 and :888-892 (BehavioralCaseError, exit 2 before any job is planned); validate_fleet.py:1333-1375,1676; tests test_eval_behavioral.py:356, test_validate_fleet.py:547",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-04T01:07:19.084071Z",
+      "destination": "scripts/eval_behavioral.py, scripts/validate_fleet.py, and associated tests",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-02T02:58:09.912239Z"
+  "updated_at": "2026-08-04T01:07:19.084071Z"
 }
