@@ -1,23 +1,23 @@
 {
-  "applicability": "code-reviewer eval corpus and any builder authoring contract tests for unexecutable artifacts.",
+  "applicability": "deep-review final-gate guidance and any orchestration running per-task review gates before a whole-branch gate.",
   "candidate_id": "lc_90dd8dc7221846d285bdaedc5f92b2a4",
-  "created_at": "2026-08-04T00:32:53.045590Z",
+  "created_at": "2026-08-04T00:32:53.100368Z",
   "destination": null,
   "disposition": null,
   "evidence": {
-    "environment": "Ansible playbook contract tests, CPython 3.12.3",
+    "environment": "10-task branch, 19 commits, per-task review gates plus one final whole-branch review",
     "provenance": "verified",
     "revision": "sde-agents 1.6.0",
     "source_kind": "field-report",
-    "source_reference": "Issue #73 / #77 field report — Ansible estate tranche-1 run, 2026-08-03; caught by code-reviewer (opus) at per-task review"
+    "source_reference": "Issue #73 / #77 field report \u2014 Ansible estate tranche-1 run, 2026-08-03; caught only at the whole-branch gate"
   },
-  "expected_behavior": "String-matching contract tests assert on strings unique to the added block — full API paths, task names, or other tokens absent from the pre-change file — rather than on counts of a substring the file already contains. The RED phase is confirmed against the specific new sub-assertion by stubbing or deleting only the block under test, not by observing the first failing line. A reviewer eval case includes an assertion-passes-against-the-pre-change-file probe.",
-  "fingerprint": "4d8dbf202ac8e3891883b3a0a987ef386edc00bd85f1c04278be33f58d96dcef",
+  "expected_behavior": "A final whole-branch review gate explicitly enumerates any task that changed shared execution configuration such as caching, fact gathering, parallelism, or connection behaviour, and then re-derives which other tasks' verification evidence predates or assumes the previous semantics. Per-task verdicts are not treated as composable when a shared-config task is present in the same branch.",
+  "fingerprint": "156c5b8eaa581307ec4d0f882e0ed312e1375dbf765f7db66482044022c7c774",
   "freshness": {
-    "as_of": "2026-08-04T00:32:53.045590Z",
-    "review_at": "2026-09-03T00:32:53.045590Z"
+    "as_of": "2026-08-04T00:32:53.100368Z",
+    "review_at": "2026-09-03T00:32:53.100368Z"
   },
-  "observation": "A contract test guarding a newly added, never-executable code block asserted on a bare substring count of the whole file. Seven of the nine matches pre-existed elsewhere in that file, so the assertion passed with the entire block under test deleted. Because the guarded code cannot be executed in this environment, that test was its only automated protection, and the one property it claimed to guard had none.",
+  "observation": "On a multi-task branch, one task enabled a 24-hour on-disk fact cache while another task pruned fact-gathering from playbooks on the basis of a static audit. Each task passed its own review. The second task's live verification ran after the first had landed, so its green check proved the warm-cache world rather than a cold one, and the roles deliberately excluded from the prune were exactly those exposed to stale facts. No per-task gate could see the interaction; only the final whole-branch review did.",
   "owner": null,
   "promotion_state": "quarantined",
   "reason": null,
@@ -25,28 +25,28 @@
     "count": 1,
     "sources": [
       {
-        "environment": "Ansible playbook contract tests, CPython 3.12.3",
-        "observed_at": "2026-08-04T00:32:53.045590Z",
+        "environment": "10-task branch, 19 commits, per-task review gates plus one final whole-branch review",
+        "observed_at": "2026-08-04T00:32:53.100368Z",
         "provenance": "verified",
         "revision": "sde-agents 1.6.0",
         "source_kind": "field-report",
-        "source_reference": "Issue #73 / #77 field report — Ansible estate tranche-1 run, 2026-08-03; caught by code-reviewer (opus) at per-task review"
+        "source_reference": "Issue #73 / #77 field report \u2014 Ansible estate tranche-1 run, 2026-08-03; caught only at the whole-branch gate"
       }
     ]
   },
   "retention": {
-    "expires_at": "2027-08-04T00:32:53.045590Z",
+    "expires_at": "2027-08-04T00:32:53.100368Z",
     "policy": "review-or-expire"
   },
   "review_history": [],
   "schema_version": 2,
-  "scope": "String-presence or substring-count contract tests guarding code that cannot be executed in the test environment, such as playbooks, shell helpers, and deployment scripts. Excludes tests that parse the artifact structurally.",
+  "scope": "Multi-task branches where at least one task edits shared execution configuration. Excludes single-task changes and branches with no shared-config edit.",
   "sensitivity_review": {
     "attestation_count": 1,
     "attested": true,
-    "last_attested_at": "2026-08-04T00:32:53.045590Z",
+    "last_attested_at": "2026-08-04T00:32:53.100368Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [],
-  "updated_at": "2026-08-04T00:32:53.045590Z"
+  "updated_at": "2026-08-04T00:32:53.100368Z"
 }
