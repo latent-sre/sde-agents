@@ -276,7 +276,9 @@ class EffectBrokerTests(unittest.TestCase):
         self.assertEqual("unknown", unresolved[0]["status"])
         self.assertEqual(request["nonce"], unresolved[0]["nonce"])
         self.assertEqual(request["argv"], unresolved[0]["argv"])
-        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+        row = ledger.get(request["nonce"])
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("stale-reservation", row["unknown_origin"])
 
         with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
             effect_broker.execute_approved(
@@ -328,7 +330,40 @@ class EffectBrokerTests(unittest.TestCase):
                 runner=runner,
                 now=lambda: next(times),
             )
-        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+        row = ledger.get(request["nonce"])
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("dispatch-exception", row["unknown_origin"])
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=10),
+            )
+
+    def test_keyboard_interrupt_mid_dispatch_marks_unknown_and_blocks_replay(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            raise KeyboardInterrupt
+
+        with self.assertRaises(KeyboardInterrupt):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        row = ledger.get(request["nonce"])
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("dispatch-exception", row["unknown_origin"])
 
         with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
             effect_broker.execute_approved(
@@ -360,7 +395,9 @@ class EffectBrokerTests(unittest.TestCase):
                 runner=runner,
                 now=lambda: next(times),
             )
-        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+        row = ledger.get(request["nonce"])
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("finalization-exception", row["unknown_origin"])
 
         with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
             effect_broker.execute_approved(
@@ -462,6 +499,57 @@ class EffectBrokerTests(unittest.TestCase):
                 key=self.key,
             )
 
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(AssertionError("no replay")),
+                now=lambda: self.start + timedelta(seconds=20),
+            )
+
+    def test_indeterminate_resolution_is_recorded_and_terminal(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(RuntimeError("boom")),
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        envelope = effect_broker.resolve_unknown(
+            ledger,
+            nonce=request["nonce"],
+            resolution="indeterminate",
+            operator="oncall@example",
+            note="target system unreachable; outcome could not be established either way",
+            workspace_root=self.workspace,
+            key=self.key,
+            now=lambda: self.start + timedelta(minutes=10),
+        )
+        evidence_envelope.validate_envelope(envelope)
+        self.assertEqual("indeterminate", envelope["source"]["resolution"])
+        row = ledger.get(request["nonce"])
+        self.assertEqual("resolved-indeterminate", row["status"])
+
+        # Admitting uncertainty is just as terminal as a definite answer: no re-resolution,
+        # no replay.
+        with self.assertRaisesRegex(effect_broker.ReplayError, "not 'unknown'"):
+            effect_broker.resolve_unknown(
+                ledger,
+                nonce=request["nonce"],
+                resolution="executed",
+                operator="oncall@example",
+                note="second look",
+                workspace_root=self.workspace,
+                key=self.key,
+            )
         with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
             effect_broker.execute_approved(
                 request,

@@ -27,7 +27,10 @@ except ModuleNotFoundError:
 
 
 SCHEMA_VERSION = 1
-RESOLUTIONS = {"executed", "not-executed"}
+# "indeterminate" is a deliberate third value: an operator who cannot establish the outcome must
+# be able to record exactly that, because forcing a binary answer invites a false attestation --
+# and the row stays terminal either way, so admitting uncertainty never re-opens replay.
+RESOLUTIONS = {"executed", "not-executed", "indeterminate"}
 # A reservation past its deadline is very unlikely to still be in flight, so reconciliation may
 # call it unknown; before the deadline the subprocess could still be legitimately running, and
 # calling it unknown early would let an operator "resolve" (and thus unblock trust in) an effect
@@ -433,6 +436,10 @@ _ADDED_COLUMNS: tuple[tuple[str, str], ...] = (
     ("resolution_note", "TEXT"),
     ("resolution_evidence_id", "TEXT"),
     ("resolution_signature", "TEXT"),
+    # How the row became unknown -- 'dispatch-exception', 'finalization-exception', or
+    # 'stale-reservation' -- so the reconciling operator knows how far the broker reached before
+    # the outcome was lost.
+    ("unknown_origin", "TEXT"),
 )
 
 
@@ -553,7 +560,7 @@ class ReplayLedger:
                         f"{current_status!r}"
                     )
 
-    def mark_unknown(self, *, nonce: str, unknown_at: str) -> None:
+    def mark_unknown(self, *, nonce: str, unknown_at: str, origin: str) -> None:
         """Eagerly record that a reservation's outcome became unknown while the process survived.
 
         This runs from an exception handler that is about to re-raise, so it must never itself
@@ -568,10 +575,11 @@ class ReplayLedger:
                 with connection:
                     connection.execute(
                         """
-                        UPDATE consumptions SET status = 'unknown', unknown_at = ?
+                        UPDATE consumptions
+                        SET status = 'unknown', unknown_at = ?, unknown_origin = ?
                         WHERE nonce = ? AND status = 'reserved'
                         """,
-                        (unknown_at, nonce),
+                        (unknown_at, origin, nonce),
                     )
         except sqlite3.Error:
             pass
@@ -609,7 +617,7 @@ class ReplayLedger:
                 rows = connection.execute(
                     """
                     SELECT nonce, request_id, approval_id, action, target, argv, reserved_at,
-                           timeout_seconds, status
+                           timeout_seconds, status, unknown_origin
                     FROM consumptions
                     WHERE status IN ('reserved', 'unknown')
                     ORDER BY reserved_at
@@ -626,6 +634,7 @@ class ReplayLedger:
                     reserved_at,
                     timeout_seconds,
                     status,
+                    unknown_origin,
                 ) in rows:
                     if status == "reserved":
                         deadline = _parse_timestamp(reserved_at, "reserved_at") + timedelta(
@@ -635,7 +644,9 @@ class ReplayLedger:
                             unknown_at = _format_timestamp(current)
                             updated = connection.execute(
                                 """
-                                UPDATE consumptions SET status = 'unknown', unknown_at = ?
+                                UPDATE consumptions
+                                SET status = 'unknown', unknown_at = ?,
+                                    unknown_origin = 'stale-reservation'
                                 WHERE nonce = ? AND status = 'reserved'
                                 """,
                                 (unknown_at, nonce),
@@ -657,6 +668,7 @@ class ReplayLedger:
                                 )
                             else:
                                 status = "unknown"
+                                unknown_origin = "stale-reservation"
                         else:
                             status = "reserved-in-flight"
                     unresolved.append(
@@ -669,6 +681,7 @@ class ReplayLedger:
                             "argv": json.loads(argv_json) if argv_json else None,
                             "reserved_at": reserved_at,
                             "status": status,
+                            "unknown_origin": unknown_origin,
                         }
                     )
                 return unresolved
@@ -779,7 +792,10 @@ def execute_approved(
     # reconciliation to resolve later -- but any exception that the process survives (the runner
     # raising, envelope construction or validation failing) must not leave an ambiguous 'reserved'
     # row behind when the broker is still alive to say better: mark it 'unknown' before the
-    # exception propagates.
+    # exception propagates. BaseException, not Exception, deliberately: a KeyboardInterrupt
+    # mid-dispatch leaves the external effect exactly as unknowable as a crash, and this handler
+    # only records and re-raises. `phase` tells the reconciling operator how far execution got.
+    phase = "dispatch"
     try:
         result = runner(
             request["argv"],
@@ -787,6 +803,7 @@ def execute_approved(
             _validate_environment(request["environment"]),
             request["timeout_seconds"],
         )
+        phase = "finalization"
         ended = now()
         if result.timed_out:
             status = "inconclusive"
@@ -845,8 +862,12 @@ def execute_approved(
             ),
             limitations=limitations,
         )
-    except Exception:
-        ledger.mark_unknown(nonce=request["nonce"], unknown_at=_format_timestamp(_now()))
+    except BaseException:
+        ledger.mark_unknown(
+            nonce=request["nonce"],
+            unknown_at=_format_timestamp(_now()),
+            origin=f"{phase}-exception",
+        )
         raise
     ledger.finish(
         nonce=request["nonce"],
