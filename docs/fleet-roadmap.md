@@ -30,30 +30,6 @@ Git history and archived reviews retain the implementation detail.
 
 ### Ready
 
-#### SAFE-002 — represent and reconcile unknown effect outcomes
-
-**Status:** `ready` — a live defect in shipped code, independent of the GRAPH-001 decision.
-
-**Outcome:** A crash between the broker's reservation, dispatch, and finalization no longer leaves
-an ambiguous `reserved` action: the state becomes an explicit `unknown` that blocks automatic
-replay, and an operator reconciliation path lists unresolved reservations with their exact
-approved action, target, and argv, recording the resolution as evidence.
-
-**Source:** Revised
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work);
-defect confirmed against `scripts/effect_broker.py` by the
-[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
-
-**Prerequisites:** None beyond SAFE-001's landed broker. No model baseline is owed.
-
-**Acceptance:** Tests for a crash at each point between reservation, dispatch, and finalization;
-proof that an `unknown` action blocks replay and requires recorded operator resolution; existing
-broker tests and the deterministic gates stay green.
-
-**Next action:** Add the `unknown` state and reconciliation listing to the broker's replay ledger
-with crash-point tests. Fail closed: unknown is terminal until an operator resolves it, and
-resolution is recorded evidence, never an automatic retry.
-
 #### SAFE-003 — resolve the dangling `contract_digest` reference
 
 **Status:** `ready` — a verified gap in shipped code, absorbed from the superseded control-plane
@@ -75,8 +51,9 @@ run creation — never left readable-as-enforcement while enforcing nothing.
 creation-time enforcement of the documented binding); existing run-state tests and the
 deterministic gates stay green.
 
-**Next action:** Decide resolver-vs-document-and-enforce when SAFE-002 opens `run_state.py`
-anyway — same file, one review context.
+**Next action:** Decide resolver-vs-document-and-enforce against `run_state.py:104,248-271,886`
+and implement the chosen repair with its tests. SAFE-002 landed without opening `run_state.py`,
+so this repair stands alone.
 
 #### LEARN-002 — close the Learning-contract compliance gap
 
@@ -262,8 +239,10 @@ retirement, and teardown keep distinct unavoidable gates.
 without consumable transport); adjacent to SAFE-002 but distinct from its crash-ambiguity
 states.
 
-**Prerequisites:** SAFE-002 sequencing decision (both touch broker semantics; serialize or
-combine deliberately, not by accident).
+**Prerequisites:** The SAFE-002 sequencing question is discharged: SAFE-002 landed 2026-08-04
+with the unknown-state ledger (see its
+[outcome record](archive/2026-08/safe-002-outcome-2026-08-04.md)); both items touch broker
+semantics, so GATE-001's spec composes with that base deliberately rather than by accident.
 
 **Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
 scenario and an approval-consolidation case that leaves irreversible gates intact.

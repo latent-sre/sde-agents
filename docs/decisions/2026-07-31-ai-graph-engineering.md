@@ -391,6 +391,10 @@ This work does not execute models and therefore needs no model baseline.
   approved action, target, and argv, and records the operator's resolution as evidence.
 - Automatic replay of an unknown effect remains prohibited.
 
+**Landed 2026-08-04**; the
+[SAFE-002 outcome record](../archive/2026-08/safe-002-outcome-2026-08-04.md) carries the
+implementation detail and the acceptance-evidence mapping.
+
 ### Accepted -- context-engineering modernization (CTX-001)
 
 Audit the fleet's 30 canonical definitions against the six published shifts for Claude
