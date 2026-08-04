@@ -26,33 +26,13 @@ Every roadmap item carries:
 An item leaves this file when its acceptance evidence is committed. The source decision remains;
 Git history and archived reviews retain the implementation detail.
 
+Small items (the `Small items` section under Current work) are the deliberate exception: one
+line carrying only ID, the observable fix, and source — the tier that keeps tiny defects in this
+single tracker instead of leaking into memory or issue lists.
+
 ## Current work
 
 ### Ready
-
-#### SAFE-002 — represent and reconcile unknown effect outcomes
-
-**Status:** `ready` — a live defect in shipped code, independent of the GRAPH-001 decision.
-
-**Outcome:** A crash between the broker's reservation, dispatch, and finalization no longer leaves
-an ambiguous `reserved` action: the state becomes an explicit `unknown` that blocks automatic
-replay, and an operator reconciliation path lists unresolved reservations with their exact
-approved action, target, and argv, recording the resolution as evidence.
-
-**Source:** Revised
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) (accepted work);
-defect confirmed against `scripts/effect_broker.py` by the
-[`2026-07-31 independent review`](archive/2026-07/graph-decision-independent-review-2026-07-31.md).
-
-**Prerequisites:** None beyond SAFE-001's landed broker. No model baseline is owed.
-
-**Acceptance:** Tests for a crash at each point between reservation, dispatch, and finalization;
-proof that an `unknown` action blocks replay and requires recorded operator resolution; existing
-broker tests and the deterministic gates stay green.
-
-**Next action:** Add the `unknown` state and reconciliation listing to the broker's replay ledger
-with crash-point tests. Fail closed: unknown is terminal until an operator resolves it, and
-resolution is recorded evidence, never an automatic retry.
 
 #### SAFE-003 — resolve the dangling `contract_digest` reference
 
@@ -75,8 +55,9 @@ run creation — never left readable-as-enforcement while enforcing nothing.
 creation-time enforcement of the documented binding); existing run-state tests and the
 deterministic gates stay green.
 
-**Next action:** Decide resolver-vs-document-and-enforce when SAFE-002 opens `run_state.py`
-anyway — same file, one review context.
+**Next action:** Decide resolver-vs-document-and-enforce. SAFE-002 closed without touching
+`run_state.py` (its repair stayed inside `effect_broker.py`), so this opens its own review
+context rather than piggybacking on that round.
 
 #### LEARN-002 — close the Learning-contract compliance gap
 
@@ -262,14 +243,14 @@ retirement, and teardown keep distinct unavoidable gates.
 without consumable transport); adjacent to SAFE-002 but distinct from its crash-ambiguity
 states.
 
-**Prerequisites:** SAFE-002 sequencing decision (both touch broker semantics; serialize or
-combine deliberately, not by accident).
+**Prerequisites:** None — the SAFE-002 sequencing question is settled by SAFE-002 having landed
+first; the spec builds on the broker's now-shipped `unknown`/reconciliation semantics instead of
+racing them.
 
 **Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
 scenario and an approval-consolidation case that leaves irreversible gates intact.
 
-**Next action:** Author a bounded spec once REV-001 is ruled on, deciding the SAFE-002
-sequencing question in the same pass.
+**Next action:** Author a bounded spec once REV-001 is ruled on.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
@@ -293,6 +274,31 @@ duplicates merge provenance; source PASS ≠ released retest) plus the no-new-ma
 
 **Next action:** Author the bounded spec extending `self-improve-loop` and the ledger states —
 alongside GATE-001's spec so the classification ownership is decided once.
+
+### Small items
+
+The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
+do not leak into session memory or issue lists as a shadow queue. One line each — ID, the
+observable fix, source. No prerequisites and no acceptance section: the fix plus green
+deterministic gates closes a line, and closing it means deleting it. A line that turns out to
+need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
+naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
+
+- **SMALL-001** — `agents/prompt-engineer.md:43`: scope the promote-repeated-helpers-into-
+  `scripts/` advice to skills; agents and tool descriptions have no bundle directories, so as
+  written it recommends the impossible. Source: 2026-07-19 multi-lens self-review; re-verified
+  2026-08-04.
+- **SMALL-002** — the AGENTS.md style rule claims prose wraps at ~100 columns "matching the
+  existing files"; measured 2026-08-04, 218/1152 agent lines and 232/1623 SKILL.md lines exceed
+  100. Fix the rule's claim or the files — not neither. Source: same review; re-measured
+  2026-08-04.
+- **SMALL-003** — the `prompt-engineer` held-out rule's second-edit-same-eval-set branch has
+  never fired; probe it with a staged scenario. Source: 2026-07-19 wrap-up, unprobed since.
+- **SMALL-004** — `frontend-craft` screenshot-as-you-build needs a probe with a real browser
+  loop; headless fixtures could not exercise it. Source: 2026-07-19 wrap-up, unprobed since.
+- **SMALL-005** — `sre-tool`'s contested-finding cap and `sde-fullstack`'s Findings-response
+  packet slot are validator-green but behaviorally unprobed. Source: 2026-07-19 self-review
+  fixes, unprobed since.
 
 ## Deferred decisions
 
