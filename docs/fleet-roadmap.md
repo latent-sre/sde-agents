@@ -26,6 +26,10 @@ Every roadmap item carries:
 An item leaves this file when its acceptance evidence is committed. The source decision remains;
 Git history and archived reviews retain the implementation detail.
 
+Small items (the `Small items` section under Current work) are the deliberate exception: one
+line carrying only ID, the observable fix, and source — the tier that keeps tiny defects in this
+single tracker instead of leaking into memory or issue lists.
+
 ## Current work
 
 ### Ready
@@ -270,6 +274,31 @@ duplicates merge provenance; source PASS ≠ released retest) plus the no-new-ma
 
 **Next action:** Author the bounded spec extending `self-improve-loop` and the ledger states —
 alongside GATE-001's spec so the classification ownership is decided once.
+
+### Small items
+
+The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
+do not leak into session memory or issue lists as a shadow queue. One line each — ID, the
+observable fix, source. No prerequisites and no acceptance section: the fix plus green
+deterministic gates closes a line, and closing it means deleting it. A line that turns out to
+need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
+naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
+
+- **SMALL-001** — `agents/prompt-engineer.md:43`: scope the promote-repeated-helpers-into-
+  `scripts/` advice to skills; agents and tool descriptions have no bundle directories, so as
+  written it recommends the impossible. Source: 2026-07-19 multi-lens self-review; re-verified
+  2026-08-04.
+- **SMALL-002** — the AGENTS.md style rule claims prose wraps at ~100 columns "matching the
+  existing files"; measured 2026-08-04, 218/1152 agent lines and 232/1623 SKILL.md lines exceed
+  100. Fix the rule's claim or the files — not neither. Source: same review; re-measured
+  2026-08-04.
+- **SMALL-003** — the `prompt-engineer` held-out rule's second-edit-same-eval-set branch has
+  never fired; probe it with a staged scenario. Source: 2026-07-19 wrap-up, unprobed since.
+- **SMALL-004** — `frontend-craft` screenshot-as-you-build needs a probe with a real browser
+  loop; headless fixtures could not exercise it. Source: 2026-07-19 wrap-up, unprobed since.
+- **SMALL-005** — `sre-tool`'s contested-finding cap and `sde-fullstack`'s Findings-response
+  packet slot are validator-green but behaviorally unprobed. Source: 2026-07-19 self-review
+  fixes, unprobed since.
 
 ## Deferred decisions
 
