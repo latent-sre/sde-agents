@@ -472,6 +472,28 @@ class EffectBrokerTests(unittest.TestCase):
                 now=lambda: self.start + timedelta(seconds=20),
             )
 
+    def test_resolve_unknown_input_guards_fire(self) -> None:
+        ledger = self._ledger()
+        base: dict[str, object] = {
+            "nonce": "0" * 64,
+            "resolution": "executed",
+            "operator": "oncall@example",
+            "note": "checked externally",
+            "workspace_root": self.workspace,
+            "key": self.key,
+        }
+        # Each guard precedes the row lookup, so an empty ledger proves the guard itself fired
+        # rather than the missing-row path.
+        for override, message in (
+            ({"resolution": "retried"}, "resolution must be one of"),
+            ({"operator": "   "}, "operator must be non-empty"),
+            ({"note": ""}, "resolution note must be non-empty"),
+            ({"key": b"short"}, "at least 32 bytes"),
+        ):
+            with self.subTest(**override):
+                with self.assertRaisesRegex(effect_broker.BrokerError, message):
+                    effect_broker.resolve_unknown(ledger, **{**base, **override})
+
     def test_resolve_unknown_nonce_fails(self) -> None:
         ledger = self._ledger()
         with self.assertRaisesRegex(effect_broker.ReplayError, "no reservation exists"):
@@ -594,6 +616,32 @@ class EffectBrokerTests(unittest.TestCase):
         self.assertEqual(request["action"], new_row["action"])
         self.assertEqual(request["argv"], new_row["argv"])
 
+
+    def test_finish_after_reconciliation_marked_unknown_reports_discarded_outcome(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        self._reserve_directly(ledger, request, approval, reserved_at=self.start)
+
+        # A reconciliation pass on a deadline flips the row to 'unknown' while the (stalled but
+        # alive) broker still believes it holds the reservation.
+        past_deadline = self.start + timedelta(
+            seconds=request["timeout_seconds"] + effect_broker.RECONCILIATION_GRACE_SECONDS + 1
+        )
+        ledger.list_unresolved(now=lambda: past_deadline)
+
+        with self.assertRaisesRegex(
+            effect_broker.ReplayError, r"finalized as 'executed' \(returncode=0\).*'unknown'"
+        ) as caught:
+            ledger.finish(
+                nonce=request["nonce"],
+                status="executed",
+                finished_at=effect_broker._format_timestamp(past_deadline),
+                returncode=0,
+                evidence_id="ev_late_finish",
+            )
+        self.assertIn("could not be finalized", str(caught.exception))
+        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
 
     def test_legacy_reserved_row_reconciles_with_placeholder_evidence(self) -> None:
         path = self.control / "legacy-reserved-ledger.sqlite3"
