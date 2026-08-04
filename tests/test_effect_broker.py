@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import contextlib
 import copy
+import io
+import json
+import os
+import sqlite3
 import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -234,6 +240,442 @@ class EffectBrokerTests(unittest.TestCase):
             "credentials",
         ):
             effect_broker._validate_environment({"API_TOKEN": "secret"})
+
+    def _timestamp(self, value: datetime) -> str:
+        return effect_broker._format_timestamp(value)
+
+    def _foreign_reservation(
+        self,
+        request: dict[str, object],
+        approval: dict[str, object],
+        *,
+        reserved_at: datetime,
+    ) -> effect_broker.ReplayLedger:
+        """Leave a `reserved` row as a broker process that died mid-flight would."""
+        ledger = self._ledger()
+        ledger.reserve(
+            nonce=request["nonce"],
+            request_id=request["request_id"],
+            request_digest=request["request_digest"],
+            approval_id=approval["approval_id"],
+            action=request["action"],
+            target=request["target"],
+            argv=request["argv"],
+            reserved_at=self._timestamp(reserved_at),
+        )
+        # The reserving process is gone, so its pid no longer matches any live sweeper.
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET reserver_pid = -1 WHERE nonce = ?",
+                    (request["nonce"],),
+                )
+        return ledger
+
+    def test_crash_leftover_reservation_is_promoted_and_replay_blocked(self) -> None:
+        crashed_request = self._request()
+        crashed_approval = self._approval(crashed_request)
+        ledger = self._foreign_reservation(
+            crashed_request,
+            crashed_approval,
+            reserved_at=self.start + timedelta(seconds=2),
+        )
+        other_request = self._request()
+        other_approval = self._approval(other_request)
+        times = iter(
+            [
+                self.start + timedelta(seconds=10),
+                self.start + timedelta(seconds=11),
+            ]
+        )
+        envelope = effect_broker.execute_approved(
+            other_request,
+            other_approval,
+            key=self.key,
+            ledger=ledger,
+            runner=lambda *args: effect_broker.ProcessResult(0, b"", b""),
+            now=lambda: next(times),
+        )
+        self.assertEqual("pass", envelope["status"])
+        self.assertTrue(
+            any("crash-leftover" in item for item in envelope["limitations"]),
+            envelope["limitations"],
+        )
+        rows = ledger.unresolved()
+        self.assertEqual([crashed_request["request_id"]], [row["request_id"] for row in rows])
+        row = rows[0]
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("stale-reservation", row["unknown_origin"])
+        self.assertEqual("publish-artifact", row["action"])
+        self.assertEqual("staging/release-1", row["target"])
+        self.assertEqual(list(crashed_request["argv"]), row["argv"])
+        self.assertIsNone(row["finished_at"])
+        called = False
+
+        def runner(argv, cwd, environment, timeout):
+            nonlocal called
+            called = True
+            return effect_broker.ProcessResult(0, b"", b"")
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                crashed_request,
+                crashed_approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(minutes=4),
+            )
+        self.assertFalse(called)
+
+    def test_crash_during_dispatch_marks_unknown_and_blocks_replay(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        calls = 0
+
+        def runner(argv, cwd, environment, timeout):
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("broker host died mid-dispatch")
+
+        with self.assertRaisesRegex(RuntimeError, "mid-dispatch"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        rows = ledger.unresolved()
+        self.assertEqual(1, len(rows))
+        self.assertEqual("unknown", rows[0]["status"])
+        self.assertEqual("dispatch-exception", rows[0]["unknown_origin"])
+        self.assertIsNone(rows[0]["finished_at"])
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=3),
+            )
+        self.assertEqual(1, calls)
+
+    def test_crash_after_dispatch_before_finalization_marks_unknown(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        calls = 0
+
+        def runner(argv, cwd, environment, timeout):
+            nonlocal calls
+            calls += 1
+            return effect_broker.ProcessResult(0, b"done\n", b"")
+
+        def failing_finish(**kwargs):
+            raise sqlite3.Error("ledger write failed after dispatch")
+
+        ledger.finish = failing_finish  # type: ignore[method-assign]
+        times = iter(
+            [
+                self.start + timedelta(seconds=2),
+                self.start + timedelta(seconds=3),
+            ]
+        )
+        with self.assertRaisesRegex(sqlite3.Error, "after dispatch"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: next(times),
+            )
+        rows = ledger.unresolved()
+        self.assertEqual(1, len(rows))
+        self.assertEqual("unknown", rows[0]["status"])
+        self.assertEqual("finalization-exception", rows[0]["unknown_origin"])
+        self.assertIsNone(rows[0]["finished_at"])
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=4),
+            )
+        self.assertEqual(1, calls)
+
+    def test_unknown_resolution_is_recorded_and_stays_terminal(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            raise RuntimeError("broker host died mid-dispatch")
+
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        resolved = ledger.resolve(
+            nonce=request["nonce"],
+            resolver="operator@example",
+            resolution="not-applied",
+            resolution_note="staging has no release-1 artifact and its log shows no publish",
+            resolved_at=self._timestamp(self.start + timedelta(minutes=3)),
+        )
+        self.assertEqual("resolved", resolved["status"])
+        self.assertEqual("operator@example", resolved["resolver"])
+        self.assertEqual("not-applied", resolved["resolution"])
+        self.assertEqual(
+            "staging has no release-1 artifact and its log shows no publish",
+            resolved["resolution_note"],
+        )
+        self.assertEqual(
+            self._timestamp(self.start + timedelta(minutes=3)), resolved["resolved_at"]
+        )
+        self.assertEqual([], ledger.unresolved())
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(minutes=4),
+            )
+        with self.assertRaisesRegex(effect_broker.ReplayError, "no unresolved unknown"):
+            ledger.resolve(
+                nonce=request["nonce"],
+                resolver="operator@example",
+                resolution="applied",
+                resolution_note="a resolved row must never be re-resolved",
+                resolved_at=self._timestamp(self.start + timedelta(minutes=4)),
+            )
+
+    def test_resolve_rejects_non_unknown_rows_and_empty_evidence(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        times = iter(
+            [
+                self.start + timedelta(seconds=2),
+                self.start + timedelta(seconds=3),
+            ]
+        )
+        effect_broker.execute_approved(
+            request,
+            approval,
+            key=self.key,
+            ledger=ledger,
+            runner=lambda *args: effect_broker.ProcessResult(0, b"", b""),
+            now=lambda: next(times),
+        )
+        resolved_at = self._timestamp(self.start + timedelta(minutes=4))
+        with self.assertRaisesRegex(effect_broker.ReplayError, "no unresolved unknown"):
+            ledger.resolve(
+                nonce=request["nonce"],
+                resolver="operator@example",
+                resolution="applied",
+                resolution_note="a finalized execution is not a crash outcome",
+                resolved_at=resolved_at,
+            )
+        with self.assertRaisesRegex(effect_broker.BrokerError, "nonce"):
+            ledger.resolve(
+                nonce="not-a-nonce",
+                resolver="operator@example",
+                resolution="applied",
+                resolution_note="verified",
+                resolved_at=resolved_at,
+            )
+        with self.assertRaisesRegex(effect_broker.BrokerError, "resolution must be one of"):
+            ledger.resolve(
+                nonce="f" * 64,
+                resolver="operator@example",
+                resolution="maybe",
+                resolution_note="verified",
+                resolved_at=resolved_at,
+            )
+        with self.assertRaisesRegex(effect_broker.BrokerError, "note"):
+            ledger.resolve(
+                nonce="f" * 64,
+                resolver="operator@example",
+                resolution="applied",
+                resolution_note="  ",
+                resolved_at=resolved_at,
+            )
+        with self.assertRaisesRegex(effect_broker.BrokerError, "resolver"):
+            ledger.resolve(
+                nonce="f" * 64,
+                resolver=" ",
+                resolution="applied",
+                resolution_note="verified",
+                resolved_at=resolved_at,
+            )
+
+    def test_reconcile_cli_lists_exact_approved_effect_and_resolves(self) -> None:
+        healthy_request = self._request()
+        healthy_approval = self._approval(healthy_request)
+        ledger = self._ledger()
+        times = iter(
+            [
+                self.start + timedelta(seconds=2),
+                self.start + timedelta(seconds=3),
+            ]
+        )
+        effect_broker.execute_approved(
+            healthy_request,
+            healthy_approval,
+            key=self.key,
+            ledger=ledger,
+            runner=lambda *args: effect_broker.ProcessResult(0, b"", b""),
+            now=lambda: next(times),
+        )
+        crashed_request = self._request()
+        crashed_approval = self._approval(crashed_request)
+        self._foreign_reservation(
+            crashed_request,
+            crashed_approval,
+            reserved_at=self.start + timedelta(seconds=4),
+        )
+        listing = io.StringIO()
+        with contextlib.redirect_stdout(listing):
+            code = effect_broker.main(
+                [
+                    "reconcile",
+                    "--ledger",
+                    str(ledger.path),
+                    "--workspace-root",
+                    str(self.workspace),
+                ]
+            )
+        self.assertEqual(0, code)
+        report = json.loads(listing.getvalue())
+        self.assertEqual(
+            [crashed_request["request_id"]],
+            [row["request_id"] for row in report["promoted"]],
+        )
+        self.assertEqual(1, len(report["unresolved"]))
+        row = report["unresolved"][0]
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("publish-artifact", row["action"])
+        self.assertEqual("staging/release-1", row["target"])
+        self.assertEqual(list(crashed_request["argv"]), row["argv"])
+        self.assertNotIn(
+            healthy_request["request_id"],
+            [item["request_id"] for item in report["promoted"] + report["unresolved"]],
+        )
+        resolution = io.StringIO()
+        with contextlib.redirect_stdout(resolution):
+            code = effect_broker.main(
+                [
+                    "resolve",
+                    "--ledger",
+                    str(ledger.path),
+                    "--workspace-root",
+                    str(self.workspace),
+                    "--nonce",
+                    crashed_request["nonce"],
+                    "--resolver",
+                    "operator@example",
+                    "--resolution",
+                    "applied",
+                    "--note",
+                    "release-1 is present in staging with the expected bytes",
+                ]
+            )
+        self.assertEqual(0, code)
+        resolved = json.loads(resolution.getvalue())
+        self.assertEqual("resolved", resolved["status"])
+        self.assertEqual("applied", resolved["resolution"])
+        self.assertEqual([], ledger.unresolved())
+
+    def test_pre_reconciliation_ledger_migrates_and_reconciles(self) -> None:
+        path = self.control / "ledger.sqlite3"
+        with closing(sqlite3.connect(path)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    CREATE TABLE consumptions (
+                        nonce TEXT PRIMARY KEY,
+                        request_id TEXT NOT NULL,
+                        request_digest TEXT NOT NULL,
+                        approval_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        reserved_at TEXT NOT NULL,
+                        finished_at TEXT,
+                        returncode INTEGER,
+                        evidence_id TEXT
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO consumptions VALUES(
+                        'legacy-nonce-done', 'req_legacy_done', 'digest', 'approval_legacy_done',
+                        'executed', '2026-08-01T10:00:00Z', '2026-08-01T10:00:04Z', 0, 'ev_done'
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO consumptions VALUES(
+                        'legacy-nonce-stale', 'req_legacy_stale', 'digest',
+                        'approval_legacy_stale', 'reserved', '2026-08-01T11:00:00Z',
+                        NULL, NULL, NULL
+                    )
+                    """
+                )
+        ledger = self._ledger()
+        ledger.initialize()
+        promoted = ledger.promote_stale_reservations(
+            promoted_at="2026-08-04T00:00:00Z",
+            current_pid=os.getpid(),
+        )
+        self.assertEqual(["req_legacy_stale"], [row["request_id"] for row in promoted])
+        rows = ledger.unresolved()
+        self.assertEqual(1, len(rows))
+        row = rows[0]
+        self.assertEqual("unknown", row["status"])
+        self.assertEqual("stale-reservation", row["unknown_origin"])
+        self.assertIsNone(row["action"])
+        self.assertIsNone(row["target"])
+        self.assertIsNone(row["argv"])
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            status = connection.execute(
+                "SELECT status FROM consumptions WHERE request_id = 'req_legacy_done'"
+            ).fetchone()
+        self.assertEqual(("executed",), status)
+
+    def test_live_reservation_survives_same_process_sweep(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        ledger.reserve(
+            nonce=request["nonce"],
+            request_id=request["request_id"],
+            request_digest=request["request_digest"],
+            approval_id=approval["approval_id"],
+            action=request["action"],
+            target=request["target"],
+            argv=request["argv"],
+            reserved_at=self._timestamp(self.start + timedelta(seconds=2)),
+        )
+        promoted = ledger.promote_stale_reservations(
+            promoted_at=self._timestamp(self.start + timedelta(seconds=3))
+        )
+        self.assertEqual([], promoted)
+        self.assertEqual([], ledger.unresolved())
 
 
 if __name__ == "__main__":

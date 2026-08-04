@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Create, approve, and consume one-shot approvals bound to one exact subprocess effect."""
+"""Create, approve, and consume one-shot approvals bound to one exact subprocess effect.
+
+A consumption that dies between reservation, dispatch, and finalization never stays an
+ambiguous `reserved` row: it becomes an explicit `unknown` that blocks automatic replay until
+an operator reconciles it with a recorded resolution — never an automatic retry.
+"""
 
 from __future__ import annotations
 
@@ -81,6 +86,22 @@ SHELL_EXECUTABLES = {
     "pwsh.exe",
     "sh",
     "zsh",
+}
+RESOLUTIONS = {"applied", "not-applied", "indeterminate"}
+# Columns added when the ledger gained crash reconciliation. A pre-existing ledger is migrated
+# in place rather than rejected: dropping the file would destroy the one-shot consumption
+# history an operator may still need for exactly the crashes this repair targets.
+_LEDGER_ADDED_COLUMNS = {
+    "action": "action TEXT",
+    "target": "target TEXT",
+    "argv": "argv TEXT",
+    "reserver_pid": "reserver_pid INTEGER",
+    "unknown_at": "unknown_at TEXT",
+    "unknown_origin": "unknown_origin TEXT",
+    "resolved_at": "resolved_at TEXT",
+    "resolver": "resolver TEXT",
+    "resolution": "resolution TEXT",
+    "resolution_note": "resolution_note TEXT",
 }
 
 
@@ -394,6 +415,14 @@ def validate_approval(
 
 
 class ReplayLedger:
+    """One-shot consumption records plus crash-outcome reconciliation.
+
+    `reserved` means a broker process holds the reservation right now: reservation and
+    finalization happen inside one process, so a `reserved` row owned by any other process is
+    definitionally a crash leftover and must become `unknown`. `unknown` is terminal until an
+    operator records a resolution; the nonce primary key keeps every state unreplayable.
+    """
+
     def __init__(self, path: Path, workspace_root: Path) -> None:
         self.path = _path_outside_workspace(path, workspace_root, "approval replay ledger")
 
@@ -408,14 +437,30 @@ class ReplayLedger:
                         request_id TEXT NOT NULL,
                         request_digest TEXT NOT NULL,
                         approval_id TEXT NOT NULL,
+                        action TEXT,
+                        target TEXT,
+                        argv TEXT,
                         status TEXT NOT NULL,
                         reserved_at TEXT NOT NULL,
+                        reserver_pid INTEGER,
                         finished_at TEXT,
                         returncode INTEGER,
-                        evidence_id TEXT
+                        evidence_id TEXT,
+                        unknown_at TEXT,
+                        unknown_origin TEXT,
+                        resolved_at TEXT,
+                        resolver TEXT,
+                        resolution TEXT,
+                        resolution_note TEXT
                     )
                     """
                 )
+                columns = {
+                    row[1] for row in connection.execute("PRAGMA table_info(consumptions)")
+                }
+                for column, ddl in _LEDGER_ADDED_COLUMNS.items():
+                    if column not in columns:
+                        connection.execute(f"ALTER TABLE consumptions ADD COLUMN {ddl}")
 
     def reserve(
         self,
@@ -424,6 +469,9 @@ class ReplayLedger:
         request_id: str,
         request_digest: str,
         approval_id: str,
+        action: str,
+        target: str,
+        argv: Sequence[str],
         reserved_at: str,
     ) -> None:
         self.initialize()
@@ -433,10 +481,21 @@ class ReplayLedger:
             connection.execute(
                 """
                 INSERT INTO consumptions(
-                    nonce, request_id, request_digest, approval_id, status, reserved_at
-                ) VALUES(?, ?, ?, ?, 'reserved', ?)
+                    nonce, request_id, request_digest, approval_id,
+                    action, target, argv, status, reserved_at, reserver_pid
+                ) VALUES(?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
                 """,
-                (nonce, request_id, request_digest, approval_id, reserved_at),
+                (
+                    nonce,
+                    request_id,
+                    request_digest,
+                    approval_id,
+                    action,
+                    target,
+                    json.dumps(list(argv)),
+                    reserved_at,
+                    os.getpid(),
+                ),
             )
             connection.commit()
         except sqlite3.IntegrityError as exc:
@@ -466,6 +525,153 @@ class ReplayLedger:
                 )
                 if result.rowcount != 1:
                     raise ReplayError("reserved approval nonce could not be finalized")
+
+    def mark_unknown(self, *, nonce: str, unknown_at: str, origin: str) -> bool:
+        """Move a live reservation to `unknown`; False means it already left `reserved`."""
+        self.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE consumptions
+                    SET status = 'unknown', unknown_at = ?, unknown_origin = ?
+                    WHERE nonce = ? AND status = 'reserved'
+                    """,
+                    (unknown_at, origin, nonce),
+                )
+                return result.rowcount == 1
+
+    def promote_stale_reservations(
+        self,
+        *,
+        promoted_at: str,
+        current_pid: int | None = None,
+    ) -> list[dict[str, object]]:
+        """Mark every `reserved` row this process does not own as `unknown` and return them.
+
+        The owning-process exemption — not a time threshold — is what keeps concurrent
+        consumers in one process from promoting each other's live reservations; clocks cannot
+        distinguish "in flight" from "crashed", but process identity can. Rows reserved before
+        the reconciliation columns existed carry a NULL pid and are always stale: the upgrade
+        itself means their process is gone.
+        """
+        self.initialize()
+        pid = os.getpid() if current_pid is None else current_pid
+        connection = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                """
+                SELECT * FROM consumptions
+                WHERE status = 'reserved' AND (reserver_pid IS NULL OR reserver_pid <> ?)
+                ORDER BY reserved_at
+                """,
+                (pid,),
+            )
+            columns = [item[0] for item in cursor.description]
+            stale = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            connection.execute(
+                """
+                UPDATE consumptions
+                SET status = 'unknown', unknown_at = ?, unknown_origin = 'stale-reservation'
+                WHERE status = 'reserved' AND (reserver_pid IS NULL OR reserver_pid <> ?)
+                """,
+                (promoted_at, pid),
+            )
+            connection.commit()
+        except sqlite3.Error:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        promoted = []
+        for row in stale:
+            row.update(
+                {
+                    "status": "unknown",
+                    "unknown_at": promoted_at,
+                    "unknown_origin": "stale-reservation",
+                }
+            )
+            promoted.append(self._public_row(row))
+        return promoted
+
+    def unresolved(self) -> list[dict[str, object]]:
+        """Unknown-outcome reservations awaiting recorded operator resolution, oldest first."""
+        self.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            cursor = connection.execute(
+                "SELECT * FROM consumptions WHERE status = 'unknown' ORDER BY reserved_at"
+            )
+            columns = [item[0] for item in cursor.description]
+            return [self._public_row(dict(zip(columns, row))) for row in cursor.fetchall()]
+
+    def resolve(
+        self,
+        *,
+        nonce: str,
+        resolver: str,
+        resolution: str,
+        resolution_note: str,
+        resolved_at: str,
+    ) -> dict[str, object]:
+        """Record an operator resolution for one `unknown` reservation and return the row.
+
+        Only `unknown` may transition: a live reservation, a finalized execution, and a nonce
+        this ledger never saw all fail closed, because resolving any of them would fabricate
+        crash evidence.
+        """
+        if not NONCE_RE.fullmatch(nonce):
+            raise BrokerError("resolution nonce is invalid")
+        if not isinstance(resolver, str) or not resolver.strip():
+            raise BrokerError("resolver must be non-empty")
+        if resolution not in RESOLUTIONS:
+            raise BrokerError(f"resolution must be one of {sorted(RESOLUTIONS)}")
+        if not isinstance(resolution_note, str) or not resolution_note.strip():
+            raise BrokerError("resolution note must be non-empty")
+        _parse_timestamp(resolved_at, "resolved_at")
+        self.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE consumptions
+                    SET status = 'resolved', resolved_at = ?, resolver = ?,
+                        resolution = ?, resolution_note = ?
+                    WHERE nonce = ? AND status = 'unknown'
+                    """,
+                    (resolved_at, resolver, resolution, resolution_note, nonce),
+                )
+                if result.rowcount != 1:
+                    raise ReplayError(
+                        "no unresolved unknown-effect reservation exists for that nonce"
+                    )
+                cursor = connection.execute(
+                    "SELECT * FROM consumptions WHERE nonce = ?", (nonce,)
+                )
+                columns = [item[0] for item in cursor.description]
+                row = cursor.fetchone()
+                if row is None:
+                    raise ReplayError("resolved reservation could not be re-read")
+                return self._public_row(dict(zip(columns, row)))
+
+    @staticmethod
+    def _public_row(row: Mapping[str, object]) -> dict[str, object]:
+        public = dict(row)
+        if isinstance(public.get("argv"), str):
+            public["argv"] = json.loads(public["argv"])
+        return public
+
+
+def _mark_unknown_best_effort(ledger: ReplayLedger, *, nonce: str, origin: str) -> None:
+    # A failed mark must never mask the crash that triggered it — a row left `reserved` is
+    # promoted to `unknown` by the next sweep instead. The wall clock, not the caller's
+    # injected time source, timestamps the mark: failure handling must not depend on a clock
+    # that may itself be part of the failure.
+    try:
+        ledger.mark_unknown(nonce=nonce, unknown_at=_format_timestamp(_now()), origin=origin)
+    except (OSError, sqlite3.Error):
+        pass
 
 
 def _run_effect(
@@ -519,84 +725,105 @@ def execute_approved(
     if not cwd.is_dir():
         raise ApprovalError(f"approved cwd no longer exists: {cwd}")
 
+    promoted = ledger.promote_stale_reservations(promoted_at=_format_timestamp(started))
     ledger.reserve(
         nonce=request["nonce"],
         request_id=request["request_id"],
         request_digest=request["request_digest"],
         approval_id=approval["approval_id"],
+        action=request["action"],
+        target=request["target"],
+        argv=request["argv"],
         reserved_at=_format_timestamp(started),
     )
-    result = runner(
-        request["argv"],
-        cwd,
-        _validate_environment(request["environment"]),
-        request["timeout_seconds"],
-    )
-    ended = now()
-    if result.timed_out:
-        status = "inconclusive"
-        ledger_status = "timed-out"
-        limitations = ["approved effect timed out; partial external effects may remain"]
-    elif result.returncode == 0:
-        status = "pass"
-        ledger_status = "executed"
-        limitations = []
-    else:
-        status = "fail"
-        ledger_status = "failed"
-        limitations = [
-            "a non-zero process result does not prove that the external effect was rolled back"
-        ]
-    context = _validate_context(request["context"])
-    envelope = evidence_envelope.new_envelope(
-        producer="effect_broker",
-        role="approved-effect-executor",
-        target_root=request["cwd"],
-        target_revision=f"effect-request:{request['request_digest']}",
-        criterion=f"execute approved {request['action']} against {request['target']}",
-        status=status,
-        started_at=started,
-        ended_at=ended,
-        command_argv=request["argv"],
-        command_cwd=request["cwd"],
-        exit_code=result.returncode,
-        source={
-            "kind": "effect-approval",
-            "request_id": request["request_id"],
-            "request_digest": request["request_digest"],
-            "approval_id": approval["approval_id"],
-            "approver": approval["approver"],
-            "action": request["action"],
-            "target": request["target"],
-            "blast_radius": request["blast_radius"],
-            "rollback": request["rollback"],
-        },
-        run_id=context["run_id"],
-        task_id=context["task_id"],
-        attempt_id=context["attempt_id"],
-        environment={"execution": "direct-argv", "shell": False},
-        isolation={"approval": "hmac-sha256", "one_shot_nonce": True},
-        artifacts=(
-            {
-                "path": "captured-stdout.bin",
-                "sha256": hashlib.sha256(result.stdout).hexdigest(),
-                "size": len(result.stdout),
+    # Anything that kills this block after the reservation — a runner exception, an envelope
+    # validation failure, a ledger write error, KeyboardInterrupt mid-dispatch — leaves the
+    # external effect genuinely unknowable, so the row is marked `unknown` before the failure
+    # propagates. `phase` records how far execution reached for the reconciling operator.
+    phase = "dispatch"
+    try:
+        result = runner(
+            request["argv"],
+            cwd,
+            _validate_environment(request["environment"]),
+            request["timeout_seconds"],
+        )
+        ended = now()
+        phase = "finalization"
+        if result.timed_out:
+            status = "inconclusive"
+            ledger_status = "timed-out"
+            limitations = ["approved effect timed out; partial external effects may remain"]
+        elif result.returncode == 0:
+            status = "pass"
+            ledger_status = "executed"
+            limitations = []
+        else:
+            status = "fail"
+            ledger_status = "failed"
+            limitations = [
+                "a non-zero process result does not prove that the external effect was rolled back"
+            ]
+        if promoted:
+            request_ids = ", ".join(str(row["request_id"]) for row in promoted)
+            limitations.append(
+                f"{len(promoted)} crash-leftover reservation(s) became unknown at the start of "
+                f"this execution ({request_ids}); each blocks replay until recorded operator "
+                "resolution"
+            )
+        context = _validate_context(request["context"])
+        envelope = evidence_envelope.new_envelope(
+            producer="effect_broker",
+            role="approved-effect-executor",
+            target_root=request["cwd"],
+            target_revision=f"effect-request:{request['request_digest']}",
+            criterion=f"execute approved {request['action']} against {request['target']}",
+            status=status,
+            started_at=started,
+            ended_at=ended,
+            command_argv=request["argv"],
+            command_cwd=request["cwd"],
+            exit_code=result.returncode,
+            source={
+                "kind": "effect-approval",
+                "request_id": request["request_id"],
+                "request_digest": request["request_digest"],
+                "approval_id": approval["approval_id"],
+                "approver": approval["approver"],
+                "action": request["action"],
+                "target": request["target"],
+                "blast_radius": request["blast_radius"],
+                "rollback": request["rollback"],
             },
-            {
-                "path": "captured-stderr.bin",
-                "sha256": hashlib.sha256(result.stderr).hexdigest(),
-                "size": len(result.stderr),
-            },
-        ),
-        limitations=limitations,
-    )
-    ledger.finish(
-        nonce=request["nonce"],
-        status=ledger_status,
-        finished_at=_format_timestamp(ended),
-        returncode=result.returncode,
-        evidence_id=envelope["evidence_id"],
-    )
+            run_id=context["run_id"],
+            task_id=context["task_id"],
+            attempt_id=context["attempt_id"],
+            environment={"execution": "direct-argv", "shell": False},
+            isolation={"approval": "hmac-sha256", "one_shot_nonce": True},
+            artifacts=(
+                {
+                    "path": "captured-stdout.bin",
+                    "sha256": hashlib.sha256(result.stdout).hexdigest(),
+                    "size": len(result.stdout),
+                },
+                {
+                    "path": "captured-stderr.bin",
+                    "sha256": hashlib.sha256(result.stderr).hexdigest(),
+                    "size": len(result.stderr),
+                },
+            ),
+            limitations=limitations,
+        )
+        ledger.finish(
+            nonce=request["nonce"],
+            status=ledger_status,
+            finished_at=_format_timestamp(ended),
+            returncode=result.returncode,
+            evidence_id=envelope["evidence_id"],
+        )
+    except BaseException:
+        _mark_unknown_best_effort(ledger, nonce=request["nonce"], origin=f"{phase}-exception")
+        raise
     return envelope
 
 
@@ -649,6 +876,23 @@ def _parser() -> argparse.ArgumentParser:
     execute.add_argument("--key-file", type=Path, required=True)
     execute.add_argument("--ledger", type=Path, required=True)
     execute.add_argument("--workspace-root", type=Path, required=True)
+
+    reconcile = commands.add_parser(
+        "reconcile",
+        help="promote crash-leftover reservations to unknown and list unresolved effects",
+    )
+    reconcile.add_argument("--ledger", type=Path, required=True)
+    reconcile.add_argument("--workspace-root", type=Path, required=True)
+
+    resolve = commands.add_parser(
+        "resolve", help="record an operator resolution for one unknown effect"
+    )
+    resolve.add_argument("--ledger", type=Path, required=True)
+    resolve.add_argument("--workspace-root", type=Path, required=True)
+    resolve.add_argument("--nonce", required=True)
+    resolve.add_argument("--resolver", required=True)
+    resolve.add_argument("--resolution", choices=sorted(RESOLUTIONS), required=True)
+    resolve.add_argument("--note", required=True, help="what the operator verified, and how")
     return parser
 
 
@@ -677,6 +921,23 @@ def main(argv: list[str] | None = None) -> int:
             request = _load_json(args.request)
             key = _read_key(args.key_file, args.workspace_root)
             result = approve_request(request, key=key, approver=args.approver)
+        elif args.command == "reconcile":
+            ledger = ReplayLedger(args.ledger, args.workspace_root)
+            result = {
+                "promoted": ledger.promote_stale_reservations(
+                    promoted_at=_format_timestamp(_now())
+                ),
+                "unresolved": ledger.unresolved(),
+            }
+        elif args.command == "resolve":
+            ledger = ReplayLedger(args.ledger, args.workspace_root)
+            result = ledger.resolve(
+                nonce=args.nonce,
+                resolver=args.resolver,
+                resolution=args.resolution,
+                resolution_note=args.note,
+                resolved_at=_format_timestamp(_now()),
+            )
         else:
             request = _load_json(args.request)
             approval = _load_json(args.approval)
