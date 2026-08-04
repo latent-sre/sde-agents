@@ -8,7 +8,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -122,7 +121,11 @@ class LedgerDriftTests(unittest.TestCase):
             root = Path(tmp)
             _repo_with_candidate(root, state="proposed", destination="scripts/thing.py",
                                  since="2026-08-01T00:00:00Z")
-            shutil.rmtree(root / ".git")
+            # Rename, not delete: git marks its object files read-only, and on Windows
+            # shutil.rmtree refuses to delete them (WinError 5). Breaking the fixture only
+            # needs git to stop finding a repository here; the temporary directory's own
+            # cleanup already handles the read-only objects.
+            (root / ".git").rename(root / ".git-broken")
             with self.assertRaises(ledger_drift.GitError):
                 ledger_drift.inspect(root)
             self.assertEqual(ledger_drift.main(["--root", str(root), "--fail-on-drift"]), 2)
