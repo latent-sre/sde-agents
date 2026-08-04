@@ -110,7 +110,6 @@ _CANONICAL_SKILL_PATH_RE = re.compile(
     r"`skills/(?P<name>[a-z0-9]+(?:-[a-z0-9]+)*)/"
     r"(?P<resource>[A-Za-z0-9_./<>*-]+)`"
 )
-_PYTHON_BYTECODE_SUFFIXES = {".pyc", ".pyo"}
 _TEXT_RESOURCE_SUFFIXES = {".json", ".md", ".py", ".toml", ".yaml", ".yml"}
 _FRONTMATTER_LINE_RE = re.compile(r"^(?P<key>[A-Za-z][A-Za-z0-9_-]*):")
 
@@ -1062,12 +1061,9 @@ def _guarded_names(root: Path) -> set[str]:
 
 
 def _is_runtime_byproduct(path: Path) -> bool:
-    """Return whether a path is execution residue rather than a distributable skill file."""
+    """Use the shared fleet predicate for execution residue, not a second vocabulary."""
 
-    return (
-        "__pycache__" in path.parts
-        or path.suffix.lower() in _PYTHON_BYTECODE_SUFFIXES
-    )
+    return bool(_validator_module().is_runtime_byproduct(path))
 
 
 def _is_link_or_reparse_point(path: Path) -> bool:
