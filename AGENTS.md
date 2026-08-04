@@ -202,6 +202,19 @@ enough to skim past stops working, and each section in it was added for an obser
   side wins on conflict; when they drift, fix the paraphrase, never the source. The full ownership
   list lives in `README.md` under "Working on the fleet itself".
 
+## Cursor Cloud specific instructions
+
+This fleet is a standard-library-only Python repository — there is nothing to `pip install`. The
+three offline checks in "Validate before you push" (`scripts/validate_fleet.py`, the
+`generate_platform_adapters.py --check`, and the `unittest` suite) run with the system `python3`
+and need no dependency step.
+
+The only external tool is the Claude Code CLI, required solely by `claude plugin validate . --strict`
+(the platform-contract check). It is installed globally with npm, but the default npm prefix here is
+`/` (not writable), so a user-writable prefix `~/.npm-global` is configured in `~/.npmrc` and added
+to `PATH` via `~/.bashrc`. The startup update script reinstalls the pinned CLI into that prefix, so
+`claude` is already on `PATH` for new sessions; no per-session setup is needed.
+
 ## Style
 
 - Markdown prose wraps at roughly 100 columns, matching the existing files.
