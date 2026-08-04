@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import hmac
+import sqlite3
 import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -234,6 +238,416 @@ class EffectBrokerTests(unittest.TestCase):
             "credentials",
         ):
             effect_broker._validate_environment({"API_TOKEN": "secret"})
+
+    def _reserve_directly(
+        self,
+        ledger: effect_broker.ReplayLedger,
+        request: dict[str, object],
+        approval: dict[str, object],
+        *,
+        reserved_at: datetime,
+    ) -> None:
+        """Write a 'reserved' row through the ledger API, as a broker that then crashed would have."""
+        ledger.reserve(
+            nonce=request["nonce"],
+            request_id=request["request_id"],
+            request_digest=request["request_digest"],
+            approval_id=approval["approval_id"],
+            reserved_at=effect_broker._format_timestamp(reserved_at),
+            action=request["action"],
+            target=request["target"],
+            argv=request["argv"],
+            timeout_seconds=request["timeout_seconds"],
+            expires_at=request["expires_at"],
+        )
+
+    def test_crash_between_reservation_and_dispatch_becomes_unknown_via_reconcile(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        self._reserve_directly(ledger, request, approval, reserved_at=self.start)
+        self.assertEqual("reserved", ledger.get(request["nonce"])["status"])
+
+        past_deadline = self.start + timedelta(
+            seconds=request["timeout_seconds"] + effect_broker.RECONCILIATION_GRACE_SECONDS + 1
+        )
+        unresolved = ledger.list_unresolved(now=lambda: past_deadline)
+        self.assertEqual(1, len(unresolved))
+        self.assertEqual("unknown", unresolved[0]["status"])
+        self.assertEqual(request["nonce"], unresolved[0]["nonce"])
+        self.assertEqual(request["argv"], unresolved[0]["argv"])
+        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(AssertionError("no replay")),
+                now=lambda: self.start + timedelta(seconds=1),
+            )
+
+    def test_reserved_before_deadline_is_in_flight_and_not_resolvable(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        self._reserve_directly(ledger, request, approval, reserved_at=self.start)
+
+        before_deadline = self.start + timedelta(seconds=5)
+        unresolved = ledger.list_unresolved(now=lambda: before_deadline)
+        self.assertEqual(["reserved-in-flight"], [item["status"] for item in unresolved])
+        self.assertEqual("reserved", ledger.get(request["nonce"])["status"])
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "not 'unknown'"):
+            effect_broker.resolve_unknown(
+                ledger,
+                nonce=request["nonce"],
+                resolution="executed",
+                operator="oncall@example",
+                note="checked externally",
+                workspace_root=self.workspace,
+                key=self.key,
+            )
+
+    def test_runner_exception_marks_unknown_eagerly_and_blocks_replay(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            raise RuntimeError("external effect may have started before the runner crashed")
+
+        times = iter([self.start + timedelta(seconds=2)])
+        with self.assertRaisesRegex(RuntimeError, "crashed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: next(times),
+            )
+        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=10),
+            )
+
+    def test_post_runner_now_failure_marks_unknown_eagerly_and_blocks_replay(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            return effect_broker.ProcessResult(0, b"", b"")
+
+        # Only one `now()` value: reserve()'s `started` consumes it, so the finalization call to
+        # `ended = now()` raises -- simulating a crash between dispatch and finalization.
+        times = iter([self.start + timedelta(seconds=2)])
+        with self.assertRaises(StopIteration):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: next(times),
+            )
+        self.assertEqual("unknown", ledger.get(request["nonce"])["status"])
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=10),
+            )
+
+    def test_mark_unknown_failure_does_not_mask_original_exception(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            # The reservation already committed; now break the ledger file itself (replace it
+            # with a directory) so mark_unknown's own connect() fails inside the exception
+            # handler. The RuntimeError below -- not a masking sqlite3.Error -- must still win.
+            ledger.path.unlink()
+            ledger.path.mkdir()
+            raise RuntimeError("effect runner crashed")
+
+        times = iter([self.start + timedelta(seconds=2)])
+        with self.assertRaisesRegex(RuntimeError, "crashed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: next(times),
+            )
+
+    def test_resolve_records_evidence_and_blocks_double_resolution(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        def runner(argv, cwd, environment, timeout):
+            raise RuntimeError("boom")
+
+        times = iter([self.start + timedelta(seconds=2)])
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: next(times),
+            )
+
+        envelope = effect_broker.resolve_unknown(
+            ledger,
+            nonce=request["nonce"],
+            resolution="not-executed",
+            operator="oncall@example",
+            note="confirmed target artifact absent",
+            workspace_root=self.workspace,
+            key=self.key,
+            now=lambda: self.start + timedelta(minutes=10),
+        )
+        evidence_envelope.validate_envelope(envelope)
+        self.assertEqual("unknown-reservation-resolution", envelope["source"]["kind"])
+        self.assertEqual("not-executed", envelope["source"]["resolution"])
+        self.assertIn("attestation", envelope["limitations"][0])
+        self.assertEqual("hmac-sha256", envelope["isolation"]["signature"])
+
+        row = ledger.get(request["nonce"])
+        self.assertEqual("resolved-not-executed", row["status"])
+        self.assertEqual("not-executed", row["resolution"])
+        self.assertEqual("oncall@example", row["resolved_by"])
+        self.assertEqual(envelope["evidence_id"], row["resolution_evidence_id"])
+        expected_signature = hmac.new(
+            self.key,
+            effect_broker._canonical(
+                {
+                    "nonce": request["nonce"],
+                    "resolution": "not-executed",
+                    "resolved_at": row["resolved_at"],
+                    "resolved_by": "oncall@example",
+                    "note": "confirmed target artifact absent",
+                }
+            ),
+            hashlib.sha256,
+        ).hexdigest()
+        self.assertTrue(hmac.compare_digest(expected_signature, row["resolution_signature"]))
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "not 'unknown'"):
+            effect_broker.resolve_unknown(
+                ledger,
+                nonce=request["nonce"],
+                resolution="executed",
+                operator="someone-else@example",
+                note="second look",
+                workspace_root=self.workspace,
+                key=self.key,
+            )
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(AssertionError("no replay")),
+                now=lambda: self.start + timedelta(seconds=20),
+            )
+
+    def test_resolve_unknown_nonce_fails(self) -> None:
+        ledger = self._ledger()
+        with self.assertRaisesRegex(effect_broker.ReplayError, "no reservation exists"):
+            effect_broker.resolve_unknown(
+                ledger,
+                nonce="0" * 64,
+                resolution="executed",
+                operator="oncall@example",
+                note="n/a",
+                workspace_root=self.workspace,
+                key=self.key,
+            )
+
+    def test_nonce_is_never_freed_across_every_terminal_state(self) -> None:
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+
+        times = iter([self.start + timedelta(seconds=2)])
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(RuntimeError("boom")),
+                now=lambda: next(times),
+            )
+        effect_broker.resolve_unknown(
+            ledger,
+            nonce=request["nonce"],
+            resolution="executed",
+            operator="oncall@example",
+            note="verified manually against the target system",
+            workspace_root=self.workspace,
+            key=self.key,
+            now=lambda: self.start + timedelta(minutes=5),
+        )
+
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM consumptions WHERE nonce = ?", (request["nonce"],)
+            ).fetchone()[0]
+        self.assertEqual(1, count)
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(AssertionError("no replay")),
+                now=lambda: self.start + timedelta(seconds=30),
+            )
+
+    def test_old_schema_ledger_migrates_and_still_enforces_one_shot(self) -> None:
+        path = self.control / "old-ledger.sqlite3"
+        old_nonce = "deadbeef" * 8
+        with closing(sqlite3.connect(path)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    CREATE TABLE consumptions (
+                        nonce TEXT PRIMARY KEY,
+                        request_id TEXT NOT NULL,
+                        request_digest TEXT NOT NULL,
+                        approval_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        reserved_at TEXT NOT NULL,
+                        finished_at TEXT,
+                        returncode INTEGER,
+                        evidence_id TEXT
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO consumptions(
+                        nonce, request_id, request_digest, approval_id, status, reserved_at,
+                        finished_at, returncode, evidence_id
+                    ) VALUES (?, 'req_old', 'digest_old', 'approval_old', 'executed',
+                              '2026-01-01T00:00:00Z', '2026-01-01T00:00:05Z', 0, 'ev_old')
+                    """,
+                    (old_nonce,),
+                )
+
+        ledger = effect_broker.ReplayLedger(path, self.workspace)
+        request = self._request()
+        approval = self._approval(request)
+
+        def runner(argv, cwd, environment, timeout):
+            return effect_broker.ProcessResult(0, b"ok\n", b"")
+
+        times = iter([self.start + timedelta(seconds=2), self.start + timedelta(seconds=3)])
+        envelope = effect_broker.execute_approved(
+            request,
+            approval,
+            key=self.key,
+            ledger=ledger,
+            runner=runner,
+            now=lambda: next(times),
+        )
+        evidence_envelope.validate_envelope(envelope)
+
+        with self.assertRaisesRegex(effect_broker.ReplayError, "already been consumed"):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=runner,
+                now=lambda: self.start + timedelta(seconds=10),
+            )
+
+        old_row = ledger.get(old_nonce)
+        self.assertEqual("executed", old_row["status"])
+        self.assertIsNone(old_row["action"])
+
+        new_row = ledger.get(request["nonce"])
+        self.assertEqual(request["action"], new_row["action"])
+        self.assertEqual(request["argv"], new_row["argv"])
+
+
+    def test_legacy_reserved_row_reconciles_with_placeholder_evidence(self) -> None:
+        path = self.control / "legacy-reserved-ledger.sqlite3"
+        legacy_nonce = "abcd1234" * 8
+        with closing(sqlite3.connect(path)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    CREATE TABLE consumptions (
+                        nonce TEXT PRIMARY KEY,
+                        request_id TEXT NOT NULL,
+                        request_digest TEXT NOT NULL,
+                        approval_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        reserved_at TEXT NOT NULL,
+                        finished_at TEXT,
+                        returncode INTEGER,
+                        evidence_id TEXT
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    INSERT INTO consumptions(
+                        nonce, request_id, request_digest, approval_id, status, reserved_at
+                    ) VALUES (?, 'req_legacy', 'digest_legacy', 'approval_legacy', 'reserved',
+                              '2026-01-01T00:00:00Z')
+                    """,
+                    (legacy_nonce,),
+                )
+
+        ledger = effect_broker.ReplayLedger(path, self.workspace)
+        # A legacy row has NULL timeout_seconds, so its deadline collapses to reserved_at + grace.
+        past_collapsed_deadline = datetime(2026, 1, 1, 0, 2, tzinfo=timezone.utc)
+        unresolved = ledger.list_unresolved(now=lambda: past_collapsed_deadline)
+        self.assertEqual(["unknown"], [item["status"] for item in unresolved])
+        self.assertIsNone(unresolved[0]["action"])
+
+        envelope = effect_broker.resolve_unknown(
+            ledger,
+            nonce=legacy_nonce,
+            resolution="not-executed",
+            operator="oncall@example",
+            note="legacy reservation predates the recorded-effect columns; target checked by hand",
+            workspace_root=self.workspace,
+            key=self.key,
+            now=lambda: self.start,
+        )
+        evidence_envelope.validate_envelope(envelope)
+        self.assertIn("unrecorded-legacy-action", envelope["criterion"])
+        self.assertIn("unrecorded-legacy-target", envelope["criterion"])
+        self.assertEqual("unrecorded-legacy-action", envelope["source"]["action"])
+        self.assertEqual("unrecorded-legacy-target", envelope["source"]["target"])
+        self.assertEqual("resolved-not-executed", ledger.get(legacy_nonce)["status"])
 
 
 if __name__ == "__main__":

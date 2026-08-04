@@ -27,6 +27,18 @@ except ModuleNotFoundError:
 
 
 SCHEMA_VERSION = 1
+RESOLUTIONS = {"executed", "not-executed"}
+# A reservation past its deadline is very unlikely to still be in flight, so reconciliation may
+# call it unknown; before the deadline the subprocess could still be legitimately running, and
+# calling it unknown early would let an operator "resolve" (and thus unblock trust in) an effect
+# that has not actually finished. This bound is conservative, not proof: it covers the child
+# process's own timeout, but not a live broker's finalization tail after the process exits
+# (hashing large captured stdout/stderr, building the evidence envelope). A broker that loses that
+# race still fails loudly in finish() instead of silently finalizing over a reconciled row (see
+# finish()). The extra grace on top separately absorbs clock skew between the process that
+# reserved and the process that reconciles -- both read wall-clock time, never the same monotonic
+# clock.
+RECONCILIATION_GRACE_SECONDS = 60
 REQUEST_FIELDS = {
     "schema_version",
     "request_id",
@@ -121,6 +133,15 @@ def _parse_timestamp(value: object, field: str) -> datetime:
 
 def _canonical(value: Mapping[str, object]) -> bytes:
     return evidence_envelope.canonical_json(value)
+
+
+def _canonical_argv(argv: Sequence[str]) -> str:
+    """Serialize argv deterministically so a reconciled row can be replayed for display exactly.
+
+    Order is the payload here (argv is not a set), so this only needs stable separators -- there
+    are no object keys to sort.
+    """
+    return json.dumps(list(argv), ensure_ascii=False, separators=(",", ":"))
 
 
 def _payload_digest(request: Mapping[str, object]) -> str:
@@ -393,6 +414,28 @@ def validate_approval(
         raise ApprovalError("approval signature verification failed")
 
 
+# Columns added after the original schema. Migration is additive-only (PRAGMA table_info + ALTER
+# TABLE ADD COLUMN) so an existing ledger keeps every historical row -- dropping and recreating the
+# table would destroy the exact evidence a crash-recovery ledger exists to preserve.
+_ADDED_COLUMNS: tuple[tuple[str, str], ...] = (
+    # The approved effect, captured redundantly on the row itself: reconciliation must be able to
+    # show and decide on an unresolved reservation without the request/approval JSON files, which
+    # may not have survived whatever crashed the broker.
+    ("action", "TEXT"),
+    ("target", "TEXT"),
+    ("argv", "TEXT"),
+    ("timeout_seconds", "INTEGER"),
+    ("expires_at", "TEXT"),
+    ("unknown_at", "TEXT"),
+    ("resolution", "TEXT"),
+    ("resolved_at", "TEXT"),
+    ("resolved_by", "TEXT"),
+    ("resolution_note", "TEXT"),
+    ("resolution_evidence_id", "TEXT"),
+    ("resolution_signature", "TEXT"),
+)
+
+
 class ReplayLedger:
     def __init__(self, path: Path, workspace_root: Path) -> None:
         self.path = _path_outside_workspace(path, workspace_root, "approval replay ledger")
@@ -416,6 +459,20 @@ class ReplayLedger:
                     )
                     """
                 )
+                existing = {row[1] for row in connection.execute("PRAGMA table_info(consumptions)")}
+                for name, column_type in _ADDED_COLUMNS:
+                    if name not in existing:
+                        try:
+                            connection.execute(
+                                f"ALTER TABLE consumptions ADD COLUMN {name} {column_type}"
+                            )
+                        except sqlite3.OperationalError as exc:
+                            # Concurrent first-contact migration: another process's ALTER already
+                            # landed this column between our PRAGMA read and this statement. The
+                            # loser's column already exists, which is the desired end state --
+                            # only a genuinely different failure should propagate.
+                            if "duplicate column name" not in str(exc):
+                                raise
 
     def reserve(
         self,
@@ -425,6 +482,11 @@ class ReplayLedger:
         request_digest: str,
         approval_id: str,
         reserved_at: str,
+        action: str,
+        target: str,
+        argv: Sequence[str],
+        timeout_seconds: int,
+        expires_at: str,
     ) -> None:
         self.initialize()
         connection = sqlite3.connect(self.path, timeout=30, isolation_level=None)
@@ -433,10 +495,22 @@ class ReplayLedger:
             connection.execute(
                 """
                 INSERT INTO consumptions(
-                    nonce, request_id, request_digest, approval_id, status, reserved_at
-                ) VALUES(?, ?, ?, ?, 'reserved', ?)
+                    nonce, request_id, request_digest, approval_id, status, reserved_at,
+                    action, target, argv, timeout_seconds, expires_at
+                ) VALUES(?, ?, ?, ?, 'reserved', ?, ?, ?, ?, ?, ?)
                 """,
-                (nonce, request_id, request_digest, approval_id, reserved_at),
+                (
+                    nonce,
+                    request_id,
+                    request_digest,
+                    approval_id,
+                    reserved_at,
+                    action,
+                    target,
+                    _canonical_argv(argv),
+                    timeout_seconds,
+                    expires_at,
+                ),
             )
             connection.commit()
         except sqlite3.IntegrityError as exc:
@@ -465,7 +539,177 @@ class ReplayLedger:
                     (status, finished_at, returncode, evidence_id, nonce),
                 )
                 if result.rowcount != 1:
-                    raise ReplayError("reserved approval nonce could not be finalized")
+                    # Most likely cause: reconciliation marked this row 'unknown' on a deadline
+                    # while this broker was still alive and about to finish -- surface what the
+                    # broker actually observed so an operator's resolution starts from it instead
+                    # of from nothing.
+                    current = connection.execute(
+                        "SELECT status FROM consumptions WHERE nonce = ?", (nonce,)
+                    ).fetchone()
+                    current_status = current[0] if current else "no such row"
+                    raise ReplayError(
+                        f"reserved approval nonce could not be finalized as {status!r} "
+                        f"(returncode={returncode!r}); its current ledger status is "
+                        f"{current_status!r}"
+                    )
+
+    def mark_unknown(self, *, nonce: str, unknown_at: str) -> None:
+        """Eagerly record that a reservation's outcome became unknown while the process survived.
+
+        This runs from an exception handler that is about to re-raise, so it must never itself
+        raise over the original failure: any sqlite error here is swallowed (after the same 30s
+        busy-wait `reserve()` uses, not the 5s default, so lock contention alone doesn't trigger
+        this path). A swallowed failure leaves the row 'reserved', which deadline-based
+        reconciliation still recovers later -- the propagating original exception is the signal
+        that must not be masked by a secondary failure from this best-effort write.
+        """
+        try:
+            with closing(sqlite3.connect(self.path, timeout=30)) as connection:
+                with connection:
+                    connection.execute(
+                        """
+                        UPDATE consumptions SET status = 'unknown', unknown_at = ?
+                        WHERE nonce = ? AND status = 'reserved'
+                        """,
+                        (unknown_at, nonce),
+                    )
+        except sqlite3.Error:
+            pass
+
+    def get(self, nonce: str) -> dict[str, object] | None:
+        self.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                "SELECT * FROM consumptions WHERE nonce = ?", (nonce,)
+            ).fetchone()
+        if row is None:
+            return None
+        record = dict(row)
+        if record.get("argv"):
+            record["argv"] = json.loads(record["argv"])
+        return record
+
+    def list_unresolved(self, *, now: Callable[[], datetime] = _now) -> list[dict[str, object]]:
+        """Transition reservations very unlikely to still be in flight to unknown, then list
+        every unresolved row.
+
+        A 'reserved' row before its deadline (reserved_at + timeout_seconds + grace) might still
+        be a legitimately running subprocess, so it is reported as in-flight, left untouched in
+        the database, and stays unresolvable -- only a row already 'unknown' can be resolved.
+        Past the deadline the transition is conservative, not proof: it bounds the child process,
+        not a live broker's finalization tail (hashing captured output, building the evidence
+        envelope) -- a broker that loses that race fails loudly in finish() rather than
+        corrupting the row.
+        """
+        self.initialize()
+        current = now()
+        with closing(sqlite3.connect(self.path)) as connection:
+            with connection:
+                rows = connection.execute(
+                    """
+                    SELECT nonce, request_id, approval_id, action, target, argv, reserved_at,
+                           timeout_seconds, status
+                    FROM consumptions
+                    WHERE status IN ('reserved', 'unknown')
+                    ORDER BY reserved_at
+                    """
+                ).fetchall()
+                unresolved: list[dict[str, object]] = []
+                for (
+                    nonce,
+                    request_id,
+                    approval_id,
+                    action,
+                    target,
+                    argv_json,
+                    reserved_at,
+                    timeout_seconds,
+                    status,
+                ) in rows:
+                    if status == "reserved":
+                        deadline = _parse_timestamp(reserved_at, "reserved_at") + timedelta(
+                            seconds=(timeout_seconds or 0) + RECONCILIATION_GRACE_SECONDS
+                        )
+                        if current >= deadline:
+                            unknown_at = _format_timestamp(current)
+                            updated = connection.execute(
+                                """
+                                UPDATE consumptions SET status = 'unknown', unknown_at = ?
+                                WHERE nonce = ? AND status = 'reserved'
+                                """,
+                                (unknown_at, nonce),
+                            )
+                            if updated.rowcount == 0:
+                                # Lost the race: finish() (or another reconciliation pass)
+                                # transitioned this row between the SELECT above and this UPDATE.
+                                # Re-read the real status -- if it finished, there is nothing left
+                                # to reconcile, so drop it rather than report a stale 'unknown'.
+                                current_status = connection.execute(
+                                    "SELECT status FROM consumptions WHERE nonce = ?", (nonce,)
+                                ).fetchone()[0]
+                                if current_status not in ("reserved", "unknown"):
+                                    continue
+                                status = (
+                                    "reserved-in-flight"
+                                    if current_status == "reserved"
+                                    else "unknown"
+                                )
+                            else:
+                                status = "unknown"
+                        else:
+                            status = "reserved-in-flight"
+                    unresolved.append(
+                        {
+                            "nonce": nonce,
+                            "request_id": request_id,
+                            "approval_id": approval_id,
+                            "action": action,
+                            "target": target,
+                            "argv": json.loads(argv_json) if argv_json else None,
+                            "reserved_at": reserved_at,
+                            "status": status,
+                        }
+                    )
+                return unresolved
+
+    def resolve(
+        self,
+        *,
+        nonce: str,
+        resolution: str,
+        resolved_at: str,
+        resolved_by: str,
+        note: str,
+        evidence_id: str,
+        resolution_signature: str,
+    ) -> None:
+        with closing(sqlite3.connect(self.path)) as connection:
+            with connection:
+                result = connection.execute(
+                    """
+                    UPDATE consumptions
+                    SET status = ?, resolution = ?, resolved_at = ?, resolved_by = ?,
+                        resolution_note = ?, resolution_evidence_id = ?, resolution_signature = ?
+                    WHERE nonce = ? AND status = 'unknown'
+                    """,
+                    (
+                        f"resolved-{resolution}",
+                        resolution,
+                        resolved_at,
+                        resolved_by,
+                        note,
+                        evidence_id,
+                        resolution_signature,
+                        nonce,
+                    ),
+                )
+                if result.rowcount != 1:
+                    raise ReplayError(
+                        "nonce is not an unresolved 'unknown' reservation; resolution requires "
+                        "status='unknown' so a still-reserved (possibly in-flight) row is never "
+                        "resolved, and an already-resolved row is never silently overwritten"
+                    )
 
 
 def _run_effect(
@@ -525,77 +769,191 @@ def execute_approved(
         request_digest=request["request_digest"],
         approval_id=approval["approval_id"],
         reserved_at=_format_timestamp(started),
+        action=request["action"],
+        target=request["target"],
+        argv=request["argv"],
+        timeout_seconds=request["timeout_seconds"],
+        expires_at=request["expires_at"],
     )
-    result = runner(
-        request["argv"],
-        cwd,
-        _validate_environment(request["environment"]),
-        request["timeout_seconds"],
-    )
-    ended = now()
-    if result.timed_out:
-        status = "inconclusive"
-        ledger_status = "timed-out"
-        limitations = ["approved effect timed out; partial external effects may remain"]
-    elif result.returncode == 0:
-        status = "pass"
-        ledger_status = "executed"
-        limitations = []
-    else:
-        status = "fail"
-        ledger_status = "failed"
-        limitations = [
-            "a non-zero process result does not prove that the external effect was rolled back"
-        ]
-    context = _validate_context(request["context"])
-    envelope = evidence_envelope.new_envelope(
-        producer="effect_broker",
-        role="approved-effect-executor",
-        target_root=request["cwd"],
-        target_revision=f"effect-request:{request['request_digest']}",
-        criterion=f"execute approved {request['action']} against {request['target']}",
-        status=status,
-        started_at=started,
-        ended_at=ended,
-        command_argv=request["argv"],
-        command_cwd=request["cwd"],
-        exit_code=result.returncode,
-        source={
-            "kind": "effect-approval",
-            "request_id": request["request_id"],
-            "request_digest": request["request_digest"],
-            "approval_id": approval["approval_id"],
-            "approver": approval["approver"],
-            "action": request["action"],
-            "target": request["target"],
-            "blast_radius": request["blast_radius"],
-            "rollback": request["rollback"],
-        },
-        run_id=context["run_id"],
-        task_id=context["task_id"],
-        attempt_id=context["attempt_id"],
-        environment={"execution": "direct-argv", "shell": False},
-        isolation={"approval": "hmac-sha256", "one_shot_nonce": True},
-        artifacts=(
-            {
-                "path": "captured-stdout.bin",
-                "sha256": hashlib.sha256(result.stdout).hexdigest(),
-                "size": len(result.stdout),
+    # From here on the reservation exists. A hard crash now leaves it 'reserved' for
+    # reconciliation to resolve later -- but any exception that the process survives (the runner
+    # raising, envelope construction or validation failing) must not leave an ambiguous 'reserved'
+    # row behind when the broker is still alive to say better: mark it 'unknown' before the
+    # exception propagates.
+    try:
+        result = runner(
+            request["argv"],
+            cwd,
+            _validate_environment(request["environment"]),
+            request["timeout_seconds"],
+        )
+        ended = now()
+        if result.timed_out:
+            status = "inconclusive"
+            ledger_status = "timed-out"
+            limitations = ["approved effect timed out; partial external effects may remain"]
+        elif result.returncode == 0:
+            status = "pass"
+            ledger_status = "executed"
+            limitations = []
+        else:
+            status = "fail"
+            ledger_status = "failed"
+            limitations = [
+                "a non-zero process result does not prove that the external effect was rolled back"
+            ]
+        context = _validate_context(request["context"])
+        envelope = evidence_envelope.new_envelope(
+            producer="effect_broker",
+            role="approved-effect-executor",
+            target_root=request["cwd"],
+            target_revision=f"effect-request:{request['request_digest']}",
+            criterion=f"execute approved {request['action']} against {request['target']}",
+            status=status,
+            started_at=started,
+            ended_at=ended,
+            command_argv=request["argv"],
+            command_cwd=request["cwd"],
+            exit_code=result.returncode,
+            source={
+                "kind": "effect-approval",
+                "request_id": request["request_id"],
+                "request_digest": request["request_digest"],
+                "approval_id": approval["approval_id"],
+                "approver": approval["approver"],
+                "action": request["action"],
+                "target": request["target"],
+                "blast_radius": request["blast_radius"],
+                "rollback": request["rollback"],
             },
-            {
-                "path": "captured-stderr.bin",
-                "sha256": hashlib.sha256(result.stderr).hexdigest(),
-                "size": len(result.stderr),
-            },
-        ),
-        limitations=limitations,
-    )
+            run_id=context["run_id"],
+            task_id=context["task_id"],
+            attempt_id=context["attempt_id"],
+            environment={"execution": "direct-argv", "shell": False},
+            isolation={"approval": "hmac-sha256", "one_shot_nonce": True},
+            artifacts=(
+                {
+                    "path": "captured-stdout.bin",
+                    "sha256": hashlib.sha256(result.stdout).hexdigest(),
+                    "size": len(result.stdout),
+                },
+                {
+                    "path": "captured-stderr.bin",
+                    "sha256": hashlib.sha256(result.stderr).hexdigest(),
+                    "size": len(result.stderr),
+                },
+            ),
+            limitations=limitations,
+        )
+    except Exception:
+        ledger.mark_unknown(nonce=request["nonce"], unknown_at=_format_timestamp(_now()))
+        raise
     ledger.finish(
         nonce=request["nonce"],
         status=ledger_status,
         finished_at=_format_timestamp(ended),
         returncode=result.returncode,
         evidence_id=envelope["evidence_id"],
+    )
+    return envelope
+
+
+def resolve_unknown(
+    ledger: ReplayLedger,
+    *,
+    nonce: str,
+    resolution: str,
+    operator: str,
+    note: str,
+    workspace_root: Path,
+    key: bytes,
+    run_id: str | None = None,
+    task_id: str | None = None,
+    attempt_id: str | None = None,
+    now: Callable[[], datetime] = _now,
+) -> dict[str, object]:
+    """Record an operator's resolution of an 'unknown' reservation as evidence.
+
+    This is an attestation, never a retry: it does not run the effect, and the ledger row is
+    updated only after the evidence envelope for the attestation itself validates. The resolution
+    is HMAC-signed with the same operator key `approve`/`execute` use, so mutating the trust
+    ledger requires the same authority as approving an effect in the first place -- a free-text
+    `--operator` name alone is not enough to write a terminal outcome into the ledger.
+    """
+    if resolution not in RESOLUTIONS:
+        raise BrokerError(f"resolution must be one of {sorted(RESOLUTIONS)}")
+    if not operator.strip():
+        raise BrokerError("operator must be non-empty")
+    if not note.strip():
+        raise BrokerError("resolution note must be non-empty")
+    if len(key) < 32:
+        raise BrokerError("resolution key must contain at least 32 bytes")
+    row = ledger.get(nonce)
+    if row is None:
+        raise ReplayError(f"no reservation exists for nonce {nonce!r}")
+    if row["status"] != "unknown":
+        raise ReplayError(
+            f"nonce {nonce!r} is status {row['status']!r}, not 'unknown'; resolving a still-"
+            "reserved row could race a possibly in-flight effect, and resolving an already-"
+            "resolved row would silently overwrite a prior operator decision"
+        )
+    # Pre-migration rows have no recorded action/target (the columns didn't exist yet); render an
+    # explicit placeholder rather than the literal string "None" leaking into evidence.
+    row_action = row["action"] or "unrecorded-legacy-action"
+    row_target = row["target"] or "unrecorded-legacy-target"
+    resolved_at = now()
+    resolved_at_text = _format_timestamp(resolved_at)
+    signature = hmac.new(
+        key,
+        _canonical(
+            {
+                "nonce": nonce,
+                "resolution": resolution,
+                "resolved_at": resolved_at_text,
+                "resolved_by": operator,
+                "note": note,
+            }
+        ),
+        hashlib.sha256,
+    ).hexdigest()
+    envelope = evidence_envelope.new_envelope(
+        producer="effect_broker",
+        role="unknown-reservation-resolver",
+        target_root=str(workspace_root),
+        target_revision=f"effect-reservation:{nonce}",
+        criterion=f"operator resolution of unknown {row_action} against {row_target}",
+        status="pass",
+        started_at=resolved_at,
+        ended_at=resolved_at,
+        source={
+            "kind": "unknown-reservation-resolution",
+            "nonce": nonce,
+            "request_id": row["request_id"],
+            "approval_id": row["approval_id"],
+            "action": row_action,
+            "target": row_target,
+            "argv": row["argv"],
+            "resolution": resolution,
+            "operator": operator,
+            "note": note,
+        },
+        run_id=run_id,
+        task_id=task_id,
+        attempt_id=attempt_id,
+        isolation={"resolution": "operator-attestation", "signature": "hmac-sha256"},
+        limitations=[
+            "this envelope records an operator attestation that the effect did or did not "
+            "happen, not machine proof -- the broker itself never learned the outcome"
+        ],
+    )
+    ledger.resolve(
+        nonce=nonce,
+        resolution=resolution,
+        resolved_at=resolved_at_text,
+        resolved_by=operator,
+        note=note,
+        evidence_id=envelope["evidence_id"],
+        resolution_signature=signature,
     )
     return envelope
 
@@ -649,6 +1007,26 @@ def _parser() -> argparse.ArgumentParser:
     execute.add_argument("--key-file", type=Path, required=True)
     execute.add_argument("--ledger", type=Path, required=True)
     execute.add_argument("--workspace-root", type=Path, required=True)
+
+    reconcile = commands.add_parser("reconcile")
+    reconcile_commands = reconcile.add_subparsers(dest="reconcile_command", required=True)
+
+    reconcile_list = reconcile_commands.add_parser(
+        "list", help="transition stale reservations to unknown and list unresolved reservations"
+    )
+    reconcile_list.add_argument("--ledger", type=Path, required=True)
+    reconcile_list.add_argument("--workspace-root", type=Path, required=True)
+
+    reconcile_resolve = reconcile_commands.add_parser(
+        "resolve", help="record an operator's resolution of an 'unknown' reservation as evidence"
+    )
+    reconcile_resolve.add_argument("--ledger", type=Path, required=True)
+    reconcile_resolve.add_argument("--workspace-root", type=Path, required=True)
+    reconcile_resolve.add_argument("--key-file", type=Path, required=True)
+    reconcile_resolve.add_argument("--nonce", required=True)
+    reconcile_resolve.add_argument("--resolution", required=True, choices=sorted(RESOLUTIONS))
+    reconcile_resolve.add_argument("--operator", required=True)
+    reconcile_resolve.add_argument("--note", required=True)
     return parser
 
 
@@ -677,12 +1055,27 @@ def main(argv: list[str] | None = None) -> int:
             request = _load_json(args.request)
             key = _read_key(args.key_file, args.workspace_root)
             result = approve_request(request, key=key, approver=args.approver)
-        else:
+        elif args.command == "execute":
             request = _load_json(args.request)
             approval = _load_json(args.approval)
             key = _read_key(args.key_file, args.workspace_root)
             ledger = ReplayLedger(args.ledger, args.workspace_root)
             result = execute_approved(request, approval, key=key, ledger=ledger)
+        elif args.reconcile_command == "list":
+            ledger = ReplayLedger(args.ledger, args.workspace_root)
+            result = ledger.list_unresolved()
+        else:
+            ledger = ReplayLedger(args.ledger, args.workspace_root)
+            key = _read_key(args.key_file, args.workspace_root)
+            result = resolve_unknown(
+                ledger,
+                nonce=args.nonce,
+                resolution=args.resolution,
+                operator=args.operator,
+                note=args.note,
+                workspace_root=args.workspace_root,
+                key=key,
+            )
     except (
         OSError,
         sqlite3.Error,
