@@ -14,7 +14,7 @@
   "expected_behavior": "A red check on main either blocks merging via branch protection or is surfaced at merge time; a check that can be silently merged over provides no gate at all.",
   "fingerprint": "6128530bc0e102a8f183b73a7b575814abd892337a1458e1b2ab58f648319af7",
   "freshness": {
-    "as_of": "2026-08-03T21:01:23.188870Z",
+    "as_of": "2026-08-04T00:51:49.917355Z",
     "review_at": "2026-09-02T21:01:23.188870Z"
   },
   "observation": "Four consecutive merges landed over a failing required-intent CI check (macOS validate job red since #57) with no branch-protection enforcement and no reviewer noticing; the breakage was discovered only when an unrelated PR inherited the red check.",
@@ -22,7 +22,7 @@
   "promotion_state": "quarantined",
   "reason": null,
   "recurrence": {
-    "count": 1,
+    "count": 2,
     "sources": [
       {
         "environment": "GitHub Actions, latent-sre/sde-agents main branch, 2026-08-02 to 2026-08-03",
@@ -31,6 +31,14 @@
         "revision": "3939a3e",
         "source_kind": "session-incident",
         "source_reference": "gh run list on main 2026-08-03: merges #57, #58, #59, #68 all landed with validate(macos) failing; first green run restored by PR #72"
+      },
+      {
+        "environment": "GitHub Actions, latent-sre/sde-agents",
+        "observed_at": "2026-08-04T00:51:49.917355Z",
+        "provenance": "verified",
+        "revision": "f6d11fc",
+        "source_kind": "session-incident",
+        "source_reference": "PR #74 merged 2026-08-03 with validate failing on all three OS jobs, landing a red main that blocked the 1.6.11 release until repaired. Third occurrence; first to break main."
       }
     ]
   },
@@ -42,11 +50,11 @@
   "schema_version": 2,
   "scope": "Repository merge discipline and branch protection; not the content of any individual check.",
   "sensitivity_review": {
-    "attestation_count": 1,
+    "attestation_count": 2,
     "attested": true,
-    "last_attested_at": "2026-08-03T21:01:23.188870Z",
+    "last_attested_at": "2026-08-04T00:51:49.917355Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [],
-  "updated_at": "2026-08-03T21:01:23.188870Z"
+  "updated_at": "2026-08-04T00:51:49.917355Z"
 }
