@@ -1,0 +1,52 @@
+{
+  "applicability": "Whenever broker semantics next open (GATE-001 spec is the named adjacent round) or if a trust decision ever reads resolution rows",
+  "candidate_id": "lc_d83c75e274164559b3a67f0c478d842b",
+  "created_at": "2026-08-04T13:50:34.273529Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "scripts/effect_broker.py resolve_unknown / ReplayLedger.resolve",
+    "provenance": "verified",
+    "revision": "de10e3d3ad2d6abf2c2e1f090608630251675df7",
+    "source_kind": "code-review",
+    "source_reference": "SAFE-002 commit-bound re-review, P3 finding: resolution_signature computed, stored, and unit-tested for construction, but no code path reads it back for tamper-detection"
+  },
+  "expected_behavior": "Either a reconcile verify path checks stored signatures against the key, or the column's audit-only nature is documented where an operator would look",
+  "fingerprint": "235370aed9067ce41dcba8dd0563ed5623ad89315763e60d86bedae6edc63f55",
+  "freshness": {
+    "as_of": "2026-08-04T13:50:34.273529Z",
+    "review_at": "2026-09-03T13:50:34.273529Z"
+  },
+  "observation": "The stored resolution_signature is write-only audit data: the write-time key gate enforces resolve authority, but nothing verifies stored signatures afterward, so the column looks like tamper-evidence while doing no tamper-detection work",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "scripts/effect_broker.py resolve_unknown / ReplayLedger.resolve",
+        "observed_at": "2026-08-04T13:50:34.273529Z",
+        "provenance": "verified",
+        "revision": "de10e3d3ad2d6abf2c2e1f090608630251675df7",
+        "source_kind": "code-review",
+        "source_reference": "SAFE-002 commit-bound re-review, P3 finding: resolution_signature computed, stored, and unit-tested for construction, but no code path reads it back for tamper-detection"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-04T13:50:34.273529Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "effect_broker replay-ledger resolution records only",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-04T13:50:34.273529Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-04T13:50:34.273529Z"
+}
