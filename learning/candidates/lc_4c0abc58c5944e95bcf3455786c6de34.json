@@ -1,0 +1,70 @@
+{
+  "applicability": "shells where a pipeline exit status is that of the last stage and success-chaining hides an earlier failure; both occurrences observed on Windows 11 Git Bash with python stdlib unittest",
+  "candidate_id": "lc_4c0abc58c5944e95bcf3455786c6de34",
+  "created_at": "2026-08-02T14:20:29.435491Z",
+  "destination": "operator global working rules, the completion-evidence section that already requires showing the command and its output",
+  "disposition": "merge",
+  "evidence": {
+    "environment": "Windows 11, Git Bash, python 3, stdlib unittest",
+    "provenance": "verified",
+    "revision": "8c2fca3",
+    "source_kind": "session-incident",
+    "source_reference": "LEARN-001 round, 2026-08-01: an adapter-generation check chained to the unit-test run reported green, while running the same suite on its own reported one failure (a missing eval coverage row)"
+  },
+  "expected_behavior": "Verification runs the tested command on its own, without chaining or piping, captures full output to a file, reports the tested process's own exit status, and quotes the summary line as the evidence.",
+  "fingerprint": "8c42ce4e1d214c2b90b13ef839972cc7ff58af8718e09434f6462d2f71cfa290",
+  "freshness": {
+    "as_of": "2026-08-02T14:20:52.491960Z",
+    "review_at": "2026-09-01T14:20:29.435491Z"
+  },
+  "observation": "A completion claim was drawn from a command whose exit status was not the tested process's own status. When two commands are chained on success, an earlier failure can be masked; when a run is piped into another program, the reported status belongs to the last stage of the pipeline rather than the test process. Block buffering of standard output when piped also reordered the summary line out of the captured excerpt, so the visible evidence looked unrelated instead of absent.",
+  "owner": "operator",
+  "promotion_state": "proposed",
+  "reason": "Second normalized occurrence within two days crosses the twice threshold for encoding a rule. An owning rule already exists and gains a narrowing clause rather than a new rule, so the disposition is merge. The destination is the operator's own instructions file, so this stays proposed: the owner decides and performs the edit.",
+  "recurrence": {
+    "count": 2,
+    "sources": [
+      {
+        "environment": "Windows 11, Git Bash, python 3, stdlib unittest",
+        "observed_at": "2026-08-02T14:20:29.435491Z",
+        "provenance": "verified",
+        "revision": "8c2fca3",
+        "source_kind": "session-incident",
+        "source_reference": "LEARN-001 round, 2026-08-01: an adapter-generation check chained to the unit-test run reported green, while running the same suite on its own reported one failure (a missing eval coverage row)"
+      },
+      {
+        "environment": "Windows 11, Git Bash, python 3, stdlib unittest",
+        "observed_at": "2026-08-02T14:20:52.491960Z",
+        "provenance": "verified",
+        "revision": "73cdeaf",
+        "source_kind": "session-incident",
+        "source_reference": "Release-readiness check, 2026-08-02: the shipped-commit test suite was run in the background piped into a tail excerpt; the reported success belonged to the excerpt program, and the summary line was absent from the captured output. Re-running the suite on its own gave the real result of 471 tests passing"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-02T14:20:29.435491Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "agent verification discipline; any command whose result is offered as proof of completion",
+  "sensitivity_review": {
+    "attestation_count": 2,
+    "attested": true,
+    "last_attested_at": "2026-08-02T14:20:52.491960Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-02T14:21:21.564613Z",
+      "destination": "operator global working rules, the completion-evidence section that already requires showing the command and its output",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "operator",
+      "reason": "Second normalized occurrence within two days crosses the twice threshold for encoding a rule. An owning rule already exists and gains a narrowing clause rather than a new rule, so the disposition is merge. The destination is the operator's own instructions file, so this stays proposed: the owner decides and performs the edit.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-02T14:21:21.564613Z"
+}
