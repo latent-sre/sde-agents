@@ -1,12 +1,14 @@
 """Tests for scripts/ledger_drift.py.
 
-The regression these guard is the one that motivated the script: seven candidates sat at
+The regression these tests guard against is the one that motivated the script: seven candidates sat at
 `proposed` while their destinations kept receiving commits, and nothing observed it.
 """
 from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -19,8 +21,14 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(ledger_drift)
 
 
-def _git(root: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
+def _git(root: Path, *args: str, date: str | None = None) -> None:
+    # Both dates are pinned: `git log --since` filters on the *committer* date, so a fixture
+    # that sets only the author date drifts with the wall clock and the tests rot silently.
+    env = dict(os.environ)
+    if date is not None:
+        env["GIT_AUTHOR_DATE"] = date
+        env["GIT_COMMITTER_DATE"] = date
+    subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, env=env)
 
 
 def _repo_with_candidate(root: Path, *, state: str, destination: str, since: str) -> None:
@@ -43,13 +51,12 @@ def _repo_with_candidate(root: Path, *, state: str, destination: str, since: str
         "transition_history": [],
     }))
     _git(root, "add", "-A")
-    _git(root, "commit", "-q", "-m", "seed")
+    _git(root, "commit", "-q", "-m", "seed", date="2026-07-01T00:00:00+0000")
 
     # A commit to the destination dated after the candidate was filed.
     target.write_text("repaired\n")
     _git(root, "add", "-A")
-    _git(root, "-c", "user.email=t@example.com", "-c", "user.name=t",
-         "commit", "-q", "-m", "repair the thing", "--date=2026-08-03T00:00:00")
+    _git(root, "commit", "-q", "-m", "repair the thing", date="2026-08-03T00:00:00+0000")
 
 
 class LedgerDriftTests(unittest.TestCase):
@@ -94,6 +101,46 @@ class LedgerDriftTests(unittest.TestCase):
                                  since="2026-08-01T00:00:00Z")
             self.assertEqual(ledger_drift.main(["--root", str(root)]), 0)
             self.assertEqual(ledger_drift.main(["--root", str(root), "--fail-on-drift"]), 1)
+
+    def test_deleted_destination_is_still_inspected(self) -> None:
+        """Deleting a destination is itself a destination change, not a clean ledger."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="proposed", destination="scripts/thing.py",
+                                 since="2026-08-01T00:00:00Z")
+            (root / "scripts" / "thing.py").unlink()
+            _git(root, "add", "-A")
+            _git(root, "commit", "-q", "-m", "remove the thing",
+                 date="2026-08-04T00:00:00+0000")
+            findings = ledger_drift.inspect(root)
+            self.assertEqual(len(findings), 1)
+            self.assertIn("scripts/thing.py", findings[0]["destination_paths"])
+
+    def test_git_failure_is_not_reported_as_clean(self) -> None:
+        """A broken repository must not read as OK, least of all under --fail-on-drift."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="proposed", destination="scripts/thing.py",
+                                 since="2026-08-01T00:00:00Z")
+            shutil.rmtree(root / ".git")
+            with self.assertRaises(ledger_drift.GitError):
+                ledger_drift.inspect(root)
+            self.assertEqual(ledger_drift.main(["--root", str(root), "--fail-on-drift"]), 2)
+
+    def test_one_commit_touching_two_destinations_counts_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="proposed",
+                                 destination="scripts/thing.py and scripts/other.py",
+                                 since="2026-08-01T00:00:00Z")
+            (root / "scripts" / "other.py").write_text("also repaired\n")
+            (root / "scripts" / "thing.py").write_text("repaired again\n")
+            _git(root, "add", "-A")
+            _git(root, "commit", "-q", "-m", "repair both", date="2026-08-05T00:00:00+0000")
+            findings = ledger_drift.inspect(root)
+            self.assertEqual(len(findings), 1)
+            # Three log lines (two paths in the shared commit, one earlier), two commits.
+            self.assertEqual(findings[0]["commit_count"], 2)
 
     def test_clean_ledger_reports_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

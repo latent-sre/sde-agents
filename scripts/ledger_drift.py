@@ -44,16 +44,32 @@ PENDING_STATES = {"quarantined", "proposed", "approved", "inconclusive"}
 PATH_PATTERN = re.compile(r"\b((?:[\w.-]+/)+[\w.-]+\.\w+)\b")
 
 
+class GitError(RuntimeError):
+    """A git command failed. Never swallowed: an empty log and a broken repository look
+    identical to the caller, and conflating them turns `--fail-on-drift` into a false green."""
+
+
 def git(root: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
     )
-    return result.stdout.strip() if result.returncode == 0 else ""
+    if result.returncode != 0:
+        raise GitError(f"git {' '.join(args)} failed in {root}: {result.stderr.strip()}")
+    return result.stdout.strip()
 
 
 def candidate_paths(destination: str, root: Path) -> list[str]:
-    """Paths named by a destination that actually exist in the working tree."""
-    return [p for p in dict.fromkeys(PATH_PATTERN.findall(destination or "")) if (root / p).exists()]
+    """Paths named by a destination that git can report history for.
+
+    A path missing from the working tree is not necessarily uninteresting: deleting or
+    renaming a destination *is* a destination change, and dropping it here would report
+    the deletion as a clean ledger. Only a path git has never tracked is discarded."""
+    named = dict.fromkeys(PATH_PATTERN.findall(destination or ""))
+    kept = []
+    for p in named:
+        if (root / p).exists() or git(root, "log", "-1", "--format=%h", "--", p):
+            kept.append(p)
+    return kept
 
 
 def last_activity(record: dict) -> str:
@@ -78,11 +94,18 @@ def inspect(root: Path) -> list[dict]:
         if not paths or not since:
             continue
         commits = []
+        # One commit touching several destination paths is one change, not several: count
+        # distinct SHAs so the report cannot imply more independent activity than happened.
+        shas = set()
         for target in paths:
-            log = git(root, "log", f"--since={since}", "--format=%h %ad %s", "--date=short",
-                      "--", target)
+            # `--full-history` keeps merge commits that touched the path: a repair authored
+            # before the candidate's last transition but merged after it is exactly the case
+            # this watch exists for, and ordinary history simplification hides it.
+            log = git(root, "log", f"--since={since}", "--full-history",
+                      "--format=%h %ad %s", "--date=short", "--", target)
             for line in log.splitlines():
                 commits.append({"path": target, "commit": line})
+                shas.add(line.split(" ", 1)[0])
         if commits:
             findings.append({
                 "candidate_id": record["candidate_id"],
@@ -90,7 +113,7 @@ def inspect(root: Path) -> list[dict]:
                 "since": since,
                 "destination_paths": paths,
                 "commits": commits[:5],
-                "commit_count": len(commits),
+                "commit_count": len(shas),
             })
     return findings
 
@@ -110,7 +133,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no learning/candidates under {args.root}", file=sys.stderr)
         return 2
 
-    findings = inspect(args.root)
+    try:
+        findings = inspect(args.root)
+    except GitError as exc:
+        # A git failure is not "no drift" -- reporting OK here would hand a caller asking
+        # for a hard gate a green run over a repository nobody could read.
+        print(f"ledger_drift: {exc}", file=sys.stderr)
+        return 2
 
     if args.json:
         print(json.dumps(findings, indent=2))
