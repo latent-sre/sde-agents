@@ -19,8 +19,8 @@
   },
   "observation": "Runbook proposal path validation accepted Windows reserved device aliases and trailing-dot path segments that do not identify safe ordinary Markdown files on Windows.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Independent prompt review produced deterministic Windows alias counterexamples; exact-current final review remains required before promotion.",
+  "promotion_state": "promoted",
+  "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Independent prompt review produced deterministic Windows alias counterexamples; exact-current final review remains required before promotion.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-04T01:07:18.699190Z",
+      "destination": "scripts/eval_behavioral.py runbook proposal path linter and associated tests",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Exact-current final review executed 2026-08-04 - the gate this record's prior reason named as outstanding. Expected behaviour verified present in the current tree: eval_behavioral.py:581-583 (_WINDOWS_RESERVED_PATH_SEGMENT), :627-637 (_is_safe_runbook_path rejects . and .., trailing dot or space, reserved basenames including NAME.ext), wired :679-686; tests test_eval_behavioral.py:621-646 (CON.md, aux.md, COM1.md, LPT9.md, ops./widget.md)",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-04T01:07:18.755277Z",
+      "destination": "scripts/eval_behavioral.py runbook proposal path linter and associated tests",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-02T02:31:38.299564Z"
+  "updated_at": "2026-08-04T01:07:18.755277Z"
 }

@@ -19,8 +19,8 @@
   },
   "observation": "Learning closeout validation accepted complete candidate blocks containing unresolved plain sentinels or provenance without source or freshness details.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "A fresh adversarial prompt review reproduced deterministic false greens; the working-tree repair and regressions require exact-current final review before promotion.",
+  "promotion_state": "promoted",
+  "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,25 @@
       "owner": "fleet-maintainer",
       "reason": "A fresh adversarial prompt review reproduced deterministic false greens; the working-tree repair and regressions require exact-current final review before promotion.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-04T01:07:18.920591Z",
+      "destination": "scripts/packet_lint.py and tests/test_packet_lint.py",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Exact-current final review executed 2026-08-04 - the gate this record's prior reason named as outstanding. Expected behaviour verified present in the current tree: packet_lint.py:156-170 (angle-metavariable plus TBD/TBA/TODO/FIXME/PLACEHOLDER sentinels and semantic-placeholder regexes), :301-308 and :334-349 (applied to the Learning block and every candidate field), :366-385 (provenance class plus non-placeholder detail); tests test_packet_lint.py:153,172,221,241,266,284,337",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-04T01:07:18.975844Z",
+      "destination": "scripts/packet_lint.py and tests/test_packet_lint.py",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-02T02:31:13.498539Z"
+  "updated_at": "2026-08-04T01:07:18.975844Z"
 }

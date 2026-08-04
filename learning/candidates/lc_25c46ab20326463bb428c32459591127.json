@@ -19,8 +19,8 @@
   },
   "observation": "Stored evaluation artifacts did not identify exact evaluation bytes, selected case definitions, and runtime plugin bytes.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "A reproducible evidence-integrity gap has a bounded implementation and regression tests, but promotion still requires independent verification and merge approval.",
+  "promotion_state": "promoted",
+  "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -55,7 +55,25 @@
       "owner": "fleet-maintainer",
       "reason": "A reproducible evidence-integrity gap has a bounded implementation and regression tests, but promotion still requires independent verification and merge approval.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-04T01:07:18.587973Z",
+      "destination": "scripts/eval_routing.py and scripts/eval_behavioral.py",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Exact-current final review executed 2026-08-04 - the gate this record's prior reason named as outstanding. Expected behaviour verified present in the current tree: eval_routing.py:562-585 (benchmark_provenance binds eval_sources+selection+evaluator+plugin), :528-559 (frozen_plugin snapshot + verify_frozen_plugin), :225-241 (exact-byte evaluator load); eval_behavioral.py:99-107,907-916,1072-1087 (refuses benchmark write on drift, exit 2); tests test_eval_routing.py:567,579,786",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-04T01:07:18.643452Z",
+      "destination": "scripts/eval_routing.py and scripts/eval_behavioral.py",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Separately authorized change accepted: PR #57, merge commit 8c2fca3 (2026-08-01), confirmed an ancestor of origin/main via git merge-base --is-ancestor. That commit touches the named files (+1165 tests/test_eval_behavioral.py, +758 tests/test_eval_routing.py, +625 tests/test_packet_lint.py, +372 tests/test_validate_fleet.py). Outcome record: docs/archive/2026-08/learn-001-outcome-2026-08-02.md:3,27-30. The record remained 'proposed' since 2026-08-02 only because the post-merge transition was never run; this corrects the ledger to match the repository.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-01T21:22:21.486102Z"
+  "updated_at": "2026-08-04T01:07:18.643452Z"
 }
