@@ -5,9 +5,22 @@ on:
   push:
     branches:
       - main
+  # The Windows and macOS legs run on pushes to main but not on PRs (see the matrix comment).
+  # The weekly sweep guarantees they still execute in a week with no merges, and manual
+  # dispatch makes "is the full matrix alive?" a ten-second question.
+  schedule:
+    - cron: '17 8 * * 1' # Mondays 08:17 UTC
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+# A rapid push train to one PR bills every superseded run against the private-repo minute
+# pool. Cancel superseded PR runs only — a main push or scheduled sweep is never cancelled,
+# so the full-matrix legs always run to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
@@ -19,16 +32,18 @@ jobs:
     # exercised, not just the Linux happy path. `py` is the working interpreter per
     # OS (GitHub's Windows runner ships real Python on PATH as `python`, so we avoid
     # the `python3` Store stub there).
+    #
+    # But this is a private repo, and Actions bills per job, rounded UP to the whole
+    # minute, then multiplied: Windows 2x, macOS 10x. A full-matrix run bills ~21
+    # minutes, ~86% of it the Windows and macOS legs — and PRs are the high-frequency
+    # event. The failure class the matrix exists to catch (a platform-specific silent
+    # disable, like the Store-stub incident) needs eventual execution, not per-PR
+    # frequency. So: PRs run the ubuntu leg only; pushes to main, the weekly schedule,
+    # and manual dispatch run all three OSes. Nothing merged goes more than a week
+    # without full-matrix coverage.
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            py: python3
-          - os: macos-latest
-            py: python3
-          - os: windows-latest
-            py: python
+      matrix: ${{ (github.event_name == 'pull_request') && fromJSON('{"include":[{"os":"ubuntu-latest","py":"python3"}]}') || fromJSON('{"include":[{"os":"ubuntu-latest","py":"python3"},{"os":"macos-latest","py":"python3"},{"os":"windows-latest","py":"python"}]}') }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
