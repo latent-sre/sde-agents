@@ -43,7 +43,7 @@ jobs:
     # without full-matrix coverage.
     strategy:
       fail-fast: false
-      matrix: ${{ (github.event_name == 'pull_request') && fromJSON('{"include":[{"os":"ubuntu-latest","py":"python3"}]}') || fromJSON('{"include":[{"os":"ubuntu-latest","py":"python3"},{"os":"macos-latest","py":"python3"},{"os":"windows-latest","py":"python"}]}') }}
+      matrix: ${{ fromJSON(github.event_name == 'pull_request' && '{"include":[{"os":"ubuntu-latest","py":"python3"}]}' || '{"include":[{"os":"ubuntu-latest","py":"python3"},{"os":"macos-latest","py":"python3"},{"os":"windows-latest","py":"python"}]}') }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
