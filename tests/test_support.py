@@ -9,6 +9,7 @@ see it.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import unittest
@@ -126,6 +127,38 @@ class RepoPoolRestoreTests(unittest.TestCase):
                 for name, content in originals.items():
                     self.assertEqual(content, (dst / victim_dir / name).read_bytes(), name)
             self.assertEqual([], list(outside.iterdir()), "restore wrote through the link")
+
+    def test_hard_link_mutation_is_broken_never_written_through(self) -> None:
+        # A hard link is invisible to symlink checks: copyfile onto the entry would write
+        # through the SHARED inode into a file outside the pool, and a link whose content
+        # already matches would survive restoration and expose later borrows' writes (Codex
+        # review on #91). Both variants: differing content, and matching content.
+        target = Path("plugin.json")
+        with tempfile.TemporaryDirectory() as outside_dir:
+            differing = Path(outside_dir) / "differing.txt"
+            differing.write_text("outside content\n", encoding="utf-8")
+            matching = Path(outside_dir) / "matching.bin"
+            with repo_copy() as dst:
+                original = (dst / target).read_bytes()
+                matching.write_bytes(original)
+                (dst / target).unlink()
+                try:
+                    os.link(differing, dst / target)
+                except OSError as exc:  # filesystem without hard-link support
+                    (dst / target).write_bytes(original)
+                    self.skipTest(f"cannot create hard links here: {exc}")
+            with repo_copy() as dst:
+                self.assertEqual(original, (dst / target).read_bytes())
+                self.assertEqual(1, (dst / target).stat().st_nlink)
+            self.assertEqual("outside content\n", differing.read_text(encoding="utf-8"))
+
+            with repo_copy() as dst:
+                (dst / target).unlink()
+                os.link(matching, dst / target)  # same bytes as the manifest expects
+            with repo_copy() as dst:
+                self.assertEqual(1, (dst / target).stat().st_nlink)
+                (dst / target).write_bytes(b"in-pool write\n")
+            self.assertEqual(original, matching.read_bytes(), "write leaked through hard link")
 
     def test_dangling_directory_link_is_removed_and_restored(self) -> None:
         # The dispatch must not follow the link: is_dir() on a DANGLING link answers for the

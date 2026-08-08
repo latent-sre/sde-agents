@@ -137,9 +137,16 @@ class _RepoPool:
             rel = path.relative_to(self.work)
             seen.add(rel)
             want = self.manifest.get(rel)
+            # nlink > 1 means the borrower hard-linked this entry to another inode — pool files
+            # are independent inodes by construction — and writing "through" it would corrupt
+            # the other side, possibly outside the fixture (caught in review on #91). So a
+            # shared or changed entry is REPLACED (unlink, then copy), never written in place,
+            # and a hard link is broken even when its content matches the manifest.
+            hardlinked = path.stat().st_nlink > 1
             if want is None:
                 path.unlink()  # file the last borrower added
-            elif hashlib.sha256(path.read_bytes()).digest() != want:
+            elif hardlinked or hashlib.sha256(path.read_bytes()).digest() != want:
+                path.unlink()
                 shutil.copyfile(self.template / rel, path)  # file the last borrower changed
         for rel in self.manifest.keys() - seen:
             target = self.work / rel
