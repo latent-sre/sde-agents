@@ -55,6 +55,12 @@ class _RepoPool:
             path.relative_to(self.template): hashlib.sha256(path.read_bytes()).digest()
             for path in _walk_files(self.template)
         }
+        self.directories = {
+            path.relative_to(self.template)
+            for path in self.template.rglob("*")
+            if path.is_dir()
+            and not any(part in _IGNORED_DIRS for part in path.relative_to(self.template).parts)
+        }
 
     def restore(self) -> None:
         """Return the working tree to exactly the manifest's content, whatever the last test did."""
@@ -76,8 +82,20 @@ class _RepoPool:
                 shutil.rmtree(target)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(self.template / rel, target)  # file the last borrower deleted
-        # Directories a borrower emptied out are left behind as empty shells; they carry no
-        # content, and git itself cannot represent them, so no validator distinguishes them.
+        # Directories the borrower ADDED are not invisible once their files are gone: an empty
+        # skills/<name>/ shell reads to validate_skills() as a skill missing its SKILL.md, so a
+        # leftover would hand later borrowers a tree the validator judges differently (caught in
+        # review on #91). Shallowest-first, so one rmtree takes any nested additions with it.
+        for rel in sorted(
+            path.relative_to(self.work)
+            for path in self.work.rglob("*")
+            if path.is_dir()
+            and not any(part in _IGNORED_DIRS for part in path.relative_to(self.work).parts)
+        ):
+            if rel not in self.directories:
+                target = self.work / rel
+                if target.is_dir():
+                    shutil.rmtree(target)
 
 
 _pool: _RepoPool | None = None

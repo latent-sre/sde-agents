@@ -55,6 +55,18 @@ class RepoPoolRestoreTests(unittest.TestCase):
         with repo_copy() as dst:
             self.assertEqual(original, (dst / target).read_bytes())
 
+    def test_added_directory_is_removed_not_left_as_an_empty_shell(self) -> None:
+        # Removing an added file but keeping its new parent directory is not pristine: an empty
+        # skills/<name>/ reads to validate_skills() as a skill missing its SKILL.md, so a
+        # leftover shell hands later borrowers a tree the validator judges differently
+        # (Codex review on #91).
+        added = Path("skills") / "phantom" / "SKILL.md"
+        with repo_copy() as dst:
+            (dst / added).parent.mkdir(parents=True)
+            (dst / added).write_text("---\nname: phantom\n---\n", encoding="utf-8")
+        with repo_copy() as dst:
+            self.assertFalse((dst / added).parent.exists())
+
     def test_file_replaced_by_a_directory_is_restored(self) -> None:
         # The shape mutation Codex review caught on #91: a borrower replaces a tracked file
         # with a directory. Restoration must clear the shadowing directory and put the file
