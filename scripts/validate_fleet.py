@@ -890,12 +890,26 @@ def load_module_by_content(source: Path, name: str):
     key = (source.name, digest.digest())
     module = _MODULES_BY_SOURCE.get(key)
     if module is None:
-        spec = importlib.util.spec_from_file_location(name, source)
-        if spec is None or spec.loader is None:
+        module = _execute_source(source, name)
+        if module is None:
             return None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         _MODULES_BY_SOURCE[key] = module
+    return module
+
+
+def _execute_source(source: Path, name: str):
+    """Build a module by compiling the file's current bytes, bypassing bytecode caches.
+
+    SourceFileLoader.exec_module trusts a __pycache__ entry validated only by (mtime, size), so
+    a same-size rewrite inside one timestamp tick would execute the PREVIOUS contents while the
+    digest above describes the new ones (caught in review on #91). Compiling the read bytes
+    directly is eval_routing's checked-buffer convention: what was hashed is exactly what runs.
+    """
+    spec = importlib.util.spec_from_file_location(name, source)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(source.read_bytes(), str(source), "exec"), module.__dict__)
     return module
 
 
@@ -1395,12 +1409,10 @@ def validate_behavioral_contracts(
     # only the OTHER tree ships would pass silently (caught in review on #91). Content the
     # import binds is not in any byte key we can afford to maintain, so this module pays a
     # fresh import per call.
-    spec = importlib.util.spec_from_file_location("eval_behavioral_validator", runner)
-    if spec is None or spec.loader is None:
-        return [f"{runner}: cannot load behavioral case schema validator"]
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = _execute_source(runner, "eval_behavioral_validator")
+        if module is None:
+            return [f"{runner}: cannot load behavioral case schema validator"]
     except Exception as exc:
         return [
             f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "

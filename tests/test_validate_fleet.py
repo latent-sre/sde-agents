@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import unittest
@@ -1630,6 +1631,25 @@ class LearningLedgerWiringTests(unittest.TestCase):
             )
         self.assertTrue(
             any("could not load" in issue for issue in issues), issues
+        )
+
+    def test_same_size_same_mtime_script_rewrite_is_not_served_stale_bytecode(self) -> None:
+        # A loader-based import trusts a __pycache__ entry validated only by (mtime, size), so
+        # a rewrite that preserves both would execute the PREVIOUS script while the content key
+        # describes the new one (Codex review on #91). The validator compiles the read bytes
+        # directly; this pins that a deliberately timestamp-preserving mutation still fails.
+        with repo_copy() as dst:
+            script = dst / "scripts" / "learning_ledger.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            original = script.read_bytes()
+            stamp = script.stat()
+            payload = b"raise RuntimeError('stale bytecode must not validate')\n"
+            self.assertGreater(len(original), len(payload), "fixture assumption: script bigger")
+            script.write_bytes(payload + b"#" * (len(original) - len(payload)))
+            os.utime(script, (stamp.st_atime, stamp.st_mtime))
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
         )
 
     def test_behavioral_validator_never_reuses_another_trees_fleet_roster(self) -> None:

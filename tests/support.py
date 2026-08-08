@@ -64,6 +64,16 @@ class _RepoPool:
 
     def restore(self) -> None:
         """Return the working tree to exactly the manifest's content, whatever the last test did."""
+        # Symlinks first: the template is link-free by construction (copytree resolves links),
+        # so any link here is borrower residue — and hashing or copyfile would follow it,
+        # letting a restore WRITE THROUGH the link to a target outside the pool (caught in
+        # review on #91). Unlinking the link itself makes the content passes below see a plain
+        # missing file and restore it from the template.
+        for path in sorted(self.work.rglob("*")):
+            if path.is_symlink() and not any(
+                part in _IGNORED_DIRS for part in path.relative_to(self.work).parts
+            ):
+                path.unlink()
         seen: set[Path] = set()
         for path in _walk_files(self.work):
             rel = path.relative_to(self.work)
@@ -111,10 +121,11 @@ def repo_copy() -> Iterator[Path]:
     `__pycache__` are excluded — one is not part of the tree under validation, the other is
     machine-local byproduct that would make copies differ between runs.
 
-    Callers may mutate file contents, add files, or delete anything under the yielded path,
-    and must not touch it after the with-block: the tree is pooled, and the next borrower gets
-    it restored by content. Restoration is content-level only — a test that needs to mutate
-    file metadata (permissions, timestamps) must build its own copy instead.
+    Callers may mutate file contents, add files or symlinks, or delete anything under the
+    yielded path, and must not touch it after the with-block: the tree is pooled, and the next
+    borrower gets it restored by content (symlinks a borrower left behind are removed, never
+    followed). Restoration is content-level only — a test that needs to mutate file metadata
+    (permissions, timestamps) must build its own copy instead.
     """
     global _pool
     if _pool is None:

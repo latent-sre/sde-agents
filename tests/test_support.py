@@ -9,6 +9,7 @@ see it.
 """
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -80,6 +81,27 @@ class RepoPoolRestoreTests(unittest.TestCase):
         with repo_copy() as dst:
             self.assertTrue((dst / target).is_file())
             self.assertEqual(original, (dst / target).read_bytes())
+
+    def test_symlink_mutation_is_unlinked_never_written_through(self) -> None:
+        # A borrower that replaces a tracked file with a symlink must not make the NEXT restore
+        # write pristine content through the link to a target outside the pool (Codex review on
+        # #91). The link is residue to remove, and the outside target must stay untouched.
+        target = Path("plugin.json")
+        with tempfile.TemporaryDirectory() as outside_dir:
+            victim = Path(outside_dir) / "victim.txt"
+            victim.write_text("outside content\n", encoding="utf-8")
+            with repo_copy() as dst:
+                original = (dst / target).read_bytes()
+                (dst / target).unlink()
+                try:
+                    (dst / target).symlink_to(victim)
+                except OSError as exc:  # e.g. Windows without symlink privilege
+                    (dst / target).write_bytes(original)
+                    self.skipTest(f"cannot create symlinks here: {exc}")
+            with repo_copy() as dst:
+                self.assertFalse((dst / target).is_symlink())
+                self.assertEqual(original, (dst / target).read_bytes())
+            self.assertEqual("outside content\n", victim.read_text(encoding="utf-8"))
 
     def test_deleted_directory_contents_are_restored(self) -> None:
         # A borrower that removes a whole subtree (files and all) must not leave the next
