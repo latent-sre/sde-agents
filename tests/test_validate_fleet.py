@@ -1597,6 +1597,20 @@ class LearningLedgerWiringTests(unittest.TestCase):
             issues = validate_fleet.validate_learning_ledger(dst)
         self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
 
+    def test_mutated_ledger_source_is_not_served_from_the_module_cache(self) -> None:
+        # The validator imports the tree-under-validation's own scripts through a cache keyed on
+        # source bytes. If that key ever regressed to the script's path — the obvious "faster"
+        # key — a copy that mutates the script would be validated by the pristine module and the
+        # mutation would pass silently. Warm the cache, then mutate, then demand the failure.
+        with repo_copy() as dst:
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            (dst / "scripts" / "learning_ledger.py").write_text(
+                "raise RuntimeError('mutated ledger source must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
+
     def test_transactional_ignore_drift_is_reported(self) -> None:
         with repo_copy() as dst:
             ignore = dst / ".gitignore"

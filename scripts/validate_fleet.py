@@ -854,14 +854,38 @@ def validate_agent_guide(root: Path) -> list[str]:
     return issues
 
 
+_MODULES_BY_SOURCE: dict[bytes, object] = {}
+
+
+def load_module_by_content(source: Path, name: str):
+    """Import a script by path, reusing the module when the exact bytes were already imported.
+
+    Validation imports the tree-under-validation's own scripts, and the mutation suite validates
+    ~a hundred copies of this repository in one process — nearly all byte-identical, each
+    previously paying compile+exec again. Keying the cache on source bytes (the convention
+    eval_routing uses for its evaluator) keeps the reuse honest: a copy whose script was mutated
+    hashes differently and gets a fresh import, so the cache can never certify code it did not
+    load. Returns None when no import spec can be built (the caller owns that message); a module
+    whose exec raises is never cached, so a broken script fails on every call, not just the first.
+    """
+    data = source.read_bytes()
+    module = _MODULES_BY_SOURCE.get(data)
+    if module is None:
+        spec = importlib.util.spec_from_file_location(name, source)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _MODULES_BY_SOURCE[data] = module
+    return module
+
+
 def load_guard(root: Path):
     """Import scripts/readonly-guard.py by path — the hyphen makes it un-importable by name."""
     source = root / "scripts" / "readonly-guard.py"
-    spec = importlib.util.spec_from_file_location("readonly_guard", source)
-    if spec is None or spec.loader is None:
+    module = load_module_by_content(source, "readonly_guard")
+    if module is None:
         raise ImportError(f"cannot load {source}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
     return module
 
 
@@ -1174,13 +1198,10 @@ def validate_platform_adapters(root: Path) -> list[str]:
             f"copies would have no mechanical link to the canonical Claude definitions."
         ]
 
-    module_name = f"platform_adapters_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, source)
-    if spec is None or spec.loader is None:
-        return [f"{source}: cannot load platform adapter generator"]
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_by_content(source, "platform_adapters")
+        if module is None:
+            return [f"{source}: cannot load platform adapter generator"]
         return module.validate_platform_support(root)
     except Exception as exc:
         return [
@@ -1349,13 +1370,10 @@ def validate_behavioral_contracts(
             f"{runner}: behavioral case files exist without their schema validator; typoed "
             "assertions could be ignored until an expensive live run."
         ]
-    module_name = f"eval_behavioral_validator_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, runner)
-    if spec is None or spec.loader is None:
-        return [f"{runner}: cannot load behavioral case schema validator"]
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_by_content(runner, "eval_behavioral_validator")
+        if module is None:
+            return [f"{runner}: cannot load behavioral case schema validator"]
     except Exception as exc:
         return [
             f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "
@@ -1708,14 +1726,11 @@ def validate_learning_ledger(root: Path) -> list[str]:
                 "committed by `git add -A` and later block safe mutation."
             )
 
-    module_name = f"learning_ledger_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, script)
-    if spec is None or spec.loader is None:
-        issues.append(f"{script}: cannot load learning-ledger validator")
-        return issues
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_by_content(script, "learning_ledger_validator")
+        if module is None:
+            issues.append(f"{script}: cannot load learning-ledger validator")
+            return issues
         module.LearningLedger(root).check()
     except Exception as exc:
         issues.append(

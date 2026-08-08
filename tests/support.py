@@ -10,6 +10,7 @@ the suite runs from the repository root.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import os
 import shutil
@@ -19,6 +20,62 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+
+_IGNORED_DIRS = {".git", "__pycache__"}
+
+
+def _walk_files(root: Path) -> Iterator[Path]:
+    for path in sorted(root.rglob("*")):
+        if any(part in _IGNORED_DIRS for part in path.relative_to(root).parts):
+            continue
+        if path.is_file():
+            yield path
+
+
+class _RepoPool:
+    """One pristine template plus one reused working tree, built lazily on first use.
+
+    Copying the whole repository per mutation test was measured at 60% of the owning module's
+    wall-clock (93 copies × ~160-325ms). The pool replaces every copy after the first two with
+    a restore that compares each file's CONTENT against a SHA-256 manifest of the template —
+    never stat shortcuts, whose mtime granularity on some filesystems would miss a same-size
+    rewrite — so every borrower still provably starts pristine. The pool is process-local and
+    unittest runs tests sequentially, so no two borrowers overlap.
+    """
+
+    def __init__(self) -> None:
+        # Held for the process lifetime; the TemporaryDirectory finalizer cleans up at exit.
+        self._holder = tempfile.TemporaryDirectory()
+        base = Path(self._holder.name)
+        self.template = base / "template"
+        shutil.copytree(REPO, self.template, ignore=shutil.ignore_patterns(*_IGNORED_DIRS))
+        self.work = base / "repo"
+        shutil.copytree(self.template, self.work)
+        self.manifest = {
+            path.relative_to(self.template): hashlib.sha256(path.read_bytes()).digest()
+            for path in _walk_files(self.template)
+        }
+
+    def restore(self) -> None:
+        """Return the working tree to exactly the manifest's content, whatever the last test did."""
+        seen: set[Path] = set()
+        for path in _walk_files(self.work):
+            rel = path.relative_to(self.work)
+            seen.add(rel)
+            want = self.manifest.get(rel)
+            if want is None:
+                path.unlink()  # file the last borrower added
+            elif hashlib.sha256(path.read_bytes()).digest() != want:
+                shutil.copyfile(self.template / rel, path)  # file the last borrower changed
+        for rel in self.manifest.keys() - seen:
+            target = self.work / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(self.template / rel, target)  # file the last borrower deleted
+        # Directories a borrower emptied out are left behind as empty shells; they carry no
+        # content, and git itself cannot represent them, so no validator distinguishes them.
+
+
+_pool: _RepoPool | None = None
 
 
 @contextlib.contextmanager
@@ -30,11 +87,18 @@ def repo_copy() -> Iterator[Path]:
     and the guide drift check resolves every multi-segment path it asserts. Only `.git` and
     `__pycache__` are excluded — one is not part of the tree under validation, the other is
     machine-local byproduct that would make copies differ between runs.
+
+    Callers may mutate file contents, add files, or delete anything under the yielded path,
+    and must not touch it after the with-block: the tree is pooled, and the next borrower gets
+    it restored by content. Restoration is content-level only — a test that needs to mutate
+    file metadata (permissions, timestamps) must build its own copy instead.
     """
-    with tempfile.TemporaryDirectory() as tmp:
-        dst = Path(tmp) / "repo"
-        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
-        yield dst
+    global _pool
+    if _pool is None:
+        _pool = _RepoPool()
+    else:
+        _pool.restore()
+    yield _pool.work
 
 
 def run_main(main: Callable[[list[str]], int], *argv: str) -> tuple[int, str]:
