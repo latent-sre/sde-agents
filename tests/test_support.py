@@ -127,6 +127,28 @@ class RepoPoolRestoreTests(unittest.TestCase):
                     self.assertEqual(content, (dst / victim_dir / name).read_bytes(), name)
             self.assertEqual([], list(outside.iterdir()), "restore wrote through the link")
 
+    def test_dangling_directory_link_is_removed_and_restored(self) -> None:
+        # The dispatch must not follow the link: is_dir() on a DANGLING link answers for the
+        # missing target and picks the wrong removal call, poisoning the pool (Codex review on
+        # #91). Delete the link's target before restoration to force that state.
+        victim_dir = Path("hooks")
+        with tempfile.TemporaryDirectory() as outside_dir:
+            outside = Path(outside_dir) / "vanishing"
+            outside.mkdir()
+            with repo_copy() as dst:
+                originals = {
+                    p.name: p.read_bytes() for p in (dst / victim_dir).iterdir() if p.is_file()
+                }
+                shutil.rmtree(dst / victim_dir)
+                try:
+                    create_directory_link(outside, dst / victim_dir)
+                except OSError as exc:
+                    self.skipTest(f"cannot create directory links here: {exc}")
+                outside.rmdir()  # the link now dangles
+            with repo_copy() as dst:
+                for name, content in originals.items():
+                    self.assertEqual(content, (dst / victim_dir / name).read_bytes(), name)
+
     def test_deleted_directory_contents_are_restored(self) -> None:
         # A borrower that removes a whole subtree (files and all) must not leave the next
         # borrower a hollowed-out repo the validator would judge incorrectly.

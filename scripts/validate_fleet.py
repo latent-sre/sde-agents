@@ -887,7 +887,10 @@ def load_module_by_content(source: Path, name: str):
     source_bytes: bytes | None = None
     for sibling in sorted(source.parent.glob("*.py")):
         data = sibling.read_bytes()
-        digest.update(sibling.name.encode("utf-8"))
+        # Length-framed, not bare concatenation: without the frame, moving bytes across a file
+        # boundary (append a deleted sibling's name+contents to the file sorted before it)
+        # yields the same stream and a false cache hit (caught in review on #91).
+        digest.update(f"{sibling.name}\x00{len(data)}\x00".encode("utf-8"))
         digest.update(data)
         if sibling == source:
             source_bytes = data

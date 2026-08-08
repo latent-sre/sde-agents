@@ -1652,6 +1652,24 @@ class LearningLedgerWiringTests(unittest.TestCase):
             any("ledger validation failed" in issue for issue in issues), issues
         )
 
+    def test_moving_bytes_across_a_file_boundary_is_a_cache_miss(self) -> None:
+        # The digest frames each file with its name and length. Without the frame, appending a
+        # deleted sibling's name and contents to the file sorted immediately before it yields
+        # the SAME unframed stream — here learning_ledger.py absorbing ledger_drift.py — and a
+        # pristine cached module would falsely validate the now-broken ledger source (caught in
+        # review on #91).
+        with repo_copy() as dst:
+            ledger = dst / "scripts" / "learning_ledger.py"
+            drift = dst / "scripts" / "ledger_drift.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            merged = ledger.read_bytes() + drift.name.encode("utf-8") + drift.read_bytes()
+            ledger.write_bytes(merged)
+            drift.unlink()
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
+        )
+
     def test_behavioral_validator_never_reuses_another_trees_fleet_roster(self) -> None:
         # Importing eval_behavioral captures FLEET_AGENTS by globbing the tree's agents/ at
         # import time — repository CONTENT, not script bytes, so the sibling-bytes module cache

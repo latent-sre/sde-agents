@@ -63,6 +63,21 @@ def _is_link(path: Path) -> bool:
     return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
 
 
+def _remove_link(path: Path) -> None:
+    """Remove a link entry itself, whatever it points at — including nothing.
+
+    The dispatch must not follow the link: is_dir() on a DANGLING junction or symlink answers
+    for the missing target, not the entry, and picks the wrong removal call (caught in review
+    on #91). unlink-then-rmdir covers every link shape on both platforms without consulting
+    the target: POSIX symlinks always unlink; Windows directory junctions refuse unlink and
+    fall through to rmdir, which removes the junction without touching its target.
+    """
+    try:
+        path.unlink()
+    except OSError:
+        os.rmdir(path)
+
+
 def _walk_files(root: Path) -> Iterator[Path]:
     for path in sorted(root.rglob("*")):
         if any(part in _IGNORED_DIRS for part in path.relative_to(root).parts):
@@ -114,7 +129,7 @@ class _RepoPool:
                 continue
             try:
                 if _is_link(path):
-                    remove_directory_link(path) if path.is_dir() else path.unlink()
+                    _remove_link(path)
             except FileNotFoundError:
                 continue  # a child of a link removed earlier in this pass
         seen: set[Path] = set()

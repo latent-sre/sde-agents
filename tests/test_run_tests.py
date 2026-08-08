@@ -86,13 +86,16 @@ class ParallelRunnerTests(unittest.TestCase):
         self.assertEqual(2, code)
 
     def test_non_importable_fixture_trees_do_not_block_the_run(self) -> None:
-        # Fixture repos may carry test-shaped filenames without __init__.py chains; discovery
-        # ignores them, so the runner must too rather than refusing to run the real suite.
+        # Fixture repos may carry test-shaped filenames — or even real sample packages — below
+        # a container without __init__.py. Discovery never descends through the container, so
+        # the runner must ignore them too rather than refusing to run the real suite (Codex
+        # review on #91: only an unbroken __init__.py chain participates in discovery).
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
             fixture = Path(tmp) / "fixtures" / "sample"
             fixture.mkdir(parents=True)
             (fixture / "test_shaped.py").write_text(FAILING, encoding="utf-8")
+            (fixture / "__init__.py").write_text("", encoding="utf-8")
             code, out = self._run(Path(tmp))
         self.assertEqual(0, code, out)
         self.assertIn("Ran 2 tests across 1 modules", out)

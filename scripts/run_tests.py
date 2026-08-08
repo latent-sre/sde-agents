@@ -42,11 +42,23 @@ def importable_packages(start_dir: Path) -> list[Path]:
     Fixture trees without __init__.py are excluded the same way discovery excludes them; flat
     shared helpers (tests/support.py) are the sanctioned alternative to helper packages.
     """
-    return sorted(
-        path.parent
-        for path in start_dir.rglob("__init__.py")
-        if path.parent != start_dir
-    )
+    packages = []
+    for path in sorted(start_dir.rglob("__init__.py")):
+        if path.parent == start_dir:
+            continue
+        # Only an unbroken __init__.py chain back to the start directory participates in
+        # discovery; a package buried under a plain fixture directory is invisible to serial
+        # discovery too, so refusing it would reject suites the documented command accepts.
+        walk = path.parent.parent
+        importable = True
+        while walk != start_dir:
+            if not (walk / "__init__.py").exists():
+                importable = False
+                break
+            walk = walk.parent
+        if importable:
+            packages.append(path.parent)
+    return packages
 
 
 def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[Path, int, str, list[str]]:
