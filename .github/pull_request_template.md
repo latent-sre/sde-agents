@@ -56,6 +56,7 @@ genuinely does not apply and say so in one line; do not leave a heading with not
 | a validator rule | a fixture or mutation test that **fails without the change** (state that you checked it fails) |
 | any canonical agent or skill | host adapters regenerated; no generated copy edited as the source |
 | an added, renamed, or removed component | `--write-inventory` re-run, host adapters regenerated, and a routing cluster seeded or extended |
+| a new mechanism (abstraction, config surface, component, gate, or CI job) | its demonstrated consumer — the real task that needs it now; its tier and measured cost if it's a check; and the smaller alternative that lost, with the reason |
 | text another file declares itself the owner of | which side you fixed — the paraphrase, never the source |
 | work that a doc tracks as open | that doc updated — a landed item still listed as pending sends the next session to redo it |
 | an always-loaded body (an agent file, or a `SKILL.md` core rather than a `references/` file) | roughly how much it adds, and why it isn't behind a predicate — always-loaded prose costs tokens on every session that loads it |
