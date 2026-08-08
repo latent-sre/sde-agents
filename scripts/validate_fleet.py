@@ -1725,12 +1725,19 @@ def validate_learning_ledger(root: Path) -> list[str]:
     return issues
 
 
-def validate_repo(root: Path, *, check_inventory: bool = True) -> tuple[list[str], list[str], list[str]]:
+def validate_repo(
+    root: Path, *, check_inventory: bool = True, check_adapters: bool = True
+) -> tuple[list[str], list[str], list[str]]:
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
     issues.extend(validate_plugin(root, agent_names, skill_names))
-    issues.extend(validate_platform_adapters(root))
+    # The adapter byte-compare is 59% of a validation run (profiled 2026-08-08) and independent
+    # of every other rule, so a caller validating a deliberate non-adapter mutation may skip it.
+    # The command line never does: `main` always runs the full set, which is why the recipe's
+    # separate `generate --check` step could be retired without losing the gate.
+    if check_adapters:
+        issues.extend(validate_platform_adapters(root))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
     issues.extend(validate_behavioral_contracts(root, agent_names, skill_names))

@@ -59,6 +59,25 @@ deterministic gates stay green.
 `run_state.py` (its repair stayed inside `effect_broker.py`), so this opens its own review
 context rather than piggybacking on that round.
 
+#### TIER-001 — tiered assurance and evidence reuse for the fleet's own gates
+
+**Status:** `active` — spec approved 2026-08-08; the paired plan is executing.
+
+**Outcome:** The wiring-test suite stops recomputing adapter byte-drift under every mutation
+test (measured before/after wall time in the round PR); `scripts/eval_baseline.py` resolves
+whether a stored routing benchmark still covers the 'before' side of a paired run, offline;
+AGENTS.md and README.md state the T0–T3 validation tiers; CI prints per-test durations.
+
+**Source:** [`TIER-001 spec`](superpowers/specs/tier-001-tiered-assurance.md); measurements in
+the spec's Problem table (2026-08-08, commit 28a3838).
+
+**Prerequisites:** None. PR #88's CI posture is consumed, not changed.
+
+**Acceptance:** The spec's acceptance list — measured suite time, detector spot-proofs,
+resolver unit tests over synthetic benchmarks, recipe/source consistency.
+
+**Next action:** Merge the round PR; retire this item to an outcome record at closeout.
+
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round.
