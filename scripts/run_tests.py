@@ -24,19 +24,45 @@ import re
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 RAN_RE = re.compile(r"^Ran (\d+) tests? in ", re.MULTILINE)
 
 
-def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[Path, int, str]:
+def nested_test_modules(start_dir: Path) -> list[Path]:
+    """test_*.py files that serial discovery would run but the top-level glob would not.
+
+    `unittest discover` recurses into importable packages (each level carrying __init__.py).
+    This runner collects only top-level modules, so a nested package added later would be
+    silently skipped while CI stayed green — the exact class of failure the suite exists to
+    make loud. Detecting the divergence and refusing to run beats guessing at discovery
+    semantics; fixture trees without __init__.py chains are excluded the same way discovery
+    excludes them.
+    """
+    nested = []
+    for path in sorted(start_dir.rglob("test_*.py")):
+        if path.parent == start_dir:
+            continue
+        walk = path.parent
+        importable = True
+        while walk != start_dir:
+            if not (walk / "__init__.py").exists():
+                importable = False
+                break
+            walk = walk.parent
+        if importable:
+            nested.append(path)
+    return nested
+
+
+def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[Path, int, str, list[str]]:
     argv = [
         sys.executable, "-m", "unittest", "discover",
         "-s", str(start_dir), "-p", module.name, *passthrough,
     ]
     proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return module, proc.returncode, proc.stdout + proc.stderr
+    return module, proc.returncode, proc.stdout + proc.stderr, argv
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -54,6 +80,15 @@ def main(argv: list[str] | None = None) -> int:
     modules = sorted(start_dir.glob("test_*.py"))
     if not modules:
         print(f"error: no test_*.py modules under {start_dir}", file=sys.stderr)
+        return 2
+    nested = nested_test_modules(start_dir)
+    if nested:
+        print(
+            "error: nested test packages exist that serial discovery would run but this "
+            "runner would silently skip: " + ", ".join(str(p) for p in nested)
+            + " — flatten them into the start directory or extend the runner first.",
+            file=sys.stderr,
+        )
         return 2
 
     passthrough: list[str] = []
@@ -73,8 +108,10 @@ def main(argv: list[str] | None = None) -> int:
     unparsed: list[Path] = []
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         futures = [pool.submit(run_module, start_dir, m, passthrough) for m in modules]
-        for future in futures:
-            module, code, output = future.result()
+        # Completion order, not submission order: a slow first module must not sit on the
+        # reports of everything that finished behind it.
+        for future in as_completed(futures):
+            module, code, output, argv = future.result()
             counted = RAN_RE.search(output)
             if counted:
                 total_tests += int(counted.group(1))
@@ -85,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
             if code != 0 or args.verbose:
                 print(output, end="" if output.endswith("\n") else "\n")
             if code != 0:
+                print(f"reproduce: {' '.join(argv)}")
                 failures.append(module)
 
     elapsed = time.perf_counter() - started

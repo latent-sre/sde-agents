@@ -55,6 +55,20 @@ class RepoPoolRestoreTests(unittest.TestCase):
         with repo_copy() as dst:
             self.assertEqual(original, (dst / target).read_bytes())
 
+    def test_file_replaced_by_a_directory_is_restored(self) -> None:
+        # The shape mutation Codex review caught on #91: a borrower replaces a tracked file
+        # with a directory. Restoration must clear the shadowing directory and put the file
+        # back — raising IsADirectoryError here would poison the pool for every later test.
+        target = Path("plugin.json")
+        with repo_copy() as dst:
+            original = (dst / target).read_bytes()
+            (dst / target).unlink()
+            (dst / target).mkdir()
+            (dst / target / "interloper.txt").write_text("shadowed\n", encoding="utf-8")
+        with repo_copy() as dst:
+            self.assertTrue((dst / target).is_file())
+            self.assertEqual(original, (dst / target).read_bytes())
+
     def test_deleted_directory_contents_are_restored(self) -> None:
         # A borrower that removes a whole subtree (files and all) must not leave the next
         # borrower a hollowed-out repo the validator would judge incorrectly.

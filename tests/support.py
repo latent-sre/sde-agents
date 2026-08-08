@@ -69,6 +69,11 @@ class _RepoPool:
                 shutil.copyfile(self.template / rel, path)  # file the last borrower changed
         for rel in self.manifest.keys() - seen:
             target = self.work / rel
+            if target.is_dir():
+                # A directory now shadows the manifest file's path (the borrower replaced the
+                # file); its contents were already removed above as additions, but copyfile
+                # onto the shell would raise and poison the pool for every later borrower.
+                shutil.rmtree(target)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(self.template / rel, target)  # file the last borrower deleted
         # Directories a borrower emptied out are left behind as empty shells; they carry no

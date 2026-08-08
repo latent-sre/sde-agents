@@ -1611,6 +1611,27 @@ class LearningLedgerWiringTests(unittest.TestCase):
             issues = validate_fleet.validate_learning_ledger(dst)
         self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
 
+    def test_mutated_dependency_of_a_cached_module_is_not_masked(self) -> None:
+        # eval_behavioral imports eval_routing and packet_lint by __file__-derived paths at
+        # import time, so a cache keyed on eval_behavioral's own bytes alone would serve a
+        # module bound to the PRISTINE tree's dependencies after a copy mutates one of them —
+        # the false pass Copilot review caught on #91. The key must cover the sibling set.
+        with repo_copy() as dst:
+            self.assertEqual(
+                [], validate_fleet.validate_repo(dst, check_inventory=False,
+                                                 check_adapters=False)[0]
+            )
+            (dst / "scripts" / "eval_routing.py").write_text(
+                "raise RuntimeError('mutated dependency must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=False
+            )
+        self.assertTrue(
+            any("could not load" in issue for issue in issues), issues
+        )
+
     def test_transactional_ignore_drift_is_reported(self) -> None:
         with repo_copy() as dst:
             ignore = dst / ".gitignore"

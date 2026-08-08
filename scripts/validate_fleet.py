@@ -9,6 +9,7 @@ runtime's generated directories.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
@@ -854,7 +855,7 @@ def validate_agent_guide(root: Path) -> list[str]:
     return issues
 
 
-_MODULES_BY_SOURCE: dict[bytes, object] = {}
+_MODULES_BY_SOURCE: dict[tuple[str, bytes], object] = {}
 
 
 def load_module_by_content(source: Path, name: str):
@@ -862,21 +863,33 @@ def load_module_by_content(source: Path, name: str):
 
     Validation imports the tree-under-validation's own scripts, and the mutation suite validates
     ~a hundred copies of this repository in one process — nearly all byte-identical, each
-    previously paying compile+exec again. Keying the cache on source bytes (the convention
-    eval_routing uses for its evaluator) keeps the reuse honest: a copy whose script was mutated
-    hashes differently and gets a fresh import, so the cache can never certify code it did not
-    load. Returns None when no import spec can be built (the caller owns that message); a module
+    previously paying compile+exec again. Keying the cache on content (the convention
+    eval_routing uses for its evaluator) keeps the reuse honest: mutated code hashes differently
+    and gets a fresh import, so the cache can never certify code it did not load.
+
+    The key covers every sibling `*.py` next to the script, not just the script itself: these
+    scripts import each other by paths derived from their own `__file__` at import time
+    (eval_behavioral pulls in eval_routing and packet_lint this way), so a module cached on its
+    own bytes alone could be served for a tree whose DEPENDENCIES were mutated — a false pass
+    caught in review. Hashing the whole sibling set costs ~1ms; a directory-wide miss on any
+    mutation is the price of never validating one tree with another tree's code.
+
+    Returns None when no import spec can be built (the caller owns that message); a module
     whose exec raises is never cached, so a broken script fails on every call, not just the first.
     """
-    data = source.read_bytes()
-    module = _MODULES_BY_SOURCE.get(data)
+    digest = hashlib.sha256()
+    for sibling in sorted(source.parent.glob("*.py")):
+        digest.update(sibling.name.encode("utf-8"))
+        digest.update(sibling.read_bytes())
+    key = (source.name, digest.digest())
+    module = _MODULES_BY_SOURCE.get(key)
     if module is None:
         spec = importlib.util.spec_from_file_location(name, source)
         if spec is None or spec.loader is None:
             return None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        _MODULES_BY_SOURCE[data] = module
+        _MODULES_BY_SOURCE[key] = module
     return module
 
 

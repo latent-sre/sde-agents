@@ -56,6 +56,31 @@ class ParallelRunnerTests(unittest.TestCase):
             code, _ = self._run(Path(tmp))
         self.assertEqual(2, code)
 
+    def test_nested_importable_test_package_refuses_to_run(self) -> None:
+        # Serial `unittest discover` recurses into importable packages; the runner's top-level
+        # glob does not. Diverging silently would leave CI green while never running the nested
+        # modules, so the runner must refuse instead (Codex review on #91).
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
+            package = Path(tmp) / "subpkg"
+            package.mkdir()
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "test_hidden.py").write_text(PASSING, encoding="utf-8")
+            code, _ = self._run(Path(tmp))
+        self.assertEqual(2, code)
+
+    def test_non_importable_fixture_trees_do_not_block_the_run(self) -> None:
+        # Fixture repos may carry test-shaped filenames without __init__.py chains; discovery
+        # ignores them, so the runner must too rather than refusing to run the real suite.
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
+            fixture = Path(tmp) / "fixtures" / "sample"
+            fixture.mkdir(parents=True)
+            (fixture / "test_shaped.py").write_text(FAILING, encoding="utf-8")
+            code, out = self._run(Path(tmp))
+        self.assertEqual(0, code, out)
+        self.assertIn("Ran 2 tests across 1 modules", out)
+
 
 if __name__ == "__main__":
     unittest.main()
