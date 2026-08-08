@@ -319,7 +319,7 @@ routing benchmark already covers the 'before' side of a paired run.
 
 ```bash
 python3 scripts/validate_fleet.py                       # every edit — subsumes the adapter byte-drift check
-python3 -m unittest discover -s tests -v                # before push — full offline suite
+python3 scripts/run_tests.py                            # before push — full offline suite, one process per module
 claude plugin validate . --strict                       # before push — Claude platform contract
 ```
 

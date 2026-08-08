@@ -60,10 +60,12 @@ jobs:
         run: ${{ matrix.py }} scripts/validate_fleet.py
 
       - name: Run repository unit tests
-        # --durations 10 (Python 3.12+, guaranteed above) prints the slowest tests in every
-        # log: the suite's slow-creep gets rediscovered by reading CI instead of a profiling
-        # session.
-        run: ${{ matrix.py }} -m unittest discover -s tests -v --durations 10
+        # One process per test module, in parallel (scripts/run_tests.py) — wall-clock is
+        # roughly the longest module instead of the sum. --durations 10 (Python 3.12+,
+        # guaranteed above) is forwarded to every module run so the slowest tests still
+        # surface in the log: the suite's slow-creep gets rediscovered by reading CI instead
+        # of a profiling session.
+        run: ${{ matrix.py }} scripts/run_tests.py -v --durations 10
 
   ledger-drift:
     # Findings are advisory; inability to inspect the repository is blocking. A pending learning

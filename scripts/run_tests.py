@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Run the test suite with one process per test module, in parallel.
+
+The suite is embarrassingly parallel at module granularity: modules share no state, and the
+two deliberately stateful fixtures (the pooled repo copy in tests/support.py and the
+validator's content-keyed module cache) are process-local, so process-per-module preserves
+exactly the isolation a plain `unittest discover` run has. What changes is wall-clock: the
+serial run costs the SUM of module times, this runner costs roughly the longest module.
+
+Each child is a plain `python -m unittest discover -s <start-dir> -p <module>.py` — the same
+sanctioned invocation the T0 loop uses — so a module that fails here reproduces verbatim by
+copying the printed command. Child output is buffered and printed whole when the module
+finishes, never interleaved; the summary aggregates the per-module "Ran N tests" counts so a
+module silently discovering zero tests is visible instead of vanishing into a green total.
+
+Exit code: 0 only when every module passed. Discovering no modules at all is an error, not an
+empty success — a typoed --start-dir must not certify a suite that never ran.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+RAN_RE = re.compile(r"^Ran (\d+) tests? in ", re.MULTILINE)
+
+
+def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[Path, int, str]:
+    argv = [
+        sys.executable, "-m", "unittest", "discover",
+        "-s", str(start_dir), "-p", module.name, *passthrough,
+    ]
+    proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return module, proc.returncode, proc.stdout + proc.stderr
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--start-dir", default="tests", help="unittest discovery start directory")
+    parser.add_argument("--jobs", type=int, default=os.cpu_count() or 2,
+                        help="concurrent module processes (default: cpu count)")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="forward -v to every module run")
+    parser.add_argument("--durations", type=int, metavar="N",
+                        help="forward --durations N (Python 3.12+) to every module run")
+    args = parser.parse_args(argv)
+
+    start_dir = Path(args.start_dir)
+    modules = sorted(start_dir.glob("test_*.py"))
+    if not modules:
+        print(f"error: no test_*.py modules under {start_dir}", file=sys.stderr)
+        return 2
+
+    passthrough: list[str] = []
+    if args.verbose:
+        passthrough.append("-v")
+    if args.durations is not None:
+        passthrough += ["--durations", str(args.durations)]
+
+    # Longest-work-first scheduling, with file size as the runtime proxy: the largest module
+    # (test_validate_fleet) is also the slowest, and starting it last would leave the pool
+    # idling behind it. The proxy being occasionally wrong costs seconds, not correctness.
+    modules.sort(key=lambda p: p.stat().st_size, reverse=True)
+
+    started = time.perf_counter()
+    failures: list[Path] = []
+    total_tests = 0
+    unparsed: list[Path] = []
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        futures = [pool.submit(run_module, start_dir, m, passthrough) for m in modules]
+        for future in futures:
+            module, code, output = future.result()
+            counted = RAN_RE.search(output)
+            if counted:
+                total_tests += int(counted.group(1))
+            else:
+                unparsed.append(module)
+            verdict = "ok" if code == 0 else f"FAILED (exit {code})"
+            print(f"== {module.name}: {verdict}")
+            if code != 0 or args.verbose:
+                print(output, end="" if output.endswith("\n") else "\n")
+            if code != 0:
+                failures.append(module)
+
+    elapsed = time.perf_counter() - started
+    print(f"\nRan {total_tests} tests across {len(modules)} modules in {elapsed:.1f}s")
+    for module in unparsed:
+        # A module whose output never says "Ran N tests" ran nothing recognizable; surfacing it
+        # beats folding it into a green total.
+        print(f"warning: could not count tests from {module.name}", file=sys.stderr)
+    if failures:
+        print(f"FAILED modules: {', '.join(sorted(m.name for m in failures))}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
