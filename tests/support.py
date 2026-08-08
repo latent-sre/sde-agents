@@ -116,6 +116,18 @@ class _RepoPool:
             and not any(part in _IGNORED_DIRS for part in path.relative_to(self.template).parts)
         }
 
+    def _remove_links_top_down(self, directory: Path) -> None:
+        with os.scandir(directory) as entries:
+            children = sorted(entries, key=lambda entry: entry.name)
+        for entry in children:
+            if entry.name in _IGNORED_DIRS:
+                continue
+            path = Path(entry.path)
+            if _is_link(path):
+                _remove_link(path)
+            elif entry.is_dir(follow_symlinks=False):
+                self._remove_links_top_down(path)
+
     def restore(self) -> None:
         """Return the working tree to exactly the manifest's content, whatever the last test did."""
         # Links first: the template is link-free by construction (copytree resolves links), so
@@ -123,15 +135,11 @@ class _RepoPool:
         # would follow it, letting a restore WRITE THROUGH the link to a target outside the
         # pool (caught in review on #91, junctions included: is_symlink() alone misses them).
         # Removing the link itself makes the content passes below see a plain missing entry
-        # and restore it from the template.
-        for path in sorted(self.work.rglob("*")):
-            if any(part in _IGNORED_DIRS for part in path.relative_to(self.work).parts):
-                continue
-            try:
-                if _is_link(path):
-                    _remove_link(path)
-            except FileNotFoundError:
-                continue  # a child of a link removed earlier in this pass
+        # and restore it from the template. The walk is explicitly top-down, removing each
+        # link BEFORE descending: a recursive enumeration like rglob would follow a junction
+        # first — pathlib's symlink-skip does not cover directory reparse points — so a
+        # junction to an ancestor would cycle until path-length exhaustion.
+        self._remove_links_top_down(self.work)
         seen: set[Path] = set()
         for path in _walk_files(self.work):
             rel = path.relative_to(self.work)

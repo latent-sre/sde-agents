@@ -160,6 +160,26 @@ class RepoPoolRestoreTests(unittest.TestCase):
                 (dst / target).write_bytes(b"in-pool write\n")
             self.assertEqual(original, matching.read_bytes(), "write leaked through hard link")
 
+    def test_cyclic_ancestor_link_is_removed_without_recursing_into_it(self) -> None:
+        # A directory link pointing at an ANCESTOR of the pool creates a cycle. Enumeration
+        # that descends before removing (rglob into a Windows junction, which the symlink-skip
+        # does not cover) would recurse until path-length exhaustion; the top-down removal
+        # walk must delete the link before ever descending (Codex review on #91).
+        victim_dir = Path("hooks")
+        with repo_copy() as dst:
+            originals = {
+                p.name: p.read_bytes() for p in (dst / victim_dir).iterdir() if p.is_file()
+            }
+            shutil.rmtree(dst / victim_dir)
+            try:
+                create_directory_link(dst, dst / victim_dir)
+            except OSError as exc:
+                self.skipTest(f"cannot create directory links here: {exc}")
+        with repo_copy() as dst:
+            self.assertFalse((dst / victim_dir).is_symlink())
+            for name, content in originals.items():
+                self.assertEqual(content, (dst / victim_dir / name).read_bytes(), name)
+
     def test_dangling_directory_link_is_removed_and_restored(self) -> None:
         # The dispatch must not follow the link: is_dir() on a DANGLING link answers for the
         # missing target and picks the wrong removal call, poisoning the pool (Codex review on
