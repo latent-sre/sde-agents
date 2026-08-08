@@ -310,11 +310,17 @@ CLI pin bump.
 
 ## Validation
 
+Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence
+instead of recomputing it. The edit loop runs the validator plus the test module owning the
+touched artifact; a push owes the full offline suite and the platform contract check; CI runs
+the full three-OS matrix on pushes to main, weekly, and on dispatch; releases and CLI pin bumps
+owe the probe and the eval suites, with `scripts/eval_baseline.py` reporting when a stored
+routing benchmark already covers the 'before' side of a paired run.
+
 ```bash
-python3 scripts/generate_platform_adapters.py --check
-python3 scripts/validate_fleet.py
-python3 -m unittest discover -s tests -v
-claude plugin validate . --strict
+python3 scripts/validate_fleet.py                       # every edit — subsumes the adapter byte-drift check
+python3 -m unittest discover -s tests -v                # before push — full offline suite
+claude plugin validate . --strict                       # before push — Claude platform contract
 ```
 
 The validator checks frontmatter, names, descriptions, explicit agent tool authority (against a
@@ -336,7 +342,9 @@ The same validator loads the adapter generator as a library. It rejects missing,
 byte-drifted generated files, including the official-import Markdown under `.claude/agents`;
 cross-host version or identity drift; the wrong manifest component paths; a Codex marketplace that
 misses the isolated plugin; and any attempt to reuse the Claude guard where the host cannot scope
-it. `scripts/generate_platform_adapters.py --check` exposes that gate directly.
+it. `scripts/generate_platform_adapters.py --check` exposes that gate directly — which is why it
+is not a separate step in the tiered recipe above: running it after the validator would re-prove
+what the validator just proved.
 
 `claude plugin validate --strict` independently covers Claude's platform contract: manifest
 schema, frontmatter parsing, and hook JSON, with warnings as errors. The Codex package is also kept
