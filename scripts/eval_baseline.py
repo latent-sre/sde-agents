@@ -13,7 +13,8 @@ a STALE verdict names what diverged so the operator knows why a fresh capture is
 Match policy (TIER-001 spec, operator-approved 2026-08-08): provenance exact on schema,
 eval_sources, selection, evaluator, and the plugin content hash; conditions exact on
 model_requested, clean_room, threshold, timeout_s. cli_version is advisory — the probe, not
-the eval suite, owns CLI drift — so a mismatch is printed but does not stale the verdict.
+the eval suite, owns CLI drift — so the recorded value is printed as a note, never compared,
+and never stales the verdict.
 
 Exit codes: 0 a reusable benchmark exists (newest path printed), 1 none does (divergences
 printed per same-cluster candidate), 2 usage or provenance error.
@@ -34,11 +35,36 @@ REPO = Path(__file__).resolve().parents[1]
 EXACT_CONDITIONS = ("model_requested", "clean_room", "threshold", "timeout_s")
 
 
+def _validated_cluster(spec: object) -> dict:
+    """Reject a malformed cluster the way eval_routing's own loader does.
+
+    A wildcard selection (`--case '*'`) matches any case whose id, coerced to a string,
+    fnmatch's the expression — including a missing id, which coerces to `""`. Without this
+    check that case reaches `selection_identity()`, which indexes `case["id"]` directly and
+    raises an uncaught `KeyError` instead of the resolver's documented exit code 2.
+    """
+    if not isinstance(spec, dict):
+        raise eval_routing.ProvenanceError("cluster error: top-level JSON value must be an object")
+    if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
+        raise eval_routing.ProvenanceError("cluster error: 'cluster' must be a non-empty string")
+    raw_cases = spec.get("cases")
+    if not isinstance(raw_cases, list) or not raw_cases:
+        raise eval_routing.ProvenanceError("cluster error: 'cases' must be a non-empty list")
+    for index, case in enumerate(raw_cases, start=1):
+        if not isinstance(case, dict):
+            raise eval_routing.ProvenanceError(f"cluster error: case #{index} must be an object")
+        case_id = case.get("id")
+        if not isinstance(case_id, str) or not case_id.strip():
+            raise eval_routing.ProvenanceError(f"cluster error: case #{index} must have a non-empty 'id'")
+        if not isinstance(case.get("prompt"), str) or not case["prompt"].strip():
+            raise eval_routing.ProvenanceError(f"cluster error: case {case_id!r} must have a non-empty 'prompt'")
+    return spec
+
+
 def desired_provenance(root: Path, cluster_path: Path, expression: str, limit: int) -> dict:
     """The provenance a run started right now would record — the comparison target."""
-    spec = json.loads(cluster_path.read_text(encoding="utf-8"))
-    cases = [case for case in spec.get("cases", [])
-             if isinstance(case, dict) and fnmatch.fnmatch(str(case.get("id", "")), expression)]
+    spec = _validated_cluster(json.loads(cluster_path.read_text(encoding="utf-8")))
+    cases = [case for case in spec["cases"] if fnmatch.fnmatch(case["id"], expression)]
     if limit:
         cases = cases[:limit]
     if not cases:
