@@ -518,7 +518,7 @@ class PluginWiringTests(unittest.TestCase):
     not a synthetic fixture that could drift away from it.
     """
 
-    def _issues_after(self, mutate) -> list[str]:
+    def _issues_after(self, mutate, *, check_adapters: bool = False) -> list[str]:
         with tempfile.TemporaryDirectory() as tmp:
             dst = Path(tmp) / "repo"
             # tests/ stays in the copy: AGENTS.md names `tests/fixtures/`, and the guide drift
@@ -527,12 +527,19 @@ class PluginWiringTests(unittest.TestCase):
                 REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__")
             )
             mutate(dst)
-            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+            # Default False: each test here checks ONE deliberate non-adapter breakage, and the
+            # adapter byte-compare they would otherwise all repeat is 59% of a validation run.
+            # A test that DOES mutate adapters must pass True — forgetting is loud (its
+            # asserted issue never appears), never a silent pass. AdapterCheckTierTests pins
+            # both sides of the flag.
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=check_adapters
+            )
             return issues
 
     def test_the_real_repo_is_a_valid_plugin(self) -> None:
         # The positive control. Without it, every test below could pass for the wrong reason.
-        self.assertEqual([], self._issues_after(lambda _: None))
+        self.assertEqual([], self._issues_after(lambda _: None, check_adapters=True))
 
     def test_behavioral_assertion_typo_fails_the_ordinary_fleet_gate(self) -> None:
         def mutate(repo: Path) -> None:
@@ -816,7 +823,7 @@ class PluginWiringTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-        issues = self._issues_after(mutate)
+        issues = self._issues_after(mutate, check_adapters=True)
         self.assertTrue(
             any(
                 "code-reviewer.toml" in issue
@@ -844,7 +851,7 @@ class PluginWiringTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-        issues = self._issues_after(mutate)
+        issues = self._issues_after(mutate, check_adapters=True)
         self.assertTrue(
             any(
                 "Codex manifest interface" in issue
@@ -866,7 +873,7 @@ class PluginWiringTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-        issues = self._issues_after(mutate)
+        issues = self._issues_after(mutate, check_adapters=True)
         self.assertTrue(
             any(
                 "Codex marketplace entry requires installation policy" in issue
@@ -1629,6 +1636,47 @@ class LearningLedgerWiringTests(unittest.TestCase):
             )
             issues = validate_fleet.validate_learning_ledger(dst)
         self.assertTrue(any(".learning-ledger.lock" in issue for issue in issues), issues)
+
+
+class AdapterCheckTierTests(unittest.TestCase):
+    """The T0/T1 tier boundary for adapter byte-drift.
+
+    check_adapters=False exists so the wiring mutation tests stop re-generating and
+    byte-comparing every host adapter to check one unrelated breakage. These two tests pin the
+    flag's semantics: True still reports drift (so retiring the recipe's separate
+    `generate --check` step loses nothing), and False genuinely skips it (so the speedup is
+    real, and a future adapter test that forgets to pass True fails loudly — its expected issue
+    never appears — instead of passing vacuously)."""
+
+    def _repo_with_drifted_adapter(self, tmp: str) -> Path:
+        dst = Path(tmp) / "repo"
+        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        adapter = sorted((dst / ".github" / "agents").glob("*.md"))[0]
+        adapter.write_text(
+            adapter.read_text(encoding="utf-8") + "\nhand edit\n", encoding="utf-8"
+        )
+        return dst
+
+    def test_flag_on_reports_hand_edited_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = self._repo_with_drifted_adapter(tmp)
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=True
+            )
+        self.assertTrue(issues, "hand-edited adapter must be reported when the check runs")
+
+    def test_flag_off_skips_only_the_adapter_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = self._repo_with_drifted_adapter(tmp)
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=False
+            )
+        self.assertEqual(
+            [],
+            issues,
+            "the only defect is adapter drift; skipping the adapter check must leave a clean "
+            "report",
+        )
 
 
 if __name__ == "__main__":
