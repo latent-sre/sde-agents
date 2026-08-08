@@ -9,9 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 from scripts import fleet_doctor
-
-
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO
 
 
 class FleetDoctorTests(unittest.TestCase):

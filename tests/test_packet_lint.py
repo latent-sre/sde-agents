@@ -7,18 +7,11 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
-import importlib.util
 import unittest
-from pathlib import Path
 
 from scripts import learning_ledger
-
-
-REPO = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location("packet_lint", REPO / "scripts" / "packet_lint.py")
-packet_lint = importlib.util.module_from_spec(_spec)
-assert _spec.loader is not None
-_spec.loader.exec_module(packet_lint)
+from scripts import packet_lint
+from tests.support import REPO
 
 COMPLIANT_REVIEW_PACKET = """
 ## Review packet

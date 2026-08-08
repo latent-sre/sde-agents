@@ -8,16 +8,15 @@ REUSABLE verdict costs nothing.
 """
 from __future__ import annotations
 
-import contextlib
 import copy
-import io
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO, run_main
+
 sys.path.insert(0, str(REPO / "scripts"))
 
 import eval_baseline  # noqa: E402
@@ -43,10 +42,7 @@ class EvalBaselineTests(unittest.TestCase):
         return path
 
     def _run(self, baselines: Path) -> tuple[int, str]:
-        stdout = io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):
-            code = eval_baseline.main(["--baselines-dir", str(baselines), *ARGS])
-        return code, stdout.getvalue()
+        return run_main(eval_baseline.main, "--baselines-dir", str(baselines), *ARGS)
 
     def test_exact_match_is_reusable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

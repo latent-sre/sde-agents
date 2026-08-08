@@ -11,9 +11,7 @@ from unittest import mock
 
 from scripts import generate_platform_adapters
 from scripts import validate_fleet
-
-
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO
 COPILOT_TOOL_ALIASES = {"agent", "edit", "execute", "read", "search", "web"}
 WRITE_TOOLS = {"Edit", "NotebookEdit", "Write"}
 

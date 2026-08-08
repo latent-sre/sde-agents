@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from scripts import validate_fleet
+from tests.support import REPO, repo_copy
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -476,9 +477,6 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertEqual([], [i for i in issues if "skills:" in i], issues)
 
 
-REPO = Path(__file__).resolve().parents[1]
-
-
 def _add_guarded_name(repo: Path, name: str) -> None:
     """Add one name to a repo COPY's GUARDED_AGENT_NAMES, whatever formatting the literal uses.
 
@@ -519,13 +517,7 @@ class PluginWiringTests(unittest.TestCase):
     """
 
     def _issues_after(self, mutate, *, check_adapters: bool = False) -> list[str]:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            # tests/ stays in the copy: AGENTS.md names `tests/fixtures/`, and the guide drift
-            # check resolves every multi-segment path it asserts.
-            shutil.copytree(
-                REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
+        with repo_copy() as dst:
             mutate(dst)
             # Default False: each test here checks ONE deliberate non-adapter breakage, and the
             # adapter byte-compare they would otherwise all repeat is 59% of a validation run.
@@ -1469,9 +1461,7 @@ class RoutingClusterTests(unittest.TestCase):
     def test_reintroducing_the_observed_inconsistency_is_reported(self) -> None:
         # The exact defect EVAL-001 was opened on, proven against a COPY of the real repository
         # rather than a synthetic shape that could drift away from the actual cluster file.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             path = dst / "evals" / "routing" / "craft-vs-fullstack.json"
             doc = json.loads(path.read_text(encoding="utf-8"))
             case = next(c for c in doc["cases"] if c["id"] == "pos-ci-actions-harden")
@@ -1489,9 +1479,7 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
     def test_workflow_evidence_enum_drift_is_reported(self) -> None:
         # Proven against a COPY of the real repository so the test breaks the actual shipped
         # workflow, not a synthetic shape that could drift away from it.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             wf = dst / "workflows" / "deep-review.js"
             wf.write_text(
                 wf.read_text(encoding="utf-8").replace(
@@ -1513,9 +1501,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
         # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way
         # Windows checkout translation did on installed 1.6.10 (#75) — the failure the rule
         # exists to catch — rather than a synthetic file that could drift from the real shape.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             wf = dst / "workflows" / "deep-review.js"
             wf.write_bytes(wf.read_bytes().replace(b"\n", b"\r\n"))
             issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
@@ -1529,9 +1515,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
         # and the Workflow tool would refuse to run them. The byte check alone cannot catch
         # this because the file on disk stays LF until the next checkout. Verify that the
         # validator fires when only the rule is removed (bytes left intact).
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             ga = dst / ".gitattributes"
             ga.write_text(
                 "\n".join(
@@ -1550,9 +1534,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
     def test_missing_gitattributes_file_is_reported(self) -> None:
         # Deleting the whole file is the same configuration regression as deleting its JS
         # rule. An existence guard must not turn the more severe mutation into a false green.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             (dst / ".gitattributes").unlink()
             issues = validate_fleet.validate_workflow_line_endings(dst)
         self.assertTrue(
@@ -1566,9 +1548,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
 
 class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_adapter_referencing_workflow_is_reported(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             adapter = next(iter(sorted((dst / ".github" / "agents").glob("*.md"))))
             adapter.write_text(
                 adapter.read_text(encoding="utf-8")
@@ -1582,9 +1562,7 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
         # Generated skill resources are not limited to the prose/config suffixes originally
         # scanned here. A shell asset carrying the same unusable instruction must not bypass
         # the host boundary merely because its extension was absent from a validator tuple.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             resource = dst / "platforms" / "copilot" / "skills" / "probe" / "scripts" / "run.sh"
             resource.parent.mkdir(parents=True)
             resource.write_text("Run /sde-agents:deep-review before merging.\n", encoding="utf-8")
@@ -1594,9 +1572,7 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_untracked_python_cache_is_not_treated_as_a_shipped_workflow_reference(self) -> None:
         # The adapter generator already excludes runtime bytecode from distributable outputs.
         # A local import must not make the host-boundary scan certify a different file set.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             byproduct = (
                 dst / "platforms" / "copilot" / "skills" / "probe" / "__pycache__" / "probe.pyc"
             )
@@ -1615,18 +1591,14 @@ class LearningLedgerWiringTests(unittest.TestCase):
         self.assertEqual([], validate_fleet.validate_learning_ledger(REPO))
 
     def test_tracked_candidate_corruption_fails_the_ordinary_validator(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             candidate = next((dst / "learning" / "candidates").glob("lc_*.json"))
             candidate.write_text("{}\n", encoding="utf-8")
             issues = validate_fleet.validate_learning_ledger(dst)
         self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
 
     def test_transactional_ignore_drift_is_reported(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             ignore = dst / ".gitignore"
             ignore.write_text(
                 ignore.read_text(encoding="utf-8").replace(
@@ -1648,26 +1620,23 @@ class AdapterCheckTierTests(unittest.TestCase):
     real, and a future adapter test that forgets to pass True fails loudly — its expected issue
     never appears — instead of passing vacuously)."""
 
-    def _repo_with_drifted_adapter(self, tmp: str) -> Path:
-        dst = Path(tmp) / "repo"
-        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    def _drift_adapter(self, dst: Path) -> None:
         adapter = sorted((dst / ".github" / "agents").glob("*.md"))[0]
         adapter.write_text(
             adapter.read_text(encoding="utf-8") + "\nhand edit\n", encoding="utf-8"
         )
-        return dst
 
     def test_flag_on_reports_hand_edited_adapter(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = self._repo_with_drifted_adapter(tmp)
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
             issues, _, _ = validate_fleet.validate_repo(
                 dst, check_inventory=False, check_adapters=True
             )
         self.assertTrue(issues, "hand-edited adapter must be reported when the check runs")
 
     def test_flag_off_skips_only_the_adapter_check(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = self._repo_with_drifted_adapter(tmp)
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
             issues, _, _ = validate_fleet.validate_repo(
                 dst, check_inventory=False, check_adapters=False
             )
