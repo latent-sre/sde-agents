@@ -53,7 +53,9 @@ jobs:
         run: ${{ matrix.py }} scripts/validate_fleet.py
 
       - name: Run repository unit tests
-        run: ${{ matrix.py }} -m unittest discover -s tests -v
+        # --durations 10 (Python 3.12+) prints the slowest tests in every log: the suite's
+        # slow-creep gets rediscovered by reading CI instead of by a profiling session.
+        run: ${{ matrix.py }} -m unittest discover -s tests -v --durations 10
 
   ledger-drift:
     # Findings are advisory; inability to inspect the repository is blocking. A pending learning
