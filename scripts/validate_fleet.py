@@ -868,11 +868,17 @@ def load_module_by_content(source: Path, name: str):
     and gets a fresh import, so the cache can never certify code it did not load.
 
     The key covers every sibling `*.py` next to the script, not just the script itself: these
-    scripts import each other by paths derived from their own `__file__` at import time
-    (eval_behavioral pulls in eval_routing and packet_lint this way), so a module cached on its
-    own bytes alone could be served for a tree whose DEPENDENCIES were mutated — a false pass
-    caught in review. Hashing the whole sibling set costs ~1ms; a directory-wide miss on any
-    mutation is the price of never validating one tree with another tree's code.
+    scripts import each other by paths derived from their own `__file__` at import time, so a
+    module cached on its own bytes alone could be served for a tree whose DEPENDENCIES were
+    mutated — a false pass caught in review. Hashing the whole sibling set costs ~1ms; a
+    directory-wide miss on any mutation is the price of never validating one tree with another
+    tree's code.
+
+    The cache is ONLY for scripts whose import binds no repository content beyond scripts/.
+    A script that captures fleet state at import — eval_behavioral, whose import chain globs
+    agents/ into FLEET_AGENTS — must be imported fresh per tree instead (see
+    validate_behavioral_contracts), because no affordable byte key can cover everything an
+    import might read.
 
     Returns None when no import spec can be built (the caller owns that message); a module
     whose exec raises is never cached, so a broken script fails on every call, not just the first.
@@ -1383,10 +1389,18 @@ def validate_behavioral_contracts(
             f"{runner}: behavioral case files exist without their schema validator; typoed "
             "assertions could be ignored until an expensive live run."
         ]
+    # Deliberately NOT load_module_by_content: importing this runner captures the tree's fleet
+    # roster (eval_routing's FLEET_AGENTS globs agents/ at import time), so two trees with
+    # identical scripts but different agents would share one roster and a case naming an agent
+    # only the OTHER tree ships would pass silently (caught in review on #91). Content the
+    # import binds is not in any byte key we can afford to maintain, so this module pays a
+    # fresh import per call.
+    spec = importlib.util.spec_from_file_location("eval_behavioral_validator", runner)
+    if spec is None or spec.loader is None:
+        return [f"{runner}: cannot load behavioral case schema validator"]
+    module = importlib.util.module_from_spec(spec)
     try:
-        module = load_module_by_content(runner, "eval_behavioral_validator")
-        if module is None:
-            return [f"{runner}: cannot load behavioral case schema validator"]
+        spec.loader.exec_module(module)
     except Exception as exc:
         return [
             f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "

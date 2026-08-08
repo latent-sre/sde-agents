@@ -1632,6 +1632,29 @@ class LearningLedgerWiringTests(unittest.TestCase):
             any("could not load" in issue for issue in issues), issues
         )
 
+    def test_behavioral_validator_never_reuses_another_trees_fleet_roster(self) -> None:
+        # Importing eval_behavioral captures FLEET_AGENTS by globbing the tree's agents/ at
+        # import time — repository CONTENT, not script bytes, so the sibling-bytes module cache
+        # must not serve it (caught in review on #91). Warm an import on a tree that ships a
+        # phantom agent, then validate a tree without it whose contracts name that agent: a
+        # reused roster would accept the case silently.
+        with repo_copy() as dst:
+            (dst / "agents" / "phantom.md").write_text("---\nname: phantom\n---\n",
+                                                       encoding="utf-8")
+            validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        with repo_copy() as dst:
+            path = dst / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = json.loads(json.dumps(document["cases"][0]))
+            case["id"] = "phantom-roster-tripwire"
+            case["agent"] = "sde-agents:phantom"
+            document["cases"].append(case)
+            path.write_text(json.dumps(document), encoding="utf-8")
+            issues = validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        self.assertTrue(
+            any("does not name a shipped agent" in issue for issue in issues), issues
+        )
+
     def test_transactional_ignore_drift_is_reported(self) -> None:
         with repo_copy() as dst:
             ignore = dst / ".gitignore"
