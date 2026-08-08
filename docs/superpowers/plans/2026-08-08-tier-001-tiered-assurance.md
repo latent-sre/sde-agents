@@ -389,7 +389,8 @@ a STALE verdict names what diverged so the operator knows why a fresh capture is
 Match policy (TIER-001 spec, operator-approved 2026-08-08): provenance exact on schema,
 eval_sources, selection, evaluator, and the plugin content hash; conditions exact on
 model_requested, clean_room, threshold, timeout_s. cli_version is advisory — the probe, not
-the eval suite, owns CLI drift — so a mismatch is printed but does not stale the verdict.
+the eval suite, owns CLI drift — so the recorded value is printed as a note, never compared,
+and never stales the verdict.
 
 Exit codes: 0 a reusable benchmark exists (newest path printed), 1 none does (divergences
 printed per same-cluster candidate), 2 usage or provenance error.
