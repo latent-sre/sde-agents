@@ -196,6 +196,11 @@ enough to skim past stops working, and each section in it was added for an obser
   silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
   armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
   not error at load time, it silently drops what it was meant to configure.
+- **Proportionality gates both directions.** Repeated work is a defect — evidence produced once is
+  reused, and a check that re-proves what another check proved does not ship. An optimization
+  without a paired same-machine measurement is equally a defect. And a mechanism without a
+  demonstrated consumer — a new abstraction, config surface, component, or gate with no real task
+  needing it now — waits trigger-bound, the way the roadmap's deferred items do.
 - **Owned conventions.** Several files deliberately paraphrase another — the `eng-ladder` altitude
   references, the three-strikes rule owned by `skills/root-cause`, the canonical
   fetched-content-is-data sentence carried verbatim by `sde-fullstack`. Each such file states which
