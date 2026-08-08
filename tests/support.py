@@ -14,14 +14,53 @@ import hashlib
 import io
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
+import unittest
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
 _IGNORED_DIRS = {".git", "__pycache__"}
+
+
+def create_directory_link(target: Path, link: Path) -> None:
+    """Create the link primitive that can redirect directory traversal on this host.
+
+    Windows junctions stand in where symlinks need privilege; POSIX gets a real symlink. Tests
+    that exercise link handling use this so the same test covers both primitives across the CI
+    matrix, skipping only where the host can create neither.
+    """
+    if os.name == "nt":
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode:
+            raise unittest.SkipTest(
+                f"cannot create a Windows junction for the regression test: {result.stderr}"
+            )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def remove_directory_link(link: Path) -> None:
+    if link.is_symlink():
+        link.unlink()
+    elif link.exists():
+        link.rmdir()
+
+
+def _is_link(path: Path) -> bool:
+    """True for symlinks AND Windows reparse points (junctions), which is_symlink() misses."""
+    if path.is_symlink():
+        return True
+    attributes = getattr(path.lstat(), "st_file_attributes", 0)
+    return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
 
 
 def _walk_files(root: Path) -> Iterator[Path]:
@@ -64,16 +103,20 @@ class _RepoPool:
 
     def restore(self) -> None:
         """Return the working tree to exactly the manifest's content, whatever the last test did."""
-        # Symlinks first: the template is link-free by construction (copytree resolves links),
-        # so any link here is borrower residue — and hashing or copyfile would follow it,
-        # letting a restore WRITE THROUGH the link to a target outside the pool (caught in
-        # review on #91). Unlinking the link itself makes the content passes below see a plain
-        # missing file and restore it from the template.
+        # Links first: the template is link-free by construction (copytree resolves links), so
+        # any symlink OR Windows junction here is borrower residue — and hashing or copyfile
+        # would follow it, letting a restore WRITE THROUGH the link to a target outside the
+        # pool (caught in review on #91, junctions included: is_symlink() alone misses them).
+        # Removing the link itself makes the content passes below see a plain missing entry
+        # and restore it from the template.
         for path in sorted(self.work.rglob("*")):
-            if path.is_symlink() and not any(
-                part in _IGNORED_DIRS for part in path.relative_to(self.work).parts
-            ):
-                path.unlink()
+            if any(part in _IGNORED_DIRS for part in path.relative_to(self.work).parts):
+                continue
+            try:
+                if _is_link(path):
+                    remove_directory_link(path) if path.is_dir() else path.unlink()
+            except FileNotFoundError:
+                continue  # a child of a link removed earlier in this pass
         seen: set[Path] = set()
         for path in _walk_files(self.work):
             rel = path.relative_to(self.work)

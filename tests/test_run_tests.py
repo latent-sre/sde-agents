@@ -69,6 +69,22 @@ class ParallelRunnerTests(unittest.TestCase):
             code, _ = self._run(Path(tmp))
         self.assertEqual(2, code)
 
+    def test_package_with_only_a_load_tests_hook_also_refuses_to_run(self) -> None:
+        # A package __init__ carrying load_tests contributes tests on EVERY discovery pass, so
+        # per-module children would run them once per top-level module instead of once per
+        # suite (Codex review on #91). No nested test_*.py file exists to trip the other
+        # guard, so the package itself must be the tripwire.
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
+            package = Path(tmp) / "hookpkg"
+            package.mkdir()
+            (package / "__init__.py").write_text(
+                "def load_tests(loader, tests, pattern):\n    return tests\n",
+                encoding="utf-8",
+            )
+            code, _ = self._run(Path(tmp))
+        self.assertEqual(2, code)
+
     def test_non_importable_fixture_trees_do_not_block_the_run(self) -> None:
         # Fixture repos may carry test-shaped filenames without __init__.py chains; discovery
         # ignores them, so the runner must too rather than refusing to run the real suite.

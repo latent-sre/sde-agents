@@ -884,32 +884,41 @@ def load_module_by_content(source: Path, name: str):
     whose exec raises is never cached, so a broken script fails on every call, not just the first.
     """
     digest = hashlib.sha256()
+    source_bytes: bytes | None = None
     for sibling in sorted(source.parent.glob("*.py")):
+        data = sibling.read_bytes()
         digest.update(sibling.name.encode("utf-8"))
-        digest.update(sibling.read_bytes())
+        digest.update(data)
+        if sibling == source:
+            source_bytes = data
+    if source_bytes is None:
+        return None
     key = (source.name, digest.digest())
     module = _MODULES_BY_SOURCE.get(key)
     if module is None:
-        module = _execute_source(source, name)
+        module = _execute_source(source, name, source_bytes)
         if module is None:
             return None
         _MODULES_BY_SOURCE[key] = module
     return module
 
 
-def _execute_source(source: Path, name: str):
-    """Build a module by compiling the file's current bytes, bypassing bytecode caches.
+def _execute_source(source: Path, name: str, data: bytes | None = None):
+    """Build a module by compiling the given bytes, bypassing bytecode caches.
 
     SourceFileLoader.exec_module trusts a __pycache__ entry validated only by (mtime, size), so
-    a same-size rewrite inside one timestamp tick would execute the PREVIOUS contents while the
-    digest above describes the new ones (caught in review on #91). Compiling the read bytes
-    directly is eval_routing's checked-buffer convention: what was hashed is exactly what runs.
+    a same-size rewrite inside one timestamp tick would execute the PREVIOUS contents while a
+    content digest describes the new ones (caught in review on #91). Compiling the buffer
+    directly is eval_routing's checked-buffer convention: what was hashed is exactly what runs
+    — which is also why callers that hashed pass the SAME bytes rather than letting this
+    function re-read a file that may have changed in between.
     """
     spec = importlib.util.spec_from_file_location(name, source)
     if spec is None or spec.loader is None:
         return None
     module = importlib.util.module_from_spec(spec)
-    exec(compile(source.read_bytes(), str(source), "exec"), module.__dict__)
+    exec(compile(data if data is not None else source.read_bytes(), str(source), "exec"),
+         module.__dict__)
     return module
 
 

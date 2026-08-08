@@ -30,30 +30,23 @@ from pathlib import Path
 RAN_RE = re.compile(r"^Ran (\d+) tests? in ", re.MULTILINE)
 
 
-def nested_test_modules(start_dir: Path) -> list[Path]:
-    """test_*.py files that serial discovery would run but the top-level glob would not.
+def importable_packages(start_dir: Path) -> list[Path]:
+    """Importable packages under the start directory — grounds for refusing to run.
 
-    `unittest discover` recurses into importable packages (each level carrying __init__.py).
-    This runner collects only top-level modules, so a nested package added later would be
-    silently skipped while CI stayed green — the exact class of failure the suite exists to
-    make loud. Detecting the divergence and refusing to run beats guessing at discovery
-    semantics; fixture trees without __init__.py chains are excluded the same way discovery
-    excludes them.
+    `unittest discover` recurses into importable packages (each level carrying __init__.py),
+    collects their test_*.py files, and honors a package __init__'s `load_tests` hook — the
+    hook fires on EVERY discovery pass, so this runner's per-module children would execute it
+    once per top-level module instead of once per suite. Either shape silently diverges from
+    the serial invocation (skipped nested modules, multiplied package-level tests), so any
+    importable package is refused outright rather than guessing at discovery semantics.
+    Fixture trees without __init__.py are excluded the same way discovery excludes them; flat
+    shared helpers (tests/support.py) are the sanctioned alternative to helper packages.
     """
-    nested = []
-    for path in sorted(start_dir.rglob("test_*.py")):
-        if path.parent == start_dir:
-            continue
-        walk = path.parent
-        importable = True
-        while walk != start_dir:
-            if not (walk / "__init__.py").exists():
-                importable = False
-                break
-            walk = walk.parent
-        if importable:
-            nested.append(path)
-    return nested
+    return sorted(
+        path.parent
+        for path in start_dir.rglob("__init__.py")
+        if path.parent != start_dir
+    )
 
 
 def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[Path, int, str, list[str]]:
@@ -81,11 +74,12 @@ def main(argv: list[str] | None = None) -> int:
     if not modules:
         print(f"error: no test_*.py modules under {start_dir}", file=sys.stderr)
         return 2
-    nested = nested_test_modules(start_dir)
-    if nested:
+    packages = importable_packages(start_dir)
+    if packages:
         print(
-            "error: nested test packages exist that serial discovery would run but this "
-            "runner would silently skip: " + ", ".join(str(p) for p in nested)
+            "error: importable packages under the start directory diverge from serial "
+            "discovery (nested modules would be skipped; a load_tests hook would run once "
+            "per child): " + ", ".join(str(p) for p in packages)
             + " — flatten them into the start directory or extend the runner first.",
             file=sys.stderr,
         )

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -12,34 +11,13 @@ from unittest import mock
 
 from scripts import generate_platform_adapters
 from scripts import validate_fleet
-from tests.support import REPO, git
+from tests.support import REPO, create_directory_link, git, remove_directory_link
 COPILOT_TOOL_ALIASES = {"agent", "edit", "execute", "read", "search", "web"}
 WRITE_TOOLS = {"Edit", "NotebookEdit", "Write"}
 
 
-def _create_directory_link(target: Path, link: Path) -> None:
-    """Create the link primitive that can redirect directory traversal on this host."""
-
-    if os.name == "nt":
-        result = subprocess.run(
-            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode:
-            raise unittest.SkipTest(
-                f"cannot create a Windows junction for the regression test: {result.stderr}"
-            )
-    else:
-        link.symlink_to(target, target_is_directory=True)
-
-
-def _remove_directory_link(link: Path) -> None:
-    if link.is_symlink():
-        link.unlink()
-    elif link.exists():
-        link.rmdir()
+_create_directory_link = create_directory_link
+_remove_directory_link = remove_directory_link
 
 
 class PlatformAdapterTests(unittest.TestCase):

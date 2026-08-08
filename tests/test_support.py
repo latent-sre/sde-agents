@@ -9,12 +9,13 @@ see it.
 """
 from __future__ import annotations
 
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 from tests import support
-from tests.support import repo_copy
+from tests.support import create_directory_link, repo_copy
 
 
 def _relative_snapshot(root: Path) -> dict[Path, bytes]:
@@ -102,6 +103,29 @@ class RepoPoolRestoreTests(unittest.TestCase):
                 self.assertFalse((dst / target).is_symlink())
                 self.assertEqual(original, (dst / target).read_bytes())
             self.assertEqual("outside content\n", victim.read_text(encoding="utf-8"))
+
+    def test_directory_replaced_by_a_link_is_restored_without_writing_through(self) -> None:
+        # The directory variant of the symlink escape, which on Windows is a JUNCTION that
+        # is_symlink() does not report (Codex review on #91): restoration must remove the link
+        # primitive itself and rebuild the real directory, never writing into the link target.
+        victim_dir = Path("hooks")
+        with tempfile.TemporaryDirectory() as outside_dir:
+            outside = Path(outside_dir) / "decoy"
+            outside.mkdir()
+            with repo_copy() as dst:
+                originals = {
+                    p.name: p.read_bytes() for p in (dst / victim_dir).iterdir() if p.is_file()
+                }
+                self.assertTrue(originals, "fixture assumption: hooks/ ships files")
+                shutil.rmtree(dst / victim_dir)
+                try:
+                    create_directory_link(outside, dst / victim_dir)
+                except OSError as exc:
+                    self.skipTest(f"cannot create directory links here: {exc}")
+            with repo_copy() as dst:
+                for name, content in originals.items():
+                    self.assertEqual(content, (dst / victim_dir / name).read_bytes(), name)
+            self.assertEqual([], list(outside.iterdir()), "restore wrote through the link")
 
     def test_deleted_directory_contents_are_restored(self) -> None:
         # A borrower that removes a whole subtree (files and all) must not leave the next
