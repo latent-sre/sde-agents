@@ -1497,6 +1497,115 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
 
+class WorkflowMetaContractTests(unittest.TestCase):
+    def test_statement_before_meta_is_reported(self) -> None:
+        # Mutation against a COPY of the real shipped workflow, in exactly the shape a merged
+        # review-fix commit shipped it: constants declared above `export const meta`. Valid
+        # JavaScript, invisible to review, unloadable by the Workflow runtime.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                "const SCOPE_MODEL = 'sonnet'\n" + wf.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("first statement" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_identifier_inside_meta_is_reported(self) -> None:
+        # The other half of the same merged breakage: meta.phases referencing a constant.
+        # The runtime requires meta to be a pure literal, so the reference fails at load.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "model: 'sonnet'", "model: SCOPE_MODEL", 1
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("pure literal" in i and "SCOPE_MODEL" in i for i in issues), issues
+        )
+
+    def test_meta_contract_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_meta_contract(REPO)
+        self.assertEqual(issues, [])
+
+    def test_leading_block_comment_is_not_a_violation(self) -> None:
+        # A `/* ... */` licence or rationale block ahead of meta is a comment, not a statement.
+        # A first-statement scan that only skips `//` lines fails a workflow the runtime loads
+        # fine -- a false positive that would teach maintainers to work around the rule.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                "/* Deep review pipeline.\n   const SCOPE_MODEL = 'sonnet'\n*/\n"
+                + wf.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_fleet.validate_workflow_meta_contract(dst), [])
+
+    def test_meta_prefixed_export_without_meta_is_reported(self) -> None:
+        # `export const metadata = {...}` shares the prefix but exports no `meta` at all, so a
+        # prefix check reads it as satisfied and the workflow cannot load.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "export const meta =", "export const metadata =", 1
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("first statement" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_identifier_inside_meta_array_is_reported(self) -> None:
+        # The pure-literal contract is violated the same way whether the identifier follows a
+        # colon or sits inside an array, but only the colon form is visible to a value-position
+        # scan -- so the array form would ship unloadable with the validator green.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "phases: [", "phases: [SCOPE_PHASE,", 1
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("pure literal" in i and "SCOPE_PHASE" in i for i in issues), issues
+        )
+
+    def test_template_literal_inside_meta_is_reported(self) -> None:
+        # An interpolating template literal is not a pure literal, and its identifier hides
+        # inside the string span where no identifier scan can reach it -- so the construct
+        # itself must be the finding.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "model: 'sonnet'", "model: `${SCOPE_MODEL}`", 1
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("template literal" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_non_object_meta_is_reported_not_raised(self) -> None:
+        # `export const meta = null` has no brace to match: the brace search raised ValueError
+        # and crashed the whole validator instead of reporting the workflow that cannot load.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text("export const meta = null\n", encoding="utf-8")
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(any("first statement" in i for i in issues), issues)
+
+
 class WorkflowLineEndingTests(unittest.TestCase):
     def test_crlf_workflow_is_reported(self) -> None:
         # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way

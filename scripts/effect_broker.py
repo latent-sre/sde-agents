@@ -729,16 +729,47 @@ class ReplayLedger:
                         "resolved, and an already-resolved row is never silently overwritten"
                     )
 
+    def has_ledger_schema(self) -> bool:
+        """True when the file already holds an initialized ledger, checked without creating one.
+
+        `initialize()` is CREATE-IF-NOT-EXISTS, which is right for every verb that writes and
+        wrong for the one that audits: pointed at a typo'd path, an empty placeholder, or a
+        ledger truncated to zero bytes, it would build a fresh schema and let verify certify an
+        audit of nothing (checked: 0, exit 0). This reads sqlite_master instead, so a file that
+        is not already a ledger stays not-a-ledger and verify fails closed."""
+        if not self.path.is_file():
+            return False
+        try:
+            with closing(sqlite3.connect(self.path)) as connection:
+                row = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'consumptions'"
+                ).fetchone()
+        except sqlite3.Error:
+            # Not a database at all (or unreadable as one) -- equally not an auditable ledger.
+            return False
+        return row is not None
+
     def list_resolved(self) -> list[dict[str, object]]:
-        """Every terminally resolved row, carrying the fields its stored signature signs over.
+        """Every row showing any terminal-resolution marker, for signature re-verification.
 
         The projection is exactly `_resolution_signature`'s payload plus the stored signature
         itself -- status included, because an unsigned status edit ('resolved-executed' <->
-        'resolved-not-executed') would otherwise rewrite the recorded outcome undetected, and
-        a predicate reading status FROM the row would let the same edit hide it from
-        verification entirely. This is the read path `reconcile verify` re-checks; until it
-        existed the stored signature had no reader at all, so the column looked like
-        tamper-evidence while doing no tamper-detection work."""
+        'resolved-not-executed') would otherwise rewrite the recorded outcome undetected.
+
+        The selector is a disjunction over every terminal marker, never a single column: a
+        predicate keyed on one signed field (the previous `resolution IS NOT NULL`) let an
+        attacker NULL that field and drop the row from inspection entirely -- verify reported
+        checked: 0 and exited 0 while status, resolved_at, and the signature still showed a
+        terminal resolution.
+
+        Erasing all seven markers is not an escape either, because the last disjunct closes the
+        gap between the two reconciliation reports. `list_unresolved` only covers 'reserved' and
+        'unknown', so a row whose status was edited to something else (say 'executed') with every
+        marker NULLed would otherwise appear in neither report. Any status outside that pair
+        means the row must be a finished execution, and finish() always writes finished_at and
+        evidence_id together -- so a row missing either, or still carrying the unknown_at
+        lifecycle marker, is out of contract and belongs in the audit set, where it reports as
+        the unsigned row it is."""
         self.initialize()
         with closing(sqlite3.connect(self.path)) as connection:
             connection.row_factory = sqlite3.Row
@@ -747,7 +778,21 @@ class ReplayLedger:
                 SELECT nonce, status, resolution, resolved_at, resolved_by, resolution_note,
                        resolution_evidence_id, resolution_signature
                 FROM consumptions
-                WHERE resolution IS NOT NULL
+                WHERE status LIKE 'resolved-%'
+                   OR resolution IS NOT NULL
+                   OR resolved_at IS NOT NULL
+                   OR resolved_by IS NOT NULL
+                   OR resolution_note IS NOT NULL
+                   OR resolution_evidence_id IS NOT NULL
+                   OR resolution_signature IS NOT NULL
+                   OR (
+                        status NOT IN ('reserved', 'unknown')
+                        AND (
+                            unknown_at IS NOT NULL
+                            OR finished_at IS NULL
+                            OR evidence_id IS NULL
+                        )
+                      )
                 ORDER BY resolved_at
                 """
             ).fetchall()
@@ -934,6 +979,42 @@ def _resolution_signature(key: bytes, row: dict[str, object]) -> str:
     ).hexdigest()
 
 
+def _legacy_resolution_signature(key: bytes, row: dict[str, object]) -> str:
+    """The pre-migration (v1) signature payload: no evidence_id, no status.
+
+    Rows resolved before the payload gained those fields carry signatures over this shape.
+    Verification tries it only after the current construction fails, so a v1 row reports as
+    its own migration finding instead of being mislabeled as tampering -- an operator triaging
+    a red verify must be able to tell re-sign-after-upgrade from an attack."""
+    return hmac.new(
+        key,
+        _canonical(
+            {
+                "nonce": row["nonce"],
+                "resolution": row["resolution"],
+                "resolved_at": row["resolved_at"],
+                "resolved_by": row["resolved_by"],
+                "note": row["resolution_note"],
+            }
+        ),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+# Every column whose stored value enters a signature payload. Verification type-checks these
+# before canonicalizing: json.dumps raises on bytes, so a BLOB planted in any one of them would
+# otherwise turn reportable tampering into an uncaught traceback.
+_SIGNED_COLUMNS = (
+    "nonce",
+    "status",
+    "resolution",
+    "resolved_at",
+    "resolved_by",
+    "resolution_note",
+    "resolution_evidence_id",
+)
+
+
 def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]:
     """Re-check every stored resolution signature against the approval key.
 
@@ -943,11 +1024,13 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
     construction from each resolved row and compares with a constant-time digest check.
 
     Returns {"checked": N, "verified": [nonces], "findings": [{nonce, problem}]}; the CLI
-    exits 1 when findings is non-empty, so automation can gate on it. Policy is strict: a
-    resolved row with no stored signature is an "unsigned" finding, because NULLing the
-    signature is within reach of anyone who can edit a signed field, and a stored signature
-    that is not a 64-character ASCII hex digest is a "malformed-signature" finding -- a value
-    the write side can never produce is tampering to report, not a comparison to crash on.
+    exits 1 when findings is non-empty, so automation can gate on it. Policy is strict, and
+    every abnormal shape is a distinct reportable finding rather than a skip or a crash:
+    "unsigned" (no stored signature -- NULLing it is within reach of anyone who can edit a
+    signed field), "malformed-signature" (not a 64-char ASCII hex digest), "malformed-field"
+    (a non-text value planted in a signed column), "legacy-signature" (verifies under the
+    pre-migration payload -- re-sign or retire, but it is not tampering), and "mismatch"
+    (verifies under neither construction).
     """
     if len(key) < 32:
         raise BrokerError("verification key must contain at least 32 bytes")
@@ -955,14 +1038,22 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
     findings: list[dict[str, object]] = []
     rows = ledger.list_resolved()
     for row in rows:
+        # The nonce names the row in findings; if it was itself tampered into a non-string,
+        # report its repr rather than letting a bytes value crash the CLI's JSON rendering.
+        nonce = row["nonce"] if isinstance(row["nonce"], str) else repr(row["nonce"])
         stored = row["resolution_signature"]
-        if not stored:
+        if stored is None:
             # Strict by operator ruling: an unsigned resolved row is a finding, never a skip.
             # Whoever can UPDATE a signed field can also NULL the signature, so treating
             # "unsigned" as benign legacy state would hand tampering an evasion path -- a
             # pre-migration ledger goes red here and earns its green by re-resolution or an
             # explicitly recorded retirement, not by silence.
-            findings.append({"nonce": row["nonce"], "problem": "unsigned"})
+            #
+            # Only SQL NULL is "unsigned". An empty string (or any other falsy non-NULL value)
+            # is something the write side can never produce, so it falls through to the shape
+            # check below and reports as the malformed signature it is -- classifying it as
+            # merely unsigned would describe deliberate tampering as absence.
+            findings.append({"nonce": nonce, "problem": "unsigned"})
             continue
         if not (
             isinstance(stored, str)
@@ -971,12 +1062,23 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
             # A non-hex, non-ASCII, or non-string stored value cannot be a write-time
             # signature; comparing it as one would raise (compare_digest requires matching
             # ASCII-only str or bytes) and turn reportable tampering into a traceback.
-            findings.append({"nonce": row["nonce"], "problem": "malformed-signature"})
+            findings.append({"nonce": nonce, "problem": "malformed-signature"})
+            continue
+        if any(
+            not isinstance(row[column], (str, type(None))) for column in _SIGNED_COLUMNS
+        ):
+            # A BLOB or numeric value in a signed column can never come from the write side;
+            # canonicalizing it would raise inside json.dumps, so classify it instead of
+            # crashing. A NULLed text field deliberately falls through to the signature
+            # comparison -- None canonicalizes fine and reports as the mismatch it is.
+            findings.append({"nonce": nonce, "problem": "malformed-field"})
             continue
         if hmac.compare_digest(_resolution_signature(key, row), stored):
-            verified.append(row["nonce"])
+            verified.append(nonce)
+        elif hmac.compare_digest(_legacy_resolution_signature(key, row), stored):
+            findings.append({"nonce": nonce, "problem": "legacy-signature"})
         else:
-            findings.append({"nonce": row["nonce"], "problem": "mismatch"})
+            findings.append({"nonce": nonce, "problem": "mismatch"})
     return {"checked": len(rows), "verified": verified, "findings": findings}
 
 
@@ -1200,6 +1302,16 @@ def main(argv: list[str] | None = None) -> int:
             result = ledger.list_unresolved()
         elif args.reconcile_command == "verify":
             ledger = ReplayLedger(args.ledger, args.workspace_root)
+            if not ledger.has_ledger_schema():
+                # ReplayLedger.initialize() creates a fresh empty database on first use, which
+                # is right for every other verb but would let verify certify a ledger that
+                # never existed -- a typo'd --ledger path, or one that happens to hit an empty
+                # placeholder file, reads as a clean audit (checked: 0, exit 0). An audit of
+                # nothing fails closed instead, and verify never creates what it audits.
+                raise BrokerError(
+                    f"no initialized replay ledger at {args.ledger} -- verify audits an "
+                    "existing ledger and never creates one"
+                )
             key = _read_key(args.key_file, args.workspace_root)
             result = verify_resolutions(ledger, key=key)
         else:
