@@ -946,8 +946,8 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
     exits 1 when findings is non-empty, so automation can gate on it. Policy is strict: a
     resolved row with no stored signature is an "unsigned" finding, because NULLing the
     signature is within reach of anyone who can edit a signed field, and a stored signature
-    that is not a 64-character ASCII hex digest is a "malformed" finding -- a value the write
-    side can never produce is tampering to report, not a comparison to crash on.
+    that is not a 64-character ASCII hex digest is a "malformed-signature" finding -- a value
+    the write side can never produce is tampering to report, not a comparison to crash on.
     """
     if len(key) < 32:
         raise BrokerError("verification key must contain at least 32 bytes")
