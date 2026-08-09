@@ -45,6 +45,15 @@ brokered, are untouched.
    bounded effect; re-gate exactly when the next action adds a materially new outage, exposure,
    deletion, authority, or custody consequence; initialization/root generation, credential
    destruction, recovery-material retirement, and service teardown always keep distinct gates.
+5. **Bundled by operator ruling 2026-08-09 (`lc_ac166609`): the same precondition-scoping
+   policy applied to `agents/verification-engineer.md` Method 5.** On an engine-less host the
+   unconditional container mandate makes every executable check inconclusive — the verifier is
+   the only fleet member barred from running the suite the builder already runs unsandboxed on
+   the same host. Method 5 becomes trust-scoped: the pinned-container boundary stays required
+   for third-party or unread agent-generated code; the operator's own repository may execute on
+   the host when the caller authorizes it **and** the packet's Execution-isolation slot records
+   the mode (the form this session's verification pass already demonstrated). The verdict rule
+   and the fail-closed behavior for untrusted targets do not change.
 
 ## Verification payloads
 
@@ -54,7 +63,10 @@ request + host-native continuation, no approval-missing implication, no security
 known-absent mediator); approval-consolidation A/B (reversible same-effect proceeds, subsequent
 irreversible action re-gates); phase calibration (issue #67 Eval 4: default-off change is
 merge-safe but activation-blocked, hardening reported separately); stacked-gate attribution
-(each pause names one owner). Deterministic gates: validator, suite, adapter parity. No
+(each pause names one owner); and for payload 5, the trust-scoped isolation pair — an
+untrusted-target check without an adequate boundary still returns inconclusive, and a
+trusted-repo host execution is accepted only when the packet records the mode. Deterministic
+gates: validator, suite, adapter parity. No
 `description:` edits are planned, so no routing runs are owed; if implementation ends up
 touching a description, the `homelab-ops` cluster runs before and after per standing law.
 

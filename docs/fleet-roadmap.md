@@ -112,6 +112,10 @@ the pilot regresses; regenerated adapters and the deterministic gates green.
 
 **Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
 highest-density candidate) and the exact paired-measurement conditions before editing anything.
+Named audit material from the 2026-08-09 estate feedback: the Learning-bullet specification is
+~9 of 15 packet bullet-lines in each of 11 always-loaded definitions for a field whose ordinary
+value is one line — a compression candidate gated on the pinned learning-slot behavioral
+contracts holding.
 
 #### GRAPH-002 — land the descriptive capability graph and contract validator
 
@@ -280,7 +284,8 @@ daemon, transcript store, or self-modifying loop.
 **Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (approved
 2026-08-09); issue #67; ledger candidate `lc_74f04730`; the
 release-tail record (a merged bump demonstrably not reaching live sessions) as independent
-evidence of the merged≠released gap.
+evidence of the merged≠released gap; issue #73 (Learning handoffs dropped by foreign
+coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for Eval 1.
 
 **Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
 five-tier risk/effect classification and this spec references it.
