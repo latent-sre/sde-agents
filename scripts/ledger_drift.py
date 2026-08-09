@@ -230,7 +230,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {entry['candidate_id'][:11]}  [{entry['promotion_state']}]"
                   f"  since {entry['since'][:10]}  destination: {destination}")
 
-    if args.annotate:
+    if args.annotate and not args.json:
+        # Annotations are human/CI log furniture: after a JSON document they leave
+        # json.loads() with extra data, so machine-readable mode stays machine-readable.
         for finding in findings:
             paths = ", ".join(finding["destination_paths"])
             print(f"::warning file={finding['destination_paths'][0]}::"

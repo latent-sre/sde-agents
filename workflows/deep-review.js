@@ -1,12 +1,3 @@
-export const meta = {
-  name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
-  phases: [
-    { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
-    { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },
-  ],
-}
-
 // Lane model policy (operator ruling 2026-08-09). Review lanes are neither workers nor
 // measurement pins, so the worker ceiling and the eval doctrine both leave them unpinned -- and
 // unpinned meant silently inheriting the session model, which billed a Fable session ~152k
@@ -18,10 +9,21 @@ export const meta = {
 // generation.
 // To pin lower, edit these constants -- deliberately NOT an args or config surface: the args
 // contract stays ref-only (issue #63), and a runtime knob with no demonstrated consumer waits
-// trigger-bound per the proportionality rule.
+// trigger-bound per the proportionality rule. The phase annotations in meta.phases derive from
+// these same constants, so editing them never leaves the /workflows display reporting models
+// the lanes no longer run.
 const SCOPE_MODEL = 'sonnet'
 const LANE_MODEL = 'opus'
 const LANE_EFFORT = 'high'
+
+export const meta = {
+  name: 'deep-review',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
+  phases: [
+    { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: SCOPE_MODEL },
+    { title: 'Review', detail: 'correctness and security lanes in parallel', model: LANE_MODEL },
+  ],
+}
 
 // Severities and verdict forms mirror agents/code-reviewer.md's canonical packet -- including the
 // mutable-tree PROVISIONAL form, which is why the scope packet records head_sha and tree_dirty: a

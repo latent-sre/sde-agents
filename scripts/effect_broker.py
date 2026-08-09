@@ -732,18 +732,22 @@ class ReplayLedger:
     def list_resolved(self) -> list[dict[str, object]]:
         """Every terminally resolved row, carrying the fields its stored signature signs over.
 
-        This is the read path `reconcile verify` re-checks; until it existed the stored
-        signature had no reader at all, so the column looked like tamper-evidence while doing
-        no tamper-detection work."""
+        The projection is exactly `_resolution_signature`'s payload plus the stored signature
+        itself -- status included, because an unsigned status edit ('resolved-executed' <->
+        'resolved-not-executed') would otherwise rewrite the recorded outcome undetected, and
+        a predicate reading status FROM the row would let the same edit hide it from
+        verification entirely. This is the read path `reconcile verify` re-checks; until it
+        existed the stored signature had no reader at all, so the column looked like
+        tamper-evidence while doing no tamper-detection work."""
         self.initialize()
         with closing(sqlite3.connect(self.path)) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 """
-                SELECT nonce, resolution, resolved_at, resolved_by, resolution_note,
+                SELECT nonce, status, resolution, resolved_at, resolved_by, resolution_note,
                        resolution_evidence_id, resolution_signature
                 FROM consumptions
-                WHERE status LIKE 'resolved-%'
+                WHERE resolution IS NOT NULL
                 ORDER BY resolved_at
                 """
             ).fetchall()
@@ -919,6 +923,11 @@ def _resolution_signature(key: bytes, row: dict[str, object]) -> str:
                 "resolved_at": row["resolved_at"],
                 "resolved_by": row["resolved_by"],
                 "note": row["resolution_note"],
+                # Signed on every row the write side produces: the envelope is created before
+                # ledger.resolve() stores its id, so verification binds the evidence link and a
+                # direct SQLite edit cannot redirect a verified row to attacker-chosen evidence.
+                "evidence_id": row["resolution_evidence_id"],
+                "status": row["status"],
             }
         ),
         hashlib.sha256,
@@ -926,7 +935,7 @@ def _resolution_signature(key: bytes, row: dict[str, object]) -> str:
 
 
 def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]:
-    """Re-check every stored resolution signature against the operator key.
+    """Re-check every stored resolution signature against the approval key.
 
     The write-time gate in resolve_unknown() proves authority at the moment of writing, and
     nothing re-read the stored signatures afterward -- a row edited directly in SQLite would
@@ -935,8 +944,10 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
 
     Returns {"checked": N, "verified": [nonces], "findings": [{nonce, problem}]}; the CLI
     exits 1 when findings is non-empty, so automation can gate on it. Policy is strict: a
-    resolved row with no stored signature is a "unsigned" finding, because NULLing the
-    signature is within reach of anyone who can edit a signed field.
+    resolved row with no stored signature is an "unsigned" finding, because NULLing the
+    signature is within reach of anyone who can edit a signed field, and a stored signature
+    that is not a 64-character ASCII hex digest is a "malformed" finding -- a value the write
+    side can never produce is tampering to report, not a comparison to crash on.
     """
     if len(key) < 32:
         raise BrokerError("verification key must contain at least 32 bytes")
@@ -952,6 +963,15 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
             # pre-migration ledger goes red here and earns its green by re-resolution or an
             # explicitly recorded retirement, not by silence.
             findings.append({"nonce": row["nonce"], "problem": "unsigned"})
+            continue
+        if not (
+            isinstance(stored, str)
+            and evidence_envelope.SHA256_RE.fullmatch(stored)
+        ):
+            # A non-hex, non-ASCII, or non-string stored value cannot be a write-time
+            # signature; comparing it as one would raise (compare_digest requires matching
+            # ASCII-only str or bytes) and turn reportable tampering into a traceback.
+            findings.append({"nonce": row["nonce"], "problem": "malformed-signature"})
             continue
         if hmac.compare_digest(_resolution_signature(key, row), stored):
             verified.append(row["nonce"])
@@ -1005,16 +1025,6 @@ def resolve_unknown(
     row_target = row["target"] or "unrecorded-legacy-target"
     resolved_at = now()
     resolved_at_text = _format_timestamp(resolved_at)
-    signature = _resolution_signature(
-        key,
-        {
-            "nonce": nonce,
-            "resolution": resolution,
-            "resolved_at": resolved_at_text,
-            "resolved_by": operator,
-            "resolution_note": note,
-        },
-    )
     envelope = evidence_envelope.new_envelope(
         producer="effect_broker",
         role="unknown-reservation-resolver",
@@ -1044,6 +1054,22 @@ def resolve_unknown(
             "this envelope records an operator attestation that the effect did or did not "
             "happen, not machine proof -- the broker itself never learned the outcome"
         ],
+    )
+    # The signature binds the envelope's evidence id and the terminal status as stored, so a
+    # direct SQLite edit of either column is a mismatch instead of an invisible rewrite; both
+    # are known only once the envelope exists, which is why the signature is computed here
+    # rather than before the attestation envelope.
+    signature = _resolution_signature(
+        key,
+        {
+            "nonce": nonce,
+            "resolution": resolution,
+            "resolved_at": resolved_at_text,
+            "resolved_by": operator,
+            "resolution_note": note,
+            "resolution_evidence_id": envelope["evidence_id"],
+            "status": f"resolved-{resolution}",
+        },
     )
     ledger.resolve(
         nonce=nonce,
@@ -1118,7 +1144,7 @@ def _parser() -> argparse.ArgumentParser:
 
     reconcile_verify = reconcile_commands.add_parser(
         "verify",
-        help="recompute every stored resolution signature against the operator key; "
+        help="recompute every stored resolution signature against the approval key; "
              "exits 1 on any finding so automation can gate on tamper evidence",
     )
     reconcile_verify.add_argument("--ledger", type=Path, required=True)

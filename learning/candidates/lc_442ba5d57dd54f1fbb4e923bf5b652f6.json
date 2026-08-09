@@ -20,7 +20,7 @@
   "observation": "A completion claim was drawn from a command whose exit status was not the tested process's own status. When two commands are chained on success, an earlier failure can be masked; when a run is piped into another program, the reported status belongs to the last stage of the pipeline rather than the test process. Block buffering of standard output when piped also reordered the summary line out of the captured excerpt, so the visible evidence looked unrelated instead of absent.",
   "owner": "fleet-maintainer",
   "promotion_state": "proposed",
-  "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module processs own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
+  "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module process's own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -62,7 +62,7 @@
       "disposition": "merge",
       "from": "quarantined",
       "owner": "fleet-maintainer",
-      "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module processs own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
+      "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module process's own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
       "to": "proposed"
     }
   ],

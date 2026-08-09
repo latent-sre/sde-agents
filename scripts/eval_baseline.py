@@ -10,11 +10,12 @@ the hash semantics cannot fork — and compares them against every stored benchm
 never launches a session and never touches the network: a REUSABLE verdict spends nothing, and
 a STALE verdict names what diverged so the operator knows why a fresh capture is owed.
 
-Match policy (TIER-001 spec, operator-approved 2026-08-08): provenance exact on schema,
-eval_sources, selection, evaluator, and the plugin content hash; conditions exact on
-model_requested, clean_room, threshold, timeout_s. cli_version is advisory — the probe, not
-the eval suite, owns CLI drift — so the recorded value is printed as a note, never compared,
-and never stales the verdict.
+Match policy (TIER-001, operator-approved 2026-08-08; the spec retired with its outcome
+record, which now carries the lasting policy — docs/archive/2026-08/tier-001-outcome-2026-08-08.md):
+provenance exact on schema, eval_sources, selection, evaluator, and the plugin content hash;
+conditions exact on model_requested, clean_room, threshold, timeout_s. cli_version is advisory
+— the probe, not the eval suite, owns CLI drift — so the recorded value is printed as a note,
+never compared, and never stales the verdict.
 
 Exit codes: 0 a reusable benchmark exists (newest path printed), 1 none does (divergences
 printed per same-cluster candidate), 2 usage or provenance error.

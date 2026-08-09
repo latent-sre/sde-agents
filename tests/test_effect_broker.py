@@ -4,6 +4,7 @@ import copy
 import hashlib
 import hmac
 import io
+import os
 import sqlite3
 import tempfile
 import threading
@@ -483,6 +484,8 @@ class EffectBrokerTests(unittest.TestCase):
                     "resolved_at": row["resolved_at"],
                     "resolved_by": "oncall@example",
                     "note": "confirmed target artifact absent",
+                    "evidence_id": envelope["evidence_id"],
+                    "status": "resolved-not-executed",
                 }
             ),
             hashlib.sha256,
@@ -638,6 +641,76 @@ class EffectBrokerTests(unittest.TestCase):
         self.assertEqual(report["verified"], [])
         self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "unsigned"}])
 
+    def test_reconcile_verify_fires_on_tampered_evidence_link(self) -> None:
+        """The evidence id is signed: a direct SQLite edit redirecting a verified row to
+        other evidence must surface as a mismatch. Unsigned, this projection was readable
+        tampering -- the row verified while naming an envelope nobody attested."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_evidence_id = ? WHERE nonce = ?",
+                    ("ev_attacker_chosen", nonce),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "mismatch"}])
+
+    def test_reconcile_verify_fires_on_tampered_status(self) -> None:
+        """A status edit is two attacks, and both must stay visible: rewriting the terminal
+        outcome ('resolved-not-executed' -> 'resolved-executed') is a signed-field mismatch,
+        and setting a non-resolved status must not drop the row from inspection -- the
+        selection predicate reads the resolution column, never the attacker's status edit."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET status = 'resolved-executed' WHERE nonce = ?",
+                    (nonce,),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "mismatch"}])
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET status = 'unknown' WHERE nonce = ?",
+                    (nonce,),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "mismatch"}])
+
+    def test_reconcile_verify_reports_malformed_signature_without_raising(self) -> None:
+        """A stored value the write side can never produce (non-ASCII text, a BLOB, a
+        truncated digest) is tampering to report, not a comparison to crash on --
+        compare_digest requires matching ASCII-only str or bytes, so classifying before
+        comparing is what keeps every tampered row reportable as JSON findings."""
+        for bad_value in ("é", b"\x00" * 32, "abc123"):
+            with self.subTest(bad_value=bad_value):
+                ledger, nonce = self._resolved_row()
+                # UPDATEs bind bytes as a BLOB even in a TEXT column, so a fresh row per value
+                # also proves an affinity-exotic stored type is caught, not just odd text.
+                with closing(sqlite3.connect(ledger.path)) as connection:
+                    with connection:
+                        connection.execute(
+                            "UPDATE consumptions SET resolution_signature = ? WHERE nonce = ?",
+                            (bad_value, nonce),
+                        )
+                try:
+                    report = effect_broker.verify_resolutions(ledger, key=self.key)
+                    self.assertEqual(report["checked"], 1)
+                    self.assertEqual(report["verified"], [])
+                    self.assertEqual(
+                        report["findings"],
+                        [{"nonce": nonce, "problem": "malformed-signature"}],
+                    )
+                finally:
+                    ledger.path.unlink()
+
     def test_reconcile_verify_cli_gates_on_findings(self) -> None:
         """The exit contract both ways: findings exit 1, an intact ledger exits 0. A verify
         that printed a mismatch but exited 0 would be the write-only column one layer up --
@@ -645,6 +718,10 @@ class EffectBrokerTests(unittest.TestCase):
         ledger, nonce = self._resolved_row()
         key_file = self.control / "verify-key"
         key_file.write_bytes(self.key)
+        if os.name != "nt":
+            # _read_key refuses a group/other-readable key; write_bytes under a 022 umask
+            # would otherwise produce 0644 and the CLI would never reach verification.
+            key_file.chmod(0o600)
         argv = [
             "reconcile", "verify",
             "--ledger", str(ledger.path),
