@@ -19,8 +19,8 @@
   },
   "observation": "Two agent sessions edited and measured the same working tree concurrently: an eval capture ran against a moving tree and produced an unattributable benchmark, and an uncommitted description iteration was overwritten mid-flight.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Recurrence 2 satisfies the threshold pre-registered by LEARN-001, which held that this encodes as an AGENTS.md rule on a second occurrence. Measurement half already covered by eval_routing frozen_plugin; the edit-collision half is unowned and its mechanism is still live via probe_plugin .probe-tmp inside REPO. Selected as this rounds single promotion candidate.",
+  "promotion_state": "promoted",
+  "reason": "Landed and verified: One writer per checkout rule in AGENTS.md Hard rules; .probe-tmp added to tests/support.py _IGNORED_DIRS with a direct ignore_patterns proof and the full suite green (541 tests, 22 modules, exit 0). Rollback: revert the commit. Recheck trigger: a third occurrence or a change to probe/suite workspace layout.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,25 @@
       "owner": "fleet-maintainer",
       "reason": "Recurrence 2 satisfies the threshold pre-registered by LEARN-001, which held that this encodes as an AGENTS.md rule on a second occurrence. Measurement half already covered by eval_routing frozen_plugin; the edit-collision half is unowned and its mechanism is still live via probe_plugin .probe-tmp inside REPO. Selected as this rounds single promotion candidate.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T14:06:14.121757Z",
+      "destination": "AGENTS.md",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved 2026-08-09 (top-5 direction, this session). Rule authored under Hard rules as One writer per checkout; deterministic companion adds .probe-tmp to tests/support.py _IGNORED_DIRS, reaching parity with probe_plugin.py:338 which already excludes it. Promoted follows once the suite proves the change.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T14:07:47.905829Z",
+      "destination": "AGENTS.md",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed and verified: One writer per checkout rule in AGENTS.md Hard rules; .probe-tmp added to tests/support.py _IGNORED_DIRS with a direct ignore_patterns proof and the full suite green (541 tests, 22 modules, exit 0). Rollback: revert the commit. Recheck trigger: a third occurrence or a change to probe/suite workspace layout.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:49:03.525233Z"
+  "updated_at": "2026-08-09T14:07:47.905829Z"
 }

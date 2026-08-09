@@ -19,8 +19,8 @@
   },
   "observation": "WebFetch on developers.openai.com/codex/* pages 308-redirects to learn.chatgpt.com/docs/*, and the summarizing fetch occasionally produces plausible paraphrase not traceable to a literal doc sentence.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Paraphrase half ALREADY LANDED at researcher.md:53-57; this occurrence corroborates the landed clause. The host-specific 308 redirect fact is perishable vendor state and is deliberately not encoded. Needs operator approval to walk to promoted.",
+  "promotion_state": "promoted",
+  "reason": "Clause verified live at researcher.md:53-57 by fresh-context investigation at fe34af2; recheck trigger stands if the vendor docs host changes.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Paraphrase half ALREADY LANDED at researcher.md:53-57; this occurrence corroborates the landed clause. The host-specific 308 redirect fact is perishable vendor state and is deliberately not encoded. Needs operator approval to walk to promoted.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T14:06:00.784031Z",
+      "destination": "agents/researcher.md Method section 3",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved 2026-08-09 (top-5 direction, this session): landed deterministic-reads clause accepted as the merge target; 308 host fact deliberately not encoded as perishable.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T14:06:00.918473Z",
+      "destination": "agents/researcher.md Method section 3",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Clause verified live at researcher.md:53-57 by fresh-context investigation at fe34af2; recheck trigger stands if the vendor docs host changes.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:49:03.375110Z"
+  "updated_at": "2026-08-09T14:06:00.918473Z"
 }
