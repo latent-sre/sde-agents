@@ -19,8 +19,8 @@
   },
   "observation": "A contract test guarding a newly added, never-executable code block asserted on a bare substring count of the whole file. Seven of the nine matches pre-existed elsewhere in that file, so the assertion passed with the entire block under test deleted. Because the guarded code cannot be executed in this environment, that test was its only automated protection, and the one property it claimed to guard had none.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "No substring-count assertion remains in tests and the detector was proven to fire, so this is a fleet authoring rule for target repos rather than a local defect: assert on tokens unique to the added block and confirm red by deleting only that block. The reviewer eval case the candidate asks for is absent from evals/behavioral/contracts.json.",
+  "promotion_state": "promoted",
+  "reason": "Merged in commit 7d08de3 as the guard-non-executable-artifacts-structurally bullet; validator green, full suite 573/573, skill adapters regenerated with parity.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "No substring-count assertion remains in tests and the detector was proven to fire, so this is a fleet authoring rule for target repos rather than a local defect: assert on tokens unique to the added block and confirm red by deleting only that block. The reviewer eval case the candidate asks for is absent from evals/behavioral/contracts.json.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T19:00:47.664202Z",
+      "destination": "skills/code-craft/references/tdd.md",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator session directive 2026-08-09: implement the proposed backlog.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T19:00:47.957377Z",
+      "destination": "skills/code-craft/references/tdd.md",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Merged in commit 7d08de3 as the guard-non-executable-artifacts-structurally bullet; validator green, full suite 573/573, skill adapters regenerated with parity.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:50:06.468162Z"
+  "updated_at": "2026-08-09T19:00:47.957377Z"
 }
