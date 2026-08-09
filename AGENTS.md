@@ -177,6 +177,13 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
 
+**Adding a defensive branch to a fleet script** — a crash-recovery, authority, or
+input-validation guard lands in the same change as a test that makes it fire; when the trigger is
+hard to stage, prove the branch non-vacuous by mutation (remove it and watch the test fail). An
+untested guard reads as enforcement while enforcing nothing — the exact silent failure the
+validator rules exist to catch, and it will pass every existing check because no check knows the
+branch is there.
+
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
 before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
