@@ -39,25 +39,27 @@ single tracker instead of leaking into memory or issue lists.
 **Status:** `ready` — a verified gap in shipped code, absorbed from the superseded control-plane
 proposal via the GRAPH-003 ruling.
 
-**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing:
-`run_state.py` either gains a resolver that maps the digest to a stored contract document (with
-a test proving digest → document), or the field's actual binding is documented and enforced at
-run creation — never left readable-as-enforcement while enforcing nothing.
+**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing: the
+field's actual binding is documented and enforced at run creation in `scripts/run_state.py` —
+never left readable-as-enforcement while enforcing nothing.
 
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
 (finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
 [`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md).
 
 **Prerequisites:** None. Any schema change honors the version-1 hard-reject at
-`run_state.py:174-177` with an explicit migration decision, never a workaround.
+`scripts/run_state.py:174-177` with an explicit migration decision, never a workaround.
 
-**Acceptance:** Tests for whichever repair is chosen (resolver round-trip, or
-creation-time enforcement of the documented binding); existing run-state tests and the
+**Acceptance:** Tests for creation-time enforcement of the documented binding;
+existing run-state tests and the
 deterministic gates stay green.
 
-**Next action:** Decide resolver-vs-document-and-enforce. SAFE-002 closed without touching
-`run_state.py` (its repair stayed inside `effect_broker.py`), so this opens its own review
-context rather than piggybacking on that round.
+**Next action:** Implement the ruled repair. The operator chose document-and-enforce
+2026-08-09: document the field's actual binding and enforce it at run creation with a test;
+the resolver stays trigger-bound on GRAPH-004 activating (re-verified same day: all seven
+`contract_digest` references in `scripts/run_state.py` are write-side — schema, validation, storage,
+echo — nothing resolves it). SAFE-002 closed without touching `scripts/run_state.py`, so this opens
+its own review context rather than piggybacking on that round.
 
 #### LEARN-002 — close the Learning-contract compliance gap
 
@@ -205,12 +207,12 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 **Next action:** Hold for REV-001's settled idiom, then author the paired plan.
 
-### Decision-needed
-
 #### LANE-001 — Codex-lane onboarding discoverability
 
-**Status:** `decision-needed` — spec drafted 2026-08-02 and awaiting operator approval;
-implementation is additionally gated on the Phase-0 host evidence the spec names.
+**Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
+re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
+suppression both hold); implementation remains gated on the Phase-0 host evidence the spec
+names (`codex --version` and the unmarked-TOML check on the SEC-01 host).
 
 **Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
 intent yields a model recommendation of the explicit onboarding workflow — never an implicit
@@ -228,13 +230,17 @@ routing baseline before any canonical edit.
 **Acceptance:** The spec's acceptance list; headline gates are no regression in the before/after
 `homelab-ops` diff, adapter parity, and one recorded Codex smoke run.
 
-**Next action:** Operator reviews the spec and runs the two Phase-0 one-liners on the Linux
-host; on approval, author the paired plan and capture the Phase-1 baseline.
+**Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
+paired plan and capture the Phase-1 baseline.
 
 #### GATE-001 — gate-owner attribution and same-effect approval consolidation
 
-**Status:** `decision-needed` — no spec yet; scope is settled by field evidence but the design
-interacts with the effect broker and belongs in one bounded spec.
+**Status:** `ready` — both blocking rulings landed 2026-08-09: REV-001 is approved, and the
+classification ownership is settled — **GATE-001 owns the five-tier risk/effect
+classification** (tiers classify effects generally, not broker-mediated effects only);
+LOOP-001 references it. The ownership follows the evidence: the consolidation rule is embedded
+in the tier text itself and is this item's deliverable, and a mis-defined tier at a gate is a
+safety error where at the lifecycle it is only a process error.
 
 **Outcome:** Every pause in a lab workflow names its gate owner (repository confirmation, host
 sandbox, plugin transport, reviewer, credential custody, irreversible action); an unavailable
@@ -254,12 +260,12 @@ racing them.
 **Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
 scenario and an approval-consolidation case that leaves irreversible gates intact.
 
-**Next action:** Author the bounded spec — REV-001 was ruled on 2026-08-09, so the outstanding
-gate is the tier-ownership decision this item shares with LOOP-001.
+**Next action:** Author the bounded spec, alongside LOOP-001's — both gates are now ruled.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
-**Status:** `decision-needed` — no spec yet; the scope is issue #67's lightweight contract.
+**Status:** `ready` — the shared-ownership prerequisite was ruled 2026-08-09: GATE-001 owns the
+five-tier classification; this spec references it.
 
 **Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
 through triage, owner and target release, paired evaluation, canonical change with adapter
@@ -271,8 +277,8 @@ daemon, transcript store, or self-modifying loop.
 **Source:** Issue #67; ledger candidate `lc_74f04730`; the release-tail record (a merged bump
 demonstrably not reaching live sessions) as independent evidence of the merged≠released gap.
 
-**Prerequisites:** A shared-ownership ruling for the five-tier risk/effect classification, which
-issue #67 and GATE-001 both carry — one spec must own it, the other reference it.
+**Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
+five-tier risk/effect classification and this spec references it.
 
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
