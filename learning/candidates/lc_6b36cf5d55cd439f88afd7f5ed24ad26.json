@@ -14,7 +14,7 @@
   "expected_behavior": "Before offering Tier-2 execution the workflow identifies the host-native broker or mediator entry point; absence yields an actionable integration diagnosis attributing the gate to plugin transport rather than missing operator approval, preserving request identity and approval evidence across a host-native continuation, with gate states (recommended, activated, guard-satisfied, broker-consumed, effect-verified) attributed distinctly.",
   "fingerprint": "c520e11c39423d7dbafec7ff36297050fe3e55c304b999d563cbf4599977e75b",
   "freshness": {
-    "as_of": "2026-08-03T05:00:47.253373Z",
+    "as_of": "2026-08-09T22:46:11.932933Z",
     "review_at": "2026-09-02T05:00:47.253373Z"
   },
   "observation": "The plugin's effect-broker code shipped to a host exposing no operator mediator, signing-key flow, or replay-ledger interface: an exact approved Tier-2 request was generated and approved but could not be consumed, forcing an operator-authorized one-action bypass through host-native approval; the layered repository guard, host approval, and absent broker transport read to the user as one unexplained gate.",
@@ -22,7 +22,7 @@
   "promotion_state": "proposed",
   "reason": "Already imported as GATE-001 decision-needed, which names this candidate as its source; prerequisites cleared by SAFE-002 landing. Behavioral do-not-bypass half already covered at agents/homelab-platform.md:43-47; transport identification before offering Tier 2 and gate attribution remain open.",
   "recurrence": {
-    "count": 1,
+    "count": 2,
     "sources": [
       {
         "environment": "SEC-01 live host-onboard on Codex/Linux host, SDE Agents 1.6.0",
@@ -31,6 +31,14 @@
         "revision": null,
         "source_kind": "field-report",
         "source_reference": "Issue #60 and #61 comments 2026-08-03 (operator-published sanitized Hera live-build evidence)"
+      },
+      {
+        "environment": "Home-lab estate repository + live hosts, sde-agents installed at user scope",
+        "observed_at": "2026-08-09T22:46:11.932933Z",
+        "provenance": "verified",
+        "revision": null,
+        "source_kind": "field-report",
+        "source_reference": "Operator-relayed estate CLAUDE.md audit 2026-08-09: mandated homelab-platform route always terminates in the mediator-unavailable stop (broker file owned by the agent's own user, no key/ledger present) and emits a false-positive security flag on every live change; the estate doc carries a 56-line workaround. Operator ruling: estate drops the mandate (agent proposes and proves; operator applies); fleet owes the stated-once integration-absence behavior."
       }
     ]
   },
@@ -42,9 +50,9 @@
   "schema_version": 2,
   "scope": "Effect-broker consumability and gate attribution on hosts without mediator integration; distinct from SAFE-002's crash-ambiguity states.",
   "sensitivity_review": {
-    "attestation_count": 1,
+    "attestation_count": 2,
     "attested": true,
-    "last_attested_at": "2026-08-03T05:00:47.253373Z",
+    "last_attested_at": "2026-08-09T22:46:11.932933Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [
@@ -58,5 +66,5 @@
       "to": "proposed"
     }
   ],
-  "updated_at": "2026-08-09T13:49:30.945810Z"
+  "updated_at": "2026-08-09T22:46:11.932933Z"
 }

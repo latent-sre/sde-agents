@@ -112,6 +112,10 @@ the pilot regresses; regenerated adapters and the deterministic gates green.
 
 **Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
 highest-density candidate) and the exact paired-measurement conditions before editing anything.
+Named audit material from the 2026-08-09 estate feedback: the Learning-bullet specification is
+~9 of 15 packet bullet-lines in each of 11 always-loaded definitions for a field whose ordinary
+value is one line — a compression candidate gated on the pinned learning-slot behavioral
+contracts holding.
 
 #### GRAPH-002 — land the descriptive capability graph and contract validator
 
@@ -235,12 +239,12 @@ paired plan and capture the Phase-1 baseline.
 
 #### GATE-001 — gate-owner attribution and same-effect approval consolidation
 
-**Status:** `ready` — both blocking rulings landed 2026-08-09: REV-001 is approved, and the
-classification ownership is settled — **GATE-001 owns the five-tier risk/effect
-classification** (tiers classify effects generally, not broker-mediated effects only);
-LOOP-001 references it. The ownership follows the evidence: the consolidation rule is embedded
-in the tier text itself and is this item's deliverable, and a mis-defined tier at a gate is a
-safety error where at the lifecycle it is only a process error.
+**Status:** `active` — spec approved and paired plan authored 2026-08-09; the classification
+ownership is settled — **GATE-001 owns the five-tier risk/effect classification** (tiers
+classify effects generally, not broker-mediated effects only); LOOP-001 references it. The
+ownership follows the evidence: the consolidation rule is embedded in the tier text itself and
+is this item's deliverable, and a mis-defined tier at a gate is a safety error where at the
+lifecycle it is only a process error.
 
 **Outcome:** Every pause in a lab workflow names its gate owner (repository confirmation, host
 sandbox, plugin transport, reviewer, credential custody, irreversible action); an unavailable
@@ -249,10 +253,11 @@ continuation rather than implying approval is missing; same-effect approvals con
 reversible corrections while initialization, credential destruction, recovery-material
 retirement, and teardown keep distinct unavoidable gates.
 
-**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (drafted
-2026-08-09, awaiting operator approval); issue #61 closeout criteria 2–5; ledger candidate
-`lc_6b36cf5d` (broker shipped without consumable transport); adjacent to SAFE-002 but distinct
-from its crash-ambiguity states.
+**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (approved
+2026-08-09) and its [paired plan](superpowers/plans/gate-001-plan.md); issue #61 closeout
+criteria 2–5; ledger candidate `lc_6b36cf5d` (broker shipped without consumable transport,
+recurrence 2 — the 2026-08-09 estate audit added the per-change false-positive security flag);
+adjacent to SAFE-002 but distinct from its crash-ambiguity states.
 
 **Prerequisites:** None — the SAFE-002 sequencing question is settled by SAFE-002 having landed
 first; the spec builds on the broker's now-shipped `unknown`/reconciliation semantics instead of
@@ -262,7 +267,7 @@ racing them.
 scenario, an approval-consolidation case that leaves irreversible gates intact, and issue #67's
 Eval 4 (phase calibration), which this round owns as classification owner.
 
-**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
+**Next action:** Implement per the paired plan on a round branch off main.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
@@ -276,10 +281,11 @@ artifact — and cannot close as successful without that retest or an owner-appr
 impossible. Source-eval PASS is never reportable as released-artifact PASS. No scheduler,
 daemon, transcript store, or self-modifying loop.
 
-**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (drafted
-2026-08-09, awaiting operator approval); issue #67; ledger candidate `lc_74f04730`; the
+**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (approved
+2026-08-09); issue #67; ledger candidate `lc_74f04730`; the
 release-tail record (a merged bump demonstrably not reaching live sessions) as independent
-evidence of the merged≠released gap.
+evidence of the merged≠released gap; issue #73 (Learning handoffs dropped by foreign
+coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for Eval 1.
 
 **Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
 five-tier risk/effect classification and this spec references it.
@@ -287,7 +293,7 @@ five-tier risk/effect classification and this spec references it.
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
 
-**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
+**Next action:** Author the paired plan.
 
 ### Small items
 

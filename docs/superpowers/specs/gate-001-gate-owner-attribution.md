@@ -1,6 +1,7 @@
 # GATE-001 spec — gate-owner attribution and same-effect approval consolidation
 
-**Status: drafted 2026-08-09 — awaiting operator approval.** Authored together with the
+**Status: approved** — drafted 2026-08-09, approved by the operator the same day (recorded at
+the PR #98 closeout). Authored together with the
 [LOOP-001 spec](loop-001-released-retest-lifecycle.md) under the operator's 2026-08-09 ruling:
 **GATE-001 owns the five-tier risk/effect classification** — the tiers classify effects
 generally, not broker-mediated effects only — and LOOP-001 references it. The ownership follows

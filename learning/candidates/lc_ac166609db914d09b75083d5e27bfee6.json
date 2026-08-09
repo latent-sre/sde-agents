@@ -1,0 +1,62 @@
+{
+  "applicability": "Engine-less hosts running the fleet; lands via the GATE-001 implementation round per operator ruling 2026-08-09 (one conditional-control policy applied twice).",
+  "candidate_id": "lc_ac166609db914d09b75083d5e27bfee6",
+  "created_at": "2026-08-09T23:00:39.638062Z",
+  "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+  "disposition": "merge",
+  "evidence": {
+    "environment": "Home-lab estate host, no container engine, sde-agents installed at user scope",
+    "provenance": "verified",
+    "revision": null,
+    "source_kind": "field-report",
+    "source_reference": "Operator-relayed estate audit 2026-08-09: command -v docker podman -> neither on the host where agents execute; VE Method 5 therefore returns inconclusive for every executable check there"
+  },
+  "expected_behavior": "The pinned-container boundary remains required for third-party or unread agent-generated code; for the operator's own repository, host execution is permitted when the caller authorizes it and the packet's Execution-isolation slot records the mode. The verdict rule never relaxes.",
+  "fingerprint": "58eac0b98aa68938e07dc3b5b7695d6f33333288f4b7861c8b977dbff6c0cb34",
+  "freshness": {
+    "as_of": "2026-08-09T23:00:39.638062Z",
+    "review_at": "2026-09-08T23:00:39.638062Z"
+  },
+  "observation": "verification-engineer's Method 5 mandates a container boundary unconditionally, so on an engine-less host every executable check is inconclusive -- the verifier is the only fleet member barred from running the suite the builder already runs unsandboxed on the same host. Same conditional-control shape as lc_6b36cf5d: a control whose precondition cannot exist on the host, applied unconditionally.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Operator approved 2026-08-09: conditionalize by target trust and bundle into the GATE-001 implementation round -- the same precondition-scoping policy as the broker finding, applied twice.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Home-lab estate host, no container engine, sde-agents installed at user scope",
+        "observed_at": "2026-08-09T23:00:39.638062Z",
+        "provenance": "verified",
+        "revision": null,
+        "source_kind": "field-report",
+        "source_reference": "Operator-relayed estate audit 2026-08-09: command -v docker podman -> neither on the host where agents execute; VE Method 5 therefore returns inconclusive for every executable check there"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-09T23:00:39.638062Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "verification-engineer Method 5 and its packet contract; excludes the verdict rule and behavior for untrusted targets, which stay fail-closed.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-09T23:00:39.638062Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-09T23:00:39.962529Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved 2026-08-09: conditionalize by target trust and bundle into the GATE-001 implementation round -- the same precondition-scoping policy as the broker finding, applied twice.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T23:00:39.962529Z"
+}
