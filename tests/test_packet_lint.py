@@ -750,6 +750,15 @@ class TheInversion(unittest.TestCase):
         text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", '$ pytest -k "retry|backoff"')
         self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
 
+    def test_go_test_regex_alternation_is_not_laundering(self) -> None:
+        # `$ go test ./... -run 'TestFoo|TestBar'` is a direct run; the `|` is inside a single-
+        # quoted regex argument, not a shell pipeline. Without quoted-span blanking this false-
+        # fires because the pipe character appears on a prompt line after a runner name.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "$ pytest -q", "$ go test ./... -run 'TestFoo|TestBar'"
+        )
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_prose_semicolon_near_a_runner_is_not_laundering(self) -> None:
         # The scan is anchored to shell-prompt lines: a prose sentence or a markdown table
         # that happens to contain a runner name plus `;` or `|` is not a command, and the
