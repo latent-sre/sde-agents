@@ -2,8 +2,8 @@
   "applicability": "Any review-fix pass in this repo; second same-shape occurrence routes to sde-fullstack charter language plus the coordinator briefing habit",
   "candidate_id": "lc_11afd10b693a45be8af6d34c4ed677e5",
   "created_at": "2026-08-04T13:57:24.440828Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "agents/sde-fullstack.md Receiving review findings",
+  "disposition": "merge",
   "evidence": {
     "environment": "sde-fullstack implementing review findings and coordinator brief wording",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-03T13:57:24.440828Z"
   },
   "observation": "Review suggestions and permissive briefs get adopted whole rather than trimmed to the gap they close: the fix that satisfied the finding was extended with speculative surface (stored signature nobody reads, just-in-case column), which the next review pass then flagged, generating follow-on bookkeeping",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "PR 90 proportionality rule closes the shipped-speculative-surface half at AGENTS.md:216-220. The fix-pass half remains unowned: sde-fullstack.md:104-113 has no rule to implement the minimal change that closes the finding and name the trimmed remainder as deliberately-not-done. The landed rule creates a challenge point, not a block.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-04T13:57:24.440828Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-04T13:57:24.440828Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:48.825573Z",
+      "destination": "agents/sde-fullstack.md Receiving review findings",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "PR 90 proportionality rule closes the shipped-speculative-surface half at AGENTS.md:216-220. The fix-pass half remains unowned: sde-fullstack.md:104-113 has no rule to implement the minimal change that closes the finding and name the trimmed remainder as deliberately-not-done. The landed rule creates a challenge point, not a block.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:48.825573Z"
 }

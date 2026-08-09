@@ -2,8 +2,8 @@
   "applicability": "sde-agents repository operating conventions; rule encodes in AGENTS.md on a second occurrence per discovery-routing thresholds.",
   "candidate_id": "lc_de3dbac7d78148e89494a07e96e8afb1",
   "created_at": "2026-08-02T08:13:49.312574Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "AGENTS.md",
+  "disposition": "add",
   "evidence": {
     "environment": "operator workstation, two concurrent agent sessions",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-01T08:13:49.312574Z"
   },
   "observation": "Two agent sessions edited and measured the same working tree concurrently: an eval capture ran against a moving tree and produced an unattributable benchmark, and an uncommitted description iteration was overwritten mid-flight.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Recurrence 2 satisfies the threshold pre-registered by LEARN-001, which held that this encodes as an AGENTS.md rule on a second occurrence. Measurement half already covered by eval_routing frozen_plugin; the edit-collision half is unowned and its mechanism is still live via probe_plugin .probe-tmp inside REPO. Selected as this rounds single promotion candidate.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -55,6 +55,16 @@
     "last_attested_at": "2026-08-03T20:01:04.005854Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-03T20:01:04.005854Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:03.525233Z",
+      "destination": "AGENTS.md",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Recurrence 2 satisfies the threshold pre-registered by LEARN-001, which held that this encodes as an AGENTS.md rule on a second occurrence. Measurement half already covered by eval_routing frozen_plugin; the edit-collision half is unowned and its mechanism is still live via probe_plugin .probe-tmp inside REPO. Selected as this rounds single promotion candidate.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:03.525233Z"
 }

@@ -2,8 +2,8 @@
   "applicability": "Branch protection settings for validate jobs; also LOOP-001 spec territory (release gates); recheck when branch protection changes.",
   "candidate_id": "lc_36adb3d0d10542eba6fc969c575590c7",
   "created_at": "2026-08-03T21:01:23.188870Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "docs/fleet-roadmap.md new item",
+  "disposition": "add",
   "evidence": {
     "environment": "GitHub Actions, latent-sre/sde-agents main branch, 2026-08-02 to 2026-08-03",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-02T21:01:23.188870Z"
   },
   "observation": "Four consecutive merges landed over a failing required-intent CI check (macOS validate job red since #57) with no branch-protection enforcement and no reviewer noticing; the breakage was discovered only when an unrelated PR inherited the red check.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Gap MOVED rather than closed: validate.yml:46 drops macOS and Windows from the per-PR matrix, so the discovery path that surfaced the original incident no longer exists and a regression now surfaces only post-merge or in the Monday sweep. Enforcement half is a GitHub branch-protection setting not ownable in-repo; any new CI job is gated by the proportionality rule.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-03T21:01:23.188870Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-03T21:01:23.188870Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:30.637000Z",
+      "destination": "docs/fleet-roadmap.md new item",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Gap MOVED rather than closed: validate.yml:46 drops macOS and Windows from the per-PR matrix, so the discovery path that surfaced the original incident no longer exists and a regression now surfaces only post-merge or in the Monday sweep. Enforcement half is a GitHub branch-protection setting not ownable in-repo; any new CI job is gated by the proportionality rule.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:30.637000Z"
 }

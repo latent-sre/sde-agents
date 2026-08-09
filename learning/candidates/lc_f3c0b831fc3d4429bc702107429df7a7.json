@@ -2,8 +2,8 @@
   "applicability": "Next multi-agent fix-and-verify round; two same-shape occurrences argue for severity-tiered proof language in the sde-fullstack and verification-engineer charters (description edits owe the overlapping routing cluster before/after)",
   "candidate_id": "lc_f3c0b831fc3d4429bc702107429df7a7",
   "created_at": "2026-08-04T13:57:04.694244Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "agents/verification-engineer.md",
+  "disposition": "merge",
   "evidence": {
     "environment": "sde-fullstack fix pass and verification-engineer charter behavior under a Fable-session coordinator",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-03T13:57:04.694244Z"
   },
   "observation": "Proof effort does not scale with severity: revert-and-refail proof, full-suite reruns, worktree re-attribution of already-attributed environment facts, and full packet ceremony are applied uniformly to P2 fixes and to P3 comment tweaks alike, making small fix passes cost more than the feature they follow",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Proportionality rule covers the evidence-reuse clause only; it never states severity, P2, P3 or stakes, and revert-and-refail at verification-engineer.md:42-44 remains categorical with no scaling language. Disproportionate first-time proof on a P3 is not repeated work and is not forbidden. Issue 83 carries the repair proposal; sde-fullstack.md:142-146 is the phrasing precedent.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-04T13:57:04.694244Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-04T13:57:04.694244Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:48.967519Z",
+      "destination": "agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Proportionality rule covers the evidence-reuse clause only; it never states severity, P2, P3 or stakes, and revert-and-refail at verification-engineer.md:42-44 remains categorical with no scaling language. Disproportionate first-time proof on a P3 is not repeated work and is not forbidden. Issue 83 carries the repair proposal; sde-fullstack.md:142-146 is the phrasing precedent.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:48.967519Z"
 }

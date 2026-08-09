@@ -2,8 +2,8 @@
   "applicability": "Whenever broker semantics next open (GATE-001 spec is the named adjacent round) or if a trust decision ever reads resolution rows",
   "candidate_id": "lc_d83c75e274164559b3a67f0c478d842b",
   "created_at": "2026-08-04T13:50:34.273529Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "scripts/effect_broker.py and tests/test_effect_broker.py",
+  "disposition": "add",
   "evidence": {
     "environment": "scripts/effect_broker.py resolve_unknown / ReplayLedger.resolve",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-03T13:50:34.273529Z"
   },
   "observation": "The stored resolution_signature is write-only audit data: the write-time key gate enforces resolve authority, but nothing verifies stored signatures afterward, so the column looks like tamper-evidence while doing no tamper-detection work",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Confirmed still open: signature written at 927-939 and 698-716, read only by a round-trip test at tests/test_effect_broker.py:489 that recomputes it from the tests own key. No verify path, no CLI surface, no roadmap item. Companion finding: the expires_at column is write-only in the same way and the SAFE-002 outcome record overstates that reconciliation reads it.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-04T13:50:34.273529Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-04T13:50:34.273529Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:30.810954Z",
+      "destination": "scripts/effect_broker.py and tests/test_effect_broker.py",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Confirmed still open: signature written at 927-939 and 698-716, read only by a round-trip test at tests/test_effect_broker.py:489 that recomputes it from the tests own key. No verify path, no CLI surface, no roadmap item. Companion finding: the expires_at column is write-only in the same way and the SAFE-002 outcome record overstates that reconciliation reads it.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:30.810954Z"
 }

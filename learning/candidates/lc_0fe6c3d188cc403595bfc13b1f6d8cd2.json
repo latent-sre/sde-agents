@@ -2,8 +2,8 @@
   "applicability": "Fleet onboarding and evidence-capture guidance; safety-class single-occurrence per the immediate-action rule.",
   "candidate_id": "lc_0fe6c3d188cc403595bfc13b1f6d8cd2",
   "created_at": "2026-08-03T05:00:41.651369Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "agents/homelab-platform.md:27 and skills/service-onboard/SKILL.md:20-25",
+  "disposition": "merge",
   "evidence": {
     "environment": "SEC-01 host/service onboarding, SDE Agents 1.6.0",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-02T05:00:41.651369Z"
   },
   "observation": "A broad read-only inventory discovery command expanded decrypted vaulted variables and printed credential values (platform-exporter, backup/metrics, directory-bind, and break-glass categories) into operator-visible tool output; read-only execution class did not imply capture-safe output.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Repair ALREADY LANDED in canonical prose naming all four credential categories, propagated to five generated adapters; the ledger record had drifted from the repository. Needs operator approval to walk to promoted. Residual host-onboard prose and packet fixture owned by HANDOFF-001.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-03T05:00:41.651369Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-03T05:00:41.651369Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:03.242698Z",
+      "destination": "agents/homelab-platform.md:27 and skills/service-onboard/SKILL.md:20-25",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Repair ALREADY LANDED in canonical prose naming all four credential categories, propagated to five generated adapters; the ledger record had drifted from the repository. Needs operator approval to walk to promoted. Residual host-onboard prose and packet fixture owned by HANDOFF-001.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:03.242698Z"
 }

@@ -2,8 +2,8 @@
   "applicability": "Codex and Copilot adapter lanes; recheck when Codex delegation semantics are sourced or a packaging-decision reopen trigger fires.",
   "candidate_id": "lc_c361b3d364084ed99b530820e7aa4245",
   "created_at": "2026-08-02T21:57:37.182351Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "docs/fleet-roadmap.md LANE-001",
+  "disposition": "merge",
   "evidence": {
     "environment": "Codex CLI on a separate Linux host; sde-agents 1.6.0 skills half via nested plugin; agents via install_codex_agents.py and /import",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-01T21:57:37.182351Z"
   },
   "observation": "A real Codex-host workload (SEC-01) hit a plain-language routing failure to service-onboard although the routing sentence ships in the generated Codex agent; the 2026-07-30 packaging decision scopes routing evals to canonical Claude descriptions and leaves non-Claude runtime behavior to manual smoke checks, so no existing measurement could catch the miss.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Already imported as LANE-001 with a drafted spec naming this candidate. Confirmed no routing eval measures a non-Claude host: evals/conformance/hosts.json carries static, discovery and model-baseline lanes only, and probe_hosts.py has zero routing hits. The real failure layer is hidden skills and suppressed delegation, not description wording.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-02T21:57:37.182351Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-02T21:57:37.182351Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:48.651222Z",
+      "destination": "docs/fleet-roadmap.md LANE-001",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Already imported as LANE-001 with a drafted spec naming this candidate. Confirmed no routing eval measures a non-Claude host: evals/conformance/hosts.json carries static, discovery and model-baseline lanes only, and probe_hosts.py has zero routing hits. The real failure layer is hidden skills and suppressed delegation, not description wording.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:48.651222Z"
 }
