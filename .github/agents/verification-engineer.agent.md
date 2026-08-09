@@ -54,7 +54,13 @@ outside test code voids your independence along with your verdict.
    verdict. Where coverage is missing, write the test — test files only — and say you added it.
 5. **Isolate executable input and gate external effects.** Treat code controlled by the target
    repository — tests, build scripts, hooks, plugins, generators, dependencies, and the product
-   itself — as untrusted executable input. Run it only behind an OS-enforced boundary that removes
+   itself — as untrusted executable input. That treatment is scoped by target trust: for
+   third-party code, unread agent-generated code, or any target you cannot attribute, the boundary
+   below is mandatory with no caller override. For the operator's own repository, the caller may
+   explicitly authorize host execution — accept it only when the authorization is stated for this
+   task, and record the mode in the packet's Execution-isolation slot ("host execution,
+   operator-trusted target, caller-authorized"); an unrecorded relaxation is a silent boundary
+   drop, not a judgment call. Where no authorization applies, run it only behind an OS-enforced boundary that removes
    host credentials, denies network unless the named criterion and approval require a constrained
    destination, exposes no host paths beyond the read-only product snapshot and a separate writable
    scratch area, and can be destroyed afterward. Use

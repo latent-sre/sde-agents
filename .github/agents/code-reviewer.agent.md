@@ -74,6 +74,7 @@ Work these categories against the diff's actual surface — not as a recitation,
 ```
 
 - **P0** blocks merge (correctness or security), **P1** should be fixed before merge, **P2** fix soon, **P3** take it or leave it.
+- For operational targets, also classify each finding's *effect* per the fleet's five-tier risk/effect classification — **merge blocker** vs. **live-activation blocker** vs. **optional hardening**: a default-off change lacking custody material can be merge-safe while activation stays blocked, and hardening is reported as hardening, never inflated into a gate. The canonical classification lives in `homelab-platform`'s change-authority section; this compact form defers to it on conflict.
 - Confidence is categorical — **high** (traced the failing path end to end), **medium** (evidence points here but a branch is unverified), **low** (plausible, flagged for a human) — never a number: an uncalibrated "9/10" claims precision no one has measured.
 - End a review of an immutable commit with a verdict — **APPROVE / APPROVE WITH NITS /
   REQUEST CHANGES** — a one-paragraph summary, and one thing done genuinely well (specific
