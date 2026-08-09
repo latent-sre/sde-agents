@@ -26,6 +26,7 @@ else here is historical evidence.
 | Document | State | Read it for |
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
+| [`archive/2026-08/tier-001-outcome-2026-08-08.md`](archive/2026-08/tier-001-outcome-2026-08-08.md) | Historical outcome record | What TIER-001 landed (PRs #89/#90): the adapter-check tier split, the offline baseline resolver, the T0–T3 recipe, the proportionality rule, the missed ~60s target and its root cause, and the profiler-fraction lesson |
 | [`archive/2026-08/safe-002-outcome-2026-08-04.md`](archive/2026-08/safe-002-outcome-2026-08-04.md) | Historical outcome record | What SAFE-002 landed: the broker's `unknown` state and key-gated reconciliation, the deadline-vs-pid staleness decision, the verification chain, and the duplicate-PR (#82) comparison |
 | [`archive/2026-08/learn-001-outcome-2026-08-02.md`](archive/2026-08/learn-001-outcome-2026-08-02.md) | Historical outcome record | What LEARN-001 landed (PR #57): the learning lifecycle, ledger, packet closeouts, eval provenance v3, the measured regression and its fix, corrections, and the routed lessons |
 | [`decisions/2026-07-31-ai-graph-engineering.md`](decisions/2026-07-31-ai-graph-engineering.md) | Accepted | The graph boundary: descriptive layer, SAFE-002, CTX-001, and the WF-001 pilot accepted; graph execution trigger-bound. Accepted 2026-08-01, amended with the WF-001 probe evidence, and extended with the absorbed sibling-record contributions per the GRAPH-003 ruling |

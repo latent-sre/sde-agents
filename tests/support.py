@@ -23,7 +23,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
-_IGNORED_DIRS = {".git", "__pycache__"}
+# `.probe-tmp` is the live-probe workspace (`scripts/probe_plugin.py`), created and removed
+# inside the repository root; copying it races that removal, which invalidated a probe run when
+# the suite and the probe ran concurrently. The probe's own copytree already excludes it.
+_IGNORED_DIRS = {".git", "__pycache__", ".probe-tmp"}
 
 
 def create_directory_link(target: Path, link: Path) -> None:

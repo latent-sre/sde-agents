@@ -2,8 +2,8 @@
   "applicability": "Next SAFE-* or broker round, or any review-fix pass that adds defensive raises; two same-shape occurrences route to code-reviewer's checklist or a validator rule",
   "candidate_id": "lc_2665af1325f840a2ae78622b922ac28c",
   "created_at": "2026-08-04T13:50:11.025464Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "AGENTS.md Change playbooks and tests/test_validate_fleet.py",
+  "disposition": "merge",
   "evidence": {
     "environment": "Windows 11, Python 3.12, stdlib unittest",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-03T13:50:11.025464Z"
   },
   "observation": "Review-fix pass added defensive guards to scripts/effect_broker.py (finish() reconciliation-race branch; resolve_unknown input guards) without tests proving they fire; both found untested by independent reviewers and mutation-confirmed non-vacuous, then covered by non-builder tests",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Named instance is closed: both guards now covered by tests at test_effect_broker.py:708-732 and 563-583, landed in commit 6873566 before the PR 91 refactor. The general rule is unowned: AGENTS.md:174-178 requires a failing test only for validator rules, not for a guard or raise added anywhere in scripts.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-04T13:50:11.025464Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-04T13:50:11.025464Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:49:49.111128Z",
+      "destination": "AGENTS.md Change playbooks and tests/test_validate_fleet.py",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Named instance is closed: both guards now covered by tests at test_effect_broker.py:708-732 and 563-583, landed in commit 6873566 before the PR 91 refactor. The general rule is unowned: AGENTS.md:174-178 requires a failing test only for validator rules, not for a guard or raise added anywhere in scripts.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:49:49.111128Z"
 }

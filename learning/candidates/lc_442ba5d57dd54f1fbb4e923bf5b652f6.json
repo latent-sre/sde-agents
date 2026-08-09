@@ -2,8 +2,8 @@
   "applicability": "shells where a pipeline exit status is that of the last stage and success-chaining hides an earlier failure; both original occurrences observed on Windows 11 Git Bash with python stdlib unittest",
   "candidate_id": "lc_442ba5d57dd54f1fbb4e923bf5b652f6",
   "created_at": "2026-08-04T02:15:40.272080Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "scripts/packet_lint.py and agents/verification-engineer.md",
+  "disposition": "merge",
   "evidence": {
     "environment": "Windows 11 Git Bash, python stdlib unittest (both original occurrences)",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-03T02:15:40.272080Z"
   },
   "observation": "A completion claim was drawn from a command whose exit status was not the tested process's own status. When two commands are chained on success, an earlier failure can be masked; when a run is piped into another program, the reported status belongs to the last stage of the pipeline rather than the test process. Block buffering of standard output when piped also reordered the summary line out of the captured excerpt, so the visible evidence looked unrelated instead of absent.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module process's own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -55,6 +55,16 @@
     "last_attested_at": "2026-08-04T02:15:50.864005Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-04T02:15:50.864005Z"
+  "transition_history": [
+    {
+      "at": "2026-08-09T13:50:06.625166Z",
+      "destination": "scripts/packet_lint.py and agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Mechanism half closed by scripts/run_tests.py, which reports each module process's own status and prints an unpiped reproduce command. Rule half uncodified: packet_lint.py:98-107 still accepts a pipeline tail as completion evidence. Caveat on provenance: both recurrence sources carry revision null and the record is a re-file of a deleted predecessor whose fingerprint did not match its claim.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-09T13:50:06.625166Z"
 }

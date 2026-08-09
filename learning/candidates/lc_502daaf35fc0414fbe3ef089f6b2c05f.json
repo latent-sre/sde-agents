@@ -1,0 +1,52 @@
+{
+  "applicability": "sde-agents rounds closed by any host; a third self-referential ledger candidate is the stop signal to hand this theme to the LOOP-001 spec rather than file more records.",
+  "candidate_id": "lc_502daaf35fc0414fbe3ef089f6b2c05f",
+  "created_at": "2026-08-09T15:31:34.146953Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "sde-agents repository, Claude Code session",
+    "provenance": "verified",
+    "revision": "acea271",
+    "source_kind": "retro-observation",
+    "source_reference": "2026-08-09 feedback-triage session: ledger creation-date metrics show zero intake after 2026-08-04 while TIER-001 closed 2026-08-08; the lesson was recovered into docs/archive/2026-08/tier-001-outcome-2026-08-08.md only at a later session's retirement pass"
+  },
+  "expected_behavior": "A closing round's learning scan feeds durable lessons to the repository-local ledger or records an explicit none result, so recurrence is observable across sessions and hosts without depending on any single host's session memory.",
+  "fingerprint": "1d3d4b225721b0c5e1b06f8140c1c354189bfc690f4cfbd7f0f8a72947cf1918",
+  "freshness": {
+    "as_of": "2026-08-09T15:31:34.146953Z",
+    "review_at": "2026-09-08T15:31:34.146953Z"
+  },
+  "observation": "TIER-001 closed with zero learning-ledger candidates filed; the round's durable lesson (profiler fractions do not predict wall-clock attribution; controlled same-machine A/B is the instrument) was written only to one host's project session memory, invisible to other hosts and contributors, and reached the repository only when a later session's closeout noticed and repaired the gap.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "sde-agents repository, Claude Code session",
+        "observed_at": "2026-08-09T15:31:34.146953Z",
+        "provenance": "verified",
+        "revision": "acea271",
+        "source_kind": "retro-observation",
+        "source_reference": "2026-08-09 feedback-triage session: ledger creation-date metrics show zero intake after 2026-08-04 while TIER-001 closed 2026-08-08; the lesson was recovered into docs/archive/2026-08/tier-001-outcome-2026-08-08.md only at a later session's retirement pass"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-09T15:31:34.146953Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Round and release closeout intake discipline in the fleet source repository; excludes the merged-versus-released lifecycle boundary tracked by LOOP-001 and lc_74f04730.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-09T15:31:34.146953Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-09T15:31:34.146953Z"
+}

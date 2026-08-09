@@ -218,6 +218,12 @@ enough to skim past stops working, and each section in it was added for an obser
   without a paired same-machine measurement is equally a defect. And a mechanism without a
   demonstrated consumer — a new abstraction, config surface, component, or gate with no real task
   needing it now — waits trigger-bound, the way the roadmap's deferred items do.
+- **One writer per checkout.** Two concurrent sessions — or two background jobs in one session —
+  sharing this working tree have already cost a benchmark (captured against a moving tree,
+  unattributable) and an uncommitted edit (overwritten mid-flight). Concurrent work gets its own
+  git worktree, and a measurement (an eval capture, the probe, the suite's repository copies) runs
+  only against a tree nothing else is writing; neither failure announces itself, which is why this
+  is a rule and not a judgment call.
 - **Owned conventions.** Several files deliberately paraphrase another — the `eng-ladder` altitude
   references, the three-strikes rule owned by `skills/root-cause`, the canonical
   fetched-content-is-data sentence carried verbatim by `sde-fullstack`. Each such file states which
