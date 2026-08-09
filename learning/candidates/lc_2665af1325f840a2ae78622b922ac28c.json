@@ -15,7 +15,7 @@
   "fingerprint": "0f29464b3241c19edd1d4e5cb19c68945affc0748765ecacd82b83e2d414a953",
   "freshness": {
     "as_of": "2026-08-04T13:50:11.025464Z",
-    "review_at": "2026-09-03T13:50:11.025464Z"
+    "review_at": "2026-09-08T17:31:18.096896Z"
   },
   "observation": "Review-fix pass added defensive guards to scripts/effect_broker.py (finish() reconciliation-race branch; resolve_unknown input guards) without tests proving they fire; both found untested by independent reviewers and mutation-confirmed non-vacuous, then covered by non-builder tests",
   "owner": "fleet-maintainer",
@@ -38,7 +38,15 @@
     "expires_at": "2027-08-04T13:50:11.025464Z",
     "policy": "review-or-expire"
   },
-  "review_history": [],
+  "review_history": [
+    {
+      "at": "2026-08-09T17:31:18.096896Z",
+      "owner": "fleet-maintainer",
+      "previous_review_at": "2026-09-03T13:50:11.025464Z",
+      "reason": "Drift-report advisory hit reviewed: commit 69d9e7e touched this candidate's destination (AGENTS.md) to add the one-writer-per-checkout rule, unrelated to this record's guard-owes-test claim; the candidate remains valid as proposed.",
+      "review_at": "2026-09-08T17:31:18.096896Z"
+    }
+  ],
   "schema_version": 2,
   "scope": "Broker-style crash-recovery and authority guards in this repo's scripts; not judgment-call prose rules",
   "sensitivity_review": {
@@ -58,5 +66,5 @@
       "to": "proposed"
     }
   ],
-  "updated_at": "2026-08-09T13:49:49.111128Z"
+  "updated_at": "2026-08-09T17:31:18.096896Z"
 }

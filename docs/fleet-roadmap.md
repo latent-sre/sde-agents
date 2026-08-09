@@ -55,9 +55,12 @@ run creation — never left readable-as-enforcement while enforcing nothing.
 creation-time enforcement of the documented binding); existing run-state tests and the
 deterministic gates stay green.
 
-**Next action:** Decide resolver-vs-document-and-enforce. SAFE-002 closed without touching
-`run_state.py` (its repair stayed inside `effect_broker.py`), so this opens its own review
-context rather than piggybacking on that round.
+**Next action:** Implement the ruled repair. The operator chose document-and-enforce
+2026-08-09: document the field's actual binding and enforce it at run creation with a test;
+the resolver stays trigger-bound on GRAPH-004 activating (re-verified same day: all seven
+`contract_digest` references in `run_state.py` are write-side — schema, validation, storage,
+echo — nothing resolves it). SAFE-002 closed without touching `run_state.py`, so this opens
+its own review context rather than piggybacking on that round.
 
 #### LEARN-002 — close the Learning-contract compliance gap
 
@@ -209,8 +212,10 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
-**Status:** `decision-needed` — spec drafted 2026-08-02 and awaiting operator approval;
-implementation is additionally gated on the Phase-0 host evidence the spec names.
+**Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
+re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
+suppression both hold); implementation remains gated on the Phase-0 host evidence the spec
+names (`codex --version` and the unmarked-TOML check on the SEC-01 host).
 
 **Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
 intent yields a model recommendation of the explicit onboarding workflow — never an implicit
@@ -228,13 +233,17 @@ routing baseline before any canonical edit.
 **Acceptance:** The spec's acceptance list; headline gates are no regression in the before/after
 `homelab-ops` diff, adapter parity, and one recorded Codex smoke run.
 
-**Next action:** Operator reviews the spec and runs the two Phase-0 one-liners on the Linux
-host; on approval, author the paired plan and capture the Phase-1 baseline.
+**Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
+paired plan and capture the Phase-1 baseline.
 
 #### GATE-001 — gate-owner attribution and same-effect approval consolidation
 
-**Status:** `decision-needed` — no spec yet; scope is settled by field evidence but the design
-interacts with the effect broker and belongs in one bounded spec.
+**Status:** `ready` — both blocking rulings landed 2026-08-09: REV-001 is approved, and the
+classification ownership is settled — **GATE-001 owns the five-tier risk/effect
+classification** (tiers classify effects generally, not broker-mediated effects only);
+LOOP-001 references it. The ownership follows the evidence: the consolidation rule is embedded
+in the tier text itself and is this item's deliverable, and a mis-defined tier at a gate is a
+safety error where at the lifecycle it is only a process error.
 
 **Outcome:** Every pause in a lab workflow names its gate owner (repository confirmation, host
 sandbox, plugin transport, reviewer, credential custody, irreversible action); an unavailable
@@ -254,12 +263,12 @@ racing them.
 **Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
 scenario and an approval-consolidation case that leaves irreversible gates intact.
 
-**Next action:** Author the bounded spec — REV-001 was ruled on 2026-08-09, so the outstanding
-gate is the tier-ownership decision this item shares with LOOP-001.
+**Next action:** Author the bounded spec, alongside LOOP-001's — both gates are now ruled.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
-**Status:** `decision-needed` — no spec yet; the scope is issue #67's lightweight contract.
+**Status:** `ready` — the shared-ownership prerequisite was ruled 2026-08-09: GATE-001 owns the
+five-tier classification; this spec references it.
 
 **Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
 through triage, owner and target release, paired evaluation, canonical change with adapter

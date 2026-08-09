@@ -1,0 +1,52 @@
+{
+  "applicability": "researcher method guidance; recheck when GitHits changes its changelog ingestion cadence.",
+  "candidate_id": "lc_9e5728c32b23494296f9bec3881c12d2",
+  "created_at": "2026-08-09T17:31:17.951147Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "GitHits MCP via researcher agent, Claude Code session",
+    "provenance": "verified",
+    "revision": "adda81b",
+    "source_kind": "subagent-report",
+    "source_reference": "sde-agents:researcher packet 2026-08-09, openai/codex premise re-verification for LANE-001: pkg_changelog latest rust-v0.142.5 (2026-07-01) vs GitHub releases rust-v0.147.0 (2026-08-07), while the code index served sha a16863f8 matching live HEAD"
+  },
+  "expected_behavior": "Release-recency claims are corroborated against the GitHub releases page before citing latest; GitHits changelog freshness is expected to lag its code-index freshness on fast-moving repositories.",
+  "fingerprint": "32bbd10c6852cff37bec610b23c860e830bbeb45dbb50748ddeef358849f8369",
+  "freshness": {
+    "as_of": "2026-08-09T17:31:17.951147Z",
+    "review_at": "2026-09-08T17:31:17.951147Z"
+  },
+  "observation": "GitHits pkg_changelog in repo-url mode served a release feed over one month stale for openai/codex while the same repository's code index resolved exact-current HEAD, so a researcher citing latest release from the changelog tool alone would have reported a version five stable releases behind.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "GitHits MCP via researcher agent, Claude Code session",
+        "observed_at": "2026-08-09T17:31:17.951147Z",
+        "provenance": "verified",
+        "revision": "adda81b",
+        "source_kind": "subagent-report",
+        "source_reference": "sde-agents:researcher packet 2026-08-09, openai/codex premise re-verification for LANE-001: pkg_changelog latest rust-v0.142.5 (2026-07-01) vs GitHub releases rust-v0.147.0 (2026-08-07), while the code index served sha a16863f8 matching live HEAD"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-09T17:31:17.951147Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "GitHits pkg_changelog repo-scope queries on fast-moving repositories; excludes code_grep and code_read freshness, which resolved exact-current in the same session.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-09T17:31:17.951147Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-09T17:31:17.951147Z"
+}
