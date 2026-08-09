@@ -249,8 +249,8 @@ continuation rather than implying approval is missing; same-effect approvals con
 reversible corrections while initialization, credential destruction, recovery-material
 retirement, and teardown keep distinct unavoidable gates.
 
-**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (drafted
-2026-08-09, awaiting operator approval); issue #61 closeout criteria 2–5; ledger candidate
+**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (approved
+2026-08-09); issue #61 closeout criteria 2–5; ledger candidate
 `lc_6b36cf5d` (broker shipped without consumable transport); adjacent to SAFE-002 but distinct
 from its crash-ambiguity states.
 
@@ -262,7 +262,7 @@ racing them.
 scenario, an approval-consolidation case that leaves irreversible gates intact, and issue #67's
 Eval 4 (phase calibration), which this round owns as classification owner.
 
-**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
+**Next action:** Author the paired plan.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
@@ -276,8 +276,8 @@ artifact — and cannot close as successful without that retest or an owner-appr
 impossible. Source-eval PASS is never reportable as released-artifact PASS. No scheduler,
 daemon, transcript store, or self-modifying loop.
 
-**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (drafted
-2026-08-09, awaiting operator approval); issue #67; ledger candidate `lc_74f04730`; the
+**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (approved
+2026-08-09); issue #67; ledger candidate `lc_74f04730`; the
 release-tail record (a merged bump demonstrably not reaching live sessions) as independent
 evidence of the merged≠released gap.
 
@@ -287,7 +287,7 @@ five-tier risk/effect classification and this spec references it.
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
 
-**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
+**Next action:** Author the paired plan.
 
 ### Small items
 

@@ -1,6 +1,7 @@
 # LOOP-001 spec — released-version retest closes the field-feedback loop
 
-**Status: drafted 2026-08-09 — awaiting operator approval.** Authored together with the
+**Status: approved** — drafted 2026-08-09, approved by the operator the same day (recorded at
+the PR #98 closeout). Authored together with the
 [GATE-001 spec](gate-001-gate-owner-attribution.md) under the operator's 2026-08-09 ruling:
 GATE-001 owns the five-tier risk/effect classification; this round **references** it and defines
 no rival classification. Implements issue #67 under its own stated discipline: smallest
