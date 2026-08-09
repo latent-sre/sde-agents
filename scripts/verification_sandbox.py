@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Run one verification command in a pinned, networkless Docker or Podman sandbox."""
+"""Run one verification command in a pinned, networkless Docker or Podman sandbox.
+
+Windows/Git Bash caveat: an MSYS shell converts argument strings that look like POSIX paths
+(`/scratch/x.py`, `/workspace`) into Windows paths BEFORE this script or the engine sees them, so
+the container receives argv naming paths that do not exist inside it and the command exits 2
+("can't open file") while the sandbox itself looks healthy — the envelope faithfully records a
+failing check that never actually ran. Field-proven 2026-08-09 (Git for Windows 2.53, Docker
+29.6). From Git Bash, prefix the invocation with `MSYS_NO_PATHCONV=1` and pass host-side paths in
+Windows form; PowerShell and cmd do not rewrite argv and need nothing."""
 
 from __future__ import annotations
 

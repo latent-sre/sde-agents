@@ -1,0 +1,80 @@
+{
+  "applicability": "verification_sandbox.py callers on Windows hosts; recheck if the sandbox CLI grows path-form normalization.",
+  "candidate_id": "lc_da1da4960edd46e2a4ed8410012ca3f7",
+  "created_at": "2026-08-09T22:09:35.722141Z",
+  "destination": "scripts/verification_sandbox.py docstring",
+  "disposition": "add",
+  "evidence": {
+    "environment": "Git for Windows 2.53.0.windows.2, Docker 29.6.1, Windows 11 10.0.26200",
+    "provenance": "verified",
+    "revision": "ebbc0f4",
+    "source_kind": "session-incident",
+    "source_reference": "verification-engineer pass 2026-08-09: envelopes c1-r1..c2-fix first attempts failed exit 2; diag wrapper rc=0; corrected reruns all pass"
+  },
+  "expected_behavior": "The container receives argv verbatim; from an MSYS shell the invocation is prefixed with MSYS_NO_PATHCONV=1 and host paths are passed in Windows form.",
+  "fingerprint": "d4bd3eb84cecc8d467944f8e2f5328883e4652ccc0a8320c676f7e6c5c061d61",
+  "freshness": {
+    "as_of": "2026-08-09T22:09:35.722141Z",
+    "review_at": "2026-09-08T22:09:35.722141Z"
+  },
+  "observation": "Invoking verification_sandbox.py from Git Bash on Windows silently rewrote container-internal argv paths (/scratch/..., /workspace) via MSYS path conversion, so container commands exited 2 (can't open file) while the sandbox looked healthy and the envelope recorded a failing check that never ran.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "promoted",
+  "reason": "Docstring caveat landed in the same commit as this promotion; validator and suite green at commit time.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Git for Windows 2.53.0.windows.2, Docker 29.6.1, Windows 11 10.0.26200",
+        "observed_at": "2026-08-09T22:09:35.722141Z",
+        "provenance": "verified",
+        "revision": "ebbc0f4",
+        "source_kind": "session-incident",
+        "source_reference": "verification-engineer pass 2026-08-09: envelopes c1-r1..c2-fix first attempts failed exit 2; diag wrapper rc=0; corrected reruns all pass"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-09T22:09:35.722141Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Any direct-argv container wrapper driven from an MSYS/Git Bash shell on Windows; excludes PowerShell/cmd invocations and Linux/macOS hosts.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-09T22:09:35.722141Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-09T22:09:36.051023Z",
+      "destination": "scripts/verification_sandbox.py docstring",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Intake from the verification-engineer handoff (no write authority there); evidence independently plausible and twice-reproduced in its session.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T22:09:36.370508Z",
+      "destination": "scripts/verification_sandbox.py docstring",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Trivial-scope doc caveat on the exact failure surface; approved for same-round landing on PR #98, operator reviews in the PR.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T22:09:36.699677Z",
+      "destination": "scripts/verification_sandbox.py docstring",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Docstring caveat landed in the same commit as this promotion; validator and suite green at commit time.",
+      "to": "promoted"
+    }
+  ],
+  "updated_at": "2026-08-09T22:09:36.699677Z"
+}
