@@ -5,7 +5,7 @@ premise was re-verified against `openai/codex` HEAD `a16863f8` (same-day): expli
 remain hard-filtered from every model-visible surface including the model's own `skills.list`
 tool, and the v2 `spawn_agent` schema still opens "Omit unless explicitly asked". Both
 load-bearing files survived three upstream commits since the spec's `2b5bdcf` baseline.
-Implementation remains gated on the Phase-0 host evidence below. Once approved, this spec
+This spec
 governs the round's scope and acceptance; a paired plan under `docs/superpowers/plans/` carries
 the exact payloads. Implementation is additionally gated on the Phase-0 evidence below.
 

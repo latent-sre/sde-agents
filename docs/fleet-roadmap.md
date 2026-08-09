@@ -39,27 +39,26 @@ single tracker instead of leaking into memory or issue lists.
 **Status:** `ready` — a verified gap in shipped code, absorbed from the superseded control-plane
 proposal via the GRAPH-003 ruling.
 
-**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing:
-`run_state.py` either gains a resolver that maps the digest to a stored contract document (with
-a test proving digest → document), or the field's actual binding is documented and enforced at
-run creation — never left readable-as-enforcement while enforcing nothing.
+**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing: the
+field's actual binding is documented and enforced at run creation in `scripts/run_state.py` —
+never left readable-as-enforcement while enforcing nothing.
 
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
 (finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
 [`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md).
 
 **Prerequisites:** None. Any schema change honors the version-1 hard-reject at
-`run_state.py:174-177` with an explicit migration decision, never a workaround.
+`scripts/run_state.py:174-177` with an explicit migration decision, never a workaround.
 
-**Acceptance:** Tests for whichever repair is chosen (resolver round-trip, or
-creation-time enforcement of the documented binding); existing run-state tests and the
+**Acceptance:** Tests for creation-time enforcement of the documented binding;
+existing run-state tests and the
 deterministic gates stay green.
 
 **Next action:** Implement the ruled repair. The operator chose document-and-enforce
 2026-08-09: document the field's actual binding and enforce it at run creation with a test;
 the resolver stays trigger-bound on GRAPH-004 activating (re-verified same day: all seven
-`contract_digest` references in `run_state.py` are write-side — schema, validation, storage,
-echo — nothing resolves it). SAFE-002 closed without touching `run_state.py`, so this opens
+`contract_digest` references in `scripts/run_state.py` are write-side — schema, validation, storage,
+echo — nothing resolves it). SAFE-002 closed without touching `scripts/run_state.py`, so this opens
 its own review context rather than piggybacking on that round.
 
 #### LEARN-002 — close the Learning-contract compliance gap
@@ -208,8 +207,6 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 **Next action:** Hold for REV-001's settled idiom, then author the paired plan.
 
-### Decision-needed
-
 #### LANE-001 — Codex-lane onboarding discoverability
 
 **Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
@@ -280,8 +277,8 @@ daemon, transcript store, or self-modifying loop.
 **Source:** Issue #67; ledger candidate `lc_74f04730`; the release-tail record (a merged bump
 demonstrably not reaching live sessions) as independent evidence of the merged≠released gap.
 
-**Prerequisites:** A shared-ownership ruling for the five-tier risk/effect classification, which
-issue #67 and GATE-001 both carry — one spec must own it, the other reference it.
+**Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
+five-tier risk/effect classification and this spec references it.
 
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
