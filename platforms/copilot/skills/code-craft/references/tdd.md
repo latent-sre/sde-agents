@@ -63,6 +63,12 @@ this bug can't come back is that this test exists. (The diagnosis that precedes 
   and breaks less than a stack of `when(...).thenReturn(...)`.
 - A flaky test is a broken test. Fix it or delete it — a suite people re-run until green teaches
   everyone to ignore red, which costs you the next real failure.
+- **Guard non-executable artifacts structurally, never by substring count.** When the guarded
+  content cannot run in the test environment — a playbook, shell helper, deployment script — a
+  bare substring count over the whole file is not protection: matches elsewhere in the file keep
+  the assertion green with the entire guarded block deleted, and for such content that test was
+  its only automated protection. Parse the artifact and assert on its structure, then prove the
+  guard by deleting the block and watching the test fail.
 
 ## Verify
 

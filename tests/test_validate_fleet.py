@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 import unittest
@@ -1604,6 +1605,113 @@ class WorkflowMetaContractTests(unittest.TestCase):
             wf.write_text("export const meta = null\n", encoding="utf-8")
             issues = validate_fleet.validate_workflow_meta_contract(dst)
         self.assertTrue(any("first statement" in i for i in issues), issues)
+
+    def test_body_reference_to_meta_is_reported(self) -> None:
+        # Mutation in exactly the shape the 1.7.0 acceptance run caught live: the body deriving
+        # a constant FROM meta. The runtime evaluates the body with the meta export isolated, so
+        # this validated clean, installed everywhere, and died at every load with
+        # "meta is not defined" -- zero agents, no install-time error.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "const SCOPE_MODEL = 'sonnet'",
+                    "const SCOPE_MODEL = meta.phases[0].model",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("not in scope at execution" in i and "deep-review" in i for i in issues),
+            issues,
+        )
+
+    def test_body_spread_of_meta_is_reported(self) -> None:
+        # `{ ...meta }` references the export and dies at load exactly like a bare reference,
+        # but the first version of the scan read the spread's third dot as member access and
+        # skipped it (review finding) -- shipping the same unloadable class the scan exists for.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nconst record = { ...meta, run: 1 }\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("not in scope at execution" in i for i in issues), issues
+        )
+
+    def test_body_template_interpolation_of_meta_is_reported(self) -> None:
+        # Blanking erases backtick contents, so `${meta...}` was invisible to the identifier
+        # scan (review finding) while the runtime executes it at load. The meta-object side
+        # banned template literals for this exact reason; the body side scans raw spans.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8")
+                + "\nlog(`lanes run ${meta.phases[1].model}`)\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("template literal interpolates" in i for i in issues), issues
+        )
+
+    def test_body_ternary_reference_to_meta_is_reported(self) -> None:
+        # `flag ? meta : x` puts a colon after `meta`, and the first key-exemption swallowed it
+        # (review finding) -- yet it is a live reference that dies at load. Key position
+        # requires a preceding `{` or `,`; a ternary consequent has neither.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nconst pick = flag ? meta : 'none'\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("not in scope at execution" in i for i in issues), issues
+        )
+
+    def test_quoted_meta_string_in_interpolation_stays_legal(self) -> None:
+        # `${flag ? 'meta' : ''}` interpolates a STRING named meta, not the export; the raw
+        # scan false-fired on it (review finding), failing a workflow the runtime loads fine.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nlog(`${flag ? 'meta' : ''}`)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_fleet.validate_workflow_meta_contract(dst), [])
+
+    def test_body_member_access_and_key_named_meta_stay_legal(self) -> None:
+        # `packet.meta` and `{ meta: ... }` are ordinary body JavaScript the runtime loads fine;
+        # flagging them would teach maintainers the scan cries wolf and to work around it.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8")
+                + "\nconst summary = { meta: 'record' }\nlog(String(summary.meta))\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_fleet.validate_workflow_meta_contract(dst), [])
+
+    def test_lane_literals_match_meta_phase_models(self) -> None:
+        # The meta.phases model entries are what the progress UI displays; the SCOPE_MODEL /
+        # LANE_MODEL literals are what the agents actually run. The runtime forbids sharing one
+        # value (meta must be pure, the body cannot read meta), so only this check keeps the
+        # display from claiming one model while the lanes run another.
+        text = (REPO / "workflows" / "deep-review.js").read_text(encoding="utf-8")
+        phase_models = re.findall(r"model:\s*'([a-z0-9-]+)'", text)
+        scope = re.search(r"const SCOPE_MODEL = '([a-z0-9-]+)'", text)
+        lane = re.search(r"const LANE_MODEL = '([a-z0-9-]+)'", text)
+        self.assertIsNotNone(scope, "SCOPE_MODEL literal not found")
+        self.assertIsNotNone(lane, "LANE_MODEL literal not found")
+        self.assertEqual(
+            phase_models[:2],
+            [scope.group(1), lane.group(1)],
+            "meta.phases models and the body literals have drifted",
+        )
 
 
 class WorkflowLineEndingTests(unittest.TestCase):

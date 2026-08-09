@@ -2,7 +2,7 @@
   "applicability": "Branch protection settings for validate jobs; also LOOP-001 spec territory (release gates); recheck when branch protection changes.",
   "candidate_id": "lc_36adb3d0d10542eba6fc969c575590c7",
   "created_at": "2026-08-03T21:01:23.188870Z",
-  "destination": "docs/fleet-roadmap.md new item",
+  "destination": "GitHub branch protection on main (live setting, not repo bytes)",
   "disposition": "add",
   "evidence": {
     "environment": "GitHub Actions, latent-sre/sde-agents main branch, 2026-08-02 to 2026-08-03",
@@ -19,8 +19,8 @@
   },
   "observation": "Four consecutive merges landed over a failing required-intent CI check (macOS validate job red since #57) with no branch-protection enforcement and no reviewer noticing; the breakage was discovered only when an unrelated PR inherited the red check.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Gap MOVED rather than closed: validate.yml:46 drops macOS and Windows from the per-PR matrix, so the discovery path that surfaced the original incident no longer exists and a regression now surfaces only post-merge or in the Monday sweep. Enforcement half is a GitHub branch-protection setting not ownable in-repo; any new CI job is gated by the proportionality rule.",
+  "promotion_state": "promoted",
+  "reason": "Enforcement applied live 2026-08-09: required checks [validate (ubuntu-latest, python3), ledger-drift, claude-plugin-contract] with enforce_admins=true, verified by GET /branches/main/protection returning the exact configuration. Merges over red required checks are now blocked for admins too.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Gap MOVED rather than closed: validate.yml:46 drops macOS and Windows from the per-PR matrix, so the discovery path that surfaced the original incident no longer exists and a regression now surfaces only post-merge or in the Monday sweep. Enforcement half is a GitHub branch-protection setting not ownable in-repo; any new CI job is gated by the proportionality rule.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T18:47:23.072050Z",
+      "destination": "GitHub branch protection on main (live setting, not repo bytes)",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator directed the flip 2026-08-09 (session directive: do the branch protection, then work the backlog). Destination resolves to the live enforcement layer rather than a roadmap item: the gap is a settings absence, not unfinished repo work.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T18:47:23.203224Z",
+      "destination": "GitHub branch protection on main (live setting, not repo bytes)",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Enforcement applied live 2026-08-09: required checks [validate (ubuntu-latest, python3), ledger-drift, claude-plugin-contract] with enforce_admins=true, verified by GET /branches/main/protection returning the exact configuration. Merges over red required checks are now blocked for admins too.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:49:30.637000Z"
+  "updated_at": "2026-08-09T18:47:23.203224Z"
 }

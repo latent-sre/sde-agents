@@ -19,12 +19,15 @@ export const meta = {
 // To pin lower, edit the meta.phases `model` literals above -- deliberately NOT an args or
 // config surface: the args contract stays ref-only (issue #63), and a runtime knob with no
 // demonstrated consumer waits trigger-bound per the proportionality rule.
-// The constants DERIVE from meta, never the reverse: the workflow runtime requires the file to
-// BEGIN with `export const meta` and requires meta to be a pure literal, so `model: SOME_CONST`
-// inside meta -- or constants declared above it -- breaks workflow loading silently. Deriving
-// keeps one source of truth without violating either requirement.
-const SCOPE_MODEL = meta.phases[0].model
-const LANE_MODEL = meta.phases[1].model
+// The model names are REPEATED literals, not derived: the runtime extracts meta statically and
+// evaluates the body with the export isolated, so `meta` is not in scope here at all --
+// deriving (`meta.phases[0].model`) validated clean, installed everywhere, and then failed
+// every invocation at load with "meta is not defined" (field-proven 2026-08-09, CLI 2.1.226,
+// run wf_c1db8dfb-b9f, the 1.7.0 acceptance run). The validator now rejects any bare `meta`
+// reference in the body, and a repo test holds these literals equal to the meta.phases models
+// so the progress display cannot claim one model while the lanes run another.
+const SCOPE_MODEL = 'sonnet'
+const LANE_MODEL = 'opus'
 const LANE_EFFORT = 'high'
 
 // Severities and verdict forms mirror agents/code-reviewer.md's canonical packet -- including the

@@ -1757,8 +1757,8 @@ _META_IDENTIFIER_RE = re.compile(r"[A-Za-z_$][\w$]*")
 
 
 def validate_workflow_meta_contract(root: Path) -> list[str]:
-    """`export const meta` must be each workflow's first statement, and the meta object must be
-    a pure literal.
+    """`export const meta` must be each workflow's first statement, the meta object must be a
+    pure literal, and the body must not reference `meta`.
 
     The Workflow runtime extracts `meta` statically before execution: a statement ahead of it,
     or an identifier reference inside it, parses as valid JavaScript and reads as configured in
@@ -1766,7 +1766,15 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
     commit moved the lane-model constants above `meta` and referenced them from
     `meta.phases[*].model`, shipping the fleet's only workflow in a shape the runtime cannot
     load -- the validator passed, the tests passed, and nothing would have said so before the
-    first billed invocation."""
+    first billed invocation.
+
+    The body ban is the same failure from the other side, and its proof is the 1.7.0 acceptance
+    run: the repair derived the constants FROM meta (`const SCOPE_MODEL = meta.phases[0].model`),
+    which this validator blessed -- but the runtime evaluates the body with the meta export
+    isolated, so `meta` is not in scope at execution and every invocation died at load with
+    "meta is not defined" (2026-08-09, CLI 2.1.226, run wf_c1db8dfb-b9f, zero agents spawned).
+    Both directions of sharing one value between meta and the body are therefore banned; the
+    only loadable shape is a repeated literal held equal by a deterministic check."""
     issues: list[str] = []
     workflows_dir = root / "workflows"
     if not workflows_dir.is_dir():
@@ -1831,8 +1839,72 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
                 f"{path}: meta contains the identifier reference {token!r}; the "
                 f"runtime requires meta to be a pure literal, so a variable here parses as "
                 f"valid JavaScript, reads as configured, and fails at workflow load with no "
-                f"install-time error -- derive constants FROM meta, never the reverse."
+                f"install-time error -- repeat the value as a literal on both sides and let a "
+                f"deterministic check hold the copies equal (the body cannot read meta either)."
             )
+        body_offset = close_index + 1
+        for match in _META_IDENTIFIER_RE.finditer(blanked, body_offset):
+            if match.group(0) != "meta":
+                continue
+            preceding = blanked[: match.start()].rstrip()
+            if preceding.endswith(".") and not preceding.endswith(".."):
+                # `something.meta` is a property of another object, not the export. Spread
+                # (`...meta`) must NOT take this exit: it references the export and dies at
+                # load exactly like a bare reference (review finding on the first version of
+                # this scan, which read the third spread dot as member access).
+                continue
+            if (
+                blanked[match.end() :].lstrip()[:1] == ":"
+                and preceding[-1:] in {"{", ","}
+            ):
+                # `{ meta: ... }` in a body-local object is a key, not a reference -- but only
+                # in key position (after `{` or `,`). A colon alone also follows a ternary
+                # consequent (`flag ? meta : x`), which IS a live reference that dies at load;
+                # the first version of this exemption swallowed it (review finding).
+                continue
+            line_number = blanked.count("\n", 0, match.start()) + 1
+            issues.append(
+                f"{path}:{line_number}: the workflow body references `meta`; the runtime "
+                f"evaluates the body with the meta export isolated, so `meta` is not in scope "
+                f"at execution -- the script validates, installs everywhere, then fails every "
+                f"invocation at load with 'meta is not defined'. Repeat the value as a literal "
+                f"and let a deterministic check hold the copies equal. A body-local `meta` "
+                f"declaration is banned by this same scan -- rename it."
+            )
+            break
+        # The meta-side template ban above has a body-side twin: blanking erases backtick
+        # contents, so a `${meta...}` interpolation is invisible to the identifier scan while
+        # the runtime executes it at body load and dies the same way. Surviving backticks in
+        # the blanked text are exactly the real template delimiters (quoted and commented
+        # backticks were blanked), so pair them and scan the RAW spans for interpolated `meta`.
+        # Nesting a template or extra braces inside an interpolation stays out of this flat
+        # scan's reach -- a missed exotic nesting is a silent non-fire, the right failure
+        # direction for a tripwire.
+        tick_positions = [
+            i for i in range(body_offset, len(blanked)) if blanked[i] == "`"
+        ]
+        for open_tick, close_tick in zip(tick_positions[0::2], tick_positions[1::2]):
+            raw_span = text[open_tick : close_tick + 1]
+            # Blank quoted strings inside each interpolation before searching: `${flag ? 'meta'
+            # : ''}` interpolates a STRING named meta, not the export, and the raw scan
+            # false-fired on it (review finding) -- failing a workflow the runtime loads fine.
+            interpolated = any(
+                re.search(
+                    r"(?<![.\w$])meta\b(?!\s*:)",
+                    re.sub(r"'[^'\n]*'|\"[^\"\n]*\"", " ", interp.group(1)),
+                )
+                for interp in re.finditer(r"\$\{([^}]*)\}", raw_span)
+            )
+            if interpolated:
+                line_number = text.count("\n", 0, open_tick) + 1
+                issues.append(
+                    f"{path}:{line_number}: a body template literal interpolates `meta`; the "
+                    f"runtime evaluates the body with the meta export isolated, so the "
+                    f"interpolation throws at load with 'meta is not defined' -- and the "
+                    f"identifier scan cannot see it because string contents are blanked. "
+                    f"Interpolate a repeated literal constant instead."
+                )
+                break
     return issues
 
 

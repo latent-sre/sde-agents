@@ -19,8 +19,8 @@
   },
   "observation": "Proof effort does not scale with severity: revert-and-refail proof, full-suite reruns, worktree re-attribution of already-attributed environment facts, and full packet ceremony are applied uniformly to P2 fixes and to P3 comment tweaks alike, making small fix passes cost more than the feature they follow",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Proportionality rule covers the evidence-reuse clause only; it never states severity, P2, P3 or stakes, and revert-and-refail at verification-engineer.md:42-44 remains categorical with no scaling language. Disproportionate first-time proof on a P3 is not repeated work and is not forbidden. Issue 83 carries the repair proposal; sde-fullstack.md:142-146 is the phrasing precedent.",
+  "promotion_state": "promoted",
+  "reason": "Merged in commit 7188821 as Method 7 scale-proof-to-consequence; the verdict rule explicitly never scales down, so no gate is weakened; full suite 573/573, adapters parity.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Proportionality rule covers the evidence-reuse clause only; it never states severity, P2, P3 or stakes, and revert-and-refail at verification-engineer.md:42-44 remains categorical with no scaling language. Disproportionate first-time proof on a P3 is not repeated work and is not forbidden. Issue 83 carries the repair proposal; sde-fullstack.md:142-146 is the phrasing precedent.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T19:00:48.241156Z",
+      "destination": "agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator session directive 2026-08-09: implement the proposed backlog.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T19:00:48.528787Z",
+      "destination": "agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Merged in commit 7188821 as Method 7 scale-proof-to-consequence; the verdict rule explicitly never scales down, so no gate is weakened; full suite 573/573, adapters parity.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:49:48.967519Z"
+  "updated_at": "2026-08-09T19:00:48.528787Z"
 }

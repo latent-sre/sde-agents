@@ -701,6 +701,79 @@ class TheInversion(unittest.TestCase):
     def test_verification_claim_with_evidence_passes(self) -> None:
         self.assertEqual([], packet_lint.lint_packet(COMPLIANT_REVIEW_PACKET, "review-packet"))
 
+    def test_piped_test_run_as_evidence_is_a_finding(self) -> None:
+        # The pipeline reports the LAST stage's status, and block buffering can push the runner's
+        # summary out of the excerpt -- the claim rides the wrong command's zero.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "$ pytest -q", "$ python3 -m unittest discover -s tests | tail -5"
+        )
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_chained_test_run_as_evidence_is_a_finding(self) -> None:
+        # `runner; other` reports `other`'s status over the runner's failure.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", "$ pytest -q; git status")
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_status_echo_after_test_run_stays_legal(self) -> None:
+        # A trailing command that reads $?/$LASTEXITCODE is reporting the runner's OWN status;
+        # flagging it would punish exactly the provenance the rule exists to demand.
+        for suffix in ("; echo $?", '; "exit: $LASTEXITCODE"'):
+            with self.subTest(suffix=suffix):
+                text = COMPLIANT_REVIEW_PACKET.replace(
+                    "$ pytest -q", f"$ python3 scripts/run_tests.py -v{suffix}"
+                )
+                self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+    def test_piped_filter_is_not_a_test_run(self) -> None:
+        # The runner vocabulary is deliberately narrow: an ordinary filter piped over logs is
+        # legal evidence, even near a claim -- only a TEST RUN piped onward launders its status.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "41 passed in 2.10s", "41 passed in 2.10s\n$ grep -c retry client.log | sort"
+        )
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+    def test_or_true_fallback_is_a_finding(self) -> None:
+        # `runner || true` forces exit 0 over the runner's failure -- the canonical status
+        # launder. The first version of this rule exempted it as a side effect of telling the
+        # pipe apart from logical-or (review finding); `&&` stays legal because a failing
+        # runner short-circuits and its own status survives.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", "$ pytest -q || true")
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_quoted_pipe_in_runner_args_is_not_laundering(self) -> None:
+        # `$ pytest -k "retry|backoff"` is a direct run; the pipe is data inside a quoted
+        # argument. The unblanked first version false-fired on it (review finding) -- the same
+        # punish-the-honest-run direction the prompt anchoring exists to prevent.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", '$ pytest -k "retry|backoff"')
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+    def test_go_test_regex_alternation_is_not_laundering(self) -> None:
+        # `$ go test ./... -run 'TestFoo|TestBar'` is a direct run; the `|` is inside a single-
+        # quoted regex argument, not a shell pipeline. Without quoted-span blanking this false-
+        # fires because the pipe character appears on a prompt line after a runner name.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "$ pytest -q", "$ go test ./... -run 'TestFoo|TestBar'"
+        )
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+    def test_prose_semicolon_near_a_runner_is_not_laundering(self) -> None:
+        # The scan is anchored to shell-prompt lines: a prose sentence or a markdown table
+        # that happens to contain a runner name plus `;` or `|` is not a command, and the
+        # unanchored first version false-fired on exactly these (review finding), punishing
+        # honest direct runs.
+        for evidence_line in (
+            "**Verified**: `pytest -q` -> 41 passed; `ruff check` clean.",
+            "**Verified**: `pytest -q` → `41 passed`.\n| tests | `pytest -q` -> 41 passed | ok |",
+        ):
+            with self.subTest(evidence_line=evidence_line):
+                text = COMPLIANT_REVIEW_PACKET.replace(
+                    "**Verified**: `pytest -q` → `41 passed`.", evidence_line
+                )
+                self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_silence_is_not_rewarded(self) -> None:
         # ECC's scorer would give this a perfect score ("assumes correctness"). Here, a packet that
         # simply omits the verification slots fails -- missing evidence is missing, not fine.

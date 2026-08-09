@@ -184,9 +184,9 @@ GRAPH-004-compatible field names — GRAPH-004 stays deferred).
 no change to working-diff lane behavior.
 
 **Next action:** Author the paired plan. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3`
-remain quarantined (no disposition, destination, or owner) and scope different components, so
-they are not part of this round; they join only through the ledger's own transition plus a
-separate spec update.
+completed their ledger transitions (proposed, with destinations `verification-engineer` and
+`code-reviewer`) and ride this round per the operator's 2026-08-09 direction — the paired plan
+admits them explicitly when it is authored.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
@@ -249,18 +249,20 @@ continuation rather than implying approval is missing; same-effect approvals con
 reversible corrections while initialization, credential destruction, recovery-material
 retirement, and teardown keep distinct unavoidable gates.
 
-**Source:** Issue #61 closeout criteria 2–5; ledger candidate `lc_6b36cf5d` (broker shipped
-without consumable transport); adjacent to SAFE-002 but distinct from its crash-ambiguity
-states.
+**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (drafted
+2026-08-09, awaiting operator approval); issue #61 closeout criteria 2–5; ledger candidate
+`lc_6b36cf5d` (broker shipped without consumable transport); adjacent to SAFE-002 but distinct
+from its crash-ambiguity states.
 
 **Prerequisites:** None — the SAFE-002 sequencing question is settled by SAFE-002 having landed
 first; the spec builds on the broker's now-shipped `unknown`/reconciliation semantics instead of
 racing them.
 
-**Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
-scenario and an approval-consolidation case that leaves irreversible gates intact.
+**Acceptance:** The spec's list; headline gates are the broker-unavailable-after-approval
+scenario, an approval-consolidation case that leaves irreversible gates intact, and issue #67's
+Eval 4 (phase calibration), which this round owns as classification owner.
 
-**Next action:** Author the bounded spec, alongside LOOP-001's — both gates are now ruled.
+**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
@@ -274,8 +276,10 @@ artifact — and cannot close as successful without that retest or an owner-appr
 impossible. Source-eval PASS is never reportable as released-artifact PASS. No scheduler,
 daemon, transcript store, or self-modifying loop.
 
-**Source:** Issue #67; ledger candidate `lc_74f04730`; the release-tail record (a merged bump
-demonstrably not reaching live sessions) as independent evidence of the merged≠released gap.
+**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (drafted
+2026-08-09, awaiting operator approval); issue #67; ledger candidate `lc_74f04730`; the
+release-tail record (a merged bump demonstrably not reaching live sessions) as independent
+evidence of the merged≠released gap.
 
 **Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
 five-tier risk/effect classification and this spec references it.
@@ -283,8 +287,7 @@ five-tier risk/effect classification and this spec references it.
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
 
-**Next action:** Author the bounded spec extending `self-improve-loop` and the ledger states —
-alongside GATE-001's spec so the classification ownership is decided once.
+**Next action:** Operator review of the drafted spec; on approval, author the paired plan.
 
 ### Small items
 
@@ -313,6 +316,11 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **SMALL-006** — the AGENTS.md Map has no row for `scripts/ledger_drift.py`, the only
   CI-wired script missing from it. Source: PR #89 review note, imported at TIER-001 closeout
   ([outcome record](archive/2026-08/tier-001-outcome-2026-08-08.md)).
+- **SMALL-007** — the installed 1.7.0 `deep-review` workflow cannot load (`meta is not
+  defined`; body derived constants from the isolated meta export). Fixed at `74128d6`; closing
+  this line is the 1.7.1 release tail (tag, marketplace, plugin update, restart) plus one live
+  `deep-review` load on the released version. Source: 1.7.0 acceptance run `wf_c1db8dfb-b9f`,
+  2026-08-09; ledger candidate `lc_546acdcc`.
 
 ## Deferred decisions
 

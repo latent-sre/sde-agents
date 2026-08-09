@@ -110,6 +110,41 @@ _HEDGE_RE = re.compile("|".join(HEDGE_PATTERNS), re.IGNORECASE)
 _CLAIM_RE = re.compile("|".join(VERIFICATION_CLAIM_PATTERNS), re.IGNORECASE)
 _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
+# Exit-status provenance. Field-observed twice: a completion claim cited a status that was not the
+# tested process's own. `runner; other` reports `other`'s status over the runner's failure,
+# `runner | filter` reports the filter's status while block buffering can push the runner's summary
+# line out of the quoted excerpt, and `runner || fallback` forces a zero over the runner's failure
+# outright (`&&` stays legal: a failing runner short-circuits and its status survives). The scan is
+# anchored to shell-prompt lines (`$ ...`), because that is the form evidence commands take — an
+# unanchored scan false-fired on prose semicolons and markdown table pipes, punishing direct
+# unpiped runs (review finding on the first version of this rule). The runner vocabulary is
+# deliberately narrow: a missed alias or an unprompted fenced command is a silent non-fire that the
+# prompt-side rule still covers, while a broad match would flag ordinary filters over logs, which
+# are legal evidence for other claims. A trailing command that reads `$?`/`$LASTEXITCODE` is
+# reporting the runner's own status and stays legal.
+STATUS_RUNNER_PATTERN = (
+    r"(?:pytest\b|go\s+test\b|cargo\s+test\b|npm\s+test\b"
+    r"|python3?\s+(?:-m\s+(?:unittest|pytest)\b|\S*run_tests\.py\b))"
+)
+_SHELL_PROMPT_PREFIX = r"^[^\S\n]*(?:>\s*)?\$\s[^\n]*?"
+STATUS_LAUNDERING_PATTERNS = (
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|\n]*\|(?!\|)",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|;\n]*\|\|",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))[^\S\n]*\S",
+)
+_LAUNDER_RE = re.compile("|".join(STATUS_LAUNDERING_PATTERNS), re.IGNORECASE | re.MULTILINE)
+_QUOTED_SPAN_RE = re.compile(r"'[^'\n]*'|\"[^\"\n]*\"")
+
+
+def _blank_quoted_spans(window: str) -> str:
+    """A `|` or `;` inside a quoted shell argument is data, not a pipeline or chain.
+
+    `$ pytest -k "retry|backoff"` is a direct run whose quoted pipe false-fired the launder scan
+    (review finding). Blanking quoted spans before the search fixes that without weakening the
+    rule: a trailing `; "exit: $LASTEXITCODE"` status echo blanks to a bare semicolon with
+    nothing after it, which still matches no pattern, and an unquoted launder is untouched."""
+    return _QUOTED_SPAN_RE.sub(" ", window)
+
 LEARNING_CANDIDATE_FIELDS = (
     "evidence",
     "scope",
@@ -497,9 +532,16 @@ def lint_packet(
         # the enum again as prose would reject every honest candidate handoff.
         is_learning_provenance = bool(_literal_field_values("provenance", [line]))
         if _CLAIM_RE.search(stripped) and not is_learning_provenance:
-            if not _EVIDENCE_RE.search(_window(lines, index)):
+            window = _window(lines, index)
+            if not _EVIDENCE_RE.search(window):
                 findings.append(
                     f"line {index + 1}: verification claim with no command or output cited: "
+                    f"{stripped[:90]!r}"
+                )
+            elif _LAUNDER_RE.search(_blank_quoted_spans(window)):
+                findings.append(
+                    f"line {index + 1}: verification claim whose cited command does not expose "
+                    f"the tested process's own exit status (piped or chained test run): "
                     f"{stripped[:90]!r}"
                 )
 
