@@ -3,12 +3,13 @@ from __future__ import annotations
 import copy
 import hashlib
 import hmac
+import io
 import sqlite3
 import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -559,6 +560,152 @@ class EffectBrokerTests(unittest.TestCase):
                 runner=lambda *a: (_ for _ in ()).throw(AssertionError("no replay")),
                 now=lambda: self.start + timedelta(seconds=20),
             )
+
+    def _resolved_row(self, resolution: str = "not-executed") -> tuple:
+        """Drive one reservation to a terminal resolution and return (ledger, nonce)."""
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(RuntimeError("boom")),
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        effect_broker.resolve_unknown(
+            ledger,
+            nonce=request["nonce"],
+            resolution=resolution,
+            operator="oncall@example",
+            note="checked externally",
+            workspace_root=self.workspace,
+            key=self.key,
+            now=lambda: self.start + timedelta(minutes=10),
+        )
+        return ledger, request["nonce"]
+
+    def test_reconcile_verify_passes_on_intact_rows(self) -> None:
+        """An untampered resolved row verifies; the report names it and carries no findings."""
+        ledger, nonce = self._resolved_row()
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [nonce])
+        self.assertEqual(report["findings"], [])
+
+    def test_reconcile_verify_fires_on_tampered_resolution(self) -> None:
+        """Editing a signed field directly in SQLite must surface as a finding. Before the
+        verify path existed this exact edit kept its stale signature indefinitely -- the
+        column looked like tamper-evidence while detecting nothing."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_note = ? WHERE nonce = ?",
+                    ("history rewritten after the fact", nonce),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(len(report["findings"]), 1)
+        self.assertEqual(report["findings"][0]["nonce"], nonce)
+
+    def test_reconcile_verify_rejects_wrong_key_and_short_key(self) -> None:
+        """A wrong (full-length) key must fail every row rather than silently verify, and a
+        short key is refused outright with the same bound the write side enforces."""
+        ledger, nonce = self._resolved_row()
+        report = effect_broker.verify_resolutions(ledger, key=b"w" * 32)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(len(report["findings"]), 1)
+        with self.assertRaisesRegex(effect_broker.BrokerError, "at least 32 bytes"):
+            effect_broker.verify_resolutions(ledger, key=b"short")
+
+    def test_reconcile_verify_flags_unsigned_resolved_rows(self) -> None:
+        """Strict policy: a resolved row with a NULL signature is an "unsigned" finding, not a
+        benign legacy skip -- whoever can UPDATE a signed field can also NULL the signature,
+        so a skip would hand tampering an evasion path."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_signature = NULL WHERE nonce = ?",
+                    (nonce,),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "unsigned"}])
+
+    def test_reconcile_verify_cli_gates_on_findings(self) -> None:
+        """The exit contract both ways: findings exit 1, an intact ledger exits 0. A verify
+        that printed a mismatch but exited 0 would be the write-only column one layer up --
+        visible to a log reader, invisible to everything that gates."""
+        ledger, nonce = self._resolved_row()
+        key_file = self.control / "verify-key"
+        key_file.write_bytes(self.key)
+        argv = [
+            "reconcile", "verify",
+            "--ledger", str(ledger.path),
+            "--workspace-root", str(self.workspace),
+            "--key-file", str(key_file),
+        ]
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_note = ? WHERE nonce = ?",
+                    ("rewritten", nonce),
+                )
+        with redirect_stdout(io.StringIO()) as captured:
+            self.assertEqual(effect_broker.main(argv), 1)
+        self.assertIn("mismatch", captured.getvalue())
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_note = ? WHERE nonce = ?",
+                    ("checked externally", nonce),
+                )
+        with redirect_stdout(io.StringIO()) as captured:
+            self.assertEqual(effect_broker.main(argv), 0)
+        self.assertIn(nonce, captured.getvalue())
+
+    def test_reconcile_verify_ignores_unresolved_rows(self) -> None:
+        """Nothing signed an unresolved row, so verify must not count or flag it."""
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(RuntimeError("boom")),
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 0)
+        self.assertEqual(report["findings"], [])
+
+    def test_list_unresolved_projects_the_approval_expiry(self) -> None:
+        """The expiry copied onto the row at reservation is triage context for the operator;
+        unprojected it was a write-only column."""
+        request = self._request()
+        approval = self._approval(request)
+        ledger = self._ledger()
+        with self.assertRaises(RuntimeError):
+            effect_broker.execute_approved(
+                request,
+                approval,
+                key=self.key,
+                ledger=ledger,
+                runner=lambda *a: (_ for _ in ()).throw(RuntimeError("boom")),
+                now=lambda: self.start + timedelta(seconds=2),
+            )
+        rows = ledger.list_unresolved(now=lambda: self.start + timedelta(hours=2))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["expires_at"], request["expires_at"])
 
     def test_resolve_unknown_input_guards_fire(self) -> None:
         ledger = self._ledger()
