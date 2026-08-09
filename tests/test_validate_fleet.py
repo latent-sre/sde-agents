@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 from scripts import validate_fleet
+from tests.support import REPO, repo_copy
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -476,9 +478,6 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertEqual([], [i for i in issues if "skills:" in i], issues)
 
 
-REPO = Path(__file__).resolve().parents[1]
-
-
 def _add_guarded_name(repo: Path, name: str) -> None:
     """Add one name to a repo COPY's GUARDED_AGENT_NAMES, whatever formatting the literal uses.
 
@@ -519,13 +518,7 @@ class PluginWiringTests(unittest.TestCase):
     """
 
     def _issues_after(self, mutate, *, check_adapters: bool = False) -> list[str]:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            # tests/ stays in the copy: AGENTS.md names `tests/fixtures/`, and the guide drift
-            # check resolves every multi-segment path it asserts.
-            shutil.copytree(
-                REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
+        with repo_copy() as dst:
             mutate(dst)
             # Default False: each test here checks ONE deliberate non-adapter breakage, and the
             # adapter byte-compare they would otherwise all repeat is 59% of a validation run.
@@ -1469,9 +1462,7 @@ class RoutingClusterTests(unittest.TestCase):
     def test_reintroducing_the_observed_inconsistency_is_reported(self) -> None:
         # The exact defect EVAL-001 was opened on, proven against a COPY of the real repository
         # rather than a synthetic shape that could drift away from the actual cluster file.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             path = dst / "evals" / "routing" / "craft-vs-fullstack.json"
             doc = json.loads(path.read_text(encoding="utf-8"))
             case = next(c for c in doc["cases"] if c["id"] == "pos-ci-actions-harden")
@@ -1489,9 +1480,7 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
     def test_workflow_evidence_enum_drift_is_reported(self) -> None:
         # Proven against a COPY of the real repository so the test breaks the actual shipped
         # workflow, not a synthetic shape that could drift away from it.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             wf = dst / "workflows" / "deep-review.js"
             wf.write_text(
                 wf.read_text(encoding="utf-8").replace(
@@ -1513,9 +1502,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
         # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way
         # Windows checkout translation did on installed 1.6.10 (#75) — the failure the rule
         # exists to catch — rather than a synthetic file that could drift from the real shape.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             wf = dst / "workflows" / "deep-review.js"
             wf.write_bytes(wf.read_bytes().replace(b"\n", b"\r\n"))
             issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
@@ -1529,9 +1516,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
         # and the Workflow tool would refuse to run them. The byte check alone cannot catch
         # this because the file on disk stays LF until the next checkout. Verify that the
         # validator fires when only the rule is removed (bytes left intact).
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             ga = dst / ".gitattributes"
             ga.write_text(
                 "\n".join(
@@ -1550,9 +1535,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
     def test_missing_gitattributes_file_is_reported(self) -> None:
         # Deleting the whole file is the same configuration regression as deleting its JS
         # rule. An existence guard must not turn the more severe mutation into a false green.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             (dst / ".gitattributes").unlink()
             issues = validate_fleet.validate_workflow_line_endings(dst)
         self.assertTrue(
@@ -1566,9 +1549,7 @@ class WorkflowLineEndingTests(unittest.TestCase):
 
 class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_adapter_referencing_workflow_is_reported(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             adapter = next(iter(sorted((dst / ".github" / "agents").glob("*.md"))))
             adapter.write_text(
                 adapter.read_text(encoding="utf-8")
@@ -1582,9 +1563,7 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
         # Generated skill resources are not limited to the prose/config suffixes originally
         # scanned here. A shell asset carrying the same unusable instruction must not bypass
         # the host boundary merely because its extension was absent from a validator tuple.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             resource = dst / "platforms" / "copilot" / "skills" / "probe" / "scripts" / "run.sh"
             resource.parent.mkdir(parents=True)
             resource.write_text("Run /sde-agents:deep-review before merging.\n", encoding="utf-8")
@@ -1594,9 +1573,7 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_untracked_python_cache_is_not_treated_as_a_shipped_workflow_reference(self) -> None:
         # The adapter generator already excludes runtime bytecode from distributable outputs.
         # A local import must not make the host-boundary scan certify a different file set.
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             byproduct = (
                 dst / "platforms" / "copilot" / "skills" / "probe" / "__pycache__" / "probe.pyc"
             )
@@ -1615,18 +1592,109 @@ class LearningLedgerWiringTests(unittest.TestCase):
         self.assertEqual([], validate_fleet.validate_learning_ledger(REPO))
 
     def test_tracked_candidate_corruption_fails_the_ordinary_validator(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             candidate = next((dst / "learning" / "candidates").glob("lc_*.json"))
             candidate.write_text("{}\n", encoding="utf-8")
             issues = validate_fleet.validate_learning_ledger(dst)
         self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
 
+    def test_mutated_ledger_source_is_not_served_from_the_module_cache(self) -> None:
+        # The validator imports the tree-under-validation's own scripts through a cache keyed on
+        # source bytes. If that key ever regressed to the script's path — the obvious "faster"
+        # key — a copy that mutates the script would be validated by the pristine module and the
+        # mutation would pass silently. Warm the cache, then mutate, then demand the failure.
+        with repo_copy() as dst:
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            (dst / "scripts" / "learning_ledger.py").write_text(
+                "raise RuntimeError('mutated ledger source must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
+
+    def test_mutated_dependency_of_a_cached_module_is_not_masked(self) -> None:
+        # eval_behavioral imports eval_routing and packet_lint by __file__-derived paths at
+        # import time, so a cache keyed on eval_behavioral's own bytes alone would serve a
+        # module bound to the PRISTINE tree's dependencies after a copy mutates one of them —
+        # the false pass Copilot review caught on #91. The key must cover the sibling set.
+        with repo_copy() as dst:
+            self.assertEqual(
+                [], validate_fleet.validate_repo(dst, check_inventory=False,
+                                                 check_adapters=False)[0]
+            )
+            (dst / "scripts" / "eval_routing.py").write_text(
+                "raise RuntimeError('mutated dependency must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=False
+            )
+        self.assertTrue(
+            any("could not load" in issue for issue in issues), issues
+        )
+
+    def test_same_size_same_mtime_script_rewrite_is_not_served_stale_bytecode(self) -> None:
+        # A loader-based import trusts a __pycache__ entry validated only by (mtime, size), so
+        # a rewrite that preserves both would execute the PREVIOUS script while the content key
+        # describes the new one (Codex review on #91). The validator compiles the read bytes
+        # directly; this pins that a deliberately timestamp-preserving mutation still fails.
+        with repo_copy() as dst:
+            script = dst / "scripts" / "learning_ledger.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            original = script.read_bytes()
+            stamp = script.stat()
+            payload = b"raise RuntimeError('stale bytecode must not validate')\n"
+            self.assertGreater(len(original), len(payload), "fixture assumption: script bigger")
+            script.write_bytes(payload + b"#" * (len(original) - len(payload)))
+            os.utime(script, (stamp.st_atime, stamp.st_mtime))
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
+        )
+
+    def test_moving_bytes_across_a_file_boundary_is_a_cache_miss(self) -> None:
+        # The digest frames each file with its name and length. Without the frame, appending a
+        # deleted sibling's name and contents to the file sorted immediately before it yields
+        # the SAME unframed stream — here learning_ledger.py absorbing ledger_drift.py — and a
+        # pristine cached module would falsely validate the now-broken ledger source (caught in
+        # review on #91).
+        with repo_copy() as dst:
+            ledger = dst / "scripts" / "learning_ledger.py"
+            drift = dst / "scripts" / "ledger_drift.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            merged = ledger.read_bytes() + drift.name.encode("utf-8") + drift.read_bytes()
+            ledger.write_bytes(merged)
+            drift.unlink()
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
+        )
+
+    def test_behavioral_validator_never_reuses_another_trees_fleet_roster(self) -> None:
+        # Importing eval_behavioral captures FLEET_AGENTS by globbing the tree's agents/ at
+        # import time — repository CONTENT, not script bytes, so the sibling-bytes module cache
+        # must not serve it (caught in review on #91). Warm an import on a tree that ships a
+        # phantom agent, then validate a tree without it whose contracts name that agent: a
+        # reused roster would accept the case silently.
+        with repo_copy() as dst:
+            (dst / "agents" / "phantom.md").write_text("---\nname: phantom\n---\n",
+                                                       encoding="utf-8")
+            validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        with repo_copy() as dst:
+            path = dst / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = json.loads(json.dumps(document["cases"][0]))
+            case["id"] = "phantom-roster-tripwire"
+            case["agent"] = "sde-agents:phantom"
+            document["cases"].append(case)
+            path.write_text(json.dumps(document), encoding="utf-8")
+            issues = validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        self.assertTrue(
+            any("does not name a shipped agent" in issue for issue in issues), issues
+        )
+
     def test_transactional_ignore_drift_is_reported(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = Path(tmp) / "repo"
-            shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+        with repo_copy() as dst:
             ignore = dst / ".gitignore"
             ignore.write_text(
                 ignore.read_text(encoding="utf-8").replace(
@@ -1648,26 +1716,23 @@ class AdapterCheckTierTests(unittest.TestCase):
     real, and a future adapter test that forgets to pass True fails loudly — its expected issue
     never appears — instead of passing vacuously)."""
 
-    def _repo_with_drifted_adapter(self, tmp: str) -> Path:
-        dst = Path(tmp) / "repo"
-        shutil.copytree(REPO, dst, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    def _drift_adapter(self, dst: Path) -> None:
         adapter = sorted((dst / ".github" / "agents").glob("*.md"))[0]
         adapter.write_text(
             adapter.read_text(encoding="utf-8") + "\nhand edit\n", encoding="utf-8"
         )
-        return dst
 
     def test_flag_on_reports_hand_edited_adapter(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = self._repo_with_drifted_adapter(tmp)
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
             issues, _, _ = validate_fleet.validate_repo(
                 dst, check_inventory=False, check_adapters=True
             )
         self.assertTrue(issues, "hand-edited adapter must be reported when the check runs")
 
     def test_flag_off_skips_only_the_adapter_check(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dst = self._repo_with_drifted_adapter(tmp)
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
             issues, _, _ = validate_fleet.validate_repo(
                 dst, check_inventory=False, check_adapters=False
             )

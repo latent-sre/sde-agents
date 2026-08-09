@@ -24,7 +24,7 @@ from scripts import eval_routing as _eval_routing_bootstrap
 
 eval_routing = _eval_routing_bootstrap.load_current_evaluator()
 
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO, git
 
 
 class ExactSourceEntrypointTest(unittest.TestCase):
@@ -739,15 +739,13 @@ class ProvenanceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             self._plugin(root)
-            subprocess.run(["git", "init", "-q", str(root)], check=True)
-            subprocess.run(
-                ["git", "-C", str(root), "config", "core.autocrlf", "false"], check=True
+            git(root, "init", "-q")
+            git(root, "config", "core.autocrlf", "false")
+            git(root, "add", ".")
+            git(
+                root, "-c", "user.name=Eval Test", "-c", "user.email=eval@example.invalid",
+                "commit", "-qm", "baseline",
             )
-            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
-            subprocess.run([
-                "git", "-C", str(root), "-c", "user.name=Eval Test",
-                "-c", "user.email=eval@example.invalid", "commit", "-qm", "baseline",
-            ], check=True)
             clean = eval_routing.plugin_identity(root)
             self.assertRegex(clean["git_head"], r"^[0-9a-f]{40,64}$")
             self.assertIs(clean["git_dirty"], False)

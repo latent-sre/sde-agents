@@ -11,9 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from scripts import learning_ledger
-
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from tests.support import REPO as REPO_ROOT
 SCRIPT = REPO_ROOT / "scripts" / "learning_ledger.py"
 FIXED_NOW = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
 

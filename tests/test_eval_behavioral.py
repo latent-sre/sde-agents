@@ -21,7 +21,7 @@ from scripts import eval_behavioral as _eval_behavioral_bootstrap
 eval_behavioral = _eval_behavioral_bootstrap.load_current_evaluator()
 eval_routing = eval_behavioral.eval_routing
 
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO
 
 
 class ExactSourceEntrypointTest(unittest.TestCase):

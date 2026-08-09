@@ -7,13 +7,11 @@ prints nothing.
 """
 from __future__ import annotations
 
-import contextlib
 import importlib.util
-import io
 import unittest
-from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO, run_main
+
 _spec = importlib.util.spec_from_file_location(
     "error_budget", REPO / "skills" / "observability" / "scripts" / "error_budget.py"
 )
@@ -23,10 +21,7 @@ _spec.loader.exec_module(error_budget)
 
 
 def run(*argv: str) -> tuple[int, str]:
-    out = io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-        code = error_budget.main(list(argv))
-    return code, out.getvalue()
+    return run_main(error_budget.main, *argv)
 
 
 class Arithmetic(unittest.TestCase):

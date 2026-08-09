@@ -23,8 +23,6 @@ except ModuleNotFoundError:
 
 SCHEMA_VERSION = 1
 RUN_TERMINAL = {"complete", "cancelled", "superseded"}
-TASK_TERMINAL = {"completed", "cancelled", "superseded"}
-ATTEMPT_TERMINAL = {"completed", "failed", "expired", "cancelled", "superseded"}
 
 
 class StateError(ValueError):
@@ -37,10 +35,6 @@ class StaleVersionError(StateError):
 
 class LeaseError(StateError):
     pass
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _timestamp(value: datetime) -> str:
@@ -82,7 +76,7 @@ class StateStore:
         database: Path,
         workspace_root: Path,
         *,
-        now: Callable[[], datetime] = _utc_now,
+        now: Callable[[], datetime] = evidence_envelope.utc_now,
     ) -> None:
         self.database, self.workspace_root = _outside_workspace(database, workspace_root)
         self.now = now

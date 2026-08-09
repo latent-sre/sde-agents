@@ -35,7 +35,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO
 HOOKS = REPO / "hooks" / "hooks.json"
 AGENT = REPO / "agents" / "code-reviewer.md"
 SH = shutil.which("sh")

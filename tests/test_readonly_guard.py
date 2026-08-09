@@ -21,6 +21,7 @@ import json
 import subprocess
 import sys
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
@@ -43,6 +44,17 @@ def run_guard(stdin_text: str) -> subprocess.CompletedProcess:
         capture_output=True,
         timeout=30,
     )
+
+
+def run_guard_batch(stdin_texts: list[str]) -> list[subprocess.CompletedProcess]:
+    """Run many guard invocations concurrently, each identical to a run_guard call.
+
+    The guard is a stateless stdin→verdict filter, so concurrency changes nothing about any
+    single invocation; it only stops ~250 interpreter launches from queuing behind each other,
+    which was measured at 98% of this module's wall-clock.
+    """
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        return list(pool.map(run_guard, stdin_texts))
 
 
 def decision(proc: subprocess.CompletedProcess) -> str:
@@ -347,16 +359,16 @@ DENIED = [
 
 class ReadonlyGuardTest(unittest.TestCase):
     def test_allows_read_only_commands(self) -> None:
-        for command in ALLOWED:
+        procs = run_guard_batch([bash_call(command) for command in ALLOWED])
+        for command, proc in zip(ALLOWED, procs):
             with self.subTest(command=command):
-                proc = run_guard(bash_call(command))
                 self.assertEqual(proc.returncode, EXIT_ALLOW)
                 self.assertEqual(decision(proc), "allow", f"falsely denied: {command!r}")
 
     def test_denies_state_changing_commands(self) -> None:
-        for command in DENIED:
+        procs = run_guard_batch([bash_call(command) for command in DENIED])
+        for command, proc in zip(DENIED, procs):
             with self.subTest(command=command):
-                proc = run_guard(bash_call(command))
                 self.assertEqual(proc.returncode, EXIT_DENY)
                 self.assertEqual(decision(proc), "deny", f"falsely allowed: {command!r}")
 

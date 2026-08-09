@@ -6,23 +6,12 @@ co-committed changes are the baseline, not evidence this history-only checker ca
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from scripts import ledger_drift
-
-
-def _git(root: Path, *args: str, date: str | None = None) -> None:
-    # Both dates are pinned so history display and deliberately backdated graph fixtures stay
-    # deterministic across machines and over time.
-    env = dict(os.environ)
-    if date is not None:
-        env["GIT_AUTHOR_DATE"] = date
-        env["GIT_COMMITTER_DATE"] = date
-    subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, env=env)
+from tests.support import git as _git
 
 
 def _repo_with_candidate(

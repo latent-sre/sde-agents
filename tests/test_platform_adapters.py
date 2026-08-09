@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import shutil
 import tempfile
 import tomllib
 import unittest
@@ -11,36 +11,13 @@ from unittest import mock
 
 from scripts import generate_platform_adapters
 from scripts import validate_fleet
-
-
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO, create_directory_link, git, remove_directory_link
 COPILOT_TOOL_ALIASES = {"agent", "edit", "execute", "read", "search", "web"}
 WRITE_TOOLS = {"Edit", "NotebookEdit", "Write"}
 
 
-def _create_directory_link(target: Path, link: Path) -> None:
-    """Create the link primitive that can redirect directory traversal on this host."""
-
-    if os.name == "nt":
-        result = subprocess.run(
-            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode:
-            raise unittest.SkipTest(
-                f"cannot create a Windows junction for the regression test: {result.stderr}"
-            )
-    else:
-        link.symlink_to(target, target_is_directory=True)
-
-
-def _remove_directory_link(link: Path) -> None:
-    if link.is_symlink():
-        link.unlink()
-    elif link.exists():
-        link.rmdir()
+_create_directory_link = create_directory_link
+_remove_directory_link = remove_directory_link
 
 
 class PlatformAdapterTests(unittest.TestCase):
@@ -171,9 +148,16 @@ class PlatformAdapterTests(unittest.TestCase):
             except OSError:
                 pass
 
+    @unittest.skipUnless(shutil.which("git"), "git is required to build the parent work tree")
     def test_nested_non_repo_copy_does_not_inherit_parent_tracking_state(self) -> None:
-        with tempfile.TemporaryDirectory(dir=REPO) as temporary:
-            nested_copy = Path(temporary) / "archive"
+        # The parent must be a git work tree, but not THIS one: writing transient entries into
+        # the live repository races the pooled repo copy once modules run in parallel
+        # (scripts/run_tests.py), and a synthetic parent proves the same non-inheritance.
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary) / "parent-repo"
+            parent.mkdir()
+            git(parent, "init", "-q")
+            nested_copy = parent / "archive"
             nested_copy.mkdir()
             self.assertIsNone(
                 generate_platform_adapters._repository_tracked_files(nested_copy)

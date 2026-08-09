@@ -29,6 +29,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
 | `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |
 | `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
+| `scripts/run_tests.py` | Parallel test runner — one process per module, exactly the discovery invocation T0 uses. |
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `scripts/eval_baseline.py` | Offline resolver from current bytes to a still-valid stored routing benchmark; it answers whether a paired run's 'before' side is already on disk before any API money is spent. |
@@ -48,10 +49,12 @@ instead of recomputing it.
   validator byte-compares every generated adapter itself, so a separate
   `generate_platform_adapters.py --check` adds nothing here; `--write` (below) remains the
   regeneration command after canonical edits.
-- **T1 — before push / PR**: the full offline suite, `python3 -m unittest discover -s tests -v`,
-  plus `claude plugin validate . --strict` for the platform contract. CI runs the validator,
-  the tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check
-  on Linux.
+- **T1 — before push / PR**: the full offline suite via `python3 scripts/run_tests.py` (one
+  process per module, in parallel — a serial `python3 -m unittest discover -s tests -v` proves
+  the same thing at the sum of the module times instead of roughly the longest one), plus
+  `claude plugin validate . --strict` for the platform contract. CI runs the validator, the
+  tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
+  Linux.
 - **T2 — merge and weekly** (CI-owned): pushes to main, the Monday sweep, and manual dispatch
   run the full Linux/macOS/Windows matrix, so platform-specific guard and hook paths are
   exercised without billing every PR for them (see the matrix comment in

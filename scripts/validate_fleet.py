@@ -9,6 +9,7 @@ runtime's generated directories.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
@@ -854,14 +855,82 @@ def validate_agent_guide(root: Path) -> list[str]:
     return issues
 
 
+_MODULES_BY_SOURCE: dict[tuple[str, bytes], object] = {}
+
+
+def load_module_by_content(source: Path, name: str):
+    """Import a script by path, reusing the module when the exact bytes were already imported.
+
+    Validation imports the tree-under-validation's own scripts, and the mutation suite validates
+    ~a hundred copies of this repository in one process — nearly all byte-identical, each
+    previously paying compile+exec again. Keying the cache on content (the convention
+    eval_routing uses for its evaluator) keeps the reuse honest: mutated code hashes differently
+    and gets a fresh import, so the cache can never certify code it did not load.
+
+    The key covers every sibling `*.py` next to the script, not just the script itself: these
+    scripts import each other by paths derived from their own `__file__` at import time, so a
+    module cached on its own bytes alone could be served for a tree whose DEPENDENCIES were
+    mutated — a false pass caught in review. Hashing the whole sibling set costs ~1ms; a
+    directory-wide miss on any mutation is the price of never validating one tree with another
+    tree's code.
+
+    The cache is ONLY for scripts whose import binds no repository content beyond scripts/.
+    A script that captures fleet state at import — eval_behavioral, whose import chain globs
+    agents/ into FLEET_AGENTS — must be imported fresh per tree instead (see
+    validate_behavioral_contracts), because no affordable byte key can cover everything an
+    import might read.
+
+    Returns None when no import spec can be built (the caller owns that message); a module
+    whose exec raises is never cached, so a broken script fails on every call, not just the first.
+    """
+    digest = hashlib.sha256()
+    source_bytes: bytes | None = None
+    for sibling in sorted(source.parent.glob("*.py")):
+        data = sibling.read_bytes()
+        # Length-framed, not bare concatenation: without the frame, moving bytes across a file
+        # boundary (append a deleted sibling's name+contents to the file sorted before it)
+        # yields the same stream and a false cache hit (caught in review on #91).
+        digest.update(f"{sibling.name}\x00{len(data)}\x00".encode("utf-8"))
+        digest.update(data)
+        if sibling == source:
+            source_bytes = data
+    if source_bytes is None:
+        return None
+    key = (source.name, digest.digest())
+    module = _MODULES_BY_SOURCE.get(key)
+    if module is None:
+        module = _execute_source(source, name, source_bytes)
+        if module is None:
+            return None
+        _MODULES_BY_SOURCE[key] = module
+    return module
+
+
+def _execute_source(source: Path, name: str, data: bytes | None = None):
+    """Build a module by compiling the given bytes, bypassing bytecode caches.
+
+    SourceFileLoader.exec_module trusts a __pycache__ entry validated only by (mtime, size), so
+    a same-size rewrite inside one timestamp tick would execute the PREVIOUS contents while a
+    content digest describes the new ones (caught in review on #91). Compiling the buffer
+    directly is eval_routing's checked-buffer convention: what was hashed is exactly what runs
+    — which is also why callers that hashed pass the SAME bytes rather than letting this
+    function re-read a file that may have changed in between.
+    """
+    spec = importlib.util.spec_from_file_location(name, source)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(data if data is not None else source.read_bytes(), str(source), "exec"),
+         module.__dict__)
+    return module
+
+
 def load_guard(root: Path):
     """Import scripts/readonly-guard.py by path — the hyphen makes it un-importable by name."""
     source = root / "scripts" / "readonly-guard.py"
-    spec = importlib.util.spec_from_file_location("readonly_guard", source)
-    if spec is None or spec.loader is None:
+    module = load_module_by_content(source, "readonly_guard")
+    if module is None:
         raise ImportError(f"cannot load {source}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
     return module
 
 
@@ -1174,13 +1243,10 @@ def validate_platform_adapters(root: Path) -> list[str]:
             f"copies would have no mechanical link to the canonical Claude definitions."
         ]
 
-    module_name = f"platform_adapters_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, source)
-    if spec is None or spec.loader is None:
-        return [f"{source}: cannot load platform adapter generator"]
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_by_content(source, "platform_adapters")
+        if module is None:
+            return [f"{source}: cannot load platform adapter generator"]
         return module.validate_platform_support(root)
     except Exception as exc:
         return [
@@ -1349,13 +1415,16 @@ def validate_behavioral_contracts(
             f"{runner}: behavioral case files exist without their schema validator; typoed "
             "assertions could be ignored until an expensive live run."
         ]
-    module_name = f"eval_behavioral_validator_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, runner)
-    if spec is None or spec.loader is None:
-        return [f"{runner}: cannot load behavioral case schema validator"]
-    module = importlib.util.module_from_spec(spec)
+    # Deliberately NOT load_module_by_content: importing this runner captures the tree's fleet
+    # roster (eval_routing's FLEET_AGENTS globs agents/ at import time), so two trees with
+    # identical scripts but different agents would share one roster and a case naming an agent
+    # only the OTHER tree ships would pass silently (caught in review on #91). Content the
+    # import binds is not in any byte key we can afford to maintain, so this module pays a
+    # fresh import per call.
     try:
-        spec.loader.exec_module(module)
+        module = _execute_source(runner, "eval_behavioral_validator")
+        if module is None:
+            return [f"{runner}: cannot load behavioral case schema validator"]
     except Exception as exc:
         return [
             f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "
@@ -1708,14 +1777,11 @@ def validate_learning_ledger(root: Path) -> list[str]:
                 "committed by `git add -A` and later block safe mutation."
             )
 
-    module_name = f"learning_ledger_{abs(hash(str(root.resolve())))}"
-    spec = importlib.util.spec_from_file_location(module_name, script)
-    if spec is None or spec.loader is None:
-        issues.append(f"{script}: cannot load learning-ledger validator")
-        return issues
-    module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        module = load_module_by_content(script, "learning_ledger_validator")
+        if module is None:
+            issues.append(f"{script}: cannot load learning-ledger validator")
+            return issues
         module.LearningLedger(root).check()
     except Exception as exc:
         issues.append(

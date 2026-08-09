@@ -746,10 +746,6 @@ class LearningLedger:
             identities[identity] = str(record["candidate_id"])
         return records
 
-    def _read(self, candidate_id: object) -> dict[str, object]:
-        self._prepare(create=False)
-        return self._load_file(self._candidate_path(candidate_id))
-
     def _atomic_write(
         self,
         path: Path,

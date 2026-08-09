@@ -3,12 +3,9 @@ from __future__ import annotations
 import copy
 import json
 import unittest
-from pathlib import Path
 
 from scripts import probe_hosts
-
-
-REPO = Path(__file__).resolve().parents[1]
+from tests.support import REPO
 
 
 class ProbeHostsTests(unittest.TestCase):
