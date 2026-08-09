@@ -18,7 +18,7 @@ def _repo_with_candidate(
     root: Path,
     *,
     state: str,
-    destination: str,
+    destination: str | None,
     since: str,
     candidate_after_repair: bool = False,
 ) -> None:
@@ -172,6 +172,48 @@ class LedgerDriftTests(unittest.TestCase):
                                  destination="learning:candidate:lc_other",
                                  since="2026-08-01T00:00:00Z")
             self.assertEqual(ledger_drift.inspect(root), [])
+
+    def test_quarantined_candidate_is_reported_as_unwatched(self) -> None:
+        """A quarantined record carries `destination: null`, so the drift watch has nothing to
+        log against; without a second report it ages invisibly — which is how fifteen records
+        sat untriaged for five days while this checker printed OK."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="quarantined", destination=None,
+                                 since="2026-08-01T00:00:00Z")
+            unwatched = ledger_drift.unwatched(root)
+            self.assertEqual(len(unwatched), 1)
+            self.assertEqual(unwatched[0]["promotion_state"], "quarantined")
+            self.assertIsNone(unwatched[0]["destination"])
+            # Advisory always: untriaged intake is not destination drift, so it must not trip
+            # the hard gate a CI caller opted into for drift.
+            self.assertEqual(ledger_drift.main(["--root", str(root), "--fail-on-drift"]), 0)
+
+    def test_pending_non_path_destination_is_unwatched_not_dropped(self) -> None:
+        """A triaged record naming a non-path sink is equally invisible to the drift watch and
+        must surface in the unwatched report rather than vanish between the two."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="proposed",
+                                 destination="learning:candidate:lc_other",
+                                 since="2026-08-01T00:00:00Z")
+            unwatched = ledger_drift.unwatched(root)
+            self.assertEqual(len(unwatched), 1)
+            self.assertEqual(unwatched[0]["destination"], "learning:candidate:lc_other")
+
+    def test_watched_or_closed_candidates_are_not_unwatched(self) -> None:
+        """A path-bearing pending record belongs to the drift watch; a closed record belongs to
+        nobody — neither may pad the unwatched report into noise."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="proposed", destination="scripts/thing.py",
+                                 since="2026-08-01T00:00:00Z")
+            self.assertEqual(ledger_drift.unwatched(root), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(root, state="promoted", destination=None,
+                                 since="2026-08-01T00:00:00Z")
+            self.assertEqual(ledger_drift.unwatched(root), [])
 
     def test_destination_naming_a_missing_file_is_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

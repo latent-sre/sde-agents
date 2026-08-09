@@ -11,6 +11,13 @@ been touched since the candidate's latest committed ledger state? -- and reports
 where the answer is yes. A hit is not a defect; it is a prompt to run the transition the
 lifecycle already requires, or to record why the change was unrelated.
 
+The watch has a second face. A pending candidate with no watchable destination -- every
+quarantined record, whose `destination` is null by construction, and any triaged record naming
+a non-path sink -- gives the question above nothing to bind to, so without a separate report it
+ages invisibly: fifteen records once sat untriaged for five days while this checker printed OK.
+Those are reported as unwatched intake, advisory always -- absence of triage is not destination
+drift, and gating on it would train hasty triage rather than prompt it.
+
 LIMIT. History is not a semantic repair detector. A destination change already ancestral to,
 or committed together with, the candidate's latest state is part of the baseline and is not
 reported. This checker finds later activity; it does not decide whether earlier work satisfied
@@ -144,6 +151,30 @@ def inspect(root: Path) -> list[dict]:
     return findings
 
 
+def unwatched(root: Path) -> list[dict]:
+    """Pending candidates the destination watch cannot see.
+
+    `inspect` keys on paths extracted from `destination`; a record yielding none is silently
+    outside its reach, and quarantined intake always yields none. Reported separately rather
+    than folded into drift so `--fail-on-drift` keeps its meaning: untriaged intake is normal
+    for fresh records, and a gate here would punish filing instead of prompting triage."""
+    findings = []
+    for path in sorted((root / "learning" / "candidates").glob("*.json")):
+        record = json.loads(path.read_text())
+        if record.get("promotion_state") not in PENDING_STATES:
+            continue
+        destination = record.get("destination") or ""
+        if candidate_paths(destination, root):
+            continue
+        findings.append({
+            "candidate_id": record["candidate_id"],
+            "promotion_state": record["promotion_state"],
+            "since": last_activity(record),
+            "destination": destination or None,
+        })
+    return findings
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
@@ -161,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         findings = inspect(args.root)
+        intake = unwatched(args.root)
     except GitError as exc:
         # A git failure is not "no drift" -- reporting OK here would hand a caller asking
         # for a hard gate a green run over a repository nobody could read.
@@ -168,7 +200,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.json:
-        print(json.dumps(findings, indent=2))
+        # An object, not the old bare list: the shape changed while it still had no consumer,
+        # which was the cheap moment -- leaving JSON blind to unwatched intake would let the
+        # text report know more than the machine-readable one.
+        print(json.dumps({"drift": findings, "unwatched": intake}, indent=2))
     elif not findings:
         print("OK - no pending candidate's destination changed after its ledger state.")
     else:
@@ -185,6 +220,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"      {entry['path']}: {entry['commit'][:96]}")
             print()
 
+    if intake and not args.json:
+        print(f"\n{len(intake)} pending candidate(s) the destination watch cannot see"
+              " (no tracked destination path).")
+        print("A quarantined record here is untriaged intake: nothing else prompts its triage,")
+        print("so it ages invisibly until someone asks.\n")
+        for entry in intake:
+            destination = entry["destination"] or "(none - untriaged)"
+            print(f"  {entry['candidate_id'][:11]}  [{entry['promotion_state']}]"
+                  f"  since {entry['since'][:10]}  destination: {destination}")
+
     if args.annotate:
         for finding in findings:
             paths = ", ".join(finding["destination_paths"])
@@ -194,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
                   f"{finding['commit_count']} commit(s) since {finding['since'][:10]}. "
                   f"If the repair landed, run learning_ledger.py transition; "
                   f"if unrelated, no action.")
+        if intake:
+            # One aggregate line, not one per record: a backlog is a single fact about the
+            # ledger, and fifteen identical warnings would bury the drift findings this job
+            # exists to surface.
+            ids = ", ".join(entry["candidate_id"][:11] for entry in intake)
+            print(f"::warning::{len(intake)} learning candidate(s) pending with no watchable "
+                  f"destination -- untriaged intake ages invisibly: {ids}. Triage with "
+                  f"learning_ledger.py transition, or record why each stays pending.")
 
     return 1 if (findings and args.fail_on_drift) else 0
 
