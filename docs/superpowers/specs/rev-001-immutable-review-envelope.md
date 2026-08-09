@@ -1,8 +1,13 @@
 # REV-001 spec — advisory/approval split and the review-to-verify envelope
 
-**Status: proposed** — drafted 2026-08-03, awaiting operator approval. Implements issue #62 under
-the operator's 2026-08-03 ruling: **smallest mechanism, GRAPH-004-compatible field names**;
-GRAPH-004 itself stays deferred per its own economics baseline.
+**Status: approved** — drafted 2026-08-03; approved by the operator 2026-08-09 with one
+condition: **the shared material-risk matrix grows by generalization, never by per-incident
+append** — it stays at the two seeded controls until a new entry can be stated as a general
+control, and an entry that cannot be generalized does not enter. This keeps the matrix from
+becoming an incident scrapbook, the patch-accretion failure the prompt-audit doctrine names.
+Implements issue #62 under the operator's 2026-08-03 ruling: **smallest mechanism,
+GRAPH-004-compatible field names**; GRAPH-004 itself stays deferred per its own economics
+baseline.
 
 ## Problem
 

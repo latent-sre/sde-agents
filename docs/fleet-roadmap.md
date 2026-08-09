@@ -180,6 +180,50 @@ roster and ignores the main session; routing preserves outage/change authority i
 **Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
 read-only command surface and a threat review of every new verb/flag before changing the guard.
 
+#### REV-001 — advisory/approval split and the review-to-verify envelope
+
+**Status:** `ready` — spec approved by the operator 2026-08-09, with the condition that the
+shared material-risk matrix grows by generalization, never per-incident append.
+
+**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
+and never transfers to changed bytes; the verifier requires that envelope and fails closed on
+mismatch; reviewer and verifier share one material-risk matrix; caller-reported and
+independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
+remain legal as advisory mode.
+
+**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md); issue #62
+with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
+GRAPH-004-compatible field names — GRAPH-004 stays deferred).
+
+**Prerequisites:** None hard; behavioral-contract additions ride the pinned harness.
+
+**Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
+no change to working-diff lane behavior.
+
+**Next action:** Author the paired plan. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3`
+remain quarantined (no disposition, destination, or owner) and scope different components, so
+they are not part of this round; they join only through the ledger's own transition plus a
+separate spec update.
+
+#### HANDOFF-001 — evidence-bound onboarding handoff packet
+
+**Status:** `ready` — spec approved by the operator 2026-08-09; **sequenced after REV-001** so
+the packet reuses that round's envelope idiom.
+
+**Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
+carry failed assumptions, verification-method validity, the executable-transport contract,
+irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
+— and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
+
+**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
+issue #60 with three-occurrence recurrence evidence and its field-derived section list.
+
+**Prerequisites:** REV-001's settled idiom.
+
+**Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
+
+**Next action:** Hold for REV-001's settled idiom, then author the paired plan.
+
 ### Decision-needed
 
 #### LANE-001 — Codex-lane onboarding discoverability
@@ -206,46 +250,6 @@ routing baseline before any canonical edit.
 **Next action:** Operator reviews the spec and runs the two Phase-0 one-liners on the Linux
 host; on approval, author the paired plan and capture the Phase-1 baseline.
 
-#### REV-001 — advisory/approval split and the review-to-verify envelope
-
-**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval.
-
-**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
-and never transfers to changed bytes; the verifier requires that envelope and fails closed on
-mismatch; reviewer and verifier share one material-risk matrix; caller-reported and
-independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
-remain legal as advisory mode.
-
-**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md); issue #62
-with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
-GRAPH-004-compatible field names — GRAPH-004 stays deferred).
-
-**Prerequisites:** None hard; behavioral-contract additions ride the pinned harness.
-
-**Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
-no change to working-diff lane behavior.
-
-**Next action:** Operator reviews the spec; on approval, author the paired plan.
-
-#### HANDOFF-001 — evidence-bound onboarding handoff packet
-
-**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval;
-**sequenced after REV-001** so the packet reuses that round's envelope idiom.
-
-**Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
-carry failed assumptions, verification-method validity, the executable-transport contract,
-irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
-— and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
-
-**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
-issue #60 with three-occurrence recurrence evidence and its field-derived section list.
-
-**Prerequisites:** REV-001's settled idiom.
-
-**Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
-
-**Next action:** Hold for REV-001; operator may pre-approve the spec meanwhile.
-
 #### GATE-001 — gate-owner attribution and same-effect approval consolidation
 
 **Status:** `decision-needed` — no spec yet; scope is settled by field evidence but the design
@@ -269,7 +273,8 @@ racing them.
 **Acceptance:** To be fixed by the spec; must include the broker-unavailable-after-approval
 scenario and an approval-consolidation case that leaves irreversible gates intact.
 
-**Next action:** Author a bounded spec once REV-001 is ruled on.
+**Next action:** Author the bounded spec — REV-001 was ruled on 2026-08-09, so the outstanding
+gate is the tier-ownership decision this item shares with LOOP-001.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
