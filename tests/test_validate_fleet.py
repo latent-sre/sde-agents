@@ -1627,6 +1627,37 @@ class WorkflowMetaContractTests(unittest.TestCase):
             issues,
         )
 
+    def test_body_spread_of_meta_is_reported(self) -> None:
+        # `{ ...meta }` references the export and dies at load exactly like a bare reference,
+        # but the first version of the scan read the spread's third dot as member access and
+        # skipped it (review finding) -- shipping the same unloadable class the scan exists for.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nconst record = { ...meta, run: 1 }\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("not in scope at execution" in i for i in issues), issues
+        )
+
+    def test_body_template_interpolation_of_meta_is_reported(self) -> None:
+        # Blanking erases backtick contents, so `${meta...}` was invisible to the identifier
+        # scan (review finding) while the runtime executes it at load. The meta-object side
+        # banned template literals for this exact reason; the body side scans raw spans.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8")
+                + "\nlog(`lanes run ${meta.phases[1].model}`)\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("template literal interpolates" in i for i in issues), issues
+        )
+
     def test_body_member_access_and_key_named_meta_stay_legal(self) -> None:
         # `packet.meta` and `{ meta: ... }` are ordinary body JavaScript the runtime loads fine;
         # flagging them would teach maintainers the scan cries wolf and to work around it.

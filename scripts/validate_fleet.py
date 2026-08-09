@@ -1846,8 +1846,12 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
         for match in _META_IDENTIFIER_RE.finditer(blanked, body_offset):
             if match.group(0) != "meta":
                 continue
-            if blanked[: match.start()].rstrip().endswith("."):
-                # `something.meta` is a property of another object, not the export.
+            preceding = blanked[: match.start()].rstrip()
+            if preceding.endswith(".") and not preceding.endswith(".."):
+                # `something.meta` is a property of another object, not the export. Spread
+                # (`...meta`) must NOT take this exit: it references the export and dies at
+                # load exactly like a bare reference (review finding on the first version of
+                # this scan, which read the third spread dot as member access).
                 continue
             if blanked[match.end() :].lstrip()[:1] == ":":
                 # `{ meta: ... }` in a body-local object is a key, not a reference.
@@ -1862,6 +1866,33 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
                 f"declaration is banned by this same scan -- rename it."
             )
             break
+        # The meta-side template ban above has a body-side twin: blanking erases backtick
+        # contents, so a `${meta...}` interpolation is invisible to the identifier scan while
+        # the runtime executes it at body load and dies the same way. Surviving backticks in
+        # the blanked text are exactly the real template delimiters (quoted and commented
+        # backticks were blanked), so pair them and scan the RAW spans for interpolated `meta`.
+        # Nesting a template or extra braces inside an interpolation stays out of this flat
+        # scan's reach -- a missed exotic nesting is a silent non-fire, the right failure
+        # direction for a tripwire.
+        tick_positions = [
+            i for i in range(body_offset, len(blanked)) if blanked[i] == "`"
+        ]
+        for open_tick, close_tick in zip(tick_positions[0::2], tick_positions[1::2]):
+            raw_span = text[open_tick : close_tick + 1]
+            interpolated = any(
+                re.search(r"(?<![.\w$])meta\b(?!\s*:)", interp.group(1))
+                for interp in re.finditer(r"\$\{([^}]*)\}", raw_span)
+            )
+            if interpolated:
+                line_number = text.count("\n", 0, open_tick) + 1
+                issues.append(
+                    f"{path}:{line_number}: a body template literal interpolates `meta`; the "
+                    f"runtime evaluates the body with the meta export isolated, so the "
+                    f"interpolation throws at load with 'meta is not defined' -- and the "
+                    f"identifier scan cannot see it because string contents are blanked. "
+                    f"Interpolate a repeated literal constant instead."
+                )
+                break
     return issues
 
 

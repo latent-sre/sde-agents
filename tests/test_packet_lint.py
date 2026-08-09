@@ -734,6 +734,30 @@ class TheInversion(unittest.TestCase):
         )
         self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
 
+    def test_or_true_fallback_is_a_finding(self) -> None:
+        # `runner || true` forces exit 0 over the runner's failure -- the canonical status
+        # launder. The first version of this rule exempted it as a side effect of telling the
+        # pipe apart from logical-or (review finding); `&&` stays legal because a failing
+        # runner short-circuits and its own status survives.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", "$ pytest -q || true")
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_prose_semicolon_near_a_runner_is_not_laundering(self) -> None:
+        # The scan is anchored to shell-prompt lines: a prose sentence or a markdown table
+        # that happens to contain a runner name plus `;` or `|` is not a command, and the
+        # unanchored first version false-fired on exactly these (review finding), punishing
+        # honest direct runs.
+        for evidence_line in (
+            "**Verified**: `pytest -q` -> 41 passed; `ruff check` clean.",
+            "**Verified**: `pytest -q` → `41 passed`.\n| tests | `pytest -q` -> 41 passed | ok |",
+        ):
+            with self.subTest(evidence_line=evidence_line):
+                text = COMPLIANT_REVIEW_PACKET.replace(
+                    "**Verified**: `pytest -q` → `41 passed`.", evidence_line
+                )
+                self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_silence_is_not_rewarded(self) -> None:
         # ECC's scorer would give this a perfect score ("assumes correctness"). Here, a packet that
         # simply omits the verification slots fails -- missing evidence is missing, not fine.

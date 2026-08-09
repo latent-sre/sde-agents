@@ -111,23 +111,28 @@ _CLAIM_RE = re.compile("|".join(VERIFICATION_CLAIM_PATTERNS), re.IGNORECASE)
 _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
 # Exit-status provenance. Field-observed twice: a completion claim cited a status that was not the
-# tested process's own. `runner; other` reports `other`'s status over the runner's failure, and
+# tested process's own. `runner; other` reports `other`'s status over the runner's failure,
 # `runner | filter` reports the filter's status while block buffering can push the runner's summary
-# line out of the quoted excerpt — the visible evidence then looks unrelated or belongs to the
-# wrong process, and the claim rides the wrong command's zero. The runner vocabulary is deliberately
-# narrow: a missed runner alias is a silent non-fire that the prompt-side rule still covers, while a
-# broad match would flag ordinary filters over logs, which are legal evidence for other claims. A
-# trailing command that reads `$?`/`$LASTEXITCODE` is reporting the runner's own status and stays
-# legal.
+# line out of the quoted excerpt, and `runner || fallback` forces a zero over the runner's failure
+# outright (`&&` stays legal: a failing runner short-circuits and its status survives). The scan is
+# anchored to shell-prompt lines (`$ ...`), because that is the form evidence commands take — an
+# unanchored scan false-fired on prose semicolons and markdown table pipes, punishing direct
+# unpiped runs (review finding on the first version of this rule). The runner vocabulary is
+# deliberately narrow: a missed alias or an unprompted fenced command is a silent non-fire that the
+# prompt-side rule still covers, while a broad match would flag ordinary filters over logs, which
+# are legal evidence for other claims. A trailing command that reads `$?`/`$LASTEXITCODE` is
+# reporting the runner's own status and stays legal.
 STATUS_RUNNER_PATTERN = (
     r"(?:pytest\b|go\s+test\b|cargo\s+test\b|npm\s+test\b"
     r"|python3?\s+(?:-m\s+(?:unittest|pytest)\b|\S*run_tests\.py\b))"
 )
+_SHELL_PROMPT_PREFIX = r"^[^\S\n]*(?:>\s*)?\$\s[^\n]*?"
 STATUS_LAUNDERING_PATTERNS = (
-    rf"{STATUS_RUNNER_PATTERN}[^|\n]*\|(?!\|)",
-    rf"{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))\s*\S",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|\n]*\|(?!\|)",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|;\n]*\|\|",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))\s*\S",
 )
-_LAUNDER_RE = re.compile("|".join(STATUS_LAUNDERING_PATTERNS), re.IGNORECASE)
+_LAUNDER_RE = re.compile("|".join(STATUS_LAUNDERING_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
 LEARNING_CANDIDATE_FIELDS = (
     "evidence",
