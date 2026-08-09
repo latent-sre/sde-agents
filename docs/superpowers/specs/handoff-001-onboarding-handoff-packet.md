@@ -1,6 +1,7 @@
 # HANDOFF-001 spec — evidence-bound onboarding handoff packet
 
-**Status: proposed** — drafted 2026-08-03, awaiting operator approval. Implements issue #60.
+**Status: approved** — drafted 2026-08-03; approved by the operator 2026-08-09 ("we need it —
+it has been burning us"), sequencing unchanged. Implements issue #60.
 **Sequenced after REV-001**: the packet reuses whatever envelope/matrix idiom that round settles
 plus the existing Learning-packet pattern — the fleet does not grow a third packet dialect.
 

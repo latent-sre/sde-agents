@@ -208,7 +208,8 @@ host; on approval, author the paired plan and capture the Phase-1 baseline.
 
 #### REV-001 — advisory/approval split and the review-to-verify envelope
 
-**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval.
+**Status:** `ready` — spec approved by the operator 2026-08-09, with the condition that the
+shared material-risk matrix grows by generalization, never per-incident append.
 
 **Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
 and never transfers to changed bytes; the verifier requires that envelope and fails closed on
@@ -225,12 +226,14 @@ GRAPH-004-compatible field names — GRAPH-004 stays deferred).
 **Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
 no change to working-diff lane behavior.
 
-**Next action:** Operator reviews the spec; on approval, author the paired plan.
+**Next action:** Author the paired plan. The triage round's `lc_90dd8dc7` (sibling-task
+evidence invalidation) and `lc_2c04ead3` (traced-vs-assumed labeling) target the same two
+agents and ride this round rather than landing as separate edits.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `decision-needed` — spec drafted 2026-08-03 and awaiting operator approval;
-**sequenced after REV-001** so the packet reuses that round's envelope idiom.
+**Status:** `ready` — spec approved by the operator 2026-08-09; **sequenced after REV-001** so
+the packet reuses that round's envelope idiom.
 
 **Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
 carry failed assumptions, verification-method validity, the executable-transport contract,
@@ -244,7 +247,7 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Next action:** Hold for REV-001; operator may pre-approve the spec meanwhile.
+**Next action:** Hold for REV-001's settled idiom, then author the paired plan.
 
 #### GATE-001 — gate-owner attribution and same-effect approval consolidation
 
