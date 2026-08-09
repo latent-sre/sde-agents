@@ -19,8 +19,8 @@
   },
   "observation": "The plugin's effect-broker code shipped to a host exposing no operator mediator, signing-key flow, or replay-ledger interface: an exact approved Tier-2 request was generated and approved but could not be consumed, forcing an operator-authorized one-action bypass through host-native approval; the layered repository guard, host approval, and absent broker transport read to the user as one unexplained gate.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Already imported as GATE-001 decision-needed, which names this candidate as its source; prerequisites cleared by SAFE-002 landing. Behavioral do-not-bypass half already covered at agents/homelab-platform.md:43-47; transport identification before offering Tier 2 and gate attribution remain open.",
+  "promotion_state": "promoted",
+  "reason": "Implemented in commit d02bd33: gate-owner attribution, integration-absence diagnosis stated once (never a per-change security finding or implied missing approval), retained bounded request with host-native continuation, same-effect consolidation with irreversible classes distinct. Behavioral contracts gate-broker-unavailable-continuation / gate-same-effect-consolidation / gate-owner-attribution-stacked added; suite 584/584, adapters parity. Live paired run of the contracts is the round's remaining acceptance step.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,25 @@
       "owner": "fleet-maintainer",
       "reason": "Already imported as GATE-001 decision-needed, which names this candidate as its source; prerequisites cleared by SAFE-002 landing. Behavioral do-not-bypass half already covered at agents/homelab-platform.md:43-47; transport identification before offering Tier 2 and gate attribution remain open.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-09T23:18:17.577854Z",
+      "destination": "docs/fleet-roadmap.md GATE-001",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Spec approved by the operator 2026-08-09 (PR #98 closeout); paired plan authored with this candidate's recurrence-2 estate evidence folded in (PR #99).",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-09T23:18:17.886202Z",
+      "destination": "docs/fleet-roadmap.md GATE-001",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Implemented in commit d02bd33: gate-owner attribution, integration-absence diagnosis stated once (never a per-change security finding or implied missing approval), retained bounded request with host-native continuation, same-effect consolidation with irreversible classes distinct. Behavioral contracts gate-broker-unavailable-continuation / gate-same-effect-consolidation / gate-owner-attribution-stacked added; suite 584/584, adapters parity. Live paired run of the contracts is the round's remaining acceptance step.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T22:46:11.932933Z"
+  "updated_at": "2026-08-09T23:18:17.886202Z"
 }
