@@ -110,6 +110,25 @@ _HEDGE_RE = re.compile("|".join(HEDGE_PATTERNS), re.IGNORECASE)
 _CLAIM_RE = re.compile("|".join(VERIFICATION_CLAIM_PATTERNS), re.IGNORECASE)
 _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
+# Exit-status provenance. Field-observed twice: a completion claim cited a status that was not the
+# tested process's own. `runner; other` reports `other`'s status over the runner's failure, and
+# `runner | filter` reports the filter's status while block buffering can push the runner's summary
+# line out of the quoted excerpt — the visible evidence then looks unrelated or belongs to the
+# wrong process, and the claim rides the wrong command's zero. The runner vocabulary is deliberately
+# narrow: a missed runner alias is a silent non-fire that the prompt-side rule still covers, while a
+# broad match would flag ordinary filters over logs, which are legal evidence for other claims. A
+# trailing command that reads `$?`/`$LASTEXITCODE` is reporting the runner's own status and stays
+# legal.
+STATUS_RUNNER_PATTERN = (
+    r"(?:pytest\b|go\s+test\b|cargo\s+test\b|npm\s+test\b"
+    r"|python3?\s+(?:-m\s+(?:unittest|pytest)\b|\S*run_tests\.py\b))"
+)
+STATUS_LAUNDERING_PATTERNS = (
+    rf"{STATUS_RUNNER_PATTERN}[^|\n]*\|(?!\|)",
+    rf"{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))\s*\S",
+)
+_LAUNDER_RE = re.compile("|".join(STATUS_LAUNDERING_PATTERNS), re.IGNORECASE)
+
 LEARNING_CANDIDATE_FIELDS = (
     "evidence",
     "scope",
@@ -497,9 +516,16 @@ def lint_packet(
         # the enum again as prose would reject every honest candidate handoff.
         is_learning_provenance = bool(_literal_field_values("provenance", [line]))
         if _CLAIM_RE.search(stripped) and not is_learning_provenance:
-            if not _EVIDENCE_RE.search(_window(lines, index)):
+            window = _window(lines, index)
+            if not _EVIDENCE_RE.search(window):
                 findings.append(
                     f"line {index + 1}: verification claim with no command or output cited: "
+                    f"{stripped[:90]!r}"
+                )
+            elif _LAUNDER_RE.search(window):
+                findings.append(
+                    f"line {index + 1}: verification claim whose cited command does not expose "
+                    f"the tested process's own exit status (piped or chained test run): "
                     f"{stripped[:90]!r}"
                 )
 

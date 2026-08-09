@@ -701,6 +701,39 @@ class TheInversion(unittest.TestCase):
     def test_verification_claim_with_evidence_passes(self) -> None:
         self.assertEqual([], packet_lint.lint_packet(COMPLIANT_REVIEW_PACKET, "review-packet"))
 
+    def test_piped_test_run_as_evidence_is_a_finding(self) -> None:
+        # The pipeline reports the LAST stage's status, and block buffering can push the runner's
+        # summary out of the excerpt -- the claim rides the wrong command's zero.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "$ pytest -q", "$ python3 -m unittest discover -s tests | tail -5"
+        )
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_chained_test_run_as_evidence_is_a_finding(self) -> None:
+        # `runner; other` reports `other`'s status over the runner's failure.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", "$ pytest -q; git status")
+        findings = packet_lint.lint_packet(text, "review-packet")
+        self.assertTrue(any("own exit status" in f for f in findings), findings)
+
+    def test_status_echo_after_test_run_stays_legal(self) -> None:
+        # A trailing command that reads $?/$LASTEXITCODE is reporting the runner's OWN status;
+        # flagging it would punish exactly the provenance the rule exists to demand.
+        for suffix in ("; echo $?", '; "exit: $LASTEXITCODE"'):
+            with self.subTest(suffix=suffix):
+                text = COMPLIANT_REVIEW_PACKET.replace(
+                    "$ pytest -q", f"$ python3 scripts/run_tests.py -v{suffix}"
+                )
+                self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+    def test_piped_filter_is_not_a_test_run(self) -> None:
+        # The runner vocabulary is deliberately narrow: an ordinary filter piped over logs is
+        # legal evidence, even near a claim -- only a TEST RUN piped onward launders its status.
+        text = COMPLIANT_REVIEW_PACKET.replace(
+            "41 passed in 2.10s", "41 passed in 2.10s\n$ grep -c retry client.log | sort"
+        )
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_silence_is_not_rewarded(self) -> None:
         # ECC's scorer would give this a perfect score ("assumes correctness"). Here, a packet that
         # simply omits the verification slots fails -- missing evidence is missing, not fine.
