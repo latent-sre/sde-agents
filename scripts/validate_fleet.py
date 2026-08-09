@@ -1853,8 +1853,14 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
                 # load exactly like a bare reference (review finding on the first version of
                 # this scan, which read the third spread dot as member access).
                 continue
-            if blanked[match.end() :].lstrip()[:1] == ":":
-                # `{ meta: ... }` in a body-local object is a key, not a reference.
+            if (
+                blanked[match.end() :].lstrip()[:1] == ":"
+                and preceding[-1:] in {"{", ","}
+            ):
+                # `{ meta: ... }` in a body-local object is a key, not a reference -- but only
+                # in key position (after `{` or `,`). A colon alone also follows a ternary
+                # consequent (`flag ? meta : x`), which IS a live reference that dies at load;
+                # the first version of this exemption swallowed it (review finding).
                 continue
             line_number = blanked.count("\n", 0, match.start()) + 1
             issues.append(
@@ -1879,8 +1885,14 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
         ]
         for open_tick, close_tick in zip(tick_positions[0::2], tick_positions[1::2]):
             raw_span = text[open_tick : close_tick + 1]
+            # Blank quoted strings inside each interpolation before searching: `${flag ? 'meta'
+            # : ''}` interpolates a STRING named meta, not the export, and the raw scan
+            # false-fired on it (review finding) -- failing a workflow the runtime loads fine.
             interpolated = any(
-                re.search(r"(?<![.\w$])meta\b(?!\s*:)", interp.group(1))
+                re.search(
+                    r"(?<![.\w$])meta\b(?!\s*:)",
+                    re.sub(r"'[^'\n]*'|\"[^\"\n]*\"", " ", interp.group(1)),
+                )
                 for interp in re.finditer(r"\$\{([^}]*)\}", raw_span)
             )
             if interpolated:

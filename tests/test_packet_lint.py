@@ -743,6 +743,13 @@ class TheInversion(unittest.TestCase):
         findings = packet_lint.lint_packet(text, "review-packet")
         self.assertTrue(any("own exit status" in f for f in findings), findings)
 
+    def test_quoted_pipe_in_runner_args_is_not_laundering(self) -> None:
+        # `$ pytest -k "retry|backoff"` is a direct run; the pipe is data inside a quoted
+        # argument. The unblanked first version false-fired on it (review finding) -- the same
+        # punish-the-honest-run direction the prompt anchoring exists to prevent.
+        text = COMPLIANT_REVIEW_PACKET.replace("$ pytest -q", '$ pytest -k "retry|backoff"')
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_prose_semicolon_near_a_runner_is_not_laundering(self) -> None:
         # The scan is anchored to shell-prompt lines: a prose sentence or a markdown table
         # that happens to contain a runner name plus `;` or `|` is not a command, and the

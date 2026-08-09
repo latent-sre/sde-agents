@@ -1658,6 +1658,32 @@ class WorkflowMetaContractTests(unittest.TestCase):
             any("template literal interpolates" in i for i in issues), issues
         )
 
+    def test_body_ternary_reference_to_meta_is_reported(self) -> None:
+        # `flag ? meta : x` puts a colon after `meta`, and the first key-exemption swallowed it
+        # (review finding) -- yet it is a live reference that dies at load. Key position
+        # requires a preceding `{` or `,`; a ternary consequent has neither.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nconst pick = flag ? meta : 'none'\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_workflow_meta_contract(dst)
+        self.assertTrue(
+            any("not in scope at execution" in i for i in issues), issues
+        )
+
+    def test_quoted_meta_string_in_interpolation_stays_legal(self) -> None:
+        # `${flag ? 'meta' : ''}` interpolates a STRING named meta, not the export; the raw
+        # scan false-fired on it (review finding), failing a workflow the runtime loads fine.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8") + "\nlog(`${flag ? 'meta' : ''}`)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_fleet.validate_workflow_meta_contract(dst), [])
+
     def test_body_member_access_and_key_named_meta_stay_legal(self) -> None:
         # `packet.meta` and `{ meta: ... }` are ordinary body JavaScript the runtime loads fine;
         # flagging them would teach maintainers the scan cries wolf and to work around it.

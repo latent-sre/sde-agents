@@ -130,9 +130,20 @@ _SHELL_PROMPT_PREFIX = r"^[^\S\n]*(?:>\s*)?\$\s[^\n]*?"
 STATUS_LAUNDERING_PATTERNS = (
     rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|\n]*\|(?!\|)",
     rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^|;\n]*\|\|",
-    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))\s*\S",
+    rf"{_SHELL_PROMPT_PREFIX}{STATUS_RUNNER_PATTERN}[^;\n]*;(?![^\n]*(?:\$\?|\$LASTEXITCODE))[^\S\n]*\S",
 )
 _LAUNDER_RE = re.compile("|".join(STATUS_LAUNDERING_PATTERNS), re.IGNORECASE | re.MULTILINE)
+_QUOTED_SPAN_RE = re.compile(r"'[^'\n]*'|\"[^\"\n]*\"")
+
+
+def _blank_quoted_spans(window: str) -> str:
+    """A `|` or `;` inside a quoted shell argument is data, not a pipeline or chain.
+
+    `$ pytest -k "retry|backoff"` is a direct run whose quoted pipe false-fired the launder scan
+    (review finding). Blanking quoted spans before the search fixes that without weakening the
+    rule: a trailing `; "exit: $LASTEXITCODE"` status echo blanks to a bare semicolon with
+    nothing after it, which still matches no pattern, and an unquoted launder is untouched."""
+    return _QUOTED_SPAN_RE.sub(" ", window)
 
 LEARNING_CANDIDATE_FIELDS = (
     "evidence",
@@ -527,7 +538,7 @@ def lint_packet(
                     f"line {index + 1}: verification claim with no command or output cited: "
                     f"{stripped[:90]!r}"
                 )
-            elif _LAUNDER_RE.search(window):
+            elif _LAUNDER_RE.search(_blank_quoted_spans(window)):
                 findings.append(
                     f"line {index + 1}: verification claim whose cited command does not expose "
                     f"the tested process's own exit status (piped or chained test run): "
