@@ -1497,6 +1497,43 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
         self.assertEqual(issues, [])
 
 
+class WorkflowMetaContractTests(unittest.TestCase):
+    def test_statement_before_meta_is_reported(self) -> None:
+        # Mutation against a COPY of the real shipped workflow, in exactly the shape a merged
+        # review-fix commit shipped it: constants declared above `export const meta`. Valid
+        # JavaScript, invisible to review, unloadable by the Workflow runtime.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                "const SCOPE_MODEL = 'sonnet'\n" + wf.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("first statement" in i and "deep-review" in i for i in issues), issues
+        )
+
+    def test_identifier_inside_meta_is_reported(self) -> None:
+        # The other half of the same merged breakage: meta.phases referencing a constant.
+        # The runtime requires meta to be a pure literal, so the reference fails at load.
+        with repo_copy() as dst:
+            wf = dst / "workflows" / "deep-review.js"
+            wf.write_text(
+                wf.read_text(encoding="utf-8").replace(
+                    "model: 'sonnet'", "model: SCOPE_MODEL", 1
+                ),
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("pure literal" in i and "SCOPE_MODEL" in i for i in issues), issues
+        )
+
+    def test_meta_contract_current_tree_is_clean(self) -> None:
+        issues = validate_fleet.validate_workflow_meta_contract(REPO)
+        self.assertEqual(issues, [])
+
+
 class WorkflowLineEndingTests(unittest.TestCase):
     def test_crlf_workflow_is_reported(self) -> None:
         # Mutation against a COPY of the real shipped workflow: re-encode it exactly the way

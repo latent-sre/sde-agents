@@ -711,6 +711,93 @@ class EffectBrokerTests(unittest.TestCase):
                 finally:
                     ledger.path.unlink()
 
+    def test_reconcile_verify_selects_row_with_nulled_resolution(self) -> None:
+        """NULLing the signed `resolution` column must not hide the row from verification.
+        The selector previously keyed on `resolution IS NOT NULL`, so an attacker who could
+        UPDATE a signed field could drop the row from inspection entirely -- verify reported
+        checked: 0 and exited 0 while status, resolved_at, and the signature all still showed
+        a terminal resolution."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution = NULL WHERE nonce = ?", (nonce,)
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(len(report["findings"]), 1)
+        self.assertEqual(report["findings"][0]["nonce"], nonce)
+
+    def test_reconcile_verify_reports_malformed_payload_field(self) -> None:
+        """A BLOB stored in a signed payload column must surface as a structured finding, not
+        a traceback: json.dumps inside the canonicalization raises TypeError on bytes, which
+        previously escaped main() uncaught."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_note = X'00ff' WHERE nonce = ?",
+                    (nonce,),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["verified"], [])
+        self.assertEqual(
+            report["findings"], [{"nonce": nonce, "problem": "malformed-field"}]
+        )
+
+    def test_reconcile_verify_refuses_missing_ledger(self) -> None:
+        """Verifying a nonexistent ledger must fail closed. ReplayLedger.initialize() would
+        otherwise create a fresh empty database and verify would certify it clean -- checked: 0,
+        exit 0 -- for a path that never held a ledger at all (a typo'd --ledger argument reads
+        as a green audit)."""
+        key_file = self.control / "verify-key"
+        key_file.write_bytes(self.key)
+        if os.name != "nt":
+            os.chmod(key_file, 0o600)
+        missing = self.control / "no-such-ledger.sqlite3"
+        argv = [
+            "reconcile", "verify",
+            "--ledger", str(missing),
+            "--workspace-root", str(self.workspace),
+            "--key-file", str(key_file),
+        ]
+        with redirect_stdout(io.StringIO()):
+            exit_code = effect_broker.main(argv)
+        self.assertEqual(exit_code, 1)
+        self.assertFalse(missing.exists(), "verify must not create the ledger it failed to find")
+
+    def test_reconcile_verify_labels_legacy_signature_distinctly(self) -> None:
+        """A signature computed over the pre-3b9885e payload (without evidence_id/status) is a
+        migration artifact, not tampering: it must report as its own finding class so an
+        operator triaging a red verify can tell re-sign-after-upgrade from an attack."""
+        ledger, nonce = self._resolved_row()
+        row = ledger.get(nonce)
+        legacy_signature = hmac.new(
+            self.key,
+            effect_broker._canonical(
+                {
+                    "nonce": nonce,
+                    "resolution": row["resolution"],
+                    "resolved_at": row["resolved_at"],
+                    "resolved_by": row["resolved_by"],
+                    "note": row["resolution_note"],
+                }
+            ),
+            hashlib.sha256,
+        ).hexdigest()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_signature = ? WHERE nonce = ?",
+                    (legacy_signature, nonce),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(
+            report["findings"], [{"nonce": nonce, "problem": "legacy-signature"}]
+        )
+
     def test_reconcile_verify_cli_gates_on_findings(self) -> None:
         """The exit contract both ways: findings exit 1, an intact ledger exits 0. A verify
         that printed a mismatch but exited 0 would be the write-only column one layer up --

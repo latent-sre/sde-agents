@@ -1688,6 +1688,99 @@ def validate_workflow_line_endings(root: Path) -> list[str]:
     return issues
 
 
+def _blank_js_strings(source: str) -> str:
+    """Replace the contents of '...', \"...\", and `...` literals with nothing, keeping the
+    delimiters, so structural scans (brace matching, identifier detection) cannot be fooled by
+    braces or identifier-shaped text inside strings."""
+    out: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for ch in source:
+        if quote is None:
+            out.append(ch)
+            if ch in "'\"`":
+                quote = ch
+            continue
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == quote:
+            out.append(ch)
+            quote = None
+    return "".join(out)
+
+
+# Identifier-shaped tokens that are legal literal values inside a pure-literal object.
+_META_LITERAL_KEYWORDS = {"true", "false", "null"}
+_META_IDENTIFIER_VALUE_RE = re.compile(r":\s*([A-Za-z_$][\w$]*)")
+
+
+def validate_workflow_meta_contract(root: Path) -> list[str]:
+    """`export const meta` must be each workflow's first statement, and the meta object must be
+    a pure literal.
+
+    The Workflow runtime extracts `meta` statically before execution: a statement ahead of it,
+    or an identifier reference inside it, parses as valid JavaScript and reads as configured in
+    review, then fails at workflow load with no install-time error. Proven live: a review-fix
+    commit moved the lane-model constants above `meta` and referenced them from
+    `meta.phases[*].model`, shipping the fleet's only workflow in a shape the runtime cannot
+    load -- the validator passed, the tests passed, and nothing would have said so before the
+    first billed invocation."""
+    issues: list[str] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return issues
+    for path in sorted(workflows_dir.glob("*.js")):
+        text = read_text(path)
+        first_statement = next(
+            (
+                line
+                for line in text.splitlines()
+                if line.strip() and not line.strip().startswith("//")
+            ),
+            "",
+        )
+        if not first_statement.startswith("export const meta"):
+            issues.append(
+                f"{path}: `export const meta` is not the file's first statement (found "
+                f"{first_statement.strip()[:60]!r} first); the Workflow runtime requires meta "
+                f"to lead the file, so this workflow would install everywhere and fail to load "
+                f"with no install-time error."
+            )
+            continue
+        blanked = _blank_js_strings(text)
+        open_index = blanked.index("{", blanked.index("export const meta"))
+        depth = 0
+        close_index = None
+        for index in range(open_index, len(blanked)):
+            if blanked[index] == "{":
+                depth += 1
+            elif blanked[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    close_index = index
+                    break
+        if close_index is None:
+            issues.append(
+                f"{path}: could not brace-match the meta object literal; an unparseable meta "
+                f"fails at workflow load with no install-time error."
+            )
+            continue
+        meta_block = blanked[open_index : close_index + 1]
+        for match in _META_IDENTIFIER_VALUE_RE.finditer(meta_block):
+            if match.group(1) not in _META_LITERAL_KEYWORDS:
+                issues.append(
+                    f"{path}: meta contains the identifier reference {match.group(1)!r}; the "
+                    f"runtime requires meta to be a pure literal, so a variable here parses as "
+                    f"valid JavaScript, reads as configured, and fails at workflow load with no "
+                    f"install-time error -- derive constants FROM meta, never the reverse."
+                )
+    return issues
+
+
 # Workflows are Claude-only: the other hosts have no workflow runtime, so a generated adapter
 # that mentions one teaches an instruction that cannot execute there -- it reads as configured
 # and fails silently, the exact failure class the bare-skill-reference rule already catches for
@@ -1813,6 +1906,7 @@ def validate_repo(
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
     issues.extend(validate_workflow_line_endings(root))
+    issues.extend(validate_workflow_meta_contract(root))
     issues.extend(validate_workflow_host_boundary(root))
     issues.extend(validate_learning_ledger(root))
     if check_inventory:
