@@ -52,6 +52,12 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # as harmful:
     # it would train someone to "fix" a component that was following its own contract.
     "sde-fullstack-packet": ("changed", "verified", "check first", "learning"),
+    # verification-engineer's executed-verdict floor. Method 7 lets a small change compress the
+    # packet, so this shape holds only what no honest executed verification can omit: the pinned
+    # target, what actually ran, and the isolation mode it ran under. The third slot is the
+    # compensating control Method 5's trust scoping leans on — a packet slot no linter checks is
+    # prose, not a control (review finding on the first version of that scoping).
+    "verification-packet": ("target", "checks executed", "execution isolation"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),

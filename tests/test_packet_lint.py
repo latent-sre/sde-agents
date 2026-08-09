@@ -792,6 +792,22 @@ class OtherShapes(unittest.TestCase):
         findings = packet_lint.lint_packet(text, "multi-agent-packet")
         self.assertTrue(any("cheapest test" in f for f in findings), findings)
 
+    def test_verification_packet_shape_requires_isolation_slot(self) -> None:
+        # The Execution-isolation slot is the compensating control Method 5's trust scoping
+        # leans on; without this shape it was prose only (review finding). Both directions:
+        # a packet naming all three floor slots passes, one omitting isolation is a finding.
+        compliant = (
+            "**Target**: repo at abc1234, Python 3.12.\n"
+            "**Checks executed**: `pytest -q` → `41 passed` [verified].\n"
+            "```\n$ pytest -q\n41 passed in 2.10s\n```\n"
+            "**Execution isolation**: host execution, user-authorized own-repository target, "
+            "dependency closure accepted.\n"
+        )
+        self.assertEqual([], packet_lint.lint_packet(compliant, "verification-packet"))
+        missing = compliant.replace("**Execution isolation**", "**Isolation notes**")
+        findings = packet_lint.lint_packet(missing, "verification-packet")
+        self.assertTrue(any("execution isolation" in f for f in findings), findings)
+
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.
         self.assertIn("review-packet", packet_lint.SHAPES)
