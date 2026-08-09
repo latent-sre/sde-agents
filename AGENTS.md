@@ -223,9 +223,12 @@ enough to skim past stops working, and each section in it was added for an obser
   unattributable) and an uncommitted edit (overwritten mid-flight). Concurrent work gets its own
   git worktree, and a measurement (an eval capture, the probe, the suite's repository copies) runs
   only against a tree nothing else is writing; neither failure announces itself, which is why this
-  is a rule and not a judgment call. The sanctioned parallel test runner is not a second writer:
-  its workers execute against isolated repository copies (`tests/support.py`), never this
-  checkout.
+  is a rule and not a judgment call. The sanctioned parallel test runner is not a second writer
+  to the tree you are editing: its workers assert against isolated repository copies
+  (`tests/support.py`). The exception is narrow and deliberate — two adapter tests create and
+  delete ignored runtime byproducts (a `__pycache__` entry, a generated-tree payload) in the live
+  checkout to prove the drift check ignores them, so the suite still may not run against a tree
+  another job is writing.
 - **Owned conventions.** Several files deliberately paraphrase another — the `eng-ladder` altitude
   references, the three-strikes rule owned by `skills/root-cause`, the canonical
   fetched-content-is-data sentence carried verbatim by `sde-fullstack`. Each such file states which

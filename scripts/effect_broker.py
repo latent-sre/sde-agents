@@ -729,6 +729,26 @@ class ReplayLedger:
                         "resolved, and an already-resolved row is never silently overwritten"
                     )
 
+    def has_ledger_schema(self) -> bool:
+        """True when the file already holds an initialized ledger, checked without creating one.
+
+        `initialize()` is CREATE-IF-NOT-EXISTS, which is right for every verb that writes and
+        wrong for the one that audits: pointed at a typo'd path, an empty placeholder, or a
+        ledger truncated to zero bytes, it would build a fresh schema and let verify certify an
+        audit of nothing (checked: 0, exit 0). This reads sqlite_master instead, so a file that
+        is not already a ledger stays not-a-ledger and verify fails closed."""
+        if not self.path.is_file():
+            return False
+        try:
+            with closing(sqlite3.connect(self.path)) as connection:
+                row = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'consumptions'"
+                ).fetchone()
+        except sqlite3.Error:
+            # Not a database at all (or unreadable as one) -- equally not an auditable ledger.
+            return False
+        return row is not None
+
     def list_resolved(self) -> list[dict[str, object]]:
         """Every row showing any terminal-resolution marker, for signature re-verification.
 
@@ -740,9 +760,16 @@ class ReplayLedger:
         predicate keyed on one signed field (the previous `resolution IS NOT NULL`) let an
         attacker NULL that field and drop the row from inspection entirely -- verify reported
         checked: 0 and exited 0 while status, resolved_at, and the signature still showed a
-        terminal resolution. Under the disjunction, hiding a row requires erasing all seven
-        markers, at which point it reads as never-resolved and resurfaces as an unresolved
-        reservation in `reconcile list` -- the two reports close over each other."""
+        terminal resolution.
+
+        Erasing all seven markers is not an escape either, because the last disjunct closes the
+        gap between the two reconciliation reports. `list_unresolved` only covers 'reserved' and
+        'unknown', so a row whose status was edited to something else (say 'executed') with every
+        marker NULLed would otherwise appear in neither report. Any status outside that pair
+        means the row must be a finished execution, and finish() always writes finished_at and
+        evidence_id together -- so a row missing either, or still carrying the unknown_at
+        lifecycle marker, is out of contract and belongs in the audit set, where it reports as
+        the unsigned row it is."""
         self.initialize()
         with closing(sqlite3.connect(self.path)) as connection:
             connection.row_factory = sqlite3.Row
@@ -758,6 +785,14 @@ class ReplayLedger:
                    OR resolution_note IS NOT NULL
                    OR resolution_evidence_id IS NOT NULL
                    OR resolution_signature IS NOT NULL
+                   OR (
+                        status NOT IN ('reserved', 'unknown')
+                        AND (
+                            unknown_at IS NOT NULL
+                            OR finished_at IS NULL
+                            OR evidence_id IS NULL
+                        )
+                      )
                 ORDER BY resolved_at
                 """
             ).fetchall()
@@ -1007,12 +1042,17 @@ def verify_resolutions(ledger: ReplayLedger, *, key: bytes) -> dict[str, object]
         # report its repr rather than letting a bytes value crash the CLI's JSON rendering.
         nonce = row["nonce"] if isinstance(row["nonce"], str) else repr(row["nonce"])
         stored = row["resolution_signature"]
-        if not stored:
+        if stored is None:
             # Strict by operator ruling: an unsigned resolved row is a finding, never a skip.
             # Whoever can UPDATE a signed field can also NULL the signature, so treating
             # "unsigned" as benign legacy state would hand tampering an evasion path -- a
             # pre-migration ledger goes red here and earns its green by re-resolution or an
             # explicitly recorded retirement, not by silence.
+            #
+            # Only SQL NULL is "unsigned". An empty string (or any other falsy non-NULL value)
+            # is something the write side can never produce, so it falls through to the shape
+            # check below and reports as the malformed signature it is -- classifying it as
+            # merely unsigned would describe deliberate tampering as absence.
             findings.append({"nonce": nonce, "problem": "unsigned"})
             continue
         if not (
@@ -1261,16 +1301,17 @@ def main(argv: list[str] | None = None) -> int:
             ledger = ReplayLedger(args.ledger, args.workspace_root)
             result = ledger.list_unresolved()
         elif args.reconcile_command == "verify":
-            if not args.ledger.is_file():
+            ledger = ReplayLedger(args.ledger, args.workspace_root)
+            if not ledger.has_ledger_schema():
                 # ReplayLedger.initialize() creates a fresh empty database on first use, which
                 # is right for every other verb but would let verify certify a ledger that
-                # never existed -- a typo'd --ledger path reads as a clean audit (checked: 0,
-                # exit 0). An audit of nothing fails closed instead.
+                # never existed -- a typo'd --ledger path, or one that happens to hit an empty
+                # placeholder file, reads as a clean audit (checked: 0, exit 0). An audit of
+                # nothing fails closed instead, and verify never creates what it audits.
                 raise BrokerError(
-                    f"replay ledger not found: {args.ledger} -- verify audits an existing "
-                    "ledger and never creates one"
+                    f"no initialized replay ledger at {args.ledger} -- verify audits an "
+                    "existing ledger and never creates one"
                 )
-            ledger = ReplayLedger(args.ledger, args.workspace_root)
             key = _read_key(args.key_file, args.workspace_root)
             result = verify_resolutions(ledger, key=key)
         else:

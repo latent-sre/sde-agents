@@ -768,6 +768,77 @@ class EffectBrokerTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertFalse(missing.exists(), "verify must not create the ledger it failed to find")
 
+    def test_reconcile_verify_refuses_uninitialized_ledger_file(self) -> None:
+        """An existing file that is not a ledger must fail closed just as a missing one does.
+        `is_file()` alone passed for an empty placeholder (a typo that hits a real path, or a
+        ledger truncated to zero bytes), after which list_resolved()'s initialize() built a
+        fresh schema in it and verify certified checked: 0, exit 0 -- an audit of nothing
+        reported as a clean audit."""
+        key_file = self.control / "verify-key"
+        key_file.write_bytes(self.key)
+        if os.name != "nt":
+            os.chmod(key_file, 0o600)
+        placeholder = self.control / "empty-placeholder.sqlite3"
+        placeholder.write_bytes(b"")
+        argv = [
+            "reconcile", "verify",
+            "--ledger", str(placeholder),
+            "--workspace-root", str(self.workspace),
+            "--key-file", str(key_file),
+        ]
+        with redirect_stdout(io.StringIO()):
+            exit_code = effect_broker.main(argv)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            placeholder.read_bytes(),
+            b"",
+            "verify must not initialize a schema into the file it refused to audit",
+        )
+
+    def test_reconcile_verify_selects_status_only_tampered_row(self) -> None:
+        """A row whose status is edited away from every reconciliation status while all seven
+        terminal markers are NULLed must stay in the audit set. `list_unresolved` only covers
+        'reserved' and 'unknown', so such a row previously appeared in neither report -- both
+        reconciliation commands went green over a row that had demonstrably required
+        reconciliation."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    """
+                    UPDATE consumptions
+                    SET status = 'executed', resolution = NULL, resolved_at = NULL,
+                        resolved_by = NULL, resolution_note = NULL,
+                        resolution_evidence_id = NULL, resolution_signature = NULL
+                    WHERE nonce = ?
+                    """,
+                    (nonce,),
+                )
+        self.assertEqual(
+            [row["nonce"] for row in ledger.list_unresolved()],
+            [],
+            "precondition: the tampered status hides the row from the unresolved report",
+        )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(report["checked"], 1)
+        self.assertEqual(report["findings"], [{"nonce": nonce, "problem": "unsigned"}])
+
+    def test_reconcile_verify_reports_empty_signature_as_malformed(self) -> None:
+        """An empty-string signature is tampering, not absence. Only SQL NULL is "unsigned";
+        the write side can never store an empty string, so classifying it as unsigned would
+        describe a deliberate edit as a missing value."""
+        ledger, nonce = self._resolved_row()
+        with closing(sqlite3.connect(ledger.path)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE consumptions SET resolution_signature = '' WHERE nonce = ?",
+                    (nonce,),
+                )
+        report = effect_broker.verify_resolutions(ledger, key=self.key)
+        self.assertEqual(
+            report["findings"], [{"nonce": nonce, "problem": "malformed-signature"}]
+        )
+
     def test_reconcile_verify_labels_legacy_signature_distinctly(self) -> None:
         """A signature computed over the pre-3b9885e payload (without evidence_id/status) is a
         migration artifact, not tampering: it must report as its own finding class so an

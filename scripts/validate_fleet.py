@@ -1688,34 +1688,72 @@ def validate_workflow_line_endings(root: Path) -> list[str]:
     return issues
 
 
-def _blank_js_strings(source: str) -> str:
-    """Replace the contents of '...', \"...\", and `...` literals with nothing, keeping the
-    delimiters, so structural scans (brace matching, identifier detection) cannot be fooled by
-    braces or identifier-shaped text inside strings."""
-    out: list[str] = []
-    quote: str | None = None
-    escaped = False
-    for ch in source:
-        if quote is None:
-            out.append(ch)
-            if ch in "'\"`":
-                quote = ch
+def _blank_js_strings_and_comments(source: str) -> str:
+    """Overwrite the contents of '...', \"...\", and `...` literals -- and the whole of `//` and
+    `/* */` comments -- with spaces, so structural scans (first-statement detection, brace
+    matching, identifier detection) cannot be fooled by braces or identifier-shaped text that is
+    only prose. Comments must blank the same way strings do: a leading licence or rationale block
+    scanned as code reads as a statement ahead of `meta` and fails a workflow the runtime loads
+    fine.
+
+    Length and newlines are preserved, so an offset found in the blanked text indexes the same
+    character of the raw source -- the checks that must see original bytes (a template literal's
+    backticks inside meta) slice the identical span."""
+    out = list(source)
+    length = len(source)
+    index = 0
+    while index < length:
+        ch = source[index]
+        if ch in "'\"`":
+            quote = ch
+            index += 1
+            while index < length:
+                current = source[index]
+                if current == "\\":
+                    # Blank the escape and whatever it escapes together, so an escaped closing
+                    # quote cannot end the literal early and leak the rest of the file into a
+                    # scan as if it were code.
+                    out[index] = " "
+                    if index + 1 < length and source[index + 1] != "\n":
+                        out[index + 1] = " "
+                    index += 2
+                    continue
+                if current == quote:
+                    index += 1
+                    break
+                if current != "\n":
+                    out[index] = " "
+                index += 1
             continue
-        if escaped:
-            escaped = False
+        if ch == "/" and index + 1 < length and source[index + 1] == "/":
+            while index < length and source[index] != "\n":
+                out[index] = " "
+                index += 1
             continue
-        if ch == "\\":
-            escaped = True
+        if ch == "/" and index + 1 < length and source[index + 1] == "*":
+            out[index] = out[index + 1] = " "
+            index += 2
+            while index < length:
+                if source[index] == "*" and index + 1 < length and source[index + 1] == "/":
+                    out[index] = out[index + 1] = " "
+                    index += 2
+                    break
+                if source[index] != "\n":
+                    out[index] = " "
+                index += 1
             continue
-        if ch == quote:
-            out.append(ch)
-            quote = None
+        index += 1
     return "".join(out)
 
 
 # Identifier-shaped tokens that are legal literal values inside a pure-literal object.
-_META_LITERAL_KEYWORDS = {"true", "false", "null"}
-_META_IDENTIFIER_VALUE_RE = re.compile(r":\s*([A-Za-z_$][\w$]*)")
+_META_LITERAL_KEYWORDS = {"true", "false", "null", "undefined"}
+# The declaration must be matched whole: `export const metadata = {...}` shares this prefix, and
+# accepting it would let a workflow with no `meta` export at all validate clean while the runtime
+# cannot load it. Requiring the opening brace here also means a non-object meta
+# (`export const meta = null`) is a reported finding rather than a brace-search traceback.
+_META_DECLARATION_RE = re.compile(r"export\s+const\s+meta\s*=\s*\{")
+_META_IDENTIFIER_RE = re.compile(r"[A-Za-z_$][\w$]*")
 
 
 def validate_workflow_meta_contract(root: Path) -> list[str]:
@@ -1735,24 +1773,26 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
         return issues
     for path in sorted(workflows_dir.glob("*.js")):
         text = read_text(path)
-        first_statement = next(
-            (
-                line
-                for line in text.splitlines()
-                if line.strip() and not line.strip().startswith("//")
-            ),
-            "",
-        )
-        if not first_statement.startswith("export const meta"):
+        blanked = _blank_js_strings_and_comments(text)
+        first = re.search(r"\S", blanked)
+        if first is None:
             issues.append(
-                f"{path}: `export const meta` is not the file's first statement (found "
-                f"{first_statement.strip()[:60]!r} first); the Workflow runtime requires meta "
-                f"to lead the file, so this workflow would install everywhere and fail to load "
+                f"{path}: workflow file has no statements; it exports no `meta` and cannot load."
+            )
+            continue
+        start = first.start()
+        line_end = blanked.find("\n", start)
+        found = text[start : line_end if line_end != -1 else len(text)].strip()
+        declaration = _META_DECLARATION_RE.match(blanked, start)
+        if declaration is None:
+            issues.append(
+                f"{path}: `export const meta = {{` is not the file's first statement (found "
+                f"{found[:60]!r} first); the Workflow runtime requires an object-literal meta to "
+                f"lead the file, so this workflow would install everywhere and fail to load "
                 f"with no install-time error."
             )
             continue
-        blanked = _blank_js_strings(text)
-        open_index = blanked.index("{", blanked.index("export const meta"))
+        open_index = declaration.end() - 1
         depth = 0
         close_index = None
         for index in range(open_index, len(blanked)):
@@ -1769,15 +1809,30 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
                 f"fails at workflow load with no install-time error."
             )
             continue
+        if "`" in text[open_index : close_index + 1]:
+            # A template literal is not a pure literal the moment it interpolates, and the
+            # interpolated identifier lives inside the blanked span where no scan can see it --
+            # so the construct itself is the finding rather than its contents.
+            issues.append(
+                f"{path}: meta contains a template literal; the runtime requires meta to be a "
+                f"pure literal, and an interpolated `${{...}}` reads as configured while failing "
+                f"at workflow load -- use a plain quoted string."
+            )
         meta_block = blanked[open_index : close_index + 1]
-        for match in _META_IDENTIFIER_VALUE_RE.finditer(meta_block):
-            if match.group(1) not in _META_LITERAL_KEYWORDS:
-                issues.append(
-                    f"{path}: meta contains the identifier reference {match.group(1)!r}; the "
-                    f"runtime requires meta to be a pure literal, so a variable here parses as "
-                    f"valid JavaScript, reads as configured, and fails at workflow load with no "
-                    f"install-time error -- derive constants FROM meta, never the reverse."
-                )
+        for match in _META_IDENTIFIER_RE.finditer(meta_block):
+            token = match.group(0)
+            if token in _META_LITERAL_KEYWORDS:
+                continue
+            after = meta_block[match.end() :].lstrip()
+            if after[:1] == ":":
+                # A property key, not a value.
+                continue
+            issues.append(
+                f"{path}: meta contains the identifier reference {token!r}; the "
+                f"runtime requires meta to be a pure literal, so a variable here parses as "
+                f"valid JavaScript, reads as configured, and fails at workflow load with no "
+                f"install-time error -- derive constants FROM meta, never the reverse."
+            )
     return issues
 
 
