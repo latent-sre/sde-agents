@@ -85,47 +85,6 @@ the grammar literal to the body, owing paired before/after reruns of the seven a
 contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
 repairs) — their first-contact single runs remain diagnostic only.
 
-#### REL-173 — record 1.7.3 release and released-artifact retest
-
-**Status:** `ready` — the LOOP-001/REV-001/SAFE-003 implementation closed; the release tail
-that those rounds' acceptance still owes is the remaining live work.
-
-**Outcome:** After the `sde-agents--v1.7.3` tag exists, every candidate this arc promoted
-(`lc_74f04730`, `lc_546acdcc`, `lc_90dd8dc7`, `lc_2c04ead3`, and the SAFE-003 ride-along
-`lc_b2d00e7d` among the broader awaiting-release set that ships in 1.7.3) carries a
-`record-release --version 1.7.3` stamp and a recorded released-artifact retest (or an
-owner-approved reason retest is impossible). Issues #67, #62, and the release-gated half of
-#73 close only on that evidence — never on the merge that shipped the mechanism.
-
-**Source:** [LOOP-001 outcome](archive/2026-08/loop-001-outcome-2026-08-10.md);
-[REV-001 outcome](archive/2026-08/rev-001-outcome-2026-08-10.md);
-[SAFE-003 outcome](archive/2026-08/safe-003-outcome-2026-08-10.md); issues #67, #62, #73.
-
-**Prerequisites:** The 1.7.3 tag exists on the released artifact. `record-release` refuses
-every state other than `promoted` and records only releases that happened.
-
-**Acceptance:** After the tag, `learning_ledger.py list --view awaiting-release` — the literal
-merged-not-released backlog, 27 records at this writing — returns no candidate whose destination
-edit is contained in the 1.7.3 artifact: the five arc IDs above and every other record that view
-enumerates at closeout carries a 1.7.3 `release` block plus a `retest` block (or an explicit
-owner reason); anything legitimately still unreleased stays listed with a stated reason. Issues
-#67, #62, and the release-gated half of #73 close with that evidence cited; deterministic
-`learning_ledger.py check` stays green.
-
-**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, enumerate the backlog with
-`python3 scripts/learning_ledger.py --root . list --view awaiting-release`, then run both
-commands once per candidate — their flag shapes differ, so neither is a template for the other:
-
-```text
-python3 scripts/learning_ledger.py --root . record-release <candidate_id> \
-  --version 1.7.3 --reference "sde-agents--v1.7.3"
-python3 scripts/learning_ledger.py --root . record-retest <candidate_id> \
-  --result pass --environment "<released-artifact environment>" --reference "<evidence>"
-```
-
-The worked invocations live in [`learning/README.md`](../learning/README.md). Close the issues on
-that evidence.
-
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
@@ -318,8 +277,8 @@ import.
 **Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10
 ([outcome record](archive/2026-08/loop-001-outcome-2026-08-10.md)); this item sits upstream of
 that lifecycle's first state and can now be designed without a concurrent edit to the same
-skill text. The 1.7.3 released-retest tail is separate live work
-([REL-173](#rel-173--record-173-release-and-released-artifact-retest)).
+skill text. The 1.7.3 release-tail evidence now lives in that archived closeout, not in this
+live tracker.
 
 **Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the emitting
 side's contract is unchanged for callers that do route it; no new write authority is granted to a

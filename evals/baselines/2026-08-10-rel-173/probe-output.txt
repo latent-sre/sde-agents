@@ -1,0 +1,30 @@
+== the platform contract ==
+  [PASS] claude plugin validate --strict
+
+== driving a real session (this takes a minute) ==
+  [PASS] headless session exited cleanly
+
+== the plugin loaded, and its components are namespaced ==
+  [PASS] sde-agents:code-reviewer spawned and returned without error
+  [PASS] sde-agents:sde-fullstack spawned and returned without error
+  [PASS] sde-agents:homelab-platform spawned and returned without error
+
+== sde-fullstack's craft skills are PRELOADED, not read ==
+  [PASS] sde-fullstack did NOT read a craft SKILL.md (it was preloaded)
+  [PASS] no agent INVOKED a craft skill via the Skill tool (preloaded, not invoked)
+  [PASS] backend-craft core content was preloaded (canary quoted)
+  [PASS] frontend-craft core content was preloaded (canary quoted)
+
+== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==
+  [PASS] homelab-platform resolved service-onboard by path
+  [PASS] the path was EXPANDED, not a literal ${CLAUDE_PLUGIN_ROOT}
+
+== the guard denies the reviewer, and ONLY the reviewer ==
+  [PASS] the guard DENIED the reviewer's denylisted command
+  [PASS] the guard IGNORED the main loop's identical command
+
+== a conditional reference is actually READ when its predicate trips ==
+  [PASS] sde-fullstack read references/consuming-apis.md when the task called an upstream API
+
+== the workflow platform contract ==
+  [PASS] plugin workflow resolved and the session completed

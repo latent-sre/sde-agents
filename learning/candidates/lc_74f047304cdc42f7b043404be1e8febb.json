@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:22.560496Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-03T17:23:30.416617Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "released 1.7.3 lifecycle release/retest recording pass; self-improve-loop retest still pending",
+    "recorded_at": "2026-08-10T21:54:22.712154Z",
+    "reference": "this REL-173 recording pass wrote the release and retest records against the tagged tree via the shipped subcommands, but it did not re-run self-improve-loop against the originating or an equivalent scenario; evals/baselines/2026-08-10-rel-173/conditions.md",
+    "result": "inconclusive"
   },
   "review_history": [],
   "schema_version": 2,
@@ -76,5 +87,5 @@
       "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-10T20:26:16.100787Z"
+  "updated_at": "2026-08-10T21:54:22.712154Z"
 }
