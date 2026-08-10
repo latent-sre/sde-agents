@@ -1,5 +1,5 @@
 {
-  "applicability": "eng-ladder description/body and the routing evals; triage pending -- import as a cluster case plus possible one-line body edit, or decline with reasons on the issue.",
+  "applicability": "eng-ladder description/body and the routing evals; triage complete -- import as a cluster case plus possible one-line body edit, or decline with reasons on the issue.",
   "candidate_id": "lc_e4234dfe331f44ec9e546807c3e373d5",
   "created_at": "2026-08-10T04:22:00.490730Z",
   "destination": "skills/eng-ladder/SKILL.md Mode 1",
@@ -12,7 +12,7 @@
     "source_reference": "Issue #66 (2026-08-03): builder-owned work with one embedded principal decision over-routes to principal ownership"
   },
   "expected_behavior": "Altitude routing escalates the decision, not the task: builder-owned work with one embedded principal fork sends that fork up (per the report-the-decision-needed pattern) while the task stays with its builder.",
-  "fingerprint": "9e8747746af196b003ac7f7752751cc82378897d45900c1892a4aac02d22aaef",
+  "fingerprint": "e55a7e1d2765eacc38f6fb436dcce616287e9ade54000dd482d2438b19079f9c",
   "freshness": {
     "as_of": "2026-08-10T04:22:00.490730Z",
     "review_at": "2026-09-09T04:22:00.490730Z"
