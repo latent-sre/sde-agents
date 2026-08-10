@@ -312,7 +312,7 @@ so a fresh capture is owed with or without this case.
 
 **Acceptance:** One recorded
 ```bash
-scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir evals/baselines/<run-date>-ladder
+python3 scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir "evals/baselines/$(date +%F)-ladder"
 ```
 run with the rates of both
 `pos-embedded-principal-fork-consult-required` and `neg-embedded-decision-not-principal-owned`
