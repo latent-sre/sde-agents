@@ -101,6 +101,14 @@
       "tags": ["near-miss", "debug"]
     },
     {
+      "id": "neg-embedded-principal-fork-not-principal-owned",
+      "prompt": "Put our production PostgreSQL behind managed TLS and move the clients to sslmode=verify-full. The one real decision is the certificate-trust model — per-host self-signed certs vs a small internal CA — everything else is execution.",
+      "polarity": "negative",
+      "expect_not_fires": ["principal-engineer"],
+      "expected_output": "Builder-owned operational change with ONE embedded principal-altitude fork (the trust model creates a standing root-key-custody obligation) — routes to the builder (sde-fullstack or homelab-platform by substrate) with a required consult on the named fork, never to wholesale principal ownership. principal-engineer firing is the re-owning miscalibration; eng-ladder firing is acceptable (Mode 1 emits exactly this builder+required-consult verdict).",
+      "tags": ["disambiguation", "sde-fullstack", "embedded-fork", "consult-not-ownership"]
+    },
+    {
       "id": "neg-existing-platform-design-not-distinguished",
       "prompt": "Within our existing platform strategy, design an 18-month migration across the payments and fulfillment services, including compatibility and rollback.",
       "polarity": "negative",
