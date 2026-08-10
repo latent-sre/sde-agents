@@ -12,15 +12,15 @@
     "source_reference": "GATE-001 round 4 (residue purge: removed design surviving in fixture/comment/plan) and LOOP/REV round 2 (builder fixed the flagged CLI enumeration, missed the same stale semantic two paragraphs up in the same file — P1, caught by both instruments independently)"
   },
   "expected_behavior": "A fix responding to a stale-semantics finding sweeps the entire artifact (and its declared paraphrase copies) for every statement of the old semantic before closing the finding; the flagged lines are the pointer, not the scope.",
-  "fingerprint": "64db5853686005bea916b32807f9f72cc83e199da1ca1032168125bda61f2086",
+  "fingerprint": "531844012b95bf12c7a6d904e58cb449dc5027059f724bb1ebdf7829fd4e58d6",
   "freshness": {
     "as_of": "2026-08-10T06:31:42.584582Z",
     "review_at": "2026-09-09T06:31:42.584582Z"
   },
-  "observation": "Twice in two consecutive rounds, a fix to flagged stale text left the same stale semantic standing elsewhere in the same artifact: fixes were scoped to the flagged lines, and the residue became the next round's critical. The second occurrence was fixed correctly only because the brief said sweep the whole file, not just the flagged lines.",
+  "observation": "One 2026-08-10 session retro captured two examples across consecutive rounds where a fix to flagged stale text left the same stale semantic elsewhere in the artifact. This is one aggregate observation source, not two independently recorded recurrences; the second example was fixed only because the brief said sweep the whole file, not just the flagged lines.",
   "owner": "fleet-maintainer",
   "promotion_state": "proposed",
-  "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
+  "reason": "Round retro 2026-08-10; one aggregate observation containing two examples. Recurrence remains 1 until a distinct observation source is recorded.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -54,7 +54,7 @@
       "disposition": "merge",
       "from": "quarantined",
       "owner": "fleet-maintainer",
-      "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
+      "reason": "Round retro 2026-08-10; one aggregate observation containing two examples. Recurrence remains 1 until a distinct observation source is recorded.",
       "to": "proposed"
     }
   ],
