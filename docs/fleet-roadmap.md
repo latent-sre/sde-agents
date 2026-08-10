@@ -298,7 +298,9 @@ measured run is owed.
 **Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
 measurement instead of a single anecdote, split by what firing-based grading can actually see:
 the positive says the consult-required shape draws `eng-ladder`; the negative says a
-builder-recordable embedded decision draws no principal or distinguished summon at all.
+builder-recordable embedded decision draws nothing but the builder — no principal, distinguished,
+or `eng-ladder` summon at all, since its prompt satisfies the scoped-work bypass (obvious owner,
+stated existing pattern) and answers its own altitude question.
 
 **Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
 read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
@@ -319,8 +321,9 @@ run with the rates of both
 reported. The pins are load-bearing: the runner writes `benchmark.json` and provenance only when
 `--output-dir` is supplied, and `eval_baseline.py` rejects unpinned runs as
 non-comparison-grade — without them the paid sessions leave no reusable artifact. A forbidden
-agent that fires is evidence the Mode 1 text is insufficient — the repair then goes to the
-skill, never to the grader.
+agent that fires is evidence the guidance is insufficient — principal or distinguished firing
+indicts the Mode 1 text, `eng-ladder` firing indicts the scoped-work narrowing in its
+description — and the repair goes to the skill, never to the grader.
 
 **Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
 
