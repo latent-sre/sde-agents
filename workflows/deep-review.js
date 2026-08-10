@@ -12,8 +12,9 @@ export const meta = {
 // unpinned meant silently inheriting the session model, which billed a Fable session ~152k
 // tokens per round for no measured review-quality gain. The lanes pin to `opus`: its documented
 // review profile (high precision AND recall, accurate at lower effort) is the fit for judgment
-// work, at half Fable's rate. Scope is mechanical git enumeration -- worker-shaped -- so it runs
-// under the standing worker ceiling at `sonnet`. Aliases only, never full model IDs: an alias
+// work, at half Fable's rate. Scope is mechanical git enumeration, which fits the lower tier at
+// `sonnet` (operator re-ruling 2026-08-10: workers default opus, lower when the task is
+// genuinely mechanical -- this is the canonical mechanical case). Aliases only, never full model IDs: an alias
 // follows the model line's upgrades, a pinned ID silently freezes review quality at last
 // generation.
 // To pin lower, edit the meta.phases `model` literals above -- deliberately NOT an args or
