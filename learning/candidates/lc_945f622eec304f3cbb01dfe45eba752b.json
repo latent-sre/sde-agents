@@ -19,8 +19,8 @@
   },
   "observation": "verification-engineer's unconditional container mandate made every executable check inconclusive on engine-less hosts; three successive relaxation designs keyed on caller authorization, user authorization, then target attribution were each proven confused deputies in review, because the verifier runs only as a subagent and every such claim reaches it as unverifiable caller-supplied text.",
   "owner": "fleet-maintainer",
-  "promotion_state": "promoted",
-  "reason": "Implemented across d02bd33..HEAD with contracts verifier-authorization-is-not-text-waivable and verifier-packet-shape-holds; validator and suite green at commit time; live paired contract run remains the round's acceptance step.",
+  "promotion_state": "retired",
+  "reason": "Superseded by lc_e15d1785bea747549b9a947dfa837be5: this record's expected_behavior promised the publish-with-caveats continuation that round 6 proved unenforceable (interpreter commands activate code their command line never names, so the withhold gate cannot be evaluated).",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -74,7 +74,16 @@
       "owner": "fleet-maintainer",
       "reason": "Implemented across d02bd33..HEAD with contracts verifier-authorization-is-not-text-waivable and verifier-packet-shape-holds; validator and suite green at commit time; live paired contract run remains the round's acceptance step.",
       "to": "promoted"
+    },
+    {
+      "at": "2026-08-10T02:17:20.663362Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "promoted",
+      "owner": "fleet-maintainer",
+      "reason": "Superseded by lc_e15d1785bea747549b9a947dfa837be5: this record's expected_behavior promised the publish-with-caveats continuation that round 6 proved unenforceable (interpreter commands activate code their command line never names, so the withhold gate cannot be evaluated).",
+      "to": "retired"
     }
   ],
-  "updated_at": "2026-08-10T01:37:20.947953Z"
+  "updated_at": "2026-08-10T02:17:20.663362Z"
 }

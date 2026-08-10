@@ -55,9 +55,8 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # verification-engineer's executed-verdict floor. Method 7 lets a small change compress the
     # packet, so this shape holds only what no honest executed verification can omit: the pinned
     # target, what actually ran, and the isolation mode it ran under. The third slot is how the
-    # packet proves what actually happened — sandboxed execution, the propose-and-prove
-    # continuation, or nothing executed — because a packet slot no linter checks is prose, not
-    # a control (review finding).
+    # packet proves what actually happened — sandboxed execution, or nothing executed — because
+    # a packet slot no linter checks is prose, not a control (review finding).
     "verification-packet": ("target", "checks executed", "execution isolation"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
