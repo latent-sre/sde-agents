@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. Also the final static-review gate over a multi-commit branch, including one already reviewed per-task: it takes no brief, so it does not inherit the caller hypotheses a steered per-task loop carries — but its lanes are read-only reviewers that run nothing, so the verdict stacks on T1 and acceptance verification, never replaces them. A clean-tree merge binds both approvals to repository, exact HEAD, its exact parent, HEAD tree object id, scope, and criteria. args (optional) is a single git ref used only as the diff base, resolved through merge-base with HEAD — never an approval base, target to check out, range, or prose/focus text; default diff base is the merge base with main. To review another branch, check it out first. The static-review signal is the returned verdict, gated on confirmed_criticals (P0/P1) and the lane verdicts — read the verdict, never findings-list emptiness; P2/P3 nits do not block — and each lane names what it did not examine in not_checked, preserved in the record.',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. Also the final static-review gate over a multi-commit branch, including one already reviewed per-task: it takes no brief, so it does not inherit the caller hypotheses a steered per-task loop carries — but its lanes are read-only reviewers that run nothing, so the verdict stacks on T1 and acceptance verification, never replaces them. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first. The static-review signal is the returned verdict, gated on confirmed_criticals (P0/P1) and the lane verdicts — read the verdict, never findings-list emptiness; P2/P3 nits do not block — and each lane names what it did not examine in not_checked, preserved in the record.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
     { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },
@@ -43,9 +43,6 @@ const LANE_EFFORT = 'high'
 // -- every await below is fail-closed and returns a structured inconclusive verdict instead of
 // surfacing a bare runtime error.
 const EVIDENCE = ['verified', 'sourced', 'unverified']
-const ACCEPTANCE_CRITERIA =
-  'correctness, safety, repository convention adherence, and security threat-model ' +
-  'coverage for the enumerated diff'
 const FINDING = {
   type: 'object',
   properties: {
@@ -58,20 +55,6 @@ const FINDING = {
   },
   required: ['file', 'line', 'claim', 'severity', 'evidence', 'failure_scenario'],
 }
-const APPROVAL_ENVELOPE = {
-  type: 'object',
-  properties: {
-    repository: { type: 'string' },
-    base_sha: { type: 'string', description: "candidate_sha's exact first parent (HEAD^1)" },
-    candidate_sha: { type: 'string', description: 'the exact commit reviewed (HEAD)' },
-    tree_oid: { type: 'string', description: "candidate_sha's committed tree (HEAD^{tree})" },
-    scope: { type: 'string' },
-    acceptance_criteria: { type: 'string' },
-  },
-  required: [
-    'repository', 'base_sha', 'candidate_sha', 'tree_oid', 'scope', 'acceptance_criteria',
-  ],
-}
 const PACKET = {
   type: 'object',
   properties: {
@@ -82,30 +65,19 @@ const PACKET = {
       description: 'your canonical verdict; provisional whenever the tree was dirty',
     },
     not_checked: { type: 'string', description: 'what this pass could not or did not examine' },
-    approval_envelope: {
-      ...APPROVAL_ENVELOPE,
-      description: 'required for a clean-tree approve verdict; omit for a provisional review',
-    },
   },
   required: ['findings', 'verdict', 'not_checked'],
 }
 const SCOPE_SCHEMA = {
   type: 'object',
   properties: {
-    repository: { type: 'string', description: 'git rev-parse --show-toplevel' },
     base_ref: { type: 'string' },
-    base_sha: { type: 'string', description: 'git rev-parse HEAD^1 -- never the merge base' },
-    candidate_sha: { type: 'string', description: 'git rev-parse HEAD' },
-    head_sha: { type: 'string', description: 'compatibility alias of candidate_sha' },
-    tree_oid: { type: 'string', description: 'git rev-parse HEAD^{tree}' },
+    head_sha: { type: 'string', description: 'git rev-parse HEAD -- the bytes any verdict binds to' },
     tree_dirty: { type: 'boolean', description: 'true if git status --porcelain printed anything' },
     changed_files: { type: 'array', items: { type: 'string' } },
     diff_summary: { type: 'string', description: 'per-file one-line change summary' },
   },
-  required: [
-    'repository', 'base_ref', 'base_sha', 'candidate_sha', 'head_sha', 'tree_oid',
-    'tree_dirty', 'changed_files', 'diff_summary',
-  ],
+  required: ['base_ref', 'head_sha', 'tree_dirty', 'changed_files', 'diff_summary'],
 }
 
 // Scope runs under the guarded reviewer identity, not a default workflow agent: the read-only
@@ -154,12 +126,9 @@ try {
         'resolving through the merge base means a base on a diverged branch yields the fork ' +
         'point rather than a diff that conflates two unrelated change sets.'
       : 'Diff the working tree against the merge base with main (git merge-base HEAD main).') +
-    ' Report the repository (git rev-parse --show-toplevel), resolved diff base as base_ref, ' +
-    'candidate_sha and its compatibility alias head_sha (both git rev-parse HEAD), the ' +
-    "candidate's exact first parent as base_sha (git rev-parse HEAD^1 -- never substitute the " +
-    'merge base), its tree_oid (git rev-parse HEAD^{tree}), whether the working tree is dirty ' +
-    '(git status --porcelain), the changed file list, and a one-line-per-file summary of what ' +
-    'changed. If the diff is empty, return an empty file list.',
+    ' Report the resolved base ref, the head commit (git rev-parse HEAD), whether the working ' +
+    'tree is dirty (git status --porcelain), the changed file list, and a one-line-per-file ' +
+    'summary of what changed. If the diff is empty, return an empty file list.',
     { agentType: 'sde-agents:code-reviewer', label: 'scope', schema: SCOPE_SCHEMA, model: SCOPE_MODEL },
   )
 } catch (err) {
@@ -168,45 +137,17 @@ try {
 if (!scope) {
   return { verdict: 'inconclusive', failed_lane: 'scope', review: null, security: null, scope: null }
 }
-if (scope.candidate_sha !== scope.head_sha) {
-  return {
-    verdict: 'inconclusive',
-    failed_lane: 'scope-approval-envelope',
-    error: 'scope candidate_sha did not match git HEAD',
-    review: null,
-    security: null,
-    scope,
-  }
-}
 if (scope.changed_files.length === 0) {
   return { verdict: 'no-diff', confirmed_criticals: 0, review: null, security: null, scope }
 }
 
-const approvalEnvelope = {
-  repository: scope.repository,
-  base_sha: scope.base_sha,
-  candidate_sha: scope.candidate_sha,
-  tree_oid: scope.tree_oid,
-  scope:
-    `ambient diff ${scope.base_ref}..${scope.candidate_sha}; files: ` +
-    scope.changed_files.join(', '),
-  acceptance_criteria: ACCEPTANCE_CRITERIA,
-}
-
 phase('Review')
 const context =
-  `Diff base: ${scope.base_ref}\nCandidate: ${scope.candidate_sha} ` +
-  `(exact parent: ${scope.base_sha}; tree: ${scope.tree_oid}; tree_dirty: ${scope.tree_dirty})\n` +
+  `Base ref: ${scope.base_ref}\nHead: ${scope.head_sha} (tree_dirty: ${scope.tree_dirty})\n` +
   `Changed files:\n- ${scope.changed_files.join('\n- ')}\nSummary:\n${scope.diff_summary}\n` +
-  `Approval envelope:\n${JSON.stringify(approvalEnvelope)}\n` +
   'Work your normal checklist and reason in prose first; the schema constrains only your final ' +
   'packet. Label evidence honestly: verified only for what you ran or observed. If tree_dirty ' +
-  'is true, your verdict must be provisional-commit-and-re-review and you must omit ' +
-  'approval_envelope. If tree_dirty is false, independently confirm the repository, HEAD, its ' +
-  'exact first parent, HEAD^{tree}, and that git status --porcelain is still empty with read-only ' +
-  'git inspection before an approve or approve-with-nits verdict, then copy every supplied ' +
-  'approval_envelope field exactly. If any identity field cannot be confirmed or the tree became ' +
-  'dirty, do not approve.'
+  'is true, your verdict must be provisional-commit-and-re-review.'
 // The security lane is a second code-reviewer pass seeded with a security-only threat model --
 // the fallback sre-tool documents when the auditor cannot run. application-security-auditor is
 // deliberately NOT used: its own negative routing excludes branch diffs, and it holds no Bash.
@@ -249,44 +190,4 @@ if (criticals.length > 0 || verdicts.includes('request-changes')) merged = 'do-n
 else if (scope.tree_dirty || verdicts.includes('provisional-commit-and-re-review')) merged = 'provisional-commit-and-re-review'
 else if (verdicts.includes('approve-with-nits')) merged = 'merge-with-nits'
 else merged = 'merge'
-if (merged === 'merge' || merged === 'merge-with-nits') {
-  const fields = [
-    'repository', 'base_sha', 'candidate_sha', 'tree_oid', 'scope', 'acceptance_criteria',
-  ]
-  const mismatchedLane = [
-    ['review', review],
-    ['security', security],
-  ].find(([, packet]) => (
-    !packet.approval_envelope ||
-    fields.some((field) => packet.approval_envelope[field] !== approvalEnvelope[field])
-  ))
-  if (mismatchedLane) {
-    return {
-      verdict: 'inconclusive',
-      failed_lane: `${mismatchedLane[0]}-approval-envelope`,
-      error: 'clean-tree approval envelope was missing or did not match the scoped identity',
-      head_sha: scope.candidate_sha,
-      confirmed_criticals: criticals.length,
-      review,
-      security,
-      scope,
-    }
-  }
-  return {
-    verdict: merged,
-    head_sha: scope.candidate_sha,
-    approval_envelope: approvalEnvelope,
-    confirmed_criticals: criticals.length,
-    review,
-    security,
-    scope,
-  }
-}
-return {
-  verdict: merged,
-  head_sha: scope.candidate_sha,
-  confirmed_criticals: criticals.length,
-  review,
-  security,
-  scope,
-}
+return { verdict: merged, head_sha: scope.head_sha, confirmed_criticals: criticals.length, review, security, scope }

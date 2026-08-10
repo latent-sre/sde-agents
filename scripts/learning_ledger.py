@@ -137,15 +137,15 @@ REVIEW_FIELDS = {
 # an old record without them stays valid with no migration, because "was this promoted candidate
 # ever released, and did the release hold up" is a fact layered on top of the existing promotion
 # lifecycle, not a new promotion_state that would ripple through STATE_DISPOSITIONS and its two
-# declared mirrors for no added power. `retest` and release-history entries containing `retest`
-# are the shipped singular forms; new writes use ordered `retests` histories while validation and
-# mutation keep both singular forms readable. `release_history` holds completed promotion cycles.
-OPTIONAL_TOP_LEVEL_FIELDS = {"release", "retest", "retests", "release_history"}
+# declared mirrors for no added power. `release_history` holds completed cycles: a candidate can
+# legally reject and re-promote (the state machine already allows it), and a new promotion after
+# the current release is a genuinely new cycle, not a correction of the old one -- so the old
+# {release, retest} pair is archived verbatim rather than discarded or refused a second slot.
+OPTIONAL_TOP_LEVEL_FIELDS = {"release", "retest", "release_history"}
 RELEASE_FIELDS = {"version", "reference", "recorded_at"}
 RETEST_FIELDS = {"result", "environment", "reference", "recorded_at"}
 RETEST_RESULTS = {"pass", "fail", "inconclusive"}
-LEGACY_RELEASE_HISTORY_ENTRY_FIELDS = {"release", "retest"}
-RELEASE_HISTORY_ENTRY_FIELDS = {"release", "retests"}
+RELEASE_HISTORY_ENTRY_FIELDS = {"release", "retest"}
 MAX_RELEASE_HISTORY = 32
 
 SECRET_PATTERNS = (
@@ -390,31 +390,6 @@ def _safe_positive_days(value: object, field: str, *, allow_zero: bool) -> int:
     return value
 
 
-def _retest_attempts(
-    container: Mapping[str, object],
-    *,
-    prefix: str = "",
-    allow_empty_history: bool = False,
-) -> list[object]:
-    """Read ordered attempts while preserving the shipped singular storage form."""
-    legacy_present = "retest" in container
-    history_present = "retests" in container
-    owner = prefix or "candidate"
-    field = f"{prefix}.retests" if prefix else "retests"
-    if legacy_present and history_present:
-        raise LedgerError(
-            f"{owner} cannot carry both legacy retest and retests history"
-        )
-    if history_present:
-        attempts = container["retests"]
-        if not isinstance(attempts, list) or (not attempts and not allow_empty_history):
-            qualifier = "a list" if allow_empty_history else "a non-empty list"
-            raise LedgerError(f"{field} must be {qualifier} of attempt records")
-        return list(attempts)
-    legacy = container.get("retest")
-    return [] if legacy is None else [legacy]
-
-
 def _validate_release_block(
     release: object,
     *,
@@ -422,8 +397,12 @@ def _validate_release_block(
     updated: datetime,
     history: Sequence[Mapping[str, object]],
     prefix: str,
-) -> tuple[datetime, int, datetime]:
-    """Validate a release and return its time and exact promotion-cycle identity."""
+) -> datetime:
+    """Validate one release block's shape and its trace to a landed promotion; return its time.
+
+    Shared by the current `release` block and every `release_history` entry so both obey the
+    identical rule: released bytes must trace to a candidate that actually landed.
+    """
     release = _require_mapping(release, prefix)
     _exact_fields(release, RELEASE_FIELDS, prefix)
     _safe_text(release["version"], "version")
@@ -433,70 +412,41 @@ def _validate_release_block(
         raise LedgerError(
             f"{prefix}.recorded_at must fall between candidate creation and the latest update"
         )
-
-    state_at_release = "quarantined"
-    promotion_index: int | None = None
-    promotion_at: datetime | None = None
-    for index, item in enumerate(history):
-        transitioned_at = _parse_timestamp(
-            item["at"], f"transition_history[{index}].at"
-        )
-        if transitioned_at > release_at:
-            break
-        state_at_release = str(item["to"])
-        if state_at_release == "promoted":
-            promotion_index = index
-            promotion_at = transitioned_at
-    if state_at_release != "promoted" or promotion_index is None or promotion_at is None:
+    if not any(
+        item["to"] == "promoted"
+        and _parse_timestamp(item["at"], "transition_history.at") <= release_at
+        for item in history
+    ):
         raise LedgerError(
-            f"candidate must be promoted at {prefix}.recorded_at; reconstructed state was "
-            f"{state_at_release!r} -- released bytes must trace to a candidate that was still "
-            "landed when the release was recorded"
+            f"{prefix} requires a prior transition to promoted at or before it; released bytes "
+            "must trace to a candidate that actually landed"
         )
-    return release_at, promotion_index, promotion_at
+    return release_at
 
 
-def _validate_retest_attempts(
-    attempts: Sequence[object],
+def _validate_retest_block(
+    retest: object,
     *,
     release_at: datetime,
     updated: datetime,
     prefix: str,
-    legacy_form: bool,
-    next_release_at: datetime | None,
 ) -> None:
-    """Validate one cycle's ordered attempts and PASS-only closure boundary."""
-    previous_retest_at = release_at
-    passed = False
-    for index, item in enumerate(attempts):
-        field = prefix if legacy_form else f"{prefix}[{index}]"
-        if passed:
-            raise LedgerError(
-                "a passing retest closes the released candidate; later attempts are invalid"
-            )
-        retest = _require_mapping(item, field)
-        _exact_fields(retest, RETEST_FIELDS, field)
-        # The explicit type guard keeps malformed, unhashable JSON values inside LedgerError
-        # instead of leaking a TypeError from set membership.
-        if not isinstance(retest["result"], str) or retest["result"] not in RETEST_RESULTS:
-            raise LedgerError(f"{field}.result must be one of {sorted(RETEST_RESULTS)}")
-        _safe_text(retest["environment"], "environment")
-        _safe_text(retest["reference"], "reference")
-        retest_at = _parse_timestamp(retest["recorded_at"], f"{field}.recorded_at")
-        if retest_at < release_at:
-            raise LedgerError(f"{field}.recorded_at must follow its release record")
-        if index and retest_at < previous_retest_at:
-            raise LedgerError("retest attempt timestamps must be chronological")
-        if retest_at > updated:
-            raise LedgerError(
-                f"{field}.recorded_at cannot follow the latest candidate update"
-            )
-        if next_release_at is not None and retest_at >= next_release_at:
-            raise LedgerError(
-                "archived retest attempts must predate the next release cycle"
-            )
-        previous_retest_at = retest_at
-        passed = retest["result"] == "pass"
+    """Validate one retest block's shape and its ordering against its own release."""
+    retest = _require_mapping(retest, prefix)
+    _exact_fields(retest, RETEST_FIELDS, prefix)
+    # isinstance guard first, same as the promotion_state check below: an unhashable stored value
+    # (a hand-edited list or dict) makes plain `in` on the RETEST_RESULTS set raise TypeError,
+    # degrading `check`'s clean LedgerError into an unhandled traceback -- still fail-closed, but
+    # with the wrong message.
+    if not isinstance(retest["result"], str) or retest["result"] not in RETEST_RESULTS:
+        raise LedgerError(f"{prefix}.result must be one of {sorted(RETEST_RESULTS)}")
+    _safe_text(retest["environment"], "environment")
+    _safe_text(retest["reference"], "reference")
+    retest_at = _parse_timestamp(retest["recorded_at"], f"{prefix}.recorded_at")
+    if retest_at < release_at or retest_at > updated:
+        raise LedgerError(
+            f"{prefix}.recorded_at must fall between its release record and the latest update"
+        )
 
 
 def validate_candidate(record: Mapping[str, object]) -> None:
@@ -513,9 +463,9 @@ def validate_candidate(record: Mapping[str, object]) -> None:
     expected_fields = (
         LEGACY_TOP_LEVEL_FIELDS if schema_version == LEGACY_SCHEMA_VERSION else TOP_LEVEL_FIELDS
     )
-    # Release/retest lifecycle fields are the only ones allowed to be ABSENT here without
-    # loosening the exact check for everything else: a pre-LOOP-001 candidate must keep validating
-    # without any of them.
+    # release/retest are the only fields allowed to be ABSENT here without loosening the exact
+    # check for everything else: unlike _exact_fields's normal all-or-nothing contract, a candidate
+    # written before LOOP-001 must keep validating with neither key present.
     unknown_fields = set(record) - expected_fields - OPTIONAL_TOP_LEVEL_FIELDS
     missing_fields = expected_fields - set(record)
     if unknown_fields:
@@ -756,24 +706,27 @@ def validate_candidate(record: Mapping[str, object]) -> None:
     # `check` instead of silently certifying a lineage that could not have happened through the
     # CLI.
     release = record.get("release")
-    current_release: tuple[datetime, int, datetime] | None = None
+    release_at: datetime | None = None
     if release is not None:
-        current_release = _validate_release_block(
+        release_at = _validate_release_block(
             release, created=created, updated=updated, history=history, prefix="release"
         )
-    current_attempts = _retest_attempts(record)
-    if ("retest" in record or "retests" in record) and current_release is None:
-        raise LedgerError("retest lifecycle requires an existing current release record")
 
-    # Every archived cycle is validated in storage order, including its complete attempt history.
-    # The promotion-history index is the cycle identity: timestamp ordering alone cannot prove two
-    # releases came from distinct landed changes when several transitions share a clock tick.
+    retest = record.get("retest")
+    if retest is not None:
+        if release_at is None:
+            raise LedgerError("a retest record requires an existing release record")
+        _validate_retest_block(retest, release_at=release_at, updated=updated, prefix="retest")
+
+    # A candidate can legally reject and re-promote (the state machine already allows it), and a
+    # release recorded after that fresh promotion is a new cycle, not a correction of the old
+    # one. `record_release` archives the completed {release, retest} pair here rather than
+    # refusing a second release outright or silently overwriting the first; validating each
+    # archived entry with the SAME rules as the current release/retest (same helpers) is what
+    # stops a hand-edited history from smuggling in a release that never actually landed.
     release_history = record.get("release_history")
-    cycles: list[
-        tuple[datetime, int, datetime, list[object], str, bool]
-    ] = []
     if release_history is not None:
-        if current_release is None:
+        if release_at is None:
             # The writer only ever archives while writing a new current release, so a stranded
             # history is proof of a hand edit -- and learning/README.md's rollback enumeration
             # promises readers this shape cannot validate. Without this check that promise was
@@ -787,85 +740,39 @@ def validate_candidate(record: Mapping[str, object]) -> None:
             raise LedgerError(
                 f"release_history must contain at most {MAX_RELEASE_HISTORY} entries"
             )
+        previous_entry_release_at: datetime | None = None
         for index, entry in enumerate(release_history):
             entry = _require_mapping(entry, f"release_history[{index}]")
-            entry_fields = frozenset(entry)
-            if entry_fields not in {
-                frozenset(LEGACY_RELEASE_HISTORY_ENTRY_FIELDS),
-                frozenset(RELEASE_HISTORY_ENTRY_FIELDS),
-            }:
-                if "retest" in entry and "retests" in entry:
-                    _retest_attempts(
-                        entry,
-                        prefix=f"release_history[{index}]",
-                        allow_empty_history=True,
-                    )
-                raise LedgerError(
-                    f"release_history[{index}] must carry release and exactly one of legacy "
-                    "retest or retests history"
-                )
-            entry_release = _validate_release_block(
+            _exact_fields(
+                entry, RELEASE_HISTORY_ENTRY_FIELDS, f"release_history[{index}]"
+            )
+            entry_release_at = _validate_release_block(
                 entry["release"],
                 created=created,
                 updated=updated,
                 history=history,
                 prefix=f"release_history[{index}].release",
             )
-            entry_attempts = _retest_attempts(
-                entry,
-                prefix=f"release_history[{index}]",
-                allow_empty_history=True,
-            )
-            attempt_prefix = (
-                f"release_history[{index}].retest"
-                if "retest" in entry
-                else f"release_history[{index}].retests"
-            )
-            cycles.append(
-                (
-                    *entry_release,
-                    entry_attempts,
-                    attempt_prefix,
-                    "retest" in entry,
+            entry_retest = entry["retest"]
+            if entry_retest is not None:
+                _validate_retest_block(
+                    entry_retest,
+                    release_at=entry_release_at,
+                    updated=updated,
+                    prefix=f"release_history[{index}].retest",
                 )
-            )
-
-    if current_release is not None:
-        cycles.append(
-            (
-                *current_release,
-                current_attempts,
-                "retest" if "retest" in record else "retests",
-                "retest" in record,
-            )
-        )
-
-    previous_release_at: datetime | None = None
-    previous_promotion_index: int | None = None
-    for release_at, promotion_index, _promotion_at, *_rest in cycles:
-        if previous_release_at is not None and release_at <= previous_release_at:
-            raise LedgerError("release cycles must be chronological")
+            if (
+                previous_entry_release_at is not None
+                and entry_release_at <= previous_entry_release_at
+            ):
+                raise LedgerError("release_history entries must be chronological")
+            previous_entry_release_at = entry_release_at
         if (
-            previous_promotion_index is not None
-            and promotion_index <= previous_promotion_index
+            release_at is not None
+            and previous_entry_release_at is not None
+            and previous_entry_release_at >= release_at
         ):
-            raise LedgerError("each release requires a distinct later promotion cycle")
-        previous_release_at = release_at
-        previous_promotion_index = promotion_index
-
-    for index, (release_at, _cycle, _promoted_at, attempts, prefix, legacy) in enumerate(cycles):
-        # Promotion selects candidate bytes; it does not replace the installed artifact. Until
-        # the next release is recorded, downstream retests still exercise this release and belong
-        # to this cycle. The next actual release is therefore the attempt-history cutoff.
-        next_release_at = cycles[index + 1][0] if index + 1 < len(cycles) else None
-        _validate_retest_attempts(
-            attempts,
-            release_at=release_at,
-            updated=updated,
-            prefix=prefix,
-            legacy_form=legacy,
-            next_release_at=next_release_at,
-        )
+            raise LedgerError("release_history entries must all predate the current release")
 
 
 class LearningLedger:
@@ -1240,16 +1147,6 @@ class LearningLedger:
             now = self.now()
             if now < _parse_timestamp(record["updated_at"], "updated_at"):
                 raise LedgerError("transition time cannot precede the current record")
-            current_release = record.get("release")
-            if current_release is not None:
-                release_at = _parse_timestamp(
-                    current_release["recorded_at"], "release.recorded_at"
-                )
-                if now <= release_at:
-                    raise LedgerError(
-                        "a transition after a recorded release must use a later timestamp; "
-                        "same-timestamp ordering cannot prove whether the release preceded it"
-                    )
             if promotion_state in FRESH_PROMOTION_STATES:
                 review_at = _parse_timestamp(
                     record["freshness"]["review_at"], "freshness.review_at"
@@ -1390,8 +1287,8 @@ class LearningLedger:
         call before any fresh promotion is refused, not a silent overwrite. But the state machine
         already allows a promoted candidate to reject and re-promote (fresh evidence required),
         and a release recorded after that later promotion is a genuinely new cycle: this archives
-        the prior release and its complete ordered attempt history, then starts a fresh current
-        cycle, so a second cycle's release is never simply unrecordable.
+        the completed {release, retest} pair into `release_history` and starts a fresh current
+        pair, so a second cycle's release is never simply unrecordable.
 
         Deliberately does not check `retention.expires_at`/`freshness.review_at`, unlike
         `transition()`'s FRESH_PROMOTION_STATES gate: this records a fact about what already
@@ -1419,48 +1316,30 @@ class LearningLedger:
                     "no released bytes to record"
                 )
             now = self.now()
-            updated_at = _parse_timestamp(record["updated_at"], "updated_at")
-            if now < updated_at:
+            if now < _parse_timestamp(record["updated_at"], "updated_at"):
                 raise LedgerError("release time cannot precede the current record")
             existing_release = record.get("release")
             if existing_release is not None:
-                _existing_release_at, existing_promotion_index, _existing_promoted_at = (
-                    _validate_release_block(
-                        existing_release,
-                        created=_parse_timestamp(record["created_at"], "created_at"),
-                        updated=_parse_timestamp(record["updated_at"], "updated_at"),
-                        history=record["transition_history"],
-                        prefix="release",
-                    )
+                existing_release_at = _parse_timestamp(
+                    existing_release["recorded_at"], "release.recorded_at"
                 )
-                latest_promotion_index = max(
+                latest_promoted_at = max(
                     (
-                        index
-                        for index, item in enumerate(record["transition_history"])
+                        _parse_timestamp(item["at"], "transition_history.at")
+                        for item in record["transition_history"]
                         if item["to"] == "promoted"
                     ),
                     default=None,
                 )
-                if (
-                    latest_promotion_index is None
-                    or latest_promotion_index <= existing_promotion_index
-                ):
+                if latest_promoted_at is None or latest_promoted_at <= existing_release_at:
                     raise LedgerError(
                         f"candidate {candidate_id} already carries a release record for this "
                         "promotion; a later release requires a fresh promotion first, not a "
                         "silent overwrite of this one"
                     )
-                if now <= updated_at:
-                    raise LedgerError(
-                        "a new release cycle must use a later timestamp than the current record; "
-                        "same-timestamp ordering cannot separate delivered versions"
-                    )
-                attempts = _retest_attempts(record)
                 record.setdefault("release_history", []).append(
-                    {"release": existing_release, "retests": attempts}
+                    {"release": existing_release, "retest": record.pop("retest", None)}
                 )
-                record.pop("retest", None)
-                record.pop("retests", None)
             recorded_at = _timestamp(now)
             record["release"] = {
                 "version": version,
@@ -1483,21 +1362,24 @@ class LearningLedger:
 
         Legal only once a release is recorded -- source-eval PASS is never reportable as
         released-artifact PASS, so there is nothing to retest against before a release exists.
-        Fail and inconclusive attempts remain open and append-only so a repaired release can be
-        proved by a later retry. PASS alone closes the current release cycle and refuses later
-        attempts. A shipped singular `retest` block is migrated into `retests` on the first retry.
+        `pass` and `fail` are settled and single-shot, same as release: a later retest belongs to
+        a new candidate record (or, after a fresh promotion, a new `release_history` cycle --
+        see `record_release`). `inconclusive` is not settled and may be re-recorded in place --
+        it means the retest could not be run to a verdict (environment unavailable, scenario not
+        yet reproducible), and without this exception the candidate would be stuck carrying an
+        unsettled result forever, retriable nowhere and invisible to `awaiting-retest`.
 
         On a `fail` result the returned record carries an extra transient `regression` key (never
         written to disk -- attached after the persisted write) so a PROGRAMMATIC caller gets the
-        same signal the CLI prints to stderr, instead of having to inspect the attempt history on
-        its own. `main()` prints from this key rather than re-deriving the message.
+        same signal the CLI prints to stderr, instead of having to notice `retest.result == "fail"`
+        on its own. `main()` prints from this key rather than re-deriving the message.
 
         Deliberately does not check `retention.expires_at`/`freshness.review_at`, same reasoning
         as `record_release`: a retest records what actually happened downstream, not a new
         promotion judgment, so it is not gated on the review/expiry clock that gates promotion.
         """
         candidate_id = _validate_candidate_id(candidate_id)
-        if not isinstance(result, str) or result not in RETEST_RESULTS:
+        if result not in RETEST_RESULTS:
             raise LedgerError(f"retest result must be one of {sorted(RETEST_RESULTS)}")
         environment = _safe_text(environment, "environment") or ""
         reference = _safe_text(reference, "reference") or ""
@@ -1517,11 +1399,12 @@ class LearningLedger:
                     f"cannot record a retest for {candidate_id}: no release is recorded yet -- "
                     "source-eval PASS is never reportable as released-artifact PASS"
                 )
-            attempts = _retest_attempts(record)
-            if any(attempt["result"] == "pass" for attempt in attempts):
+            existing_retest = record.get("retest")
+            if existing_retest is not None and existing_retest["result"] != "inconclusive":
                 raise LedgerError(
-                    f"candidate {candidate_id} already passed its released-artifact retest and "
-                    "is closed; refusing a later attempt"
+                    f"candidate {candidate_id} already carries a settled retest record "
+                    f"({existing_retest['result']!r}); a later retest is a new record's "
+                    "business, not a silent overwrite of this one"
                 )
             now = self.now()
             if now < _parse_timestamp(record["updated_at"], "updated_at"):
@@ -1529,44 +1412,28 @@ class LearningLedger:
             release_at = _parse_timestamp(release["recorded_at"], "release.recorded_at")
             if now < release_at:
                 raise LedgerError("retest time cannot precede its recorded release")
-            _release_at, release_promotion_index, _promoted_at = _validate_release_block(
-                release,
-                created=_parse_timestamp(record["created_at"], "created_at"),
-                updated=_parse_timestamp(record["updated_at"], "updated_at"),
-                history=record["transition_history"],
-                prefix="release",
-            )
-            release_destination = str(
-                record["transition_history"][release_promotion_index]["destination"]
-            )
             recorded_at = _timestamp(now)
-            attempt = {
+            record["retest"] = {
                 "result": result,
                 "environment": environment,
                 "reference": reference,
                 "recorded_at": recorded_at,
             }
-            record.pop("retest", None)
-            record["retests"] = [*attempts, attempt]
             record["updated_at"] = recorded_at
             self._atomic_write(path, record, overwrite=True)
             # Attached AFTER the write: this key is never persisted, only returned. A fail here
             # is worse news than a source-eval fail because it slipped past every earlier gate on
-            # a destination that already shipped -- a caller that only inspects the attempt
-            # history would have to know to check for "fail" specifically, so the signal is
-            # surfaced explicitly instead of staying implicit in an enum value.
+            # a destination that already shipped -- a caller that only inspects retest.result
+            # would have to know to check for "fail" specifically, so the signal is surfaced
+            # explicitly instead of staying implicit in an enum value.
             if result == "fail":
                 record["regression"] = {
-                    # A fresh promotion can change the record-head destination before it ships.
-                    # The failure still belongs to the installed release, so resolve identity
-                    # from that release's bound promotion rather than mutable head metadata.
-                    "destination": release_destination,
-                    "candidate_destination": record["destination"],
+                    "destination": record["destination"],
                     "environment": environment,
                     "reference": reference,
                     "message": (
                         f"REGRESSION: candidate {candidate_id}'s destination "
-                        f"{release_destination!r} regressed in the field "
+                        f"{record['destination']!r} regressed in the field "
                         f"(environment={environment!r}, reference={reference!r})"
                     ),
                 }
@@ -1594,57 +1461,31 @@ class LearningLedger:
                 continue
             # LOOP-001 spec item 5: retest discovery is pull-based, not scheduled. A release or
             # upgrade retro reads this view to find what it still owes a downstream retest --
-            # nothing here starts a background process. Fail and inconclusive attempts remain
-            # retryable and visible until PASS closes the current release cycle.
-            attempts = _retest_attempts(record)
-            passed = any(attempt["result"] == "pass" for attempt in attempts)
-            failed = any(attempt["result"] == "fail" for attempt in attempts)
-            release = record.get("release")
-            release_destination: str | None = None
-            release_promotion_index: int | None = None
-            if release is not None:
-                _release_at, release_promotion_index, _promoted_at = _validate_release_block(
-                    release,
-                    created=_parse_timestamp(record["created_at"], "created_at"),
-                    updated=_parse_timestamp(record["updated_at"], "updated_at"),
-                    history=record["transition_history"],
-                    prefix="release",
-                )
-                release_destination = str(
-                    record["transition_history"][release_promotion_index]["destination"]
-                )
+            # nothing here starts a background process. An `inconclusive` retest is not settled
+            # (the retest could not reach a verdict, not that it passed or failed), so it stays
+            # in this backlog exactly like no retest at all -- otherwise recording the honest
+            # "could not tell yet" result would be the one way to make an item unretriable.
+            retest = record.get("retest")
             if view == "awaiting-retest" and not (
                 record["promotion_state"] == "promoted"
                 and record.get("release") is not None
-                and not passed
+                and (retest is None or retest["result"] == "inconclusive")
             ):
                 continue
-            # A failed attempt is a live regression until a later PASS proves the same released
-            # cycle repaired or an owner transitions the candidate away from promoted.
+            # A `fail` retest is a live regression on a candidate whose destination already
+            # shipped -- it stays discoverable here until an owner acts (rejects or retires the
+            # candidate), which is the same "pull, don't schedule" discipline as awaiting-retest.
             if view == "regressed" and not (
                 record["promotion_state"] == "promoted"
-                and failed
-                and not passed
+                and retest is not None
+                and retest["result"] == "fail"
             ):
                 continue
             # The merged-not-released backlog: a promoted candidate with no destination pattern
-            # this module could reliably parse. A fresh promotion after an older release is also
-            # awaiting release: the old release remains current until the new candidate ships.
-            latest_promotion_index = max(
-                (
-                    index
-                    for index, transition in enumerate(record["transition_history"])
-                    if transition["to"] == "promoted"
-                ),
-                default=None,
-            )
-            release_pending = release is None or (
-                latest_promotion_index is not None
-                and release_promotion_index is not None
-                and latest_promotion_index > release_promotion_index
-            )
+            # this module could reliably parse, so "promoted with no release block yet" is the
+            # literal, unambiguous surface instead of guessing at the destination's shape.
             if view == "awaiting-release" and not (
-                record["promotion_state"] == "promoted" and release_pending
+                record["promotion_state"] == "promoted" and record.get("release") is None
             ):
                 continue
             summaries.append(
@@ -1660,11 +1501,7 @@ class LearningLedger:
                     "scope": record["scope"],
                     "observation": record["observation"],
                     "release": record.get("release"),
-                    "release_destination": release_destination,
-                    # Preserve the shipped summary field as a latest-attempt compatibility alias
-                    # while exposing the complete ordered history to new callers.
-                    "retest": attempts[-1] if attempts else None,
-                    "retests": attempts,
+                    "retest": retest,
                 }
             )
         return summaries
@@ -1733,7 +1570,7 @@ def _parser() -> argparse.ArgumentParser:
 
     record_retest = commands.add_parser(
         "record-retest",
-        help="append a downstream retest attempt for a released candidate",
+        help="stamp the downstream retest of a released candidate",
     )
     record_retest.add_argument("candidate_id")
     record_retest.add_argument("--result", choices=sorted(RETEST_RESULTS), required=True)

@@ -194,17 +194,9 @@ LEARNING_CANDIDATE_FIELDS = (
 )
 LEARNING_CANDIDATE_FIELD_ORDER = ("learning", *LEARNING_CANDIDATE_FIELDS)
 EXACT_FIELD_LABELS = (
-    "Verdict",
-    "Repository",
-    "base_sha",
-    "candidate_sha",
-    "tree_oid",
-    "Identity finding",
-    "Execution",
     "Learning",
     "Evidence",
     "Scope",
-    "Acceptance criteria",
     "Provenance",
     "Learning disposition",
     "Promotion state",
@@ -302,8 +294,6 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
     decoration = r"\*\*|__|\*|_|`"
     pattern = re.compile(
         r"^\s*(?:>\s*)*(?:(?:[-*+]|\d+[.)])\s+)?(?:#{1,6}\s+)?(?:"
-        rf"(?P<whole>{decoration}){literal_label}\s*:\s*"
-        rf"(?P<whole_value>.*?)(?P=whole)(?=\s*$)|"
         rf"(?P<outside>{decoration}){literal_label}(?P=outside)\s*:|"
         rf"(?P<inside>{decoration}){literal_label}\s*:(?P=inside)|"
         rf"(?P<span>{decoration}){literal_label}\s*:|"
@@ -316,11 +306,7 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
         match = pattern.match(line)
         if match is None:
             continue
-        value = (
-            match.group("whole_value")
-            if match.group("whole_value") is not None
-            else match.group("value")
-        ).strip()
+        value = match.group("value").strip()
         # The span alternative consumed the OPENING marker only; its partner can still sit right
         # after the first value token. Drop that one shape only so ``candidate** - x`` reads as
         # ``candidate - x`` and an exact field value still compares literally. An unterminated
@@ -333,7 +319,7 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
                 value = " ".join((first, split[1])) if len(split) == 2 else first
                 value = value.strip()
         decorated = any(
-            match.group(name) for name in ("whole", "outside", "inside", "span")
+            match.group(name) for name in ("outside", "inside", "span")
         )
         occurrences.append((index, value, bool(decorated)))
     return _collapse_display_echoes(occurrences)
