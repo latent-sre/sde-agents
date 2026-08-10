@@ -61,6 +61,22 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # "Checks executed: none" without naming what could not run cannot pass as green.
     "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
+    # homelab-platform's DELEGATION handoff, emitted before a builder starts rather than after work
+    # ends. Thirteen slots and deliberately no scaling clause: this packet exists because a
+    # constraint dropped between design and builder came back three times in one onboarding (twice
+    # with a regression test that required the wrong form), so the canonical text requires every
+    # line, `none` when empty. A shape that let a slot vanish would grade the exact failure it was
+    # built to catch as compliant. The proportional short form the agent may use instead is not a
+    # compressed packet and is not graded here — it emits no packet at all, by design.
+    # `verified facts` also reaches the verification-claim rule below: a packet whose facts and
+    # acceptance criteria cite no command anywhere near them is reported, which is the point —
+    # verification-method validity is what this packet exists to carry, so a fact with no probe in
+    # sight should read as a finding rather than as measurement.
+    "handoff-packet": (
+        "deliverable", "fixed decisions", "sources", "verified facts", "forbidden regressions",
+        "acceptance", "authority", "irreversible", "temporary authority", "inventory invariants",
+        "blocking", "open lanes", "out of scope",
+    ),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),
     "postmortem": (

@@ -815,6 +815,68 @@ class OtherShapes(unittest.TestCase):
         findings = packet_lint.lint_packet(missing_blocked, "verification-packet")
         self.assertTrue(any("skipped or blocked checks" in f for f in findings), findings)
 
+    def test_handoff_packet_shape_keeps_every_delegation_slot(self) -> None:
+        # The delegation packet exists because a disproved constraint was dropped between design
+        # and builder three times in one onboarding. So every direction is pinned: a complete
+        # packet passes; dropping the forbidden-regressions line — the exact field whose loss
+        # caused the incident — is a finding; and dropping the open-lanes line is a finding too,
+        # because that is how an unworked lane silently reads as finished.
+        compliant = (
+            "- **Deliverable**: a staged `bao.hcl` and its unit, unapplied. Tier 1 only.\n"
+            "- **Fixed decisions**: Raft storage; TLS terminates at the service.\n"
+            "- **Sources**: `docs/lab/hera-01.md`; the 2.6.1 release notes.\n"
+            "- **Verified facts**: `$ bao version` → `OpenBao v2.6.1` [sourced].\n"
+            "- **Forbidden regressions**: `server -verify-only` is absent in 2.6.1 → "
+            "`$ bao operator validate-config` is the supported check; its test asserts the "
+            "replacement, never the removed flag.\n"
+            "- **Acceptance**: config parses, Tier 0 read-only, exit 0 is the evidence; a "
+            "check-mode run is not evidence because the probe is skipped under `--check`.\n"
+            "- **Authority**: nothing live; Tier 2 activation is out of this delegation.\n"
+            "- **Irreversible**: none — initialization stays with the operator.\n"
+            "- **Temporary authority**: none — no root token at Tier 1.\n"
+            "- **Inventory invariants**: the estate goes 11 → 12; the dashboard threshold moves.\n"
+            "- **Blocking**: TLS custody inputs absent; live promotion cannot start.\n"
+            "- **Open lanes**: snapshot credentials — operator; alert routing — observability.\n"
+            "- **Out of scope**: DNS, proxy, and monitoring promotion.\n"
+        )
+        self.assertEqual([], packet_lint.lint_packet(compliant, "handoff-packet"))
+        for dropped, slot in (
+            ("- **Forbidden regressions**", "forbidden regressions"),
+            ("- **Open lanes**", "open lanes"),
+        ):
+            without = "".join(
+                line + "\n"
+                for line in compliant.splitlines()
+                if not line.startswith(dropped)
+            )
+            findings = packet_lint.lint_packet(without, "handoff-packet")
+            self.assertTrue(any(slot in finding for finding in findings), findings)
+
+    def test_handoff_packet_facts_without_a_probe_are_a_finding(self) -> None:
+        # Verification-method validity is the point of the packet, so a `Verified facts` line with
+        # no command cited anywhere near it must not read as measurement. This is the shared
+        # verification-claim rule reaching the new shape, pinned here because the shape was chosen
+        # to sit under it deliberately.
+        unprobed = (
+            "- **Deliverable**: a staged unit file.\n"
+            "- **Fixed decisions**: Raft storage.\n"
+            "- **Sources**: the lab profile.\n"
+            "- **Verified facts**: the host runs the newer release and swap is off.\n"
+            "- **Forbidden regressions**: the removed flag is replaced by the supported check.\n"
+            "- **Acceptance**: the config parses and the unit starts.\n"
+            "- **Authority**: nothing live here.\n"
+            "- **Irreversible**: none.\n"
+            "- **Temporary authority**: none.\n"
+            "- **Inventory invariants**: the estate grows by one host.\n"
+            "- **Blocking**: custody inputs are absent.\n"
+            "- **Open lanes**: snapshot credentials — operator.\n"
+            "- **Out of scope**: proxy promotion.\n"
+        )
+        findings = packet_lint.lint_packet(unprobed, "handoff-packet")
+        self.assertTrue(
+            any("no command or output cited" in finding for finding in findings), findings
+        )
+
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.
         self.assertIn("review-packet", packet_lint.SHAPES)
