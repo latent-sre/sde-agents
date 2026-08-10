@@ -214,22 +214,25 @@ in LEARN-002's docket.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `ready` — the canonical packet, its deterministic grader, and the eight offline
-fixtures landed (issue #60). What remains is measurement, not design: the paired live runs and
-the released-artifact retest, neither runnable from a session without API credentials.
+**Status:** `active` — the canonical packet, its deterministic grader, and the nine offline
+fixtures are implemented and awaiting operator review with the round PR (issue #60). What
+remains after merge is measurement, not design: the paired live runs and the released-artifact
+retest, neither runnable from a session without API credentials.
 
 **Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
 carry failed assumptions, verification-method validity, the executable-transport contract,
 irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
 — and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
 
-**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
+**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) and
+its [paired plan](superpowers/plans/handoff-001-plan.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
-**Prerequisites:** REV-001's settled idiom — honored without waiting on it by reusing the
-idiom REV-001 will also build on: the fleet's existing labeled-line packet with a
-`scripts/packet_lint.py` shape (`handoff-packet`) grading its slots, so no third packet dialect
-entered the tree. REV-001 remains free to add its envelope fields to that same shape.
+**Prerequisites:** REV-001's settled idiom — now settled and reconciled in the paired plan: the
+envelope is a field vocabulary (`candidate_sha`/`base_sha`/`tree_oid`) for binding verdicts to
+immutable identity, the packet is the fleet's existing labeled-line dialect with a
+`scripts/packet_lint.py` shape (`handoff-packet`) grading its slots, and a packet line naming an
+immutable revision uses the envelope's field names — no third packet dialect entered the tree.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 Landed so far: the packet in `agents/homelab-platform.md`, the builder echo in
