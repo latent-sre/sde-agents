@@ -335,7 +335,7 @@ def probe_workflow_contract(probe: "Probe") -> None:
     plugin_copy = workspace / "plugin"
     shutil.copytree(
         REPO, plugin_copy,
-        ignore=shutil.ignore_patterns(".git", ".probe-tmp", "node_modules"),
+        ignore=shutil.ignore_patterns(".git", ".probe-tmp", "node_modules", "worktrees"),
     )
     hook_log = workspace / "hook-log.jsonl"
     hooks_path = plugin_copy / "hooks" / "hooks.json"

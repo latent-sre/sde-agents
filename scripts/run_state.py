@@ -62,7 +62,9 @@ def _validate_id(value: str, field: str) -> str:
 # append-only, so a malformed digest admitted here is permanent in the ledger and reads forever
 # after as a binding no later resolver can match. Non-strings are rejected here rather than left
 # to the regex, whose TypeError is an exception this module never raises and ``main`` does not
-# catch — it would surface as a traceback instead of a run-state error.
+# catch — it would surface as a traceback instead of a run-state error. (That hardening is
+# scoped to this field, the one SAFE-003 ruled on; the sibling creation arguments keep their
+# CLI-era assumptions and a library caller passing them non-strings still gets bare exceptions.)
 def _validate_contract_digest(value: object) -> str:
     if not isinstance(value, str) or not evidence_envelope.SHA256_RE.fullmatch(value):
         raise StateError(
@@ -258,7 +260,7 @@ class StateStore:
         _validate_id(run_id, "run_id")
         if not input_revision.strip():
             raise StateError("input_revision must be non-empty")
-        _validate_contract_digest(contract_digest)
+        contract_digest = _validate_contract_digest(contract_digest)
         now = _timestamp(self.now())
         with self._transaction() as connection:
             connection.execute(

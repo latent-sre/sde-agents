@@ -28,7 +28,9 @@ REPO = Path(__file__).resolve().parents[1]
 # the suite and the probe ran concurrently. The probe's own copytree already excludes it.
 # `worktrees` is the platform's nested-worktree home (`.claude/worktrees/agent-*`): a second
 # full checkout that another session writes concurrently, so copying it both bloats every test
-# template by that checkout's size and races the other writer exactly as `.probe-tmp` did.
+# template by that checkout's size and races the other writer exactly as `.probe-tmp` did. The
+# probe's copytree (scripts/probe_plugin.py) carries the same worktrees exclusion for the same
+# reason — the two ignore lists are kept in step by hand.
 _IGNORED_DIRS = {".git", "__pycache__", ".probe-tmp", "worktrees"}
 
 
@@ -196,9 +198,9 @@ def repo_copy() -> Iterator[Path]:
 
     Wiring invariants are proven against a copy of the actual repo, not a synthetic fixture
     that could drift away from it. tests/ stays in the copy: AGENTS.md names `tests/fixtures/`,
-    and the guide drift check resolves every multi-segment path it asserts. Only `.git` and
-    `__pycache__` are excluded — one is not part of the tree under validation, the other is
-    machine-local byproduct that would make copies differ between runs.
+    and the guide drift check resolves every multi-segment path it asserts. Exclusions are
+    exactly `_IGNORED_DIRS` — see its comment for why each entry is not part of the tree under
+    validation.
 
     Callers may mutate file contents, add files or symlinks, or delete anything under the
     yielded path, and must not touch it after the with-block: the tree is pooled, and the next
