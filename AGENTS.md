@@ -64,6 +64,15 @@ instead of recomputing it.
   reports whether a stored benchmark already covers the 'before' side — reuse it when it does;
   the 'after' side is always fresh.
 
+Static review has a convergence bound. A prose-behavior change (agent or skill text) gets at
+most **two** deep-review rounds: when a later round's criticals land in sentences the previous
+round's fix introduced, the loop is diverging — natural-language rules have unbounded
+hypothetical attack surface, so each rewrite mints the next round's findings. Close with the
+instrument that measures behavior instead (a live behavioral-contract run, or an executed
+verification pass); a third static round happens only on an explicit operator ruling. This rule
+exists because one branch spent six rounds and ~1.5M review tokens finding defects only in its
+own successive fixes.
+
 After **any** canonical agent or skill edit, regenerate the host adapters:
 
 ```bash

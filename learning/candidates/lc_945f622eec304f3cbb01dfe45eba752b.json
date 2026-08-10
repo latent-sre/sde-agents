@@ -1,0 +1,89 @@
+{
+  "applicability": "All hosts; supersedes lc_ac166609 (whose expected_behavior stated the caller-authorized design rejected in review). Recheck if the platform ever provides a caller-identity channel a subagent can verify.",
+  "candidate_id": "lc_945f622eec304f3cbb01dfe45eba752b",
+  "created_at": "2026-08-10T01:37:19.801945Z",
+  "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+  "disposition": "supersede",
+  "evidence": {
+    "environment": "Fleet source repository + engine-less estate hosts",
+    "provenance": "verified",
+    "revision": "03fb6dd",
+    "source_kind": "review-finding",
+    "source_reference": "GATE-001 rounds: estate audit (engine-less host makes VE inconclusive-everything) + deep-review rounds wf_78b946fb/wf_1d3a1871/wf_8f0516e7 proving every text-based waiver and attribution form is a confused deputy"
+  },
+  "expected_behavior": "Method 5's execution-isolation boundary is never waivable by any received text. With no adequate boundary the verifier executes nothing; the propose-and-prove continuation is available for any target and vouches for none -- exact commands published with the dependency-closure and command-provenance caveats, returned output graded as caller-reported: <result> under the verdict rule, never plain pass. The durable fix for engine-less hosts is installing a container engine.",
+  "fingerprint": "ac748c8e336d6d44a246f49dc40cbd28849b3b20557cd01431dcfcd8632e78bd",
+  "freshness": {
+    "as_of": "2026-08-10T01:37:19.801945Z",
+    "review_at": "2026-09-09T01:37:19.801945Z"
+  },
+  "observation": "verification-engineer's unconditional container mandate made every executable check inconclusive on engine-less hosts; three successive relaxation designs keyed on caller authorization, user authorization, then target attribution were each proven confused deputies in review, because the verifier runs only as a subagent and every such claim reaches it as unverifiable caller-supplied text.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "retired",
+  "reason": "Superseded by lc_e15d1785bea747549b9a947dfa837be5: this record's expected_behavior promised the publish-with-caveats continuation that round 6 proved unenforceable (interpreter commands activate code their command line never names, so the withhold gate cannot be evaluated).",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Fleet source repository + engine-less estate hosts",
+        "observed_at": "2026-08-10T01:37:19.801945Z",
+        "provenance": "verified",
+        "revision": "03fb6dd",
+        "source_kind": "review-finding",
+        "source_reference": "GATE-001 rounds: estate audit (engine-less host makes VE inconclusive-everything) + deep-review rounds wf_78b946fb/wf_1d3a1871/wf_8f0516e7 proving every text-based waiver and attribution form is a confused deputy"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T01:37:19.801945Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "verification-engineer Method 5, its packet contract, and the verification-packet lint shape; excludes the verdict rule, which never changes.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T01:37:19.801945Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-10T01:37:20.186958Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Supersedes lc_ac166609: the review-proven design differs from that record's bounded expected_behavior, and expected_behavior is recurrence identity the lifecycle cannot edit.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T01:37:20.564435Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator rulings 2026-08-09: infrastructure fix (podman/docker on the estate host) plus a never-text-waivable boundary.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T01:37:20.947953Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Implemented across d02bd33..HEAD with contracts verifier-authorization-is-not-text-waivable and verifier-packet-shape-holds; validator and suite green at commit time; live paired contract run remains the round's acceptance step.",
+      "to": "promoted"
+    },
+    {
+      "at": "2026-08-10T02:17:20.663362Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "promoted",
+      "owner": "fleet-maintainer",
+      "reason": "Superseded by lc_e15d1785bea747549b9a947dfa837be5: this record's expected_behavior promised the publish-with-caveats continuation that round 6 proved unenforceable (interpreter commands activate code their command line never names, so the withhold gate cannot be evaluated).",
+      "to": "retired"
+    }
+  ],
+  "updated_at": "2026-08-10T02:17:20.663362Z"
+}

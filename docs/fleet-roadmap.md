@@ -84,7 +84,13 @@ conditions; deterministic gates green; the two 2/3-flaky contracts re-measured a
 watch-metrics (Learning-slot `none`-rate, ledger organic-candidate count) reported at close.
 
 **Next action:** Start with the three self-improve packet-grammar cases — same failure shape, so
-one grammar-vs-skill-text decision sets the pattern for the rest.
+one grammar-vs-skill-text decision sets the pattern for the rest. New calibration input
+2026-08-10: the first live run of the ten gate-001/verifier contracts
+(`evals/baselines/2026-08-10-gate-001-first-live/`, sonnet clean-room, 2/10 green) — every
+failure reads grader-shaped (a negation-blind forbidden pattern fired on the correct negated
+answer; the packet shape held while the claim-evidence heuristic bit an honest "verified:
+nothing" line; one vocabulary miss; one 300s timeout), so those cases join this item's
+grammar-vs-text docket rather than being tuned in the GATE-001 branch.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -267,7 +273,10 @@ racing them.
 scenario, an approval-consolidation case that leaves irreversible gates intact, and issue #67's
 Eval 4 (phase calibration), which this round owns as classification owner.
 
-**Next action:** Implement per the paired plan on a round branch off main.
+**Next action:** Operator review and merge of the round PR. Implementation is complete on
+`round/gate-001-implementation` (six deep-review rounds plus the operator's step-back strip;
+deterministic gates green; first live contract baseline captured 2026-08-10); contract
+calibration rides LEARN-002 per its docket.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 

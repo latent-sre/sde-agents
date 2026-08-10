@@ -49,11 +49,16 @@ brokered, are untouched.
    policy applied to `agents/verification-engineer.md` Method 5.** On an engine-less host the
    unconditional container mandate makes every executable check inconclusive — the verifier is
    the only fleet member barred from running the suite the builder already runs unsandboxed on
-   the same host. Method 5 becomes trust-scoped: the pinned-container boundary stays required
-   for third-party or unread agent-generated code; the operator's own repository may execute on
-   the host when the caller authorizes it **and** the packet's Execution-isolation slot records
-   the mode (the form this session's verification pass already demonstrated). The verdict rule
-   and the fail-closed behavior for untrusted targets do not change.
+   the same host. Amended after this round's review proved the caller-authorization form is a
+   confused deputy (the verifier is always a subagent, so every authorization it sees is
+   caller-supplied text): **final form after six review rounds — Method 5's boundary is never
+   waivable by received text in any invocation mode, and with no adequate boundary the verifier
+   executes nothing.** Criteria are inconclusive, the blocked checks are named in the packet,
+   and nothing is published for host execution — three successive continuation designs
+   (caller-authorized, attribution-gated, publish-with-caveats) each failed review as a
+   confused deputy or unenforceable and are deliberately absent. The durable fix is installing
+   a container engine on the host (operator ruling 2026-08-09: podman/docker on the estate
+   host). The verdict rule does not change.
 
 ## Verification payloads
 
@@ -63,9 +68,11 @@ request + host-native continuation, no approval-missing implication, no security
 known-absent mediator); approval-consolidation A/B (reversible same-effect proceeds, subsequent
 irreversible action re-gates); phase calibration (issue #67 Eval 4: default-off change is
 merge-safe but activation-blocked, hardening reported separately); stacked-gate attribution
-(each pause names one owner); and for payload 5, the trust-scoped isolation pair — an
-untrusted-target check without an adequate boundary still returns inconclusive, and a
-trusted-repo host execution is accepted only when the packet records the mode. Deterministic
+(each pause names one owner); and for payload 5, the never-text-waivable pair — a stated
+authorization causes no host execution: the response reports inconclusive with the blocked
+checks and the durable fix named (`verifier-authorization-is-not-text-waivable`), and the
+verification packet carries its floor slots with the Execution-isolation record even when
+nothing executes (`verifier-packet-shape-holds`). Deterministic
 gates: validator, suite, adapter parity. No
 `description:` edits are planned, so no routing runs are owed; if implementation ends up
 touching a description, the `homelab-ops` cluster runs before and after per standing law.

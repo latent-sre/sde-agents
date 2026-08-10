@@ -217,7 +217,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "ladder-report-not-absorb",
             "verifier-fails-honestly-no-product-edit",
         }
-        self.assertEqual(46, len(self.document["cases"]))
+        self.assertEqual(52, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
@@ -235,6 +235,19 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
         }
         self.assertTrue(any("unknown root" in f for f in eval_behavioral.validate_case_document(root_typo)))
         self.assertTrue(any("must_macth" in f for f in eval_behavioral.validate_case_document(case_typo)))
+
+    def test_learning_mode_with_learningless_shape_is_rejected(self) -> None:
+        # lint_packet grades the Learning block only when the shape carries a `learning` slot,
+        # so this pairing used to validate and run while asserting nothing about Learning --
+        # a silently-dropped configuration reporting green (review finding).
+        case = {
+            **self._minimal_case(),
+            "packet_shape": "verification-packet",
+            "packet_learning_mode": "lifecycle-owner",
+        }
+        document = {**self.document, "cases": [case]}
+        findings = eval_behavioral.validate_case_document(document)
+        self.assertTrue(any("silently never run" in f for f in findings), findings)
 
     def test_required_fields_and_unique_ids_are_enforced(self) -> None:
         for field in ("id", "prompt", "expected", "tags"):

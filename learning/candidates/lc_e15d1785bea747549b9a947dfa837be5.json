@@ -1,0 +1,80 @@
+{
+  "applicability": "All hosts. Supersedes lc_945f622e, whose expected_behavior still promised the publish-with-caveats continuation. Recheck only if the platform ever provides a verifiable caller-identity channel.",
+  "candidate_id": "lc_e15d1785bea747549b9a947dfa837be5",
+  "created_at": "2026-08-10T02:17:19.507190Z",
+  "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+  "disposition": "supersede",
+  "evidence": {
+    "environment": "Fleet source repository; single-operator lab; engine-less estate host being fixed by podman install",
+    "provenance": "verified",
+    "revision": "6a2c908",
+    "source_kind": "review-finding",
+    "source_reference": "GATE-001 deep-review rounds 3-6 (wf_78b946fb, wf_1d3a1871, wf_8f0516e7, wf_7c34b087): every continuation design failed -- caller/user/attribution gating as confused deputies, publish-with-caveats as unenforceable (pytest activates code its command line never names)"
+  },
+  "expected_behavior": "Method 5's boundary is never waivable by any received text in any invocation mode. With no adequate boundary the verifier executes nothing: affected criteria are inconclusive, the packet names the blocked checks and records that nothing executed, and nothing is published for host execution. The durable fix is installing a container engine.",
+  "fingerprint": "6b2a2145b05366460c021d90b54bb9367cce2378c89e0a4240946bbaef33ef68",
+  "freshness": {
+    "as_of": "2026-08-10T02:17:19.507190Z",
+    "review_at": "2026-09-09T02:17:19.507190Z"
+  },
+  "observation": "Every attempt to give the verifier a text-conditioned or command-publishing continuation on engine-less hosts failed review: authorization and attribution claims are unverifiable caller-supplied text in every invocation mode, and command inspection cannot bound what interpreter-launched code executes, so each formulation left a confused-deputy or unenforceable-gate path.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "promoted",
+  "reason": "Implemented at HEAD: continuation text removed from Method 5, inconclusive clause restored verbatim, contracts simplified to strip semantics; validator and suite green at commit time; live contract run is the round's closing acceptance step.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Fleet source repository; single-operator lab; engine-less estate host being fixed by podman install",
+        "observed_at": "2026-08-10T02:17:19.507190Z",
+        "provenance": "verified",
+        "revision": "6a2c908",
+        "source_kind": "review-finding",
+        "source_reference": "GATE-001 deep-review rounds 3-6 (wf_78b946fb, wf_1d3a1871, wf_8f0516e7, wf_7c34b087): every continuation design failed -- caller/user/attribution gating as confused deputies, publish-with-caveats as unenforceable (pytest activates code its command line never names)"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T02:17:19.507190Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "verification-engineer Method 5 and its packet contract; excludes the verdict rule, which never changes.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T02:17:19.507190Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-10T02:17:19.798791Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Supersedes lc_945f622e after round 6 proved its continuation unenforceable; third and final supersede in this chain -- the record trail deliberately documents the whole arc.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T02:17:20.081826Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator step-back ruling 2026-08-09/10: strip the continuation; fail-closed inconclusive plus the engine install is the whole answer.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T02:17:20.372300Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Implemented at HEAD: continuation text removed from Method 5, inconclusive clause restored verbatim, contracts simplified to strip semantics; validator and suite green at commit time; live contract run is the round's closing acceptance step.",
+      "to": "promoted"
+    }
+  ],
+  "updated_at": "2026-08-10T02:17:20.372300Z"
+}
