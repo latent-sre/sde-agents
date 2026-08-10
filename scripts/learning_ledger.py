@@ -726,6 +726,16 @@ def validate_candidate(record: Mapping[str, object]) -> None:
     # stops a hand-edited history from smuggling in a release that never actually landed.
     release_history = record.get("release_history")
     if release_history is not None:
+        if release_at is None:
+            # The writer only ever archives while writing a new current release, so a stranded
+            # history is proof of a hand edit -- and learning/README.md's rollback enumeration
+            # promises readers this shape cannot validate. Without this check that promise was
+            # writer-only prose reading as a reader guarantee (executed verification finding).
+            raise LedgerError(
+                "release_history requires a current release record; a history with no release "
+                "can only come from a hand edit and would silently break the rollback "
+                "enumeration the docs promise"
+            )
         if not isinstance(release_history, list) or len(release_history) > MAX_RELEASE_HISTORY:
             raise LedgerError(
                 f"release_history must contain at most {MAX_RELEASE_HISTORY} entries"

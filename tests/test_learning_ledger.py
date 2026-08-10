@@ -650,6 +650,115 @@ class LearningLedgerTests(unittest.TestCase):
                 self.assertEqual(1, len(matching))
                 self.assertEqual(schema_version, matching[0]["schema_version"])
 
+    def test_rollback_grep_for_release_enumerates_every_record_needing_the_manual_step(
+        self,
+    ) -> None:
+        """learning/README.md's Rollback step 2 tells an operator to find every record that
+        acquired a `release`, `retest`, or `release_history` block with a single grep for
+        ``"release"`` under `learning/candidates/`. That enumeration was prose only: nothing
+        executable failed if a shape stopped matching it, which is exactly how a rollback
+        silently leaves a record behind that then fails every ledger command under the reverted
+        reader. This pins both halves -- completeness (no record needing the manual step is
+        missed) and the detector (a record that never acquired a block is not a hit, so a green
+        result is not the grep matching everything).
+
+        Deliberately byte-level: it greps the stored JSON exactly as the documented command does,
+        rather than re-deriving the answer from the parsed keys the command cannot see.
+        """
+        needle = '"release"'
+        candidates_dir = self.root / "learning" / "candidates"
+
+        def seed(tag: str) -> str:
+            record = self._add(
+                observation=f"The {tag} packet omitted its failing dependency.",
+                expected_behavior=f"The {tag} packet names the failing dependency.",
+                scope=f"{tag} packets",
+                applicability=f"{tag} agent on Python 3.13",
+                source_reference=f"tests/test_worker.py::test_{tag}",
+            )
+            candidate_id = str(record["candidate_id"])
+            self._promote(candidate_id)
+            return candidate_id
+
+        # 1. Promoted but never released: the additive half, which needs no rollback step at all.
+        untouched = seed("untouched")
+
+        # 2. Release only.
+        release_only = seed("release_only")
+        self.ledger.record_release(release_only, version="1.7.3", reference="PR 401")
+
+        # 3. Release plus a settled retest.
+        release_retest = seed("release_retest")
+        self.ledger.record_release(release_retest, version="1.7.3", reference="PR 402")
+        self.ledger.record_retest(
+            release_retest,
+            result="pass",
+            environment="released plugin 1.7.3",
+            reference="retest 402",
+        )
+
+        # 4. A second promotion cycle, so the record also carries `release_history`.
+        with_history = seed("with_history")
+        self.ledger.record_release(with_history, version="1.7.3", reference="PR 403")
+        self.ledger.record_retest(
+            with_history,
+            result="fail",
+            environment="released plugin 1.7.3",
+            reference="retest 403",
+        )
+        self.ledger.transition(
+            with_history,
+            promotion_state="rejected",
+            disposition="drop",
+            destination="scripts/validate_fleet.py",
+            owner="fleet-maintainer",
+            reason="The destination regressed against its own originating scenario.",
+        )
+        self.current_now += timedelta(minutes=1)
+        self.ledger.observe(
+            with_history,
+            provenance="verified",
+            source_kind="test",
+            source_reference="tests/test_worker.py::test_with_history_again",
+            sensitivity_reviewed=True,
+        )
+        for state in ("proposed", "approved", "promoted"):
+            self.ledger.transition(
+                with_history,
+                promotion_state=state,
+                disposition="add",
+                destination="scripts/validate_fleet.py",
+                owner="fleet-maintainer",
+                reason=f"Fresh field evidence supports the {state} state.",
+            )
+        self.current_now += timedelta(minutes=1)
+        second_cycle = self.ledger.record_release(
+            with_history, version="1.7.4", reference="PR 404"
+        )
+        self.assertEqual(1, len(second_cycle["release_history"]))
+
+        needs_rollback = {release_only, release_retest, with_history}
+        hits = {
+            path.stem
+            for path in candidates_dir.glob("*.json")
+            if needle in path.read_text(encoding="utf-8")
+        }
+        self.assertEqual(needs_rollback, hits)
+        self.assertNotIn(untouched, hits)
+
+        # The one shape the CLI never writes but a hand edit can leave behind: an archived cycle
+        # with the current `release` removed. The documented grep must still enumerate it, because
+        # every `release_history` entry carries its own nested `"release"` key.
+        stranded_path = candidates_dir / f"{with_history}.json"
+        stranded = json.loads(stranded_path.read_text(encoding="utf-8"))
+        stranded.pop("release")
+        self.assertIn("release_history", stranded)
+        stranded_path.write_text(
+            json.dumps(stranded, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        self.assertIn(needle, stranded_path.read_text(encoding="utf-8"))
+
     def test_promoted_candidate_can_be_invalidated_but_disposition_must_fit_state(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
@@ -1061,6 +1170,30 @@ class LearningLedgerTests(unittest.TestCase):
 
         backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-release")}
         self.assertEqual({unreleased["candidate_id"]}, backlog)
+
+    def test_stranded_release_history_without_release_is_rejected_by_the_reader(self) -> None:
+        # The writer only archives history while writing a new current release, so this shape
+        # can only come from a hand edit -- and the rollback docs promise the reader rejects
+        # it. Executed verification proved that promise was writer-only prose: the reader
+        # accepted the stranded shape (finding, criterion 4). This is the firing test for the
+        # guard that makes the documented invariant real.
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        self._advance(seconds=2)
+        self._promote(candidate_id)
+        self._advance(seconds=2)
+        released = self.ledger.record_release(
+            candidate_id, version="1.7.3", reference="PR#123"
+        )
+        mutated = json.loads(json.dumps(released))
+        release_block = mutated.pop("release")
+        mutated["release_history"] = [{"release": release_block, "retest": None}]
+        path.write_text(json.dumps(mutated), encoding="utf-8")
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "release_history requires a current release"
+        ):
+            self.ledger.check()
 
     def test_check_validates_release_and_retest_block_shapes_and_ordering(self) -> None:
         record = self._add()
