@@ -731,6 +731,19 @@ class LearningLedgerTests(unittest.TestCase):
         ):
             self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#124")
 
+    def test_record_release_rejects_a_secret_like_version(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        self._promote(candidate_id)
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        before = path.read_bytes()
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "secret-like"):
+            self.ledger.record_release(
+                candidate_id, version="api_token=redacted-value", reference="PR#123"
+            )
+        self.assertEqual(before, path.read_bytes())
+        self.assertIsNone(self.ledger.check()[0].get("release"))
+
     def test_record_retest_requires_release_and_records_the_field_result(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
@@ -762,6 +775,115 @@ class LearningLedgerTests(unittest.TestCase):
             self.ledger.record_retest(
                 candidate_id, result="pass", environment="staging", reference="run#2"
             )
+
+    def test_record_retest_returns_the_regression_signal_programmatically(self) -> None:
+        """A library caller must see the fail signal without inspecting main()'s stderr print --
+        the CLI (proven separately in the argparse wiring test) prints from this same key."""
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        self._promote(candidate_id)
+        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+
+        passed = self.ledger.record_retest(
+            candidate_id, result="pass", environment="prod", reference="run#0"
+        )
+        self.assertNotIn("regression", passed)
+
+        second = self._add(
+            observation="A worker packet omitted the exhausted dependency name.",
+            expected_behavior="The packet always names the exhausted dependency.",
+            scope="worker regression signal packets",
+            source_reference="tests/test_worker.py::test_regression_signal",
+        )
+        second_id = second["candidate_id"]
+        self._promote(second_id)
+        self.ledger.record_release(second_id, version="1.7.3", reference="PR#456")
+        failed = self.ledger.record_retest(
+            second_id, result="fail", environment="prod", reference="run#1"
+        )
+        self.assertIn("regression", failed)
+        self.assertEqual("scripts/validate_fleet.py", failed["regression"]["destination"])
+        self.assertEqual("prod", failed["regression"]["environment"])
+        self.assertEqual("run#1", failed["regression"]["reference"])
+        self.assertIn("REGRESSION:", failed["regression"]["message"])
+        self.assertIn(second_id, failed["regression"]["message"])
+
+        # The transient key is never persisted -- only returned.
+        path = self.root / "learning" / "candidates" / f"{second_id}.json"
+        on_disk = json.loads(path.read_text(encoding="utf-8"))
+        self.assertNotIn("regression", on_disk)
+        checked = [r for r in self.ledger.check() if r["candidate_id"] == second_id][0]
+        self.assertNotIn("regression", checked)
+
+    def test_release_history_archives_a_completed_cycle_on_re_promotion(self) -> None:
+        record = self._add(
+            observation="A deploy script omitted the rollback command on failure.",
+            expected_behavior="The deploy script always prints the rollback command on failure.",
+            scope="deploy script failure output",
+            source_reference="tests/test_deploy.py::test_cycle",
+        )
+        candidate_id = record["candidate_id"]
+        self._promote(candidate_id)
+        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
+        first_cycle = self.ledger.record_retest(
+            candidate_id, result="fail", environment="prod", reference="run#1"
+        )
+        first_release = first_cycle["release"]
+        first_retest = first_cycle["retest"]
+
+        # No intervening re-promotion: a second release for the SAME cycle is still refused.
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "already carries a release record for this promotion"
+        ):
+            self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#2")
+
+        # The owner acts on the field regression: reject, reopen with fresh evidence, re-promote.
+        self._advance(seconds=1)
+        self.ledger.transition(
+            candidate_id, promotion_state="rejected", disposition="drop",
+            destination="proposal:none", owner="fleet-maintainer",
+            reason="1.7.3 regressed the rollback-command invariant in the field.",
+        )
+        self._advance(seconds=1)
+        self.ledger.observe(
+            candidate_id, provenance="verified", source_kind="test",
+            source_reference="tests/test_deploy.py::test_cycle_fixed",
+            sensitivity_reviewed=True,
+        )
+        self.ledger.transition(
+            candidate_id, promotion_state="proposed", disposition="add",
+            destination="scripts/deploy.py", owner="fleet-maintainer",
+            reason="A distinct newer observation supports reconsideration after the fix.",
+        )
+        self.ledger.transition(
+            candidate_id, promotion_state="approved", disposition="add",
+            destination="scripts/deploy.py", owner="fleet-maintainer",
+            reason="Reviewed evidence supports the approved state.",
+        )
+        second_promoted = self.ledger.transition(
+            candidate_id, promotion_state="promoted", disposition="add",
+            destination="scripts/deploy.py", owner="fleet-maintainer",
+            reason="Reviewed evidence supports the promoted state.",
+        )
+        self.assertEqual("promoted", second_promoted["promotion_state"])
+
+        self._advance(seconds=1)
+        second_cycle = self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#2")
+        self.assertEqual("1.7.4", second_cycle["release"]["version"])
+        self.assertNotIn("retest", second_cycle)
+        self.assertEqual(1, len(second_cycle["release_history"]))
+        archived = second_cycle["release_history"][0]
+        self.assertEqual(first_release, archived["release"])
+        self.assertEqual(first_retest, archived["retest"])
+
+        second_retest = self.ledger.record_retest(
+            candidate_id, result="pass", environment="prod", reference="run#2"
+        )
+        self.assertEqual("pass", second_retest["retest"]["result"])
+        self.assertEqual(1, len(second_retest["release_history"]))
+        self.assertEqual(first_release, second_retest["release_history"][0]["release"])
+
+        self.assertEqual(1, len(self.ledger.check()))
 
     def test_inconclusive_retest_may_be_re_recorded_settled_results_are_final(self) -> None:
         for final_result in ("pass", "fail"):
@@ -870,6 +992,76 @@ class LearningLedgerTests(unittest.TestCase):
             "inconclusive", summaries[inconclusive["candidate_id"]]["retest"]["result"]
         )
 
+    def test_regressed_view_lists_fail_retests_until_an_owner_transition(self) -> None:
+        regressed = self._add(
+            observation="A worker packet omitted the exhausted dependency name.",
+            expected_behavior="The packet always names the exhausted dependency.",
+            scope="worker regression packets",
+            source_reference="tests/test_worker.py::test_regressed",
+        )
+        self._promote(regressed["candidate_id"])
+        self.ledger.record_release(regressed["candidate_id"], version="1.7.3", reference="PR#1")
+        self.ledger.record_retest(
+            regressed["candidate_id"], result="fail", environment="prod", reference="run#1"
+        )
+
+        passed = self._add(
+            observation="A verifier packet omitted the exact target revision.",
+            expected_behavior="The verifier packet always binds the exact target revision.",
+            scope="verification evidence packets",
+            source_reference="tests/test_verifier.py::test_passed",
+        )
+        self._promote(passed["candidate_id"])
+        self.ledger.record_release(passed["candidate_id"], version="1.7.3", reference="PR#2")
+        self.ledger.record_retest(
+            passed["candidate_id"], result="pass", environment="prod", reference="run#1"
+        )
+
+        # A settled fail drops out of awaiting-retest but must not vanish from every actionable
+        # view -- it stays discoverable via `regressed` until an owner acts on it.
+        awaiting = {item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")}
+        self.assertNotIn(regressed["candidate_id"], awaiting)
+        regressed_ids = {item["candidate_id"] for item in self.ledger.list_records("regressed")}
+        self.assertEqual({regressed["candidate_id"]}, regressed_ids)
+
+        self._advance(seconds=1)
+        self.ledger.transition(
+            regressed["candidate_id"], promotion_state="rejected", disposition="drop",
+            destination="proposal:none", owner="fleet-maintainer",
+            reason="The field regression is confirmed; rejecting the promoted destination.",
+        )
+        self.assertEqual(set(), {
+            item["candidate_id"] for item in self.ledger.list_records("regressed")
+        })
+
+    def test_awaiting_release_view_lists_promoted_candidates_with_no_release(self) -> None:
+        unreleased = self._add(
+            observation="A restore drill packet omitted the recovery point objective.",
+            expected_behavior="The restore drill packet always names the recovery point objective.",
+            scope="restore drill packets",
+            source_reference="tests/test_restore.py::test_unreleased",
+        )
+        self._promote(unreleased["candidate_id"])
+
+        released = self._add(
+            observation="A worker retry packet omitted the exhausted dependency name.",
+            expected_behavior="The retry packet always names the exhausted dependency.",
+            scope="worker retry packets",
+            source_reference="tests/test_worker.py::test_released",
+        )
+        self._promote(released["candidate_id"])
+        self.ledger.record_release(released["candidate_id"], version="1.7.3", reference="PR#1")
+
+        self._add(
+            observation="A packet omitted the request id on retry exhaustion.",
+            expected_behavior="The packet always carries the request id.",
+            scope="request tracing",
+            source_reference="tests/test_tracing.py::test_not_promoted",
+        )
+
+        backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-release")}
+        self.assertEqual({unreleased["candidate_id"]}, backlog)
+
     def test_check_validates_release_and_retest_block_shapes_and_ordering(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
@@ -907,6 +1099,26 @@ class LearningLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(learning_ledger.LedgerError, "prior transition to promoted"):
             self.ledger.check()
 
+        # The recorded_at bounds check itself (release_at < created) is distinct from the
+        # "prior transition to promoted" check above -- both raise on an out-of-order timestamp,
+        # but for different reasons, and only the first is reachable unless this is proven to
+        # fire on its own.
+        mutated = json.loads(json.dumps(release_baseline))
+        mutated["release"]["recorded_at"] = learning_ledger._timestamp(
+            FIXED_NOW - timedelta(days=1)
+        )
+        write(mutated)
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "recorded_at must fall between candidate creation"
+        ):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(release_baseline))
+        mutated["release"] = "not-an-object"
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "release must be an object"):
+            self.ledger.check()
+
         write(release_baseline)
         retested = self.ledger.record_retest(
             candidate_id, result="pass", environment="prod", reference="run#1"
@@ -936,6 +1148,24 @@ class LearningLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(
             learning_ledger.LedgerError, "must fall between its release record"
         ):
+            self.ledger.check()
+
+        # The other side of the same OR: a retest recorded_at AFTER the record's own updated_at
+        # (left unchanged here) is a distinct violation from "before its release" above.
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"]["recorded_at"] = learning_ledger._timestamp(
+            FIXED_NOW + timedelta(seconds=5)
+        )
+        write(mutated)
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "must fall between its release record"
+        ):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"] = ["not", "an", "object"]
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "retest must be an object"):
             self.ledger.check()
 
         mutated = json.loads(json.dumps(retest_baseline))

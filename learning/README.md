@@ -130,8 +130,12 @@ python scripts/learning_ledger.py `
 ```
 
 `record-release` requires `promotion_state: promoted` and stamps `version`, `reference`, and a
-timestamp exactly once. A second call on the same candidate is rejected -- a later release belongs
-to a new candidate record, never a silent overwrite of this one.
+timestamp once per promotion cycle. A second call before any fresh promotion is rejected -- never
+a silent overwrite. But the state machine already allows a promoted candidate to reject and
+re-promote (fresh evidence required, as described above); a release recorded after that later
+promotion is a genuinely new cycle, so `record-release` archives the completed `{release, retest}`
+pair into `release_history` and starts a fresh current pair, rather than refusing the second
+cycle outright.
 
 Record a downstream retest of the released artifact:
 
@@ -149,7 +153,13 @@ python scripts/learning_ledger.py `
 single-shot; `inconclusive` is not settled and may be re-recorded in place once retest conditions
 are met, so a blocked retest is not a dead end. A `fail` result also prints a `REGRESSION:` line to
 stderr -- the candidate's destination, already merged and shipped, regressed against its own
-originating scenario in the field.
+originating scenario in the field; a programmatic caller gets the identical signal in the returned
+record's transient `regression` key (never written to disk) rather than only a stderr line.
+
+Neither command checks `freshness.review_at` or `retention.expires_at`, unlike `transition`'s
+positive-state gate: each records a fact about what already happened downstream, not a new
+promotion judgment, so a stale or expired review window has nothing to say about whether a
+release or retest may still be recorded.
 
 Surface work and validate the store:
 
@@ -157,6 +167,8 @@ Surface work and validate the store:
 python scripts/learning_ledger.py --root C:\path\to\repo list --view pending
 python scripts/learning_ledger.py --root C:\path\to\repo list --view stale
 python scripts/learning_ledger.py --root C:\path\to\repo list --view awaiting-retest
+python scripts/learning_ledger.py --root C:\path\to\repo list --view regressed
+python scripts/learning_ledger.py --root C:\path\to\repo list --view awaiting-release
 python scripts/learning_ledger.py --root C:\path\to\repo check
 ```
 
@@ -164,7 +176,13 @@ python scripts/learning_ledger.py --root C:\path\to\repo check
 `list --view stale` compares each explicit review timestamp with current UTC; staleness is
 independent of disposition. `list --view awaiting-retest` covers promoted candidates carrying a
 `release` but no settled `retest` (none yet, or an `inconclusive` one) -- the pull-based backlog a
-release or upgrade retro reads; nothing here schedules or runs the retest itself.
+release or upgrade retro reads; nothing here schedules or runs the retest itself. `list --view
+regressed` covers promoted candidates whose retest `result` is `fail`, staying listed until an
+owner transitions the candidate away from `promoted` (typically `rejected`) -- a settled fail
+drops out of `awaiting-retest` but must not vanish from every actionable view. `list --view
+awaiting-release` covers promoted candidates with no `release` block at all -- the literal
+merged-not-released backlog, since a plugin-shipped destination pattern is not reliably parseable
+from `destination` alone.
 
 Promotion state constrains disposition. `proposed`, `approved`, and `promoted` accept `add`,
 `merge`, or `supersede`; `inconclusive` accepts `skip`; `rejected` accepts `skip` or `drop`; and
@@ -187,15 +205,19 @@ records remain readable; new records use version 2 so the fingerprint includes a
 part of the recurrence boundary. Duplicate recurrence identities are rejected with the existing ID
 so the caller can use `observe` explicitly.
 
-Two further blocks are optional and additive on every schema version: `release` (`version`,
-`reference`, `recorded_at`) records the plugin version a `promoted` candidate shipped in, and
-`retest` (`result`, `environment`, `reference`, `recorded_at`) records its downstream retest
-against the released artifact. `release` requires a prior `promoted` transition at or before its
-own timestamp; `retest` requires an existing `release`. `result` is `pass`, `fail`, or
-`inconclusive`; only `inconclusive` may be re-recorded, so a blocked or inconclusive retest can be
-retried without opening a new candidate. Neither block is present on a record written before this
-lifecycle existed, and neither is required for such a record to keep validating -- see Rollback
-below for what changes when a record *does* acquire one.
+Three further blocks are optional and additive on every schema version: `release` (`version`,
+`reference`, `recorded_at`) records the plugin version a `promoted` candidate shipped in, `retest`
+(`result`, `environment`, `reference`, `recorded_at`) records its downstream retest against the
+released artifact, and `release_history` archives completed `{release, retest}` cycles. `release`
+requires a prior `promoted` transition at or before its own timestamp; `retest` requires an
+existing `release`. `result` is `pass`, `fail`, or `inconclusive`; only `inconclusive` may be
+re-recorded, so a blocked or inconclusive retest can be retried without opening a new candidate.
+A candidate may legally reject and re-promote; a `record-release` call after that later promotion
+archives the current `{release, retest}` pair into `release_history` (each entry validated by the
+same rules as the current pair) and starts a fresh current pair, so a second release/retest cycle
+is never simply unrecordable. None of the three blocks is present on a record written before this
+lifecycle existed, and none is required for such a record to keep validating -- see Rollback below
+for what changes when a record *does* acquire one.
 
 The writer rejects unknown or malformed fields, invalid IDs and transitions, duplicate evidence,
 oversized fields/files/counts, secret-like strings, multiline transcript content, and command-like
@@ -236,12 +258,13 @@ verified directly: running the pre-LOOP-001 CLI's `check` against a record carry
 full rollback is two steps:
 
 1. Revert the code change to `scripts/learning_ledger.py` (and its tests).
-2. Strip the `release` and `retest` keys from every candidate record that acquired one, then
-   re-run `check`. Find them with a single grep for `"release"` under `learning/candidates/` --
-   `record-retest` never accepts a retest without an existing release (a validated invariant, not
-   just a documented one), so a `retest` block can never exist on a record without a `release`
-   block, and that one grep is a complete enumeration. Deleting the two keys is enough; no other
-   field needs to change.
+2. Strip the `release`, `retest`, and `release_history` keys from every candidate record that
+   acquired one, then re-run `check`. Find them with a single grep for `"release"` under
+   `learning/candidates/` -- `record-retest` never accepts a retest without an existing release
+   and `record-release` only ever writes `release_history` in the same operation that also writes
+   a current `release` (both validated invariants, not just documented ones), so neither `retest`
+   nor `release_history` can exist on a record without a `release` block, and that one grep is a
+   complete enumeration. Deleting the up-to-three keys is enough; no other field needs to change.
 
 The additive half of that claim -- a record that never acquired `release`/`retest` needs no
 rollback step at all, and keeps validating byte-for-byte under the new reader with no migration
