@@ -49,11 +49,15 @@ brokered, are untouched.
    policy applied to `agents/verification-engineer.md` Method 5.** On an engine-less host the
    unconditional container mandate makes every executable check inconclusive — the verifier is
    the only fleet member barred from running the suite the builder already runs unsandboxed on
-   the same host. Method 5 becomes trust-scoped: the pinned-container boundary stays required
-   for third-party or unread agent-generated code; the operator's own repository may execute on
-   the host when the caller authorizes it **and** the packet's Execution-isolation slot records
-   the mode (the form this session's verification pass already demonstrated). The verdict rule
-   and the fail-closed behavior for untrusted targets do not change.
+   the same host. Amended after this round's review proved the caller-authorization form is a
+   confused deputy (the verifier is always a subagent, so every authorization it sees is
+   caller-supplied text): **Method 5's boundary is never waivable by received text.** The
+   engine-less continuation for the operator's own repository is propose-and-prove — the
+   verifier publishes the exact commands, the operator runs them, and the output grades as
+   caller-reported evidence, a distinct class named in the verdict; untrusted targets keep
+   inconclusive with no continuation. The durable fix is installing a container engine on the
+   host (operator ruling 2026-08-09: podman/docker on the estate host). The verdict rule does
+   not change.
 
 ## Verification payloads
 
