@@ -175,8 +175,9 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### REV-001 — advisory/approval split and the review-to-verify envelope
 
-**Status:** `ready` — spec approved by the operator 2026-08-09, with the condition that the
-shared material-risk matrix grows by generalization, never per-incident append.
+**Status:** `active` — spec approved 2026-08-09 (growth-by-generalization condition carried
+into the matrix text itself); paired plan authored and implemented 2026-08-10 on
+`round/loop-rev-001` together with LOOP-001.
 
 **Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
 and never transfers to changed bytes; the verifier requires that envelope and fails closed on
@@ -184,7 +185,8 @@ mismatch; reviewer and verifier share one material-risk matrix; caller-reported 
 independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
 remain legal as advisory mode.
 
-**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md); issue #62
+**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md) and its
+[paired plan](superpowers/plans/rev-001-plan.md); issue #62
 with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
 GRAPH-004-compatible field names — GRAPH-004 stays deferred).
 
@@ -193,10 +195,10 @@ GRAPH-004-compatible field names — GRAPH-004 stays deferred).
 **Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
 no change to working-diff lane behavior.
 
-**Next action:** Author the paired plan. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3`
-completed their ledger transitions (proposed, with destinations `verification-engineer` and
-`code-reviewer`) and ride this round per the operator's 2026-08-09 direction — the paired plan
-admits them explicitly when it is authored.
+**Next action:** Operator review and merge of the round PR (`round/loop-rev-001`). Both riders
+landed with the round (`lc_90dd8dc7` → verification-engineer's whole-branch cold-rerun rule,
+`lc_2c04ead3` → code-reviewer's repro-evidence-class rule); the two envelope contracts calibrate
+in LEARN-002's docket.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
@@ -245,10 +247,11 @@ paired plan and capture the Phase-1 baseline.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
-**Status:** `ready` — the shared-ownership prerequisite is fully settled: GATE-001 closed
-2026-08-10 ([outcome record](archive/2026-08/gate-001-outcome-2026-08-10.md)) and the five-tier
-classification it owns is shipped canonically in `agents/homelab-platform.md`'s
-change-authority section; this spec references that canonical text.
+**Status:** `active` — paired plan authored and implemented 2026-08-10 on `round/loop-rev-001`
+together with REV-001 (design decision recorded in the plan: release/retest record **fields**,
+not new lifecycle states). The classification prerequisite is settled: GATE-001 closed
+2026-08-10 ([outcome record](archive/2026-08/gate-001-outcome-2026-08-10.md)) with the
+five-tier text canonical in `agents/homelab-platform.md`.
 
 **Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
 through triage, owner and target release, paired evaluation, canonical change with adapter
@@ -258,7 +261,8 @@ impossible. Source-eval PASS is never reportable as released-artifact PASS. No s
 daemon, transcript store, or self-modifying loop.
 
 **Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (approved
-2026-08-09); issue #67; ledger candidate `lc_74f04730`; the
+2026-08-09) and its [paired plan](superpowers/plans/loop-001-plan.md); issue #67; ledger
+candidate `lc_74f04730`; the
 release-tail record (a merged bump demonstrably not reaching live sessions) as independent
 evidence of the merged≠released gap; issue #73 (Learning handoffs dropped by foreign
 coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for Eval 1.
@@ -269,7 +273,9 @@ coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for 
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
 
-**Next action:** Author the paired plan.
+**Next action:** Operator review and merge of the round PR (`round/loop-rev-001`); the three
+lifecycle contracts calibrate in LEARN-002's docket, and the first real release after merge
+exercises `record-release`/`record-retest` end to end.
 
 ### Small items
 

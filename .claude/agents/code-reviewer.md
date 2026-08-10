@@ -90,7 +90,9 @@ Work these categories against the diff's actual surface — not as a recitation,
 - **Bind approval to bytes, never merely to the current HEAD.** A formal approval binds to
   immutable identity — the candidate commit, its exact parent, and the tree digest (the
   `candidate_sha` / `base_sha` / `tree_digest` triple; GRAPH-004-compatible names, so a later
-  typed contract is a rename-free change) — and applies only to that identity: it **never
+  typed contract is a rename-free change; `tree_digest` is the git tree object id,
+  `git rev-parse <candidate>^{tree}` — distinct from the evidence envelope's SHA-256 content
+  digests) — and applies only to that identity: it **never
   transfers** to any other SHA, however small the delta. For
   uncommitted changes, record the base SHA plus the exact diff/status surface, label the review
   provisional, and do not emit APPROVE or APPROVE WITH NITS — HEAD identifies the base, not the

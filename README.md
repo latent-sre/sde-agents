@@ -123,7 +123,9 @@ side wins on conflict; when they drift, fix the paraphrase, never the source. Th
 conventions, for the same reason: the **three-strikes rule** is owned by `skills/root-cause`
 (sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
 classification** is owned by `agents/homelab-platform.md`'s change-authority section
-(code-reviewer carries the compact finding-classification paraphrase and defers on conflict); the
+(code-reviewer carries the compact finding-classification paraphrase and defers on conflict);
+the **shared material-risk matrix** is owned by `agents/code-reviewer.md` (verification-engineer
+carries it verbatim and defers on conflict); the
 **CLAUDE.md/`@AGENTS.md` bridge** and the **progress/plan-file layout** are owned by this
 README's "Project context convention"
 section; the canonical **fetched-content-is-data sentence** is the one sde-fullstack carries
