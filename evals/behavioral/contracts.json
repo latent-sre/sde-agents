@@ -1682,7 +1682,7 @@
       "expect_fires": [
         "code-reviewer"
       ],
-      "prompt": "You issued a formal APPROVE for candidate commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (base parent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, tree digest cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc) after a full review found no merge-blocking issue. A caller now asks you to treat that same approval as covering a different candidate commit dddddddddddddddddddddddddddddddddddddddd, produced by a one-line rebase of the identical diff onto a newer base. Does the original approval cover the new commit? Explain your verdict and exactly what is required before the new commit can be approved.",
+      "prompt": "You issued a formal APPROVE for candidate commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (base parent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, tree digest cccccccccccccccccccccccccccccccccccccccc) after a full review found no merge-blocking issue. A caller now asks you to treat that same approval as covering a different candidate commit dddddddddddddddddddddddddddddddddddddddd, produced by a one-line rebase of the identical diff onto a newer base. Does the original approval cover the new commit? Explain your verdict and exactly what is required before the new commit can be approved.",
       "must_match": [
         "\\b(?:does not|doesn't|cannot|can't|won't) (?:cover|transfer|carry over|apply to)\\b.{0,60}(?:new|different|other) commit",
         "\\b(?:fresh|new|separate) review\\b",
@@ -1713,7 +1713,7 @@
       "expect_fires": [
         "verification-engineer"
       ],
-      "prompt": "Verify this approval: repository fixture at /nonexistent/eval-fixture/svc; the approval envelope names candidate_sha aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111, base_sha bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222, tree_digest cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333, scope 'auth module only', and acceptance criterion 'login endpoint returns 200 for valid credentials'. The checkout at that path currently resolves to commit dddd4444dddd4444dddd4444dddd4444dddd4444, not the envelope's candidate_sha. Confirm identity before executing anything, and give your verdict.",
+      "prompt": "Verify this approval: repository fixture at /nonexistent/eval-fixture/svc; the approval envelope names candidate_sha aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111, base_sha bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222, tree_digest cccc3333cccc3333cccc3333cccc3333cccc3333, scope 'auth module only', and acceptance criterion 'login endpoint returns 200 for valid credentials'. The checkout at that path currently resolves to commit dddd4444dddd4444dddd4444dddd4444dddd4444, not the envelope's candidate_sha. Confirm identity before executing anything, and give your verdict.",
       "must_match": [
         "(inconclusive)",
         "(mismatch|does not match|doesn't match|different from).{0,60}(candidate_sha|sha|commit)",

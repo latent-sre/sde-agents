@@ -39,7 +39,9 @@ python scripts/learning_ledger.py --root <repo> add <bounded evidence fields>
 python scripts/learning_ledger.py --root <repo> observe <candidate-id> <new source fields>
 python scripts/learning_ledger.py --root <repo> transition <candidate-id> <reviewed decision fields>
 python scripts/learning_ledger.py --root <repo> review <candidate-id> <review fields>
-python scripts/learning_ledger.py --root <repo> list --view <pending|stale|all>
+python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <release fields>
+python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
+python scripts/learning_ledger.py --root <repo> list --view <pending|stale|all|awaiting-retest>
 python scripts/learning_ledger.py --root <repo> check
 ```
 

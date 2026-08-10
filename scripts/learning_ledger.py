@@ -668,7 +668,11 @@ def validate_candidate(record: Mapping[str, object]) -> None:
             raise LedgerError("a retest record requires an existing release record")
         retest = _require_mapping(retest, "retest")
         _exact_fields(retest, RETEST_FIELDS, "retest")
-        if retest["result"] not in RETEST_RESULTS:
+        # isinstance guard first, same as the promotion_state check above: an unhashable stored
+        # value (a hand-edited list or dict) makes plain `in` on the RETEST_RESULTS set raise
+        # TypeError, degrading `check`'s clean LedgerError into an unhandled traceback -- still
+        # fail-closed, but with the wrong message.
+        if not isinstance(retest["result"], str) or retest["result"] not in RETEST_RESULTS:
             raise LedgerError(f"retest.result must be one of {sorted(RETEST_RESULTS)}")
         _safe_text(retest["environment"], "environment")
         _safe_text(retest["reference"], "reference")
@@ -1240,8 +1244,11 @@ class LearningLedger:
 
         Legal only once a release is recorded -- source-eval PASS is never reportable as
         released-artifact PASS, so there is nothing to retest against before a release exists.
-        As with release, a candidate carries at most one retest; a later retest belongs to a new
-        candidate record.
+        `pass` and `fail` are settled and single-shot, same as release: a later retest belongs to
+        a new candidate record. `inconclusive` is not settled and may be re-recorded in place --
+        it means the retest could not be run to a verdict (environment unavailable, scenario not
+        yet reproducible), and without this exception the candidate would be stuck carrying an
+        unsettled result forever, retriable nowhere and invisible to `awaiting-retest`.
         """
         candidate_id = _validate_candidate_id(candidate_id)
         if result not in RETEST_RESULTS:
@@ -1264,10 +1271,12 @@ class LearningLedger:
                     f"cannot record a retest for {candidate_id}: no release is recorded yet -- "
                     "source-eval PASS is never reportable as released-artifact PASS"
                 )
-            if record.get("retest") is not None:
+            existing_retest = record.get("retest")
+            if existing_retest is not None and existing_retest["result"] != "inconclusive":
                 raise LedgerError(
-                    f"candidate {candidate_id} already carries a retest record; a later retest "
-                    "is a new record's business, not a silent overwrite of this one"
+                    f"candidate {candidate_id} already carries a settled retest record "
+                    f"({existing_retest['result']!r}); a later retest is a new record's "
+                    "business, not a silent overwrite of this one"
                 )
             now = self.now()
             if now < _parse_timestamp(record["updated_at"], "updated_at"):
@@ -1308,11 +1317,15 @@ class LearningLedger:
                 continue
             # LOOP-001 spec item 5: retest discovery is pull-based, not scheduled. A release or
             # upgrade retro reads this view to find what it still owes a downstream retest --
-            # nothing here starts a background process.
+            # nothing here starts a background process. An `inconclusive` retest is not settled
+            # (the retest could not reach a verdict, not that it passed or failed), so it stays
+            # in this backlog exactly like no retest at all -- otherwise recording the honest
+            # "could not tell yet" result would be the one way to make an item unretriable.
+            retest = record.get("retest")
             if view == "awaiting-retest" and not (
                 record["promotion_state"] == "promoted"
                 and record.get("release") is not None
-                and record.get("retest") is None
+                and (retest is None or retest["result"] == "inconclusive")
             ):
                 continue
             summaries.append(
@@ -1328,6 +1341,7 @@ class LearningLedger:
                     "scope": record["scope"],
                     "observation": record["observation"],
                     "release": record.get("release"),
+                    "retest": retest,
                 }
             )
         return summaries

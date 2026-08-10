@@ -612,6 +612,44 @@ class LearningLedgerTests(unittest.TestCase):
         checked = self.ledger.check()
         self.assertEqual(learning_ledger.LEGACY_SCHEMA_VERSION, checked[0]["schema_version"])
 
+    def test_legacy_record_without_release_or_retest_blocks_stays_valid_under_new_reader(
+        self,
+    ) -> None:
+        """Regression for the additive-schema rollback claim: reverting the LOOP-001 commit is a
+        single revert ONLY for records that never acquired `release`/`retest` -- those must keep
+        validating byte-for-byte, with no migration and no schema version bump, on both schema
+        versions. (A record that DID acquire either block is the two-step case documented in
+        learning/README.md's Rollback section; the additive half is what this test proves.)
+        """
+        for index, schema_version in enumerate(
+            (learning_ledger.LEGACY_SCHEMA_VERSION, learning_ledger.SCHEMA_VERSION), start=1
+        ):
+            with self.subTest(schema_version=schema_version):
+                record = self._add(
+                    observation=f"A schema-{schema_version} worker packet omitted a field.",
+                    expected_behavior=f"The schema-{schema_version} packet always names it.",
+                    scope=f"schema-{schema_version} worker packets",
+                    source_reference=f"tests/test_worker.py::test_schema_{schema_version}",
+                )
+                candidate_id = record["candidate_id"]
+                path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                if schema_version == learning_ledger.LEGACY_SCHEMA_VERSION:
+                    payload["schema_version"] = learning_ledger.LEGACY_SCHEMA_VERSION
+                    payload["fingerprint"] = learning_ledger._legacy_candidate_fingerprint(
+                        payload["observation"], payload["expected_behavior"], payload["scope"]
+                    )
+                    del payload["review_history"]
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+
+                self.assertNotIn("release", payload)
+                self.assertNotIn("retest", payload)
+                checked = self.ledger.check()
+                self.assertEqual(index, len(checked))
+                matching = [r for r in checked if r["candidate_id"] == candidate_id]
+                self.assertEqual(1, len(matching))
+                self.assertEqual(schema_version, matching[0]["schema_version"])
+
     def test_promoted_candidate_can_be_invalidated_but_disposition_must_fit_state(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
@@ -719,11 +757,57 @@ class LearningLedgerTests(unittest.TestCase):
         self.assertEqual("run#1", retested["retest"]["reference"])
 
         with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "already carries a retest record"
+            learning_ledger.LedgerError, "already carries a settled retest record"
         ):
             self.ledger.record_retest(
                 candidate_id, result="pass", environment="staging", reference="run#2"
             )
+
+    def test_inconclusive_retest_may_be_re_recorded_settled_results_are_final(self) -> None:
+        for final_result in ("pass", "fail"):
+            with self.subTest(final_result=final_result):
+                record = self._add(
+                    observation=f"A {final_result} recovery candidate omitted a field.",
+                    expected_behavior=f"The {final_result} recovery packet always names it.",
+                    scope=f"{final_result} recovery packets",
+                    source_reference=f"tests/test_recovery.py::test_{final_result}",
+                )
+                candidate_id = record["candidate_id"]
+                self._promote(candidate_id)
+                self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
+
+                inconclusive = self.ledger.record_retest(
+                    candidate_id, result="inconclusive", environment="prod",
+                    reference="run#1: environment unavailable",
+                )
+                self.assertEqual("inconclusive", inconclusive["retest"]["result"])
+                backlog = {
+                    item["candidate_id"]
+                    for item in self.ledger.list_records("awaiting-retest")
+                }
+                self.assertIn(candidate_id, backlog)
+
+                settled = self.ledger.record_retest(
+                    candidate_id, result=final_result, environment="prod",
+                    reference="run#2: retried after environment recovered",
+                )
+                self.assertEqual(final_result, settled["retest"]["result"])
+                self.assertEqual(
+                    "run#2: retried after environment recovered",
+                    settled["retest"]["reference"],
+                )
+                backlog = {
+                    item["candidate_id"]
+                    for item in self.ledger.list_records("awaiting-retest")
+                }
+                self.assertNotIn(candidate_id, backlog)
+
+                with self.assertRaisesRegex(
+                    learning_ledger.LedgerError, "already carries a settled retest record"
+                ):
+                    self.ledger.record_retest(
+                        candidate_id, result="pass", environment="prod", reference="run#3"
+                    )
 
     def test_awaiting_retest_view_lists_exactly_the_pull_based_backlog(self) -> None:
         awaiting = self._add(
@@ -762,10 +846,29 @@ class LearningLedgerTests(unittest.TestCase):
             source_reference="tests/test_tracing.py::test_not_promoted",
         )
 
+        inconclusive = self._add(
+            observation="A restore drill packet omitted the recovery point objective.",
+            expected_behavior="The restore drill packet always names the recovery point objective.",
+            scope="restore drill packets",
+            source_reference="tests/test_restore.py::test_inconclusive",
+        )
+        self._promote(inconclusive["candidate_id"])
+        self.ledger.record_release(inconclusive["candidate_id"], version="1.7.3", reference="PR#3")
+        self.ledger.record_retest(
+            inconclusive["candidate_id"], result="inconclusive", environment="prod",
+            reference="run#1: drill window unavailable",
+        )
+
         backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")}
-        self.assertEqual({awaiting["candidate_id"]}, backlog)
-        [summary] = self.ledger.list_records("awaiting-retest")
-        self.assertEqual("1.7.3", summary["release"]["version"])
+        self.assertEqual({awaiting["candidate_id"], inconclusive["candidate_id"]}, backlog)
+        summaries = {
+            item["candidate_id"]: item for item in self.ledger.list_records("awaiting-retest")
+        }
+        self.assertEqual("1.7.3", summaries[awaiting["candidate_id"]]["release"]["version"])
+        self.assertIsNone(summaries[awaiting["candidate_id"]]["retest"])
+        self.assertEqual(
+            "inconclusive", summaries[inconclusive["candidate_id"]]["retest"]["result"]
+        )
 
     def test_check_validates_release_and_retest_block_shapes_and_ordering(self) -> None:
         record = self._add()
@@ -812,6 +915,15 @@ class LearningLedgerTests(unittest.TestCase):
 
         mutated = json.loads(json.dumps(retest_baseline))
         mutated["retest"]["result"] = "maybe"
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, r"retest\.result must be one of"):
+            self.ledger.check()
+
+        # A hand-edited unhashable result (a list, from e.g. a botched merge) must fail with the
+        # module's own LedgerError, not degrade to an unhandled TypeError from plain `in` on a
+        # set -- still fail-closed either way, but only one of them is the documented contract.
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"]["result"] = ["pass"]
         write(mutated)
         with self.assertRaisesRegex(learning_ledger.LedgerError, r"retest\.result must be one of"):
             self.ledger.check()
