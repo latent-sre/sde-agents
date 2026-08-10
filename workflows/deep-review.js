@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. Also the independent final gate over a multi-commit branch, including one already reviewed per-task: it takes no brief, so it does not inherit the caller hypotheses a steered per-task loop carries. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first. The merge signal is the returned verdict, gated on confirmed_criticals (P0/P1) and the lane verdicts — never an empty findings list, since P2/P3 nits do not block.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
     { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },
