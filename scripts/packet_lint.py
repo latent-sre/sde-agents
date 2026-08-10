@@ -54,10 +54,12 @@ SHAPES: dict[str, tuple[str, ...]] = {
     "sde-fullstack-packet": ("changed", "verified", "check first", "learning"),
     # verification-engineer's executed-verdict floor. Method 7 lets a small change compress the
     # packet, so this shape holds only what no honest executed verification can omit: the pinned
-    # target, what actually ran, and the isolation mode it ran under. The third slot is how the
-    # packet proves what actually happened — sandboxed execution, or nothing executed — because
-    # a packet slot no linter checks is prose, not a control (review finding).
-    "verification-packet": ("target", "checks executed", "execution isolation"),
+    # target, what actually ran, what was blocked and why, and the isolation mode it ran under.
+    # The fourth slot is how the packet proves what actually happened — sandboxed execution, or
+    # nothing executed — because a packet slot no linter checks is prose, not a control (review
+    # finding). The third slot ensures every blocked criterion is named, so a packet that records
+    # "Checks executed: none" without naming what could not run cannot pass as green.
+    "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),

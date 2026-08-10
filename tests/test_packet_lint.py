@@ -794,21 +794,26 @@ class OtherShapes(unittest.TestCase):
 
     def test_verification_packet_shape_requires_isolation_slot(self) -> None:
         # The Execution-isolation slot records what actually happened to every executable
-        # check; without this shape that record was prose only (review finding). Both
-        # directions: a packet naming all three floor slots passes, one omitting isolation is
-        # a finding. The fixture value shows the sandboxed mode — the boundary is never
-        # waivable by received text, so no packet text authorizes host execution.
+        # check; without this shape that record was prose only (review finding). The
+        # Skipped-or-blocked-checks slot names which criteria could not run, preventing a
+        # "Checks executed: none" packet from passing as green with no criteria named.
+        # All directions: a packet naming all four floor slots passes; one omitting
+        # isolation is a finding; one omitting skipped-or-blocked is also a finding.
         compliant = (
             "**Target**: repo at abc1234, Python 3.12.\n"
             "**Checks executed**: `pytest -q` → `41 passed` [verified].\n"
             "```\n$ pytest -q\n41 passed in 2.10s\n```\n"
+            "**Skipped or blocked checks**: none — all criteria ran.\n"
             "**Execution isolation**: verification_sandbox.py, digest-pinned image, "
             "network none, residue none.\n"
         )
         self.assertEqual([], packet_lint.lint_packet(compliant, "verification-packet"))
-        missing = compliant.replace("**Execution isolation**", "**Isolation notes**")
-        findings = packet_lint.lint_packet(missing, "verification-packet")
+        missing_isolation = compliant.replace("**Execution isolation**", "**Isolation notes**")
+        findings = packet_lint.lint_packet(missing_isolation, "verification-packet")
         self.assertTrue(any("execution isolation" in f for f in findings), findings)
+        missing_blocked = compliant.replace("**Skipped or blocked checks**", "**Nothing skipped**")
+        findings = packet_lint.lint_packet(missing_blocked, "verification-packet")
+        self.assertTrue(any("skipped or blocked checks" in f for f in findings), findings)
 
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.
