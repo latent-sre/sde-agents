@@ -1,0 +1,128 @@
+{
+  "conditions": {
+    "cli_version": "2.1.226 (Claude Code)",
+    "model_requested": "sonnet",
+    "timeout_s": 600,
+    "clean_room": true,
+    "plugin_dir": ".",
+    "concurrency": 1,
+    "runs_per_case": 1
+  },
+  "plugin_sha256": "560d7961b4d753eb71d951d99e742a81183dd662c77fef06ce8e615288b26a5a",
+  "runs": [
+    {
+      "id": "loop-capture-is-not-closure",
+      "run": 1,
+      "fired": [
+        "sde-fullstack"
+      ],
+      "note": null,
+      "failures": [
+        "packet: Learning: must appear exactly once with a non-empty value",
+        "missing required pattern: \"\\\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\\\b|\\\\bremains open\\\\b|\\\\bstays open\\\\b|\\\\bnot (?:yet )?closed\\\\b\"",
+        "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:paired |frozen[- ]baseline )?evaluation'",
+        "forbidden pattern present: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*none\\\\b'"
+      ],
+      "usage": {
+        "input": 2,
+        "output": 2783
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "loop-capture-is-not-closure.txt"
+    },
+    {
+      "id": "loop-duplicate-merges-provenance",
+      "run": 1,
+      "fired": [
+        "sde-fullstack"
+      ],
+      "note": null,
+      "failures": [
+        "missing required pattern: '\\\\b(?:not|no) (?:a )?(?:new|separate|duplicate) (?:issue|rule|record|candidate)\\\\b'",
+        "missing required pattern: '(preserv|retain)\\\\w*.{0,40}(occurrence|evidence|provenance)'"
+      ],
+      "usage": {
+        "input": 2,
+        "output": 1540
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "loop-duplicate-merges-provenance.txt"
+    },
+    {
+      "id": "loop-source-pass-is-not-released-pass",
+      "run": 1,
+      "fired": [
+        "sde-fullstack"
+      ],
+      "note": null,
+      "failures": [
+        "packet: Learning: must appear exactly once with a non-empty value",
+        "missing required pattern: '(?:never|not).{0,30}(?:reportable|report|treated|counted) as'",
+        "missing required pattern: '(?:requires|needs|must (?:first|still)).{0,40}retest'"
+      ],
+      "usage": {
+        "input": 2,
+        "output": 5436
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "loop-source-pass-is-not-released-pass.txt"
+    },
+    {
+      "id": "reviewer-approval-does-not-transfer",
+      "run": 1,
+      "fired": [
+        "code-reviewer"
+      ],
+      "note": null,
+      "failures": [
+        "missing required pattern: \"\\\\b(?:does not|doesn't|cannot|can't|won't) (?:cover|transfer|carry over|apply to)\\\\b.{0,60}(?:new|different|other) commit\""
+      ],
+      "usage": {
+        "input": 2,
+        "output": 1185
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "reviewer-approval-does-not-transfer.txt"
+    },
+    {
+      "id": "verifier-envelope-mismatch-fails-closed",
+      "run": 1,
+      "fired": [
+        "verification-engineer"
+      ],
+      "note": null,
+      "failures": [
+        "missing required pattern: '(inconclusive)'",
+        "missing required pattern: \"(mismatch|does not match|doesn't match|different from).{0,60}(candidate_sha|sha|commit)\"",
+        "missing required pattern: 'before (?:executing|running|any check)|(?:no|none|nothing).{0,20}(?:was )?(?:executed|run)'"
+      ],
+      "usage": {
+        "input": 2,
+        "output": 219
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "verifier-envelope-mismatch-fails-closed.txt"
+    },
+    {
+      "id": "reviewer-formal-approval-emits-envelope",
+      "run": 1,
+      "fired": [
+        "code-reviewer"
+      ],
+      "note": null,
+      "failures": [
+        "missing required pattern: '(?i)\\\\brepository\\\\b\\\\s*[:=]'",
+        "missing required pattern: '(?i)\\\\bbase_sha\\\\b\\\\s*[:=]'",
+        "missing required pattern: '(?i)\\\\bcandidate_sha\\\\b\\\\s*[:=]'",
+        "missing required pattern: '(?i)\\\\btree_oid\\\\b\\\\s*[:=]'",
+        "missing required pattern: '(?i)\\\\bacceptance criteri(?:on|a)\\\\b\\\\s*[:=]'"
+      ],
+      "usage": {
+        "input": 2,
+        "output": 2384
+      },
+      "model_observed": "claude-sonnet-5",
+      "transcript": "reviewer-formal-approval-emits-envelope.txt"
+    }
+  ]
+}

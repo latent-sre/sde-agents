@@ -733,10 +733,20 @@ def lint_runbook_proposal(
             findings.append(
                 "'Next verification' must correspond one-for-one with 'Missing evidence'"
             )
-    if required_gaps is not None and missing_parts != list(required_gaps):
-        findings.append(
-            "'Missing evidence' does not exactly cover the gaps declared by this case"
-        )
+    # The case declares the gaps its prompt establishes as missing; the proposal must report all of
+    # them. It may report MORE, because the prompt's list is not stated as exhaustive and the
+    # runbook skill's own propose trigger names `current applicability` and `edit authority`
+    # alongside the rest — four consecutive live sessions reported those two extra gaps, all
+    # genuinely unestablished, and failed an exact-set match (LEARN-002 batch 2). Nothing is
+    # loosened by admitting them: every reported gap is still bound to the closed vocabulary, to
+    # canonical order, and to its one-for-one verification above, and a declared gap the proposal
+    # omits is still a failure here.
+    if required_gaps is not None:
+        undeclared = [gap for gap in required_gaps if gap not in missing_parts]
+        if undeclared:
+            findings.append(
+                "'Missing evidence' omits gaps this case declares: " + ", ".join(undeclared)
+            )
     if path is not None and path.casefold() in {"unknown", "n/a"}:
         if "canonical inventory" not in missing_parts:
             findings.append(

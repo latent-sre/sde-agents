@@ -1,0 +1,20 @@
+Both lifecycle choices, given the stated facts (owned canonical doc, applicability and safe replay path already established, two verified drills agreeing on the same gap):
+
+**Learning disposition: merge**
+**Runbook disposition: update**
+
+Learning disposition: merge
+Evidence: two independent verified restore/recovery drills, same missing recovery step
+Scope: ops/widgets.md recovery procedure
+Provenance: local, verified via drill replay
+Promotion state: proposed
+Destination: ops/widgets.md (via sde-agents:runbook)
+Owner: ops/widgets.md owner
+
+Runbook disposition: update
+
+**Why these two:**
+- `merge` (not `add`) — the recovery step isn't a novel, ownerless lesson; it extends an existing rule (the recovery procedure already documented in `ops/widgets.md`) without changing its meaning. Two occurrences of the *same* cause/boundary/expected-result corroborate rather than introduce.
+- `update` (not `create` or `propose`) — the runbook is stated as existing, owned, and canonical, with applicability and a safe replay path already established. `create` would wrongly imply no canonical doc exists; `propose` is only for missing owner/applicability/authority/evidence, none of which is missing here.
+
+No inspection, edit, or write performed — this is the routing decision only, per the instruction.

@@ -115,6 +115,37 @@ class ComponentDetectionTest(unittest.TestCase):
     def test_malformed_lines_do_not_crash(self) -> None:
         self.assertEqual(set(), eval_routing.components_fired("not json\n{bad\n"))
 
+    def test_unexpected_event_shapes_are_skipped_not_fatal(self) -> None:
+        """Both readers run on every line of every session; a raise here loses a paid batch.
+
+        Observed 2026-08-10 on a live `verifier-fails-honestly-no-product-edit` session: an event
+        carrying a string `message` raised AttributeError out of `components_fired`, past the
+        behavioral runner's auth-only handler, aborting the batch with no benchmark written.
+        """
+        odd_events = "\n".join((
+            json.dumps({"type": "system", "message": "session resumed"}),
+            json.dumps({"type": "assistant", "message": None}),
+            json.dumps({"type": "assistant", "message": ["not", "a", "mapping"]}),
+            json.dumps(["a bare list line"]),
+            json.dumps("a bare string line"),
+            json.dumps(7),
+        ))
+        real = transcript(skill_use("sde-agents:prompt-craft"))
+        self.assertEqual(
+            {"prompt-craft"}, eval_routing.components_fired(odd_events + "\n" + real)
+        )
+
+        stats = eval_routing.transcript_stats(
+            odd_events + "\n" + json.dumps({
+                "type": "result", "is_error": False, "duration_ms": 11,
+                "usage": {"input_tokens": 3, "output_tokens": 4},
+                "message": "still a string", "model": "claude-sonnet-5",
+            })
+        )
+        self.assertTrue(stats["completed"])
+        self.assertEqual("claude-sonnet-5", stats["model"])
+        self.assertEqual(4, stats["output_tokens"])
+
     def test_errored_tool_result_does_not_count_as_fired(self) -> None:
         # A failed skill invocation (is_error: true) is NOT the skill firing — counting it would
         # produce false PASS results on positives whose spawn failed.

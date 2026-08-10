@@ -83,14 +83,16 @@ edits, if any emerge, owe the overlapping routing cluster before/after per stand
 conditions; deterministic gates green; the two 2/3-flaky contracts re-measured alongside; the
 watch-metrics (Learning-slot `none`-rate, ledger organic-candidate count) reported at close.
 
-**Next action:** Start with the three self-improve packet-grammar cases — same failure shape, so
-one grammar-vs-skill-text decision sets the pattern for the rest. New calibration input
-2026-08-10: the first live run of the ten gate-001/verifier contracts
-(`evals/baselines/2026-08-10-gate-001-first-live/`, sonnet clean-room, 2/10 green) — every
-failure reads grader-shaped (a negation-blind forbidden pattern fired on the correct negated
-answer; the packet shape held while the claim-evidence heuristic bit an honest "verified:
-nothing" line; one vocabulary miss; one 300s timeout), so those cases join this item's
-grammar-vs-text docket rather than being tuned in the GATE-001 branch.
+**Next action:** The 2026-08-10 calibration round
+(`evals/baselines/2026-08-10-learn-002/`, 76 sessions, decisions.md per case) settled the
+pattern-setter question: **the closed contracts are right and the skill text carries the
+defect** — the packet-grammar literal lives only in `references/`, unreachable by a Skill-only
+session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three contracts settled 3/3.
+Two follow-ups now own the residue: (1) implement failing-run transcript retention in
+`scripts/eval_behavioral.py` (`lc_` candidate from the round — 22 of 76 sessions were re-buys
+of text the runner had already read and dropped), which gates settling the four contracts
+parked at 1–2/3; (2) a canonical `self-improve-loop` SKILL.md edit adding the grammar literal
+to the body, owing paired before/after reruns of the seven affected contracts.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 

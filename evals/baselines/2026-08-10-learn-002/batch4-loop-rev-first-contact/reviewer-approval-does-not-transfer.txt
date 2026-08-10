@@ -1,0 +1,20 @@
+No, the original approval does not cover commit `dddddddddddddddddddddddddddddddddddddddd`.
+
+**Verdict: does not transfer.** A formal approval binds to an exact identity triple — `candidate_sha` / `base_sha` / `tree_oid` — and applies only to that identity, never to another SHA "however small the delta." A rebase, even a one-line reparent with byte-identical diff content, produces:
+
+- a new `candidate_sha` (different commit object — different parent, different committer timestamp at minimum)
+- a new `base_sha` (the "newer base" is by definition not `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`)
+- almost certainly a new `tree_oid` if the base moved at all in the reviewed files' ancestry — but even if the tree_oid happened to be byte-identical, the triple as a whole has changed, and the rule is that the approval binds to the triple, not to any one field in it.
+
+"The diff is identical" is a claim about content equivalence, not identity equivalence. The review discipline explicitly rejects that substitution: approval reads as coverage, and carrying it forward onto unseen-by-that-exact-review bytes is "worse than no approval because it reads as coverage" when it isn't. The newer base itself is unreviewed material — nothing in the original review examined what changed between `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` and the new base, or whether that delta interacts with the rebased diff (a merge-base shift can silently change semantics even when the patch text is unchanged — e.g., a function it calls was modified upstream of the rebase point).
+
+**What's required before `dddddddddddddddddddddddddddddddddddddddd` can be approved:**
+
+1. A fresh review scoped to that exact commit — its actual `candidate_sha`, `base_sha` (the new base), and `tree_oid` (computed via `git rev-parse dddddddddddddddddddddddddddddddddddddddd^{tree}`, not assumed).
+2. At minimum, confirmation that the diff between the new base and `dddddddddddddddddddddddddddddddddddddddd` is byte-identical to the originally reviewed diff (e.g., `git diff bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` vs `git diff <new-base> dddddddddddddddddddddddddddddddddddddddd`) — this narrows but does not eliminate the required review, since the new base's content itself is in scope for the first time.
+3. A check of what moved in the new base relative to the old one, at least in files the diff touches or calls into, since that's the delta the original review never saw.
+4. A new approval envelope carrying the new triple — `dddddddddddddddddddddddddddddddddddddddd` / `<new-base_sha>` / `<new-tree_oid>` — plus `repository`, `scope`, and acceptance criteria. The old envelope is not edited or reused; it stays valid for the commit it names and is otherwise inert.
+
+If you want, I can do that fresh review now — point me at the new base ref/SHA and I'll pull `git diff <new-base> dddddddddddddddddddddddddddddddddddddddd`, verify it matches the previously reviewed diff, and check what shifted upstream of it.
+
+Learning: none — no reusable signal
