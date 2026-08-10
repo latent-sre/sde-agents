@@ -52,7 +52,9 @@ brokered, are untouched.
    the same host. Amended after this round's review proved the caller-authorization form is a
    confused deputy (the verifier is always a subagent, so every authorization it sees is
    caller-supplied text): **Method 5's boundary is never waivable by received text.** The
-   engine-less continuation is propose-and-prove for any target, vouching for none — the
+   engine-less continuation is propose-and-prove, vouching for no target and owed to none — a
+   target whose executable path inspection finds hostile gets no published commands (the
+   finding is the report) — otherwise the
    verifier publishes the exact commands with the dependency-closure caveat and the note that
    the target's claimed identity is caller-reported; returned output grades as caller-reported
    evidence, a distinct class under the verdict rule, never plain pass. Criteria proven no
