@@ -215,6 +215,37 @@ class RepoPoolRestoreTests(unittest.TestCase):
             for rel in files:
                 self.assertTrue((dst / rel).is_file(), rel)
 
+    def test_unignored_worktrees_directory_survives_every_borrow(self) -> None:
+        # Tripwire for the exclusion scoping: `.claude/worktrees` is ignored by repository-
+        # relative path, never by basename, so a legitimate `worktrees/` directory elsewhere in
+        # the tree must reach the copy and survive a restore cycle. A basename-level ignore
+        # would silently drop it from the tree under validation — the exact failure the path
+        # scoping exists to prevent. The pool's template is copied once per process, so this
+        # builds a private pool (as RepoPool is the copy source, never repo_copy's shared one)
+        # with the directory planted in the live checkout for the duration of the build only.
+        live = support.REPO / "skills" / "worktrees" / "tripwire.md"
+        try:
+            live.parent.mkdir(parents=True, exist_ok=False)
+            live.write_text("not the platform worktree home\n", encoding="utf-8")
+            pool = support._RepoPool()
+        finally:
+            live.unlink(missing_ok=True)
+            shutil.rmtree(live.parent, ignore_errors=True)
+        try:
+            rel = Path("skills") / "worktrees" / "tripwire.md"
+            self.assertEqual(
+                "not the platform worktree home\n",
+                (pool.work / rel).read_text(encoding="utf-8"),
+            )
+            (pool.work / rel).unlink()  # a borrower deletes it
+            pool.restore()
+            self.assertEqual(
+                "not the platform worktree home\n",
+                (pool.work / rel).read_text(encoding="utf-8"),
+            )
+        finally:
+            pool._holder.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main()
