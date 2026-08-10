@@ -279,6 +279,34 @@ duplicates merge provenance; source PASS ≠ released retest) plus the no-new-ma
 lifecycle contracts calibrate in LEARN-002's docket, and the first real release after merge
 exercises `record-release`/`record-retest` end to end.
 
+#### LADDER-001 — measure the ownership-vs-consult calibration
+
+**Status:** `ready` — the guidance itself shipped 2026-08-03 (`6fa2be3`, PR #68) and both cluster
+cases now exist (#103's positive as reshaped by `05417c8`, this branch's negative); only the
+measured run is owed.
+
+**Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
+measurement instead of a single anecdote: a ladder-cluster pair says whether builder-owned work
+carrying one embedded higher-altitude decision draws the required consult without summoning
+principal or distinguished *ownership*.
+
+**Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
+read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
+builder-owned with a required consult); guidance landed in `skills/eng-ladder/SKILL.md` Mode 1;
+ledger candidate `lc_e4234dfe` (triaged 2026-08-10 as proposed/merge, which names this case as the
+residual).
+
+**Prerequisites:** None. The cluster's only stored benchmark predates the provenance schema
+(`python scripts/eval_baseline.py evals/routing/ladder.json --model sonnet` → `STALE`, 2026-08-10),
+so a fresh capture is owed with or without this case.
+
+**Acceptance:** One recorded `scripts/eval_routing.py evals/routing/ladder.json --runs 3` run with
+the rates of both `pos-embedded-principal-fork-consult-required` and
+`neg-embedded-decision-not-principal-owned` reported. A negative that fires is evidence the
+Mode 1 text is insufficient — the repair then goes to the skill, never to the grader.
+
+**Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
