@@ -435,6 +435,13 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             )
         )
 
+    def test_unterminated_span_keeps_later_markdown_in_value(self) -> None:
+        occurrences = packet_lint.literal_field_occurrences(
+            "**Owner: fleet-maintainer and **release** coordinator\n",
+            "Owner",
+        )
+        self.assertEqual([(0, "fleet-maintainer and **release** coordinator")], occurrences)
+
     def test_display_echoes_collapse_but_conflicts_still_count(self) -> None:
         """A repeated value is display; a different value is a conflict and must still fail."""
         # A bare section header above the block (learning-slot-operational-agent).

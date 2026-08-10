@@ -301,17 +301,23 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
         r")\s*(?P<value>.*?)\s*$",
         re.IGNORECASE,
     )
-    occurrences: list[tuple[int, str]] = []
+    occurrences: list[tuple[int, str, bool]] = []
     for index, line in enumerate(lines):
         match = pattern.match(line)
         if match is None:
             continue
         value = match.group("value").strip()
-        # The span alternative consumed the OPENING marker only; its partner still sits in the
-        # value. Drop exactly one so ``candidate** - x`` reads as ``candidate - x`` and an exact
-        # field value still compares literally. An unterminated span leaves the value untouched.
-        if (opener := match.group("span")) and opener in value:
-            value = value.replace(opener, "", 1).strip()
+        # The span alternative consumed the OPENING marker only; its partner can still sit right
+        # after the first value token. Drop that one shape only so ``candidate** - x`` reads as
+        # ``candidate - x`` and an exact field value still compares literally. An unterminated
+        # span or unrelated markdown later in the value stays untouched.
+        if opener := match.group("span"):
+            split = value.split(maxsplit=1)
+            first = split[0] if split else ""
+            if first.endswith(opener):
+                first = first[:-len(opener)]
+                value = " ".join((first, split[1])) if len(split) == 2 else first
+                value = value.strip()
         decorated = any(
             match.group(name) for name in ("outside", "inside", "span")
         )
