@@ -26,7 +26,10 @@ REPO = Path(__file__).resolve().parents[1]
 # `.probe-tmp` is the live-probe workspace (`scripts/probe_plugin.py`), created and removed
 # inside the repository root; copying it races that removal, which invalidated a probe run when
 # the suite and the probe ran concurrently. The probe's own copytree already excludes it.
-_IGNORED_DIRS = {".git", "__pycache__", ".probe-tmp"}
+# `worktrees` is the platform's nested-worktree home (`.claude/worktrees/agent-*`): a second
+# full checkout that another session writes concurrently, so copying it both bloats every test
+# template by that checkout's size and races the other writer exactly as `.probe-tmp` did.
+_IGNORED_DIRS = {".git", "__pycache__", ".probe-tmp", "worktrees"}
 
 
 def create_directory_link(target: Path, link: Path) -> None:
