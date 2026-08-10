@@ -79,6 +79,39 @@ records owner approval; `promoted` records that a separately reviewed change lan
 logical subtraction. Retention expiry only triggers review; physical deletion remains a separately
 reviewed Git change. Current repository and runtime evidence can invalidate any retained claim.
 
+## Retained field-feedback lifecycle
+
+A field-feedback item is one visible path, governed here: field observation -> sanitized packet ->
+duplicate check and triage -> named owner and target release (or explicit rejection) -> frozen
+baseline and paired evaluation -> canonical change plus generated-adapter parity -> released plugin
+version -> the originating or an equivalent scenario retested on the released artifact -> measured
+result attached -> close, revise, or reject. Merged is not released; nothing in this path treats
+source-level promotion as the end.
+
+`record-release` and `record-retest` are the recording mechanism for the last three steps, once a
+candidate is `promoted`:
+
+```text
+python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <release fields>
+python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
+```
+
+`record-release` is legal only on a `promoted` candidate and stamps version, reference, and
+timestamp exactly once; a later release is a new candidate record's business, not a second stamp
+on this one. `record-retest` is legal only once a release is recorded and stamps its own fields
+exactly once; a `fail` result is a loud pointer that the candidate's destination regressed in the
+field, not a silent write. Both blocks are additive: a candidate written before this lifecycle
+existed stays valid carrying neither one, with no migration and no schema version bump.
+
+Closure is fail-closed: a field-feedback item closes as successful only with an exact
+released-version retest recorded, or the owner's explicit reason that a retest is impossible or
+no longer applicable. Source-eval PASS from a `promoted` candidate is never reportable as
+released-artifact PASS -- the two remain distinct result classes, the same discipline REV-001
+applies to caller-reported versus independently executed evidence. `list --view awaiting-retest`
+is the pull-based discovery surface: it surfaces every promoted candidate carrying a release but
+no retest, for a release or upgrade retro to read; nothing here schedules or runs the retest
+itself.
+
 ## Cross-task and maintenance use
 
 Start a cross-task or round retro from `list --view pending` and `list --view stale`, then bind each

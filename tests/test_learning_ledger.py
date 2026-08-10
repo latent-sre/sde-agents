@@ -65,6 +65,19 @@ class LearningLedgerTests(unittest.TestCase):
     def _advance(self, **delta: int) -> None:
         self.current_now += timedelta(**delta)
 
+    def _promote(self, candidate_id: str) -> dict[str, object]:
+        record: dict[str, object] = {}
+        for state in ("proposed", "approved", "promoted"):
+            record = self.ledger.transition(
+                candidate_id,
+                promotion_state=state,
+                disposition="add",
+                destination="scripts/validate_fleet.py",
+                owner="fleet-maintainer",
+                reason=f"Reviewed evidence supports the {state} state.",
+            )
+        return record
+
     def test_cli_mission_transaction_add_observe_transition_list_and_check(self) -> None:
         added = self._cli(
             "add",
@@ -656,6 +669,224 @@ class LearningLedgerTests(unittest.TestCase):
         self.assertEqual({stale["candidate_id"]}, stale_ids)
         pending_ids = {item["candidate_id"] for item in self.ledger.list_records("pending")}
         self.assertEqual({stale["candidate_id"], fresh["candidate_id"]}, pending_ids)
+
+    def test_record_release_requires_promoted_and_is_single_shot(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        before = path.read_bytes()
+
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "not 'promoted'.*no released bytes"
+        ):
+            self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        self.assertEqual(before, path.read_bytes())
+
+        self._promote(candidate_id)
+        released = self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        self.assertEqual("1.7.3", released["release"]["version"])
+        self.assertEqual("PR#123", released["release"]["reference"])
+        self.assertEqual(1, len(self.ledger.check()))
+
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "already carries a release record"
+        ):
+            self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#124")
+
+    def test_record_retest_requires_release_and_records_the_field_result(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "retest result must be one of"):
+            self.ledger.record_retest(
+                candidate_id, result="maybe", environment="prod", reference="run#0"
+            )
+
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "no release is recorded yet"
+        ):
+            self.ledger.record_retest(
+                candidate_id, result="pass", environment="prod", reference="run#1"
+            )
+
+        self._promote(candidate_id)
+        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        retested = self.ledger.record_retest(
+            candidate_id, result="fail", environment="prod", reference="run#1"
+        )
+        self.assertEqual("fail", retested["retest"]["result"])
+        self.assertEqual("prod", retested["retest"]["environment"])
+        self.assertEqual("run#1", retested["retest"]["reference"])
+
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "already carries a retest record"
+        ):
+            self.ledger.record_retest(
+                candidate_id, result="pass", environment="staging", reference="run#2"
+            )
+
+    def test_awaiting_retest_view_lists_exactly_the_pull_based_backlog(self) -> None:
+        awaiting = self._add(
+            observation="A worker retry packet omitted the exhausted dependency name.",
+            expected_behavior="The retry packet always names the exhausted dependency.",
+            scope="worker retry packets",
+            source_reference="tests/test_worker.py::test_awaiting",
+        )
+        self._promote(awaiting["candidate_id"])
+        self.ledger.record_release(awaiting["candidate_id"], version="1.7.3", reference="PR#1")
+
+        retested = self._add(
+            observation="A verifier packet omitted the exact target revision.",
+            expected_behavior="The verifier packet always binds the exact target revision.",
+            scope="verification evidence packets",
+            source_reference="tests/test_verifier.py::test_retested",
+        )
+        self._promote(retested["candidate_id"])
+        self.ledger.record_release(retested["candidate_id"], version="1.7.3", reference="PR#2")
+        self.ledger.record_retest(
+            retested["candidate_id"], result="pass", environment="prod", reference="run#1"
+        )
+
+        promoted_no_release = self._add(
+            observation="A restore drill left the recovery volume unmounted.",
+            expected_behavior="The restore drill always remounts the recovery volume.",
+            scope="restore drills",
+            source_reference="tests/test_restore.py::test_no_release",
+        )
+        self._promote(promoted_no_release["candidate_id"])
+
+        self._add(
+            observation="A packet omitted the request id on retry exhaustion.",
+            expected_behavior="The packet always carries the request id.",
+            scope="request tracing",
+            source_reference="tests/test_tracing.py::test_not_promoted",
+        )
+
+        backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")}
+        self.assertEqual({awaiting["candidate_id"]}, backlog)
+        [summary] = self.ledger.list_records("awaiting-retest")
+        self.assertEqual("1.7.3", summary["release"]["version"])
+
+    def test_check_validates_release_and_retest_block_shapes_and_ordering(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+
+        # Space out creation, promotion, and release so a release timestamp can be placed BEFORE
+        # the promoted transition (still after creation) to isolate that ordering check from the
+        # simpler "before creation" one.
+        self._advance(seconds=2)
+        self._promote(candidate_id)
+        self._advance(seconds=2)
+        released = self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        release_baseline = json.loads(json.dumps(released))
+
+        def write(payload: dict) -> None:
+            path.write_text(json.dumps(payload), encoding="utf-8")
+
+        mutated = json.loads(json.dumps(release_baseline))
+        mutated["release"]["extra"] = "unexpected"
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "unknown release fields"):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(release_baseline))
+        del mutated["release"]["version"]
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "missing release fields"):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(release_baseline))
+        mutated["release"]["recorded_at"] = learning_ledger._timestamp(
+            FIXED_NOW + timedelta(seconds=1)
+        )
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "prior transition to promoted"):
+            self.ledger.check()
+
+        write(release_baseline)
+        retested = self.ledger.record_retest(
+            candidate_id, result="pass", environment="prod", reference="run#1"
+        )
+        retest_baseline = json.loads(json.dumps(retested))
+
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"]["result"] = "maybe"
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, r"retest\.result must be one of"):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"]["recorded_at"] = learning_ledger._timestamp(
+            FIXED_NOW - timedelta(seconds=1)
+        )
+        write(mutated)
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "must fall between its release record"
+        ):
+            self.ledger.check()
+
+        mutated = json.loads(json.dumps(retest_baseline))
+        del mutated["release"]
+        write(mutated)
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "retest record requires an existing release record"
+        ):
+            self.ledger.check()
+
+        write(retest_baseline)
+        self.assertEqual(1, len(self.ledger.check()))
+
+    def test_cli_record_release_and_record_retest_wire_through_argparse(self) -> None:
+        added = self._cli(
+            "add",
+            "--provenance", "verified",
+            "--source-kind", "test",
+            "--source-reference", "tests/test_release.py::test_cli",
+            "--observation", "A release note omitted the regenerated-adapter parity line.",
+            "--expected-behavior", "The release note always names the parity assertion.",
+            "--scope", "release notes",
+            "--applicability", "plugin releases",
+            "--sensitivity-reviewed",
+        )
+        self.assertEqual(0, added.returncode, added.stderr)
+        candidate_id = json.loads(added.stdout)["candidate_id"]
+        for state in ("proposed", "approved", "promoted"):
+            transitioned = self._cli(
+                "transition", candidate_id,
+                "--promotion-state", state,
+                "--disposition", "add",
+                "--destination", "scripts/validate_fleet.py",
+                "--owner", "fleet-maintainer",
+                "--reason", f"Reviewed evidence supports the {state} state.",
+            )
+            self.assertEqual(0, transitioned.returncode, transitioned.stderr)
+
+        released = self._cli(
+            "record-release", candidate_id, "--version", "1.7.3", "--reference", "PR#123"
+        )
+        self.assertEqual(0, released.returncode, released.stderr)
+        self.assertEqual("1.7.3", json.loads(released.stdout)["release"]["version"])
+
+        awaiting = self._cli("list", "--view", "awaiting-retest")
+        self.assertEqual(0, awaiting.returncode, awaiting.stderr)
+        self.assertEqual(
+            [candidate_id], [item["candidate_id"] for item in json.loads(awaiting.stdout)]
+        )
+
+        retested = self._cli(
+            "record-retest", candidate_id,
+            "--result", "fail", "--environment", "prod", "--reference", "run#1",
+        )
+        self.assertEqual(0, retested.returncode, retested.stderr)
+        self.assertIn("REGRESSION", retested.stderr)
+        self.assertIn(candidate_id, retested.stderr)
+
+        emptied = self._cli("list", "--view", "awaiting-retest")
+        self.assertEqual([], json.loads(emptied.stdout))
+
+        checked = self._cli("check")
+        self.assertEqual(0, checked.returncode, checked.stderr)
 
     def test_malformed_unknown_and_oversized_records_fail_closed(self) -> None:
         candidates = self.root / "learning" / "candidates"
