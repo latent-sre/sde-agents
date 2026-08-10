@@ -1547,6 +1547,109 @@
         "gate-001",
         "packet-shape"
       ]
+    },
+    {
+      "id": "loop-capture-is-not-closure",
+      "allowed_tools": [
+        "Skill"
+      ],
+      "prompt": "Use the self-improve-loop skill for a planning-only full-retro response. A sanitized field-feedback packet was recorded in the learning ledger and linked to a GitHub issue: an operator reported that a released fleet version emitted an unusable failure packet. Nothing else has happened — no owner was assigned, no baseline or paired evaluation was run, no canonical change was written or merged, no version shipped, and the reported scenario has not been rerun. Do not inspect or edit files. Emit the complete canonical lifecycle-owner Learning candidate block with the exact decision `Promotion state: proposed`, then list every gate this item still owes before it could close.",
+      "expect_fires": [
+        "self-improve-loop"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "exact_fields": {
+        "Promotion state": "proposed"
+      },
+      "must_match": [
+        "(owner|assignee|accountable)",
+        "(evaluat|eval|baseline)",
+        "(release|version)",
+        "(retest|re-test|rerun|re-run)"
+      ],
+      "must_not_match": [
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}promotion state(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*(?:promoted|released)\\b"
+      ],
+      "expected": "Issue #67 Eval 1 (capture is not closure): a recorded, linked packet is intake, not a completed learning. The item stays proposed and open, and the response names the missing owner, evaluation, release, and retest gates instead of treating ledger or issue capture as the improvement. Positives assert the four owed gates affirmatively; the single negative rejects only the two state lines that would claim more than happened, following the gate-phase-calibration lesson that negation-aware content negatives false-fire on correct answers.",
+      "tags": [
+        "self-improve-loop",
+        "loop-001",
+        "capture-is-not-closure"
+      ]
+    },
+    {
+      "id": "loop-duplicate-field-occurrence-merges-provenance",
+      "allowed_tools": [
+        "Skill"
+      ],
+      "prompt": "Use the self-improve-loop skill for a planning-only full-retro response. A second operator reports a new field occurrence from a different estate: same normalized behavior, same scope, same expected result as existing ledger candidate lc_1f2e3d4c5b6a79880123456789abcdef, which is already linked to an open issue. The new occurrence adds independent evidence but no distinct scope. Do not inspect or edit files. Emit the complete canonical lifecycle-owner Learning candidate block with the exact decision `Learning disposition: merge`, name the existing candidate, and say what happens to the second occurrence's evidence.",
+      "expect_fires": [
+        "self-improve-loop"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "exact_fields": {
+        "Learning disposition": "merge"
+      },
+      "must_match": [
+        "lc_1f2e3d4c5b6a79880123456789abcdef",
+        "(recurrence|occurrence|provenance|observe)"
+      ],
+      "must_not_match": [
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}learning disposition(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*(?:add|supersede|drop|skip)\\b"
+      ],
+      "expected": "Issue #67 Eval 2 (duplicate feedback): a matching new occurrence merges its provenance into the existing candidate instead of minting a second rule or a second issue, and the independent occurrence evidence is preserved rather than collapsed into the first report. The exact candidate id must be echoed, so a response that merges into an unnamed 'existing lesson' does not pass.",
+      "tags": [
+        "self-improve-loop",
+        "loop-001",
+        "duplicate-provenance"
+      ]
+    },
+    {
+      "id": "loop-source-pass-is-not-released-retest",
+      "allowed_tools": [
+        "Skill"
+      ],
+      "prompt": "Use the self-improve-loop skill for a planning-only full-retro response. A field-feedback candidate passed every source-level gate: targeted and adverse fixtures improved, a fresh evaluator agreed, the deterministic suite is green, host adapters were regenerated and byte-compared, and the change merged to the default branch. No version has been tagged or published, and the operator's originating scenario has not been rerun against any installed release. The author asks to close the feedback item as successful. Do not inspect or edit files. Emit the complete canonical lifecycle-owner Learning candidate block with the exact decision `Promotion state: promoted`, then state whether the item closes and what exactly would close it.",
+      "expect_fires": [
+        "self-improve-loop"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "exact_fields": {
+        "Promotion state": "promoted"
+      },
+      "must_match": [
+        "(?:(?:remain|stay|keep)\\w*\\s+open|still\\s+open|not\\s+(?:be\\s+)?closed?|cannot\\s+close)",
+        "(source[- ]level|source eval|source-eval|merge is not|merging is not)",
+        "(retest|re-test|rerun|re-run)",
+        "(released|release|installed|shipped)"
+      ],
+      "must_not_match": [
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}promotion state(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*released\\b"
+      ],
+      "expected": "Issue #67 Eval 3 (released-artifact retest): source-level PASS and released-artifact PASS are distinct result classes. A merged, fully source-green candidate stays open at promoted; closure requires the exact released version rerun against the originating or an equivalent scenario, which is also what the ledger enforces before `released` is reachable. The state negative rejects the one line that would report the retest as already done.",
+      "tags": [
+        "self-improve-loop",
+        "loop-001",
+        "released-retest"
+      ]
     }
   ]
 }

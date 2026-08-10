@@ -6,8 +6,9 @@ is not agent memory, a prompt, a task queue, or an authority source.
 
 `scripts/learning_ledger.py` is the only supported writer. It can create candidate records, attach
 independent observations, record a reviewed lifecycle transition, attach a released-artifact retest
-result, list work, and validate the ledger. It never edits an agent, skill, runbook, test, roadmap, or other policy artifact. Promotion
-always remains a separate, write-authorized change with its own review and verification.
+result, list work, and validate the ledger. It never edits an agent, skill, runbook, test,
+roadmap, or other policy artifact. Promotion always remains a separate, write-authorized change
+with its own review and verification.
 
 ## Authority and trust boundary
 
@@ -163,9 +164,9 @@ transition is still owed. It is a pull query for a release or upgrade retro; not
 
 Promotion state constrains disposition. `proposed`, `approved`, `promoted`, and `released` accept
 `add`, `merge`, or `supersede`; `inconclusive` accepts `skip`; `rejected` accepts `skip` or `drop`;
-and `retired` accepts `skip`, `drop`, `merge`, or `supersede`. This prevents contradictory records such
-as a promoted candidate whose disposition says to skip it. A transition back to `proposed` from an
-adverse state is additionally evidence-gated as described above.
+and `retired` accepts `skip`, `drop`, `merge`, or `supersede`. This prevents contradictory records
+such as a promoted candidate whose disposition says to skip it. A transition back to `proposed`
+from an adverse state is additionally evidence-gated as described above.
 
 Transitioning `promoted` to `released` additionally requires a passed or explicitly waived retest
 recorded after the promotion it releases and before the release itself, so a source-level PASS can
@@ -173,10 +174,11 @@ never be reported as a released-artifact PASS and an older release's PASS cannot
 re-merge. The rule is enforced both by the command and by record validation, so a hand-written
 `released` record fails `check`.
 
-Transitions to `proposed`, `approved`, `promoted`, or `released` also require the current time to be
-before both `freshness.review_at` and `retention.expires_at`. A stale candidate must first receive an explicit
-`review`; an expired candidate cannot advance through a positive state. Adverse or subtractive
-transitions remain available so stale evidence can still be rejected, invalidated, or retired.
+Transitions to `proposed`, `approved`, `promoted`, or `released` also require the current time to
+be before both `freshness.review_at` and `retention.expires_at`. A stale candidate must first
+receive an explicit `review`; an expired candidate cannot advance through a positive state. Adverse
+or subtractive transitions remain available so stale evidence can still be rejected, invalidated,
+or retired.
 
 ## Record and storage contract
 
@@ -186,8 +188,9 @@ sources, sensitivity-review attestation, lifecycle and disposition fields, appli
 next review date, retention expiry, explicit review history (schema version 2 and later), and
 released-artifact retest history (schema version 3). Versions 1 and 2 remain readable exactly as
 written; new records use version 3, and an older record is upgraded only by the write that needs a
-newer field. The version-2 fingerprint includes applicability as part of the recurrence boundary. Duplicate recurrence identities are rejected with the existing ID
-so the caller can use `observe` explicitly.
+newer field. The version-2 fingerprint includes applicability as part of the recurrence boundary.
+Duplicate recurrence identities are rejected with the existing ID so the caller can use `observe`
+explicitly.
 
 The writer rejects unknown or malformed fields, invalid IDs and transitions, duplicate evidence,
 oversized fields/files/counts, secret-like strings, multiline transcript content, and command-like

@@ -76,4 +76,7 @@ plan file lying around after its round is how a finished task keeps reading as p
 7. GitHub issues are evidence-bound intake, never a second work tracker. An issue adds work only
    when the roadmap imports it (the roadmap entry names the source issue); an issue that is not
    imported is field evidence awaiting triage, and letting the two lists drift is how the same
-   work gets tracked twice or dropped once.
+   work gets tracked twice or dropped once. `.github/ISSUE_TEMPLATE/field-feedback.md` makes that
+   intake's lifecycle visible for feedback from a released version — captured, triaged, evaluated,
+   implemented, released, retested — so an item cannot read as finished at the merge that
+   implemented it. Nothing automates those boxes; an unfilled gate is the signal.

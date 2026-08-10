@@ -73,15 +73,15 @@ and cannot cross `retention.expires_at`. It does not change the evidence `as_of`
 recurrence count. Retention extension remains outside the CLI.
 
 Advancing to `proposed`, `approved`, `promoted`, or `released` requires a current review date and
-unexpired retention. Review a stale candidate explicitly before a positive transition; an expired candidate
-cannot advance. Rejection and subtraction remain possible so old evidence can be invalidated or
-retired without first pretending it is current.
+unexpired retention. Review a stale candidate explicitly before a positive transition; an expired
+candidate cannot advance. Rejection and subtraction remain possible so old evidence can be
+invalidated or retired without first pretending it is current.
 
 No state authorizes the CLI to edit an agent, skill, test, runbook, or provider memory. `approved`
 records owner approval; `promoted` records that a separately reviewed change landed. `released`
 records that a named released version was retested against the originating or an equivalent
 scenario, and it is reachable only after `retest` attaches a passed or explicitly waived result for
-the merge being released -- a source-level PASS is not a released-artifact PASS. `retired` is
+the merge being released; a source-level PASS is not a released-artifact PASS. `retired` is
 logical subtraction. Retention expiry only triggers review; physical deletion remains a separately
 reviewed Git change. Current repository and runtime evidence can invalidate any retained claim.
 
@@ -90,9 +90,10 @@ reviewed Git change. Current repository and runtime evidence can invalidate any 
 Start a cross-task or round retro from `list --view pending` and `list --view stale`, then bind each
 candidate back to its compact source references. A release or upgrade retro also runs
 `list --view awaiting-retest`, which names the merged candidates whose released artifact nobody has
-certified yet; nothing schedules that query, so a release that never asks leaves the loop open. Validate the store with `check` before and after a
-mutation. A read overlapping a write may fail closed on transient state; retry after the single
-writer completes rather than weakening validation.
+certified yet; nothing schedules that query, so a release that never asks leaves the loop open.
+Validate the store with `check` before and after a mutation. A read overlapping a write may fail
+closed on transient state; retry after the single writer completes rather than weakening
+validation.
 
 The ledger makes recurrence observable. It does not prove recurrence, schedule its own review, or
 promote anything. Fresh evaluation and the owning artifact's normal approval path remain mandatory.
