@@ -34,75 +34,97 @@ single tracker instead of leaking into memory or issue lists.
 
 ### Ready
 
-#### SAFE-003 — resolve the dangling `contract_digest` reference
-
-**Status:** `active` — the ruled repair is implemented on `round/safe-003` and awaiting operator
-review; a verified gap in shipped code, absorbed from the superseded control-plane proposal via
-the GRAPH-003 ruling.
-
-**Outcome:** `contract_digest`'s actual binding is documented and enforced at run creation in
-`scripts/run_state.py` — never left readable-as-enforcement while enforcing nothing. The
-operator's 2026-08-09 ruling supersedes the absorbed proposal's original resolver-shaped
-wording: document-and-enforce was chosen over resolution, so the slot stays a reserved
-forward-compatibility binding — documented as such at the enforcement site — and resolving it
-is GRAPH-004's business, not this item's.
-
-**Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
-(finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
-[`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md).
-
-**Prerequisites:** None. Any schema change honors the version-1 hard-reject at
-`scripts/run_state.py:174-177` with an explicit migration decision, never a workaround.
-
-**Acceptance:** Tests for creation-time enforcement of the documented binding;
-existing run-state tests and the
-deterministic gates stay green. Met on `round/safe-003`: `_validate_contract_digest`
-documents the slot at the enforcement site and rejects anything but a lowercase 64-character
-SHA-256 in the module's own error type, three tests in `tests/test_run_state.py` fire every
-rejection branch and assert no run survives one, and both gates are green (586 → 589 tests).
-
-**Next action:** Operator review of `round/safe-003`. The operator chose document-and-enforce
-2026-08-09: document the field's actual binding and enforce it at run creation with a test;
-the resolver stays trigger-bound on GRAPH-004 activating (re-verified same day: all seven
-`contract_digest` references in `scripts/run_state.py` are write-side — schema, validation, storage,
-echo — nothing resolves it). SAFE-002 closed without touching `scripts/run_state.py`, so this opens
-its own review context rather than piggybacking on that round. The documented shape is
-**required**, not null-or-digest: the column is `NOT NULL` and the CLI flag is `required`, so
-admitting null would have been a schema change against the version-1 hard-reject — the repair
-enforces the shape the shipped schema already declares, and no migration was needed.
-
 #### LEARN-002 — close the Learning-contract compliance gap
 
-**Status:** `ready` — the measured residual of the merged LEARN-001 round.
+**Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
+LOOP-001/REV-001 contracts this docket now owns.
 
-**Outcome:** Each of the seven behavioral contracts failing 0/3 under the final closed graders
-(`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
+**Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
+graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
 `self-improve-canonical-triaged-close`, `runbook-disposition-propose`,
 `learning-slot-readonly-agent`, `learning-slot-operational-agent`,
-`learning-runbook-namespaces`) either holds 3/3 across two consecutive clean-room sonnet batches
-or has its grammar amended with a recorded rationale — settling empirically whether the closed
-contracts or the skill text carried the defect. No grader is silently loosened.
+`learning-runbook-namespaces`) either holds 3/3 across two consecutive clean-room sonnet
+batches or has its grammar amended with a recorded rationale — settling empirically whether
+the closed contracts or the skill text carried the defect. No grader is silently loosened.
+(2) Each of the six contracts the closed LOOP-001/REV-001 round authored
+(`loop-capture-is-not-closure`, `loop-duplicate-merges-provenance`,
+`loop-source-pass-is-not-released-pass`, `reviewer-approval-does-not-transfer`,
+`verifier-envelope-mismatch-fails-closed`, `reviewer-formal-approval-emits-envelope`) has a
+three-run clean-room baseline under recorded conditions and either holds its acceptance rate
+or has a grammar/text repair with a recorded rationale — the first-contact single runs in
+`evals/baselines/2026-08-10-learn-002/decisions.md` are diagnostic only and do not close this
+half. Closing the original seven without settling these six is not closing LEARN-002.
 
 **Source:** [`LEARN-001 outcome record`](archive/2026-08/learn-001-outcome-2026-08-02.md);
-live rates in `evals/baselines/2026-08-01-self-improve/final-live/`.
+live rates in `evals/baselines/2026-08-01-self-improve/final-live/`; the six contracts' first
+contact and ownership handoff in the
+[LOOP-001](archive/2026-08/loop-001-outcome-2026-08-10.md) and
+[REV-001](archive/2026-08/rev-001-outcome-2026-08-10.md) outcome records.
 
 **Prerequisites:** None — the behavioral harness and pinned conditions are ready. Description
 edits, if any emerge, owe the overlapping routing cluster before/after per standing law.
 
 **Acceptance:** Per-contract paired before/after behavioral runs under identical recorded
-conditions; deterministic gates green; the two 2/3-flaky contracts re-measured alongside; the
-watch-metrics (Learning-slot `none`-rate, ledger organic-candidate count) reported at close.
+conditions for the original seven; deterministic gates green; the two 2/3-flaky contracts
+re-measured alongside; the watch-metrics (Learning-slot `none`-rate, ledger organic-candidate
+count) reported at close. **And**, for each of the six LOOP-001/REV-001 contracts: a three-run
+clean-room baseline under recorded conditions committed under `evals/baselines/`, plus either
+a hold at the acceptance rate or a grammar/text repair with rationale — first-contact single
+runs and deferred repairs do not satisfy this clause.
 
 **Next action:** The 2026-08-10 calibration round
 (`evals/baselines/2026-08-10-learn-002/`, 76 sessions, decisions.md per case) settled the
-pattern-setter question: **the closed contracts are right and the skill text carries the
-defect** — the packet-grammar literal lives only in `references/`, unreachable by a Skill-only
-session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three contracts settled 3/3.
-Two follow-ups now own the residue: (1) implement failing-run transcript retention in
-`scripts/eval_behavioral.py` (`lc_` candidate from the round — 22 of 76 sessions were re-buys
-of text the runner had already read and dropped), which gates settling the four contracts
-parked at 1–2/3; (2) a canonical `self-improve-loop` SKILL.md edit adding the grammar literal
-to the body, owing paired before/after reruns of the seven affected contracts.
+pattern-setter question for the original seven: **the closed contracts are right and the skill
+text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
+by a Skill-only session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three
+contracts settled 3/3. Two follow-ups now own the residue on that half: (1) implement
+failing-run transcript retention in `scripts/eval_behavioral.py` (`lc_2e549c0b` — 22 of 76
+sessions were re-buys of text the runner had already read and dropped), which gates settling
+the four contracts parked at 1–2/3; (2) a canonical `self-improve-loop` SKILL.md edit adding
+the grammar literal to the body, owing paired before/after reruns of the seven affected
+contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
+repairs) — their first-contact single runs remain diagnostic only.
+
+#### REL-173 — record 1.7.3 release and released-artifact retest
+
+**Status:** `ready` — the LOOP-001/REV-001/SAFE-003 implementation closed; the release tail
+that those rounds' acceptance still owes is the remaining live work.
+
+**Outcome:** After the `sde-agents--v1.7.3` tag exists, every candidate this arc promoted
+(`lc_74f04730`, `lc_546acdcc`, `lc_90dd8dc7`, `lc_2c04ead3`, and the SAFE-003 ride-along
+`lc_b2d00e7d` among the broader awaiting-release set that ships in 1.7.3) carries a
+`record-release --version 1.7.3` stamp and a recorded released-artifact retest (or an
+owner-approved reason retest is impossible). Issues #67, #62, and the release-gated half of
+#73 close only on that evidence — never on the merge that shipped the mechanism.
+
+**Source:** [LOOP-001 outcome](archive/2026-08/loop-001-outcome-2026-08-10.md);
+[REV-001 outcome](archive/2026-08/rev-001-outcome-2026-08-10.md);
+[SAFE-003 outcome](archive/2026-08/safe-003-outcome-2026-08-10.md); issues #67, #62, #73.
+
+**Prerequisites:** The 1.7.3 tag exists on the released artifact. `record-release` refuses
+every state other than `promoted` and records only releases that happened.
+
+**Acceptance:** After the tag, `learning_ledger.py list --view awaiting-release` — the literal
+merged-not-released backlog, 27 records at this writing — returns no candidate whose destination
+edit is contained in the 1.7.3 artifact: the five arc IDs above and every other record that view
+enumerates at closeout carries a 1.7.3 `release` block plus a `retest` block (or an explicit
+owner reason); anything legitimately still unreleased stays listed with a stated reason. Issues
+#67, #62, and the release-gated half of #73 close with that evidence cited; deterministic
+`learning_ledger.py check` stays green.
+
+**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, enumerate the backlog with
+`python3 scripts/learning_ledger.py --root . list --view awaiting-release`, then run both
+commands once per candidate — their flag shapes differ, so neither is a template for the other:
+
+```text
+python3 scripts/learning_ledger.py --root . record-release <candidate_id> \
+  --version 1.7.3 --reference "sde-agents--v1.7.3"
+python3 scripts/learning_ledger.py --root . record-retest <candidate_id> \
+  --result pass --environment "<released-artifact environment>" --reference "<evidence>"
+```
+
+The worked invocations live in [`learning/README.md`](../learning/README.md). Close the issues on
+that evidence.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -185,37 +207,12 @@ roster and ignores the main session; routing preserves outage/change authority i
 **Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
 read-only command surface and a threat review of every new verb/flag before changing the guard.
 
-#### REV-001 — advisory/approval split and the review-to-verify envelope
-
-**Status:** `active` — spec approved 2026-08-09 (growth-by-generalization condition carried
-into the matrix text itself); paired plan authored and implemented 2026-08-10 on
-`round/loop-rev-001` together with LOOP-001.
-
-**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
-and never transfers to changed bytes; the verifier requires that envelope and fails closed on
-mismatch; reviewer and verifier share one material-risk matrix; caller-reported and
-independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
-remain legal as advisory mode.
-
-**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md) and its
-[paired plan](superpowers/plans/rev-001-plan.md); issue #62
-with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
-GRAPH-004-compatible field names — GRAPH-004 stays deferred).
-
-**Prerequisites:** None hard; behavioral-contract additions ride the pinned harness.
-
-**Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
-no change to working-diff lane behavior.
-
-**Next action:** Operator review and merge of the round PR (`round/loop-rev-001`). Both riders
-landed with the round (`lc_90dd8dc7` → verification-engineer's whole-branch cold-rerun rule,
-`lc_2c04ead3` → code-reviewer's repro-evidence-class rule); the two envelope contracts calibrate
-in LEARN-002's docket.
-
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `ready` — spec approved by the operator 2026-08-09; **sequenced after REV-001** so
-the packet reuses that round's envelope idiom.
+**Status:** `ready` — spec approved by the operator 2026-08-09. The REV-001 sequencing
+condition is met: that round closed 2026-08-10
+([outcome record](archive/2026-08/rev-001-outcome-2026-08-10.md)) with the envelope idiom
+settled — `candidate_sha`/`base_sha`/`tree_oid` and the six-field approval envelope.
 
 **Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
 carry failed assumptions, verification-method validity, the executable-transport contract,
@@ -225,11 +222,12 @@ irreversible postconditions, authority lifetimes, inventory invariants, and secr
 **Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
-**Prerequisites:** REV-001's settled idiom.
+**Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
+release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Next action:** Hold for REV-001's settled idiom, then author the paired plan.
+**Next action:** Author the paired plan, reusing the merged envelope idiom.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
@@ -256,38 +254,6 @@ routing baseline before any canonical edit.
 
 **Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
 paired plan and capture the Phase-1 baseline.
-
-#### LOOP-001 — released-version retest closes the field-feedback loop
-
-**Status:** `active` — paired plan authored and implemented 2026-08-10 on `round/loop-rev-001`
-together with REV-001 (design decision recorded in the plan: release/retest record **fields**,
-not new lifecycle states). The classification prerequisite is settled: GATE-001 closed
-2026-08-10 ([outcome record](archive/2026-08/gate-001-outcome-2026-08-10.md)) with the
-five-tier text canonical in `agents/homelab-platform.md`.
-
-**Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
-through triage, owner and target release, paired evaluation, canonical change with adapter
-parity, released plugin version, and a retest of the originating scenario on the released
-artifact — and cannot close as successful without that retest or an owner-approved reason it is
-impossible. Source-eval PASS is never reportable as released-artifact PASS. No scheduler,
-daemon, transcript store, or self-modifying loop.
-
-**Source:** [`LOOP-001 spec`](superpowers/specs/loop-001-released-retest-lifecycle.md) (approved
-2026-08-09) and its [paired plan](superpowers/plans/loop-001-plan.md); issue #67; ledger
-candidate `lc_74f04730`; the
-release-tail record (a merged bump demonstrably not reaching live sessions) as independent
-evidence of the merged≠released gap; issue #73 (Learning handoffs dropped by foreign
-coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for Eval 1.
-
-**Prerequisites:** None — the classification this spec references is released canonical text
-(GATE-001, closed 2026-08-10).
-
-**Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
-duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.
-
-**Next action:** Operator review and merge of the round PR (`round/loop-rev-001`); the three
-lifecycle contracts calibrate in LEARN-002's docket, and the first real release after merge
-exercises `record-release`/`record-retest` end to end.
 
 #### LADDER-001 — measure the ownership-vs-consult calibration
 
@@ -349,9 +315,11 @@ lesson rides it as `lc_90dd8dc7`, the string-presence contract-test lesson promo
 the branch-final-gate and convergence-signal lines landed in the workflow description with this
 import.
 
-**Prerequisites:** Sequence after LOOP-001 lands. That round owns the capture-to-released
-lifecycle, this item sits upstream of its first state, and building both at once edits the same
-skill text twice.
+**Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10
+([outcome record](archive/2026-08/loop-001-outcome-2026-08-10.md)); this item sits upstream of
+that lifecycle's first state and can now be designed without a concurrent edit to the same
+skill text. The 1.7.3 released-retest tail is separate live work
+([REL-173](#rel-173--record-173-release-and-released-artifact-retest)).
 
 **Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the emitting
 side's contract is unchanged for callers that do route it; no new write authority is granted to a
@@ -415,8 +383,10 @@ absorbed generated-prompt provenance control.
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
 [`WF-001 pilot note`](archive/2026-08/wf-001-pilot-run-2026-08.md) are the baseline for that
-call). SAFE-003 is no longer a trigger: its 2026-08-09 ruling chose document-and-enforce over
-the resolver path, so nothing there now needs a contract document to resolve to.
+call). SAFE-003 (closed 2026-08-10,
+[outcome record](archive/2026-08/safe-003-outcome-2026-08-10.md)) is no longer a trigger: its
+2026-08-09 ruling chose document-and-enforce over the resolver path, so nothing there now needs
+a contract document to resolve to.
 
 **Acceptance:** The contract document exists, `contract_digest` resolves to it with a test, the
 workflow (if any) consuming it validates against it, and no judgment text lives outside
