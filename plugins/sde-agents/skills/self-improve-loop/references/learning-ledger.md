@@ -41,13 +41,17 @@ python scripts/learning_ledger.py --root <repo> add <bounded evidence fields>
 python scripts/learning_ledger.py --root <repo> observe <candidate-id> <new source fields>
 python scripts/learning_ledger.py --root <repo> transition <candidate-id> <reviewed decision fields>
 python scripts/learning_ledger.py --root <repo> review <candidate-id> <review fields>
-python scripts/learning_ledger.py --root <repo> list --view <pending|stale|all>
+python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <release fields>
+python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
+python scripts/learning_ledger.py --root <repo> list --view <view>
 python scripts/learning_ledger.py --root <repo> check
 ```
 
-Read `learning/README.md` in the source repository and the CLI help for the exact arguments. Never
-guess them from this summary. A second writer, malformed record, unexpected file, symlink/reparse
-point, likely secret, transcript-shaped field, or command-like content fails closed.
+`<view>` is one of `pending`, `stale`, `all`, `awaiting-retest`, `regressed`, or
+`awaiting-release`. Read `learning/README.md` in the source repository and the CLI help for the
+exact arguments. Never guess them from this summary. A second writer, malformed record,
+unexpected file, symlink/reparse point, likely secret, transcript-shaped field, or command-like
+content fails closed.
 
 The files are Git-reviewed data, not authenticated state. `check` proves shape and internal
 consistency; it cannot detect a coherent manual rewrite of both a decision and the fields that
@@ -80,6 +84,53 @@ No state authorizes the CLI to edit an agent, skill, test, runbook, or provider 
 records owner approval; `promoted` records that a separately reviewed change landed. `retired` is
 logical subtraction. Retention expiry only triggers review; physical deletion remains a separately
 reviewed Git change. Current repository and runtime evidence can invalidate any retained claim.
+
+## Retained field-feedback lifecycle
+
+A field-feedback item is one visible path, governed here: field observation -> sanitized packet ->
+duplicate check and triage -> named owner and target release (or explicit rejection) -> frozen
+baseline and paired evaluation -> canonical change plus generated-adapter parity -> released plugin
+version -> the originating or an equivalent scenario retested on the released artifact -> measured
+result attached -> close, revise, or reject. Merged is not released; nothing in this path treats
+source-level promotion as the end.
+
+`record-release` and `record-retest` are the recording mechanism for the last three steps, once a
+candidate is `promoted`:
+
+```text
+python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <release fields>
+python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
+```
+
+`record-release` is legal only on a `promoted` candidate and stamps version, reference, and
+timestamp once per promotion cycle; a second call within the same cycle is refused, not a silent
+overwrite. A candidate may legally reject and re-promote (fresh evidence required); a release
+recorded after that later promotion is a genuinely new cycle, so `record-release` archives the
+completed `{release, retest}` pair into `release_history` and starts a fresh current pair, rather
+than refusing the second cycle outright. `record-retest` is legal only once a release is recorded
+and stamps its own fields: `pass` and `fail` are settled and single-shot, but `inconclusive` may
+be re-recorded in place -- it means the retest could not reach a verdict, not that it passed or
+failed, so it must stay retriable. A `fail` result is a loud pointer that the candidate's
+destination regressed in the field, not a silent write, and the same signal is returned to a
+programmatic caller (a transient `regression` key on the returned record, never persisted), not
+only printed to the CLI's stderr. All three blocks are additive: a candidate written before this
+lifecycle existed stays valid carrying none of them, with no migration and no schema version
+bump. Neither `record-release` nor `record-retest` checks `freshness.review_at` or
+`retention.expires_at` -- each records a fact about what already happened, not a new promotion
+judgment.
+
+Closure is fail-closed: a field-feedback item closes as successful only with an exact
+released-version retest recorded, or the owner's explicit reason that a retest is impossible or
+no longer applicable. Source-eval PASS from a `promoted` candidate is never reportable as
+released-artifact PASS -- the two remain distinct result classes, the same discipline REV-001
+applies to caller-reported versus independently executed evidence. Three views make the lifecycle
+pull-based, never scheduled: `awaiting-retest` surfaces every promoted candidate carrying a
+release but no settled retest (none yet, or an `inconclusive` one); `regressed` surfaces promoted
+candidates whose retest `result` is `fail`, staying listed until an owner transitions the
+candidate away from `promoted`, so a settled fail cannot vanish from every actionable view;
+`awaiting-release` surfaces promoted candidates with no release block at all -- the
+merged-but-unreleased backlog. A release or upgrade retro reads these; nothing here schedules or
+runs anything itself.
 
 ## Cross-task and maintenance use
 
