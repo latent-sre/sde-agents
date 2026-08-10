@@ -289,6 +289,74 @@ duplicates merge provenance; source PASS ≠ released retest) plus the no-new-ma
 lifecycle contracts calibrate in LEARN-002's docket, and the first real release after merge
 exercises `record-release`/`record-retest` end to end.
 
+#### LADDER-001 — measure the ownership-vs-consult calibration
+
+**Status:** `ready` — the guidance itself shipped 2026-08-03 (`6fa2be3`, PR #68) and both cluster
+cases now exist (#103's positive as reshaped by `05417c8`, this branch's negative); only the
+measured run is owed.
+
+**Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
+measurement instead of a single anecdote: a ladder-cluster pair says whether builder-owned work
+carrying one embedded higher-altitude decision draws the required consult without summoning
+principal or distinguished *ownership*.
+
+**Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
+read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
+builder-owned with a required consult); guidance landed in `skills/eng-ladder/SKILL.md` Mode 1;
+ledger candidate `lc_e4234dfe` (triaged 2026-08-10 as proposed/merge, which names this case as the
+residual).
+
+**Prerequisites:** None. The cluster's only stored benchmark predates the provenance schema
+(`python scripts/eval_baseline.py evals/routing/ladder.json --model sonnet` → `STALE`, 2026-08-10),
+so a fresh capture is owed with or without this case.
+
+**Acceptance:** One recorded `scripts/eval_routing.py evals/routing/ladder.json --runs 3` run with
+the rates of both `pos-embedded-principal-fork-consult-required` and
+`neg-embedded-decision-not-principal-owned` reported. A negative that fires is evidence the
+Mode 1 text is insufficient — the repair then goes to the skill, never to the grader.
+
+**Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
+
+#### ACK-001 — make a dropped Learning handoff visible
+
+**Status:** `decision-needed` — the gap is twice-observed, but the three candidate mechanisms
+differ in size and authority, so the choice is the operator's before any spec is authored.
+
+**Outcome:** A Learning packet the caller does not persist is *visibly* unpersisted. Today a
+persisted packet and a dropped one produce identical-looking output, so the drop is discoverable
+only by auditing the destination file afterward.
+
+**Source:** Issue #73 — the 2026-08-03 26-dispatch SDD run (five canonical packets emitted by
+`code-reviewer`, all five silently discarded, recovered only because the operator asked) and its
+2026-08-09 comment (a second, differently shaped run: 8 packets, 3 dropped — and
+`self-improve-loop` was itself invoked, emitted three triaged blocks, and those were not persisted
+either, so reaching the loop is not the missing step). Ledger candidate `lc_50297f97`
+(proposed/add, two occurrences). The issue's other asks are already disposed: the args contract and
+its deliberate unsteerability ship in the workflow description (issue #63), the repro
+measured-vs-reasoned calibration rides REV-001 as `lc_2c04ead3`, the cross-task config-semantics
+lesson rides it as `lc_90dd8dc7`, the string-presence contract-test lesson promoted as
+`lc_7d0844a0`, the slot-competition half got the operator's 2026-08-10 configuration relief, and
+the branch-final-gate and convergence-signal lines landed in the workflow description with this
+import.
+
+**Prerequisites:** Sequence after LOOP-001 lands. That round owns the capture-to-released
+lifecycle, this item sits upstream of its first state, and building both at once edits the same
+skill text twice.
+
+**Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the emitting
+side's contract is unchanged for callers that do route it; no new write authority is granted to a
+read-only role; adapter parity and the deterministic gates green.
+
+**Next action:** Operator rules among three mechanisms, then a bounded spec. (1) Emitter-side
+pointer in the verdict line plus an end-of-loop manifest of packet identifiers, destinations, and
+dispositions — **recommended**: prose-only, and the only option that helps a caller running another
+plugin's loop. (2) A caller-side `scripts/packet_lint.py` mode scanning a transcript or ledger for
+`Learning: candidate` blocks with no recorded disposition — **recommended: defer, trigger-bound**;
+no coordinator transcript artifact exists here to consume, and a mechanism without a demonstrated
+consumer waits. (3) Agents writing packets to a well-known scratch file — **recommended: decline**;
+that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
+write authority read-only roles do not hold.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
