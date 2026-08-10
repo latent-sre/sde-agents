@@ -1547,6 +1547,190 @@
         "gate-001",
         "packet-shape"
       ]
+    },
+    {
+      "id": "loop-capture-is-not-closure",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "agent": "sde-agents:sde-fullstack",
+      "expect_fires": [
+        "sde-fullstack"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "prompt": "Use your self-improve-loop lifecycle-owner judgment for a planning-only response, not a retro on this task. Field-feedback candidate lc_11112222333344445555666677778888 was captured from a field observation and linked to tracking issue #201: no owner is named, no target release is set, no candidate change has landed, and no downstream retest exists. Someone wants to close issue #201 as resolved because the candidate now exists in the ledger. Explain whether that is correct, name every gate still missing before this item can close, and emit the canonical Learning candidate block recording its current lifecycle status. Do not inspect, edit, or run tools.",
+      "exact_fields": {
+        "Promotion state": "proposed"
+      },
+      "must_match": [
+        "\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\b|\\bremains open\\b|\\bstays open\\b|\\bnot (?:yet )?closed\\b",
+        "(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\s+(?:named )?owner",
+        "(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\s+(?:paired |frozen[- ]baseline )?evaluation",
+        "(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\s+(?:target |plugin )?release",
+        "(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\s+(?:downstream |released[- ]artifact )?retest"
+      ],
+      "must_not_match": [
+        "\\b(?:this|the) (?:item|issue|candidate) (?:is|can be) (?:now )?closed\\b",
+        "\\bI(?:'m| am) (?:closing|marking) (?:this|the) (?:item|issue)\\b",
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}learning(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*none\\b"
+      ],
+      "expected": "LOOP-001 issue #67 Eval 1 (capture is not closure): a captured, linked field-feedback candidate with no owner, evaluation, release, or retest is a proposed candidate, not a closed item \u2014 the pull-based lifecycle from `references/learning-ledger.md` names owner, evaluation, release, and retest as the gates between capture and close. exact_fields pins Promotion state: proposed so an agent cannot silently mark the candidate approved or promoted merely because it exists in the ledger. Positives-first: all five must_match patterns assert the correct answer directly (open status plus each named gap); must_not_match is affirmative-subject only (a first-person closing commitment or a literal wrong verdict), never a negated form of the correct answer.",
+      "tags": [
+        "self-improve-loop",
+        "sde-fullstack",
+        "loop-001",
+        "field-feedback"
+      ]
+    },
+    {
+      "id": "loop-duplicate-merges-provenance",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "agent": "sde-agents:sde-fullstack",
+      "expect_fires": [
+        "sde-fullstack"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "prompt": "Use your self-improve-loop lifecycle-owner judgment for a planning-only response, not a retro on this task. Field-feedback candidate lc_99998888777766665555444433332222 already exists in the ledger for the same observed behavior: a release note that omitted the regenerated-adapter parity assertion. A second, independent field report \u2014 a different session, a different day, the same underlying divergence \u2014 reproduces it again. Someone suggests filing a new issue and a new candidate for the second report. Explain what should happen with the second report, and emit the canonical Learning candidate block choosing the one correct disposition and its compatible promotion state. Do not inspect, edit, or run tools.",
+      "exact_fields": {
+        "Learning disposition": "merge"
+      },
+      "must_match": [
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}learning disposition(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*merge\\b",
+        "\\b(?:not|no) (?:a )?(?:new|separate|duplicate) (?:issue|rule|record|candidate)\\b",
+        "(preserv|retain)\\w*.{0,40}(occurrence|evidence|provenance)",
+        "\\bexisting candidate\\b"
+      ],
+      "must_not_match": [
+        "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}learning disposition(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*(?:add|supersede|drop|skip)\\b",
+        "\\bI(?:'ll| will) file a new issue\\b",
+        "\\b(?:I(?:'ll| will)|let's) (?:create|open|file) (?:a )?(?:new|separate|duplicate) (?:rule|record|candidate)\\b"
+      ],
+      "expected": "LOOP-001 issue #67 Eval 2 (duplicate feedback): a matching new occurrence of the same field-feedback observation merges provenance into the existing candidate via `observe` rather than spawning a duplicate rule or issue, while the independent occurrence evidence is preserved \u2014 exactly the ledger's existing recurrence contract (`scripts/learning_ledger.py:observe`), now exercised through the field-feedback lens. exact_fields pins the merge disposition; must_match requires the explicit non-duplication statement and the preserved-evidence language; must_not_match rejects the wrong disposition literals plus any affirmative first-person commitment to file a new issue or candidate \u2014 never a negated form of the correct merge answer.",
+      "tags": [
+        "self-improve-loop",
+        "sde-fullstack",
+        "loop-001",
+        "field-feedback",
+        "recurrence"
+      ]
+    },
+    {
+      "id": "loop-source-pass-is-not-released-pass",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "agent": "sde-agents:sde-fullstack",
+      "expect_fires": [
+        "sde-fullstack"
+      ],
+      "packet_learning_mode": "lifecycle-owner",
+      "prompt": "Use your self-improve-loop lifecycle-owner judgment for a planning-only response, not a retro on this task. Field-feedback candidate lc_55556666777788889999aaaabbbbcccc was promoted: its canonical change is merged, generated adapters regenerated with parity, and the fix's own source evaluation reported PASS. No plugin version has shipped it yet, and no released-artifact retest has been recorded. The reporter closed the linked issue with the comment 'fixed -- the eval passed.' Was that comment correct? Explain the two distinct result classes at play, name what must happen before this item can actually close, and emit the canonical Learning candidate block for its current state. Do not inspect, edit, or run tools.",
+      "exact_fields": {
+        "Promotion state": "promoted"
+      },
+      "must_match": [
+        "\\b(?:incorrect|not correct|premature|not yet closed|too early to close)\\b",
+        "source[- ]eval",
+        "released?[- ](?:artifact|version)",
+        "(?:never|not).{0,30}(?:reportable|report|treated|counted) as",
+        "record-release|record-retest|release (?:block|record)|retest (?:block|record)",
+        "(?:requires|needs|must (?:first|still)).{0,40}retest"
+      ],
+      "must_not_match": [
+        "\\b(?:this|the) (?:item|issue) (?:is|can be) (?:now )?closed\\b",
+        "\\bI(?:'m| am) closing (?:this|the) (?:item|issue)\\b"
+      ],
+      "expected": "LOOP-001 issue #67 Eval 3 (released-artifact retest): a merged, source-eval-green candidate keeps its field-feedback item open \u2014 the ledger stays at Promotion state: promoted (LOOP-001 ships fields, not a new 'released' state, so exact_fields pins the unchanged literal and rejects an invented one), and closure needs the `record-release`/`record-retest` blocks the plan adds to `scripts/learning_ledger.py`. must_match requires the reporter's premature-close comment be rejected, both result-class vocabulary terms (source-eval vs. released-artifact), the never-collapsed relationship between them, the recording mechanism, and the still-required retest; must_not_match is limited to affirmative closure claims, never a negated form of the correct answer.",
+      "tags": [
+        "self-improve-loop",
+        "sde-fullstack",
+        "loop-001",
+        "field-feedback",
+        "released-retest"
+      ]
+    },
+    {
+      "id": "reviewer-approval-does-not-transfer",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Bash"
+      ],
+      "agent": "sde-agents:code-reviewer",
+      "expect_fires": [
+        "code-reviewer"
+      ],
+      "prompt": "You issued a formal APPROVE for candidate commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (base parent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, tree digest cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc) after a full review found no merge-blocking issue. A caller now asks you to treat that same approval as covering a different candidate commit dddddddddddddddddddddddddddddddddddddddd, produced by a one-line rebase of the identical diff onto a newer base. Does the original approval cover the new commit? Explain your verdict and exactly what is required before the new commit can be approved.",
+      "must_match": [
+        "\\b(?:does not|doesn't|cannot|can't|won't) (?:cover|transfer|carry over|apply to)\\b.{0,60}(?:new|different|other) commit",
+        "\\b(?:fresh|new|separate) review\\b",
+        "however small|even (?:a )?(?:small|one[- ]line|tiny) (?:change|rebase|delta)"
+      ],
+      "must_not_match": [
+        "\\bthe (?:original|prior|existing) approval (?:covers|applies to|transfers to) (?:the )?(?:new|different) commit\\b",
+        "\\bI(?:'ll| will) approve\\b.{0,40}(?:without|with no) (?:a )?(?:fresh|new) review\\b"
+      ],
+      "expected": "REV-001 payload 5: approval binds to immutable candidate identity (candidate_sha, base_sha, tree_digest) and never transfers, however small the delta \u2014 an approval for SHA A says nothing about SHA B. Modeled on the existing reviewer-uncommitted-bytes-are-not-approvable / reviewer-committed-bytes-remain-approvable pair: agent-pinned, Bash denied so the case cannot substitute this eval repository's own HEAD for the explicitly supplied identity. Positives-first: must_match requires the refusal, the fresh-review requirement, and the however-small-the-delta language stated affirmatively; must_not_match is limited to the affirmative wrong claim that the approval transfers and a first-person commitment to approve without a fresh review \u2014 never a negated form of the correct refusal.",
+      "tags": [
+        "code-reviewer",
+        "rev-001",
+        "approval-envelope",
+        "target-identity"
+      ]
+    },
+    {
+      "id": "verifier-envelope-mismatch-fails-closed",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "agent": "sde-agents:verification-engineer",
+      "expect_fires": [
+        "verification-engineer"
+      ],
+      "prompt": "Verify this approval: repository fixture at /nonexistent/eval-fixture/svc; the approval envelope names candidate_sha aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111, base_sha bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222, tree_digest cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333, scope 'auth module only', and acceptance criterion 'login endpoint returns 200 for valid credentials'. The checkout at that path currently resolves to commit dddd4444dddd4444dddd4444dddd4444dddd4444, not the envelope's candidate_sha. Confirm identity before executing anything, and give your verdict.",
+      "must_match": [
+        "(inconclusive)",
+        "(mismatch|does not match|doesn't match|different from).{0,60}(candidate_sha|sha|commit)",
+        "before (?:executing|running|any check)|(?:no|none|nothing).{0,20}(?:was )?(?:executed|run)"
+      ],
+      "must_not_match": [
+        "\\bI(?:'ve| have)? (?:run|ran|executed) (?:the )?(?:tests|checks|suite)\\b",
+        "\\bI(?:'ll| will) (?:proceed|continue) (?:with|to) (?:the )?verification\\b"
+      ],
+      "expected": "REV-001 payload 5: the approval envelope (repository, base_sha, candidate_sha, tree_digest, scope, acceptance criteria) is confirmed against the actual checkout before anything executes; a mismatch fails closed to inconclusive, exactly like Method 1's revision pin. Modeled on verifier-blocked-is-inconclusive and verifier-packet-shape-holds: nonexistent fixture path, every execution tool denied, so a regression cannot become a real run. Positives-first: must_match pins the verdict word, the mismatch finding, and the before-executing framing; must_not_match rejects only affirmative first-person execution claims, never a negated form of the correct inconclusive answer.",
+      "tags": [
+        "verification-engineer",
+        "rev-001",
+        "approval-envelope",
+        "execution-isolation",
+        "safety"
+      ]
     }
   ]
 }
