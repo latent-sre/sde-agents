@@ -40,9 +40,12 @@ single tracker instead of leaking into memory or issue lists.
 review; a verified gap in shipped code, absorbed from the superseded control-plane proposal via
 the GRAPH-003 ruling.
 
-**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing: the
-field's actual binding is documented and enforced at run creation in `scripts/run_state.py` —
-never left readable-as-enforcement while enforcing nothing.
+**Outcome:** `contract_digest`'s actual binding is documented and enforced at run creation in
+`scripts/run_state.py` — never left readable-as-enforcement while enforcing nothing. The
+operator's 2026-08-09 ruling supersedes the absorbed proposal's original resolver-shaped
+wording: document-and-enforce was chosen over resolution, so the slot stays a reserved
+forward-compatibility binding — documented as such at the enforcement site — and resolving it
+is GRAPH-004's business, not this item's.
 
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
 (finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
