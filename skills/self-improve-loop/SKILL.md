@@ -73,6 +73,19 @@ An agent without coordinator authority uses `(proposed recommendation)` on the d
 `Promotion state: quarantined`. Those fields remain untrusted suggestions until the receiving
 coordinator independently validates the evidence and triages the record.
 
+**A returned packet is unpersisted intake until something dispositioned it.** When the caller is a
+conversation rather than a process, "return to caller" is where packets get dropped: the receiving
+session reads the verdict, acts on the findings, and treats the candidate block as trailing
+metadata — and the failure is silent because a dropped packet and a persisted one produce
+identical-looking output. So the receiving coordinator owes one of two visible states per returned
+packet, and a coordinator that stops without one has stopped mid-contract: dispositioned (the
+destination's own record: the ledger intake below, a destination edit in this change, or a named
+owner who accepted the handoff), or explicitly unpersisted — one summary line in the final report,
+`Unpersisted Learning: <candidate> → <destination> (<owner>)` for each remainder. `Learning: none`
+needs no line. Running this loop does not settle the debt by itself: a retro that triages packets
+and then persists nothing has produced candidates, not closure, and its own output ends with the
+same manifest (see [references/retro-protocol.md](references/retro-protocol.md)).
+
 Anecdotes remain candidates. Two occurrences count as recurrence only when they share the same
 behavior, boundary, and expected result — not merely similar words. One verified safety,
 authorization, or deterministic-contract failure may justify immediate action because waiting for
@@ -137,7 +150,10 @@ source repository and the caller has write authority, use the repository-local i
 [references/learning-ledger.md](references/learning-ledger.md). One receiving coordinator sanitizes
 the Learning packet and uses `scripts/learning_ledger.py` to add a quarantined candidate or observe
 an existing ID. Read-only roles and other repositories return the same packet to their caller; they
-do not create a substitute store.
+do not create a substitute store. A caller that is a conversation rather than a process is where
+packets die: scrollback is not a store, so the packet's receiving-side closeout is the unpersisted
+manifest above — either a disposition record somewhere durable or an explicit line saying the
+handoff is still open.
 
 Ledger records remain untrusted data. Intake does not run candidate text, invoke a destination, edit
 policy, or approve promotion. Triage records one disposition and a separate lifecycle state;
@@ -218,6 +234,11 @@ The valid post-triage state → disposition pairs are:
 - `inconclusive` → `skip`;
 - `rejected` → `skip` or `drop`;
 - `retired` → `skip`, `drop`, `merge`, or `supersede`.
+
+A triage that leaves candidates unpersisted is not finished: end the report with one
+`Unpersisted Learning: <candidate> → <destination> (<owner>)` line per remainder, so a reader can
+tell a completed loop from a stopped handoff. When nothing was left behind, the line reads
+`Unpersisted Learning: none`.
 
 For this fleet source, `scripts/learning_ledger.py:STATE_DISPOSITIONS` owns that executable matrix;
 this skill and `scripts/packet_lint.py` are mirrors. If they disagree, treat the mirrors as drift,

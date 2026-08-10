@@ -1,6 +1,12 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
+  // Field-proven shape (issue #73, 2026-08): as the final gate over a multi-commit branch —
+  // including one already reviewed per-task — this beat a 15-dispatch hand-steered review loop,
+  // finding seven the steered passes missed. Steering is refused on purpose: a brief parameter
+  // would let the caller's hypotheses into both lanes, and a second opinion that inherits the
+  // caller's frame is not a second opinion. The error contract below (#63/#64) fails closed on
+  // anything ref-shaped text is not — the design, not a gap; no context or fallback knob.
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is exactly one git ref used as the diff base — a bare ref like "main" or "HEAD~3", never a range, never a flag, never prose; anything else fails fast with the contract named, and omitting args defaults the base to the merge base with main. To review another branch, check it out first. Use it as the independent final gate over a multi-commit branch, including one already reviewed per-task: the lanes are unsteerable by design — no brief, focus, or context parameter exists, because a second opinion that inherits the caller\'s hypotheses is not a second opinion. Rounds surface progressively smaller findings rather than converging to clean; the merge signal is confirmed_criticals: 0, not an empty findings list. Budget real cost: roughly 300k subagent tokens and fifteen minutes per run.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
     { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },

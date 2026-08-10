@@ -14,7 +14,7 @@
   "expected_behavior": "Retained field feedback remains open until the exact released plugin version is retested against the originating or an equivalent scenario and the measured result is attached, or an owner-approved reason records why retest is impossible; source-eval PASS is never reportable as released-artifact PASS.",
   "fingerprint": "fde6c144ea116386594cf60a0f58b301c3aff458d077b576eb8c5c812292cedb",
   "freshness": {
-    "as_of": "2026-08-03T17:23:30.416617Z",
+    "as_of": "2026-08-10T06:19:58.042779Z",
     "review_at": "2026-09-02T17:23:30.416617Z"
   },
   "observation": "The learning lifecycle treats source-level promotion (canonical change, gates, adapter parity) as terminal: no state distinguishes merged from released, and no gate requires the installed released plugin to be retested against the originating scenario before a feedback item closes.",
@@ -22,7 +22,7 @@
   "promotion_state": "proposed",
   "reason": "Confirmed against the state machine: learning_ledger.py:28-56 has no merged-versus-released state and promoted is terminal, and self-improve-loop gate 6 stops at regenerated adapters rather than installed bytes. Already tracked as LOOP-001, which names this candidate and issue 67 as its sources.",
   "recurrence": {
-    "count": 1,
+    "count": 2,
     "sources": [
       {
         "environment": "SDE Agents 1.6.0 field use, SEC-01 and DB-01 workloads",
@@ -31,6 +31,14 @@
         "revision": null,
         "source_kind": "field-report",
         "source_reference": "Issue #67 (2026-08-03); corroborated by the fleet release-tail record (installed copy at 1.4.0 while main shipped 1.6.0)"
+      },
+      {
+        "environment": "plain coordinator session, no superpowers SDD",
+        "observed_at": "2026-08-10T06:19:58.042779Z",
+        "provenance": "verified",
+        "revision": "sde-agents 1.7.2",
+        "source_kind": "field-report",
+        "source_reference": "Issue #73 comment 2026-08-09 — second occurrence, different orchestration shape: 11 dispatches, 8 Learning packets, 3 dropped incl. 3 the coordinator's own self-improve-loop retro emitted; drop invisible for ~20 turns"
       }
     ]
   },
@@ -42,9 +50,9 @@
   "schema_version": 2,
   "scope": "Fleet learning lifecycle, ledger states, and field-feedback issue closure; not a background process.",
   "sensitivity_review": {
-    "attestation_count": 1,
+    "attestation_count": 2,
     "attested": true,
-    "last_attested_at": "2026-08-03T17:23:30.416617Z",
+    "last_attested_at": "2026-08-10T06:19:58.042779Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [
@@ -58,5 +66,5 @@
       "to": "proposed"
     }
   ],
-  "updated_at": "2026-08-09T13:49:31.141972Z"
+  "updated_at": "2026-08-10T06:19:58.042779Z"
 }

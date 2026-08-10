@@ -243,6 +243,45 @@ routing baseline before any canonical edit.
 **Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
 paired plan and capture the Phase-1 baseline.
 
+#### FIELD-073 — 26-dispatch field run: repro calibration, final-gate surface, receiving-side Learning teeth
+
+**Status:** `active` — doc, description, and contract fixes landed on the reporting branch; the
+canonical description edit rides REV-001's pinned eval machinery, and the issue stays open until
+LOOP-001's released-artifact retest closes the loop it was imported into.
+
+**Outcome:** The reviewer labels a failure scenario's footing (traced through source versus
+assumed about runtime semantics) so a builder's verify-the-repro delta has something to bind to;
+`/sde-agents:deep-review`'s only ad surfaces name the branch-final-gate use case, the exact args
+contract, the deliberate unsteerability, and the convergence signal; and a coordinator that drops
+a returned Learning packet has visibly stopped mid-contract — an explicit `Unpersisted Learning:`
+manifest line — rather than appearing to have completed one.
+
+**Source:** [issue #73](https://github.com/latent-sre/sde-agents/issues/73) (field report
+2026-08-03; measured follow-up and second-occurrence handoff drop 2026-08-09); ledger candidates
+`lc_2c04ead3` (reviewer repro calibration, promoted here) and `lc_90dd8dc7` (shared-config
+whole-branch evidence, deep-review half landed — merge-base base resolution plus this item's
+description work).
+
+**Prerequisites:** None for the landed half. The deep-review meta.description edit owes a
+before/after routing measurement that no runner covers today — the Workflow tool is not a
+skill/agent surface, so neither `eval_routing.py` nor `eval_behavioral.py` reaches it; that
+measurement is dispositioned on REV-001's paired plan (a probe-side check if one gets built, a
+recorded waiver if not).
+
+**Acceptance:** Deterministic gates and adapter parity green; the three ledger recurrences
+recorded; REV-001's paired plan names the description measurement's disposition; issue #73
+updated with evidence. Closure of the issue itself is LOOP-001's released retest, not this item
+— capture is not closure.
+
+**Next action:** Land the branch; REV-001's paired plan picks up the description-measurement
+disposition named above. Declined with reasons recorded on the issue: an args fallback on unparseable
+input (prose silently degrading to a default base is the failure the #63/#64 fail-closed error
+contract exists to prevent), a caller-side packet-lint scan mode and per-packet unbounded
+`Learning:` ledger lines (mechanisms without a demonstrated consumer — the manifest is bounded
+summary form), and a new verify-the-repro behavioral case (the behavior is canonical at
+`sde-fullstack.md`'s receiving-review-findings section and already graded by the
+`packet-slots-builder` Findings-response contract; re-pinning is repeated work).
+
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
 **Status:** `ready` — the shared-ownership prerequisite is fully settled: GATE-001 closed

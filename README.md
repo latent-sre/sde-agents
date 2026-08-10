@@ -311,6 +311,14 @@ prose packet first and the schema second, never the reverse. Probe coverage:
 `agentType` spawns, guard delivery inside workflow-spawned agents) and is owed a re-run at every
 CLI pin bump.
 
+`deep-review` is the fleet's **independent final gate over a multi-commit branch** — including a
+branch another orchestrator already reviewed per-task. Its lanes take no brief or focus text
+(args is one git ref or nothing), and that is deliberate: a second opinion that inherits the
+caller's frame is not a second opinion. When a task list ends in "review the branch before
+merge," reach for it instead of dispatching one more steered `code-reviewer` pass; the merge
+signal to read is `confirmed_criticals: 0`, not an empty findings list, and a run costs real
+budget (~300k subagent tokens, ~15 minutes).
+
 ## Validation
 
 Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence

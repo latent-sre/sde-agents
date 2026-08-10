@@ -106,7 +106,14 @@ Destination: <exact artifact>
 Owner: <authorized owner>
 Promotion evidence: <targeted, regression/adverse, fresh evaluator, exact artifact>
 Residue: <each other candidate -> disposition + promotion state + destination/owner/reason>
+Unpersisted: <each candidate emitted or triaged this run that no durable store recorded -> destination + owner; `none` when every candidate landed>
 ```
+
+The `Unpersisted:` line is the retro's closeout gate. A triaged candidate the coordinator never
+persisted is a stopped handoff, and today a dropped packet and a persisted one produce
+identical-looking output — the manifest is what makes the difference visible to whoever reads the
+final report. A retro that ends with unpersisted candidates and no manifest has stopped
+mid-contract, whatever else it reported.
 
 `quarantined` is not a full-retro outcome: it is the intake state before the retro chooses a
 disposition. No recurring or material signal means `Learning: none — no reusable signal` and the
