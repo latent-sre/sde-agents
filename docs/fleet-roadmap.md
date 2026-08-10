@@ -311,8 +311,10 @@ residual).
 so a fresh capture is owed with or without this case.
 
 **Acceptance:** One recorded
-`scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room
---output-dir evals/baselines/<run-date>-ladder` run with the rates of both
+```bash
+scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir evals/baselines/<run-date>-ladder
+```
+run with the rates of both
 `pos-embedded-principal-fork-consult-required` and `neg-embedded-decision-not-principal-owned`
 reported. The pins are load-bearing: the runner writes `benchmark.json` and provenance only when
 `--output-dir` is supplied, and `eval_baseline.py` rejects unpinned runs as
