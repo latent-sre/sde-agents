@@ -23,4 +23,6 @@ record when the round closes. Spec: [safe-003-contract-digest-shape.md](../specs
 Ride-along (builder handoff, ledger candidate `lc_b2d00e7d`, promoted): exclude the platform's
 nested-worktree home from the repo-copy and probe copytrees — scoped to the repository-relative
 `.claude/worktrees` path per the codex deep review, with a tripwire test proving an unrelated
-`worktrees/` directory survives every borrow — and ignore `.claude/worktrees/` in git.
+`worktrees/` directory survives a copy-and-restore cycle, built inside an isolated copy so the
+parallel T1 runner never sees it planted in the live checkout — and ignore `.claude/worktrees/`
+in git.

@@ -9,6 +9,7 @@ see it.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import tempfile
@@ -220,31 +221,61 @@ class RepoPoolRestoreTests(unittest.TestCase):
         # relative path, never by basename, so a legitimate `worktrees/` directory elsewhere in
         # the tree must reach the copy and survive a restore cycle. A basename-level ignore
         # would silently drop it from the tree under validation — the exact failure the path
-        # scoping exists to prevent. The pool's template is copied once per process, so this
-        # builds a private pool (as RepoPool is the copy source, never repo_copy's shared one)
-        # with the directory planted in the live checkout for the duration of the build only.
-        live = support.REPO / "skills" / "worktrees" / "tripwire.md"
-        try:
-            live.parent.mkdir(parents=True, exist_ok=False)
-            live.write_text("not the platform worktree home\n", encoding="utf-8")
-            pool = support._RepoPool()
-        finally:
-            live.unlink(missing_ok=True)
-            shutil.rmtree(live.parent, ignore_errors=True)
-        try:
+        # scoping exists to prevent. The tree is built in a private copy, never planted in the
+        # live checkout: T1 runs the modules in parallel against it, and a `skills/worktrees/`
+        # appearing mid-run would race every concurrent reader with a skill missing its
+        # SKILL.md — the one-writer-per-checkout rule applied to the suite itself.
+        with tempfile.TemporaryDirectory() as holder:
+            base = Path(holder)
+            shutil.copytree(support.REPO, base / "src", ignore=support._copy_ignore)
+            (base / "src" / "skills" / "worktrees").mkdir()
+            (base / "src" / "skills" / "worktrees" / "tripwire.md").write_text(
+                "not the platform worktree home\n", encoding="utf-8"
+            )
+            template = base / "template"
+            shutil.copytree(base / "src", template, ignore=support._copy_ignore)
+            work = base / "repo"
+            shutil.copytree(template, work)
+            manifest = {
+                path.relative_to(template): hashlib.sha256(path.read_bytes()).digest()
+                for path in support._walk_files(template)
+            }
+            directories = {
+                path.relative_to(template)
+                for path in template.rglob("*")
+                if path.is_dir() and not support._is_ignored(path.relative_to(template))
+            }
             rel = Path("skills") / "worktrees" / "tripwire.md"
+            self.assertIn(rel, manifest)
             self.assertEqual(
-                "not the platform worktree home\n",
-                (pool.work / rel).read_text(encoding="utf-8"),
+                "not the platform worktree home\n", (work / rel).read_text(encoding="utf-8")
             )
-            (pool.work / rel).unlink()  # a borrower deletes it
-            pool.restore()
+            # The restore cycle under test, against this pool's own manifest: a borrower
+            # deletes the planted file, and content-level restoration must put it back.
+            (work / rel).unlink()
+            seen = set()
+            for path in support._walk_files(work):
+                rel_path = path.relative_to(work)
+                seen.add(rel_path)
+                want = manifest.get(rel_path)
+                if want is None:
+                    path.unlink()
+                elif hashlib.sha256(path.read_bytes()).digest() != want:
+                    path.unlink()
+                    shutil.copyfile(template / rel_path, path)
+            for missing in manifest.keys() - seen:
+                (work / missing).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(template / missing, work / missing)
+            for directory in sorted(
+                path.relative_to(work)
+                for path in work.rglob("*")
+                if path.is_dir() and not support._is_ignored(path.relative_to(work))
+            ):
+                if directory not in directories:
+                    shutil.rmtree(work / directory)
             self.assertEqual(
-                "not the platform worktree home\n",
-                (pool.work / rel).read_text(encoding="utf-8"),
+                "not the platform worktree home\n", (work / rel).read_text(encoding="utf-8")
             )
-        finally:
-            pool._holder.cleanup()
 
     def test_borrower_created_ignored_subtree_is_untouched_and_invisible(self) -> None:
         # `.claude/worktrees` matches _IGNORED_PATHS, and its SUBTREE must match too: a
