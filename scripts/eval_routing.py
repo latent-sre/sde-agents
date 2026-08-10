@@ -590,6 +590,23 @@ def strip_ns(name: str) -> str:
     return name.split(":", 1)[1] if ":" in name else name
 
 
+def _event_message_field(event: object, field: str):
+    """Read `event["message"][field]`, tolerating a stream event that is not shaped that way.
+
+    Not defensive decoration: `(event.get("message") or {}).get(...)` crashes on an event whose
+    `message` is a plain string, and both readers below run on EVERY line of EVERY session. One such
+    event raised AttributeError out of `components_fired`, past the behavioral runner's
+    `EvalAuthUnavailable`-only handler, and took down the whole batch with no benchmark written —
+    observed on a live `verifier-fails-honestly-no-product-edit` session, 2026-08-10. A transcript
+    line the reader cannot interpret must be skipped, never fatal: the sessions are already paid
+    for by the time it is parsed.
+    """
+    if not isinstance(event, dict):
+        return None
+    message = event.get("message")
+    return message.get(field) if isinstance(message, dict) else None
+
+
 def components_fired(transcript: str) -> set[str]:
     """The set of fleet components (bare names) invoked anywhere in a run's transcript.
 
@@ -620,7 +637,7 @@ def components_fired(transcript: str) -> set[str]:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
-        content = (event.get("message") or {}).get("content")
+        content = _event_message_field(event, "content")
         if not isinstance(content, list):
             continue
         for block in content:
@@ -670,6 +687,8 @@ def transcript_stats(stdout: str) -> dict:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if not isinstance(event, dict):
+            continue
         if event.get("type") == "result":
             usage = event.get("usage") or {}
             input_tokens = usage.get("input_tokens", input_tokens)
@@ -686,7 +705,10 @@ def transcript_stats(stdout: str) -> dict:
         # `models_observed` echoed the requested alias for exactly the pinned runs the conditions
         # block exists to describe.
         if model is None:
-            candidate = event.get("model") or (event.get("message") or {}).get("model")
+            candidate = (
+                (event.get("model") if isinstance(event, dict) else None)
+                or _event_message_field(event, "model")
+            )
             if isinstance(candidate, str) and candidate:
                 model = candidate
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
