@@ -676,9 +676,17 @@ class PlatformAdapterTests(unittest.TestCase):
         )
         codex_fields = validate_fleet.parse_frontmatter(codex_skill)
         self.assertNotIn("disable-model-invocation", codex_fields)
-        # The Codex policy file is what carries `allow_implicit_invocation: false`, so its absence
-        # IS this skill's model visibility on that host.
-        self.assertFalse((codex_skill.parent / "agents" / "openai.yaml").exists())
+        # `allow_implicit_invocation: false` in the generated Codex policy is the exact byte that
+        # hides a skill from the model, so asserting its absence anywhere under the skill IS this
+        # skill's model visibility on that host -- and it survives a generator that later emits a
+        # policy file for other reasons.
+        for generated in sorted(codex_skill.parent.rglob("*")):
+            if generated.is_file():
+                with self.subTest(file=str(generated.relative_to(REPO))):
+                    self.assertNotIn(
+                        "allow_implicit_invocation: false",
+                        generated.read_text(encoding="utf-8"),
+                    )
 
         for skill_file, namespace in (
             (canonical, "sde-agents:"),

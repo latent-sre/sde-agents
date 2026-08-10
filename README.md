@@ -111,7 +111,7 @@ future updates; `/import` remains a one-time migration and never overwrites an e
 #### What this lane surfaces to the model
 
 The Codex lane is supported but limited, and its limits are about *discovery*, not content. Two
-host behaviors change how the fleet is reached here:
+host behaviors — both observed at codex-cli 0.147.0 — change how the fleet is reached here:
 
 - **Explicit-only skills are invisible to the model.** `service-onboard` and `host-onboard` ship
   with `policy.allow_implicit_invocation: false`, and Codex keeps such skills out of every
@@ -131,9 +131,9 @@ states distinct — **discovery** (the workflow exists), **recommendation** (it 
 live target under that agent's change tiers). It covers the first two and authorizes neither of
 the last two.
 
-Versioning covers only half of this lane: a plugin version stamps the generated skills, while
-`.codex/agents/*.toml` carries no version field. Use `scripts/install_codex_agents.py` to update
-agents; the plugin commands above update only skills.
+One consequence for updates: a plugin version stamps the generated skills, but `.codex/agents/`
+carries no version field, so an up-to-date skill bundle says nothing about whether the agents
+beside it are current. Re-run the installer above rather than inferring it from a version.
 
 ### Working on the fleet itself
 
