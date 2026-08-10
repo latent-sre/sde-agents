@@ -619,9 +619,16 @@ class PluginWiringTests(unittest.TestCase):
         def drop_shape(repo: Path) -> None:
             path = repo / "scripts" / "packet_lint.py"
             source = path.read_text(encoding="utf-8")
-            start = source.index('    "handoff-packet": (')
-            end = source.index('    "multi-agent-packet"')
-            path.write_text(source[:start] + source[end:], encoding="utf-8")
+            # Order-independent: match the entry itself, so reordering SHAPES cannot make this
+            # mutation silently remove the wrong lines (or nothing).
+            mutated, count = re.subn(
+                r'^    "handoff-packet": \(.*?\n    \),\n',
+                "",
+                source,
+                flags=re.DOTALL | re.MULTILINE,
+            )
+            self.assertEqual(1, count, "the handoff-packet SHAPES entry was not found to remove")
+            path.write_text(mutated, encoding="utf-8")
 
         issues = self._issues_after(drop_shape)
         self.assertTrue(
