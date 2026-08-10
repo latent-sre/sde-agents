@@ -104,19 +104,27 @@ owner-approved reason retest is impossible). Issues #67, #62, and the release-ga
 **Prerequisites:** The 1.7.3 tag exists on the released artifact. `record-release` refuses
 every state other than `promoted` and records only releases that happened.
 
-**Acceptance:** `learning_ledger.py list --view awaiting-release` no longer lists this arc's
-promoted candidates without a 1.7.3 `release` block; each has a `retest` block (or an explicit
-owner reason); issues #67, #62, and the release-gated half of #73 close with that evidence
-cited; deterministic `learning_ledger.py check` stays green.
+**Acceptance:** After the tag, `learning_ledger.py list --view awaiting-release` — the literal
+merged-not-released backlog, 27 records at this writing — returns no candidate whose destination
+edit is contained in the 1.7.3 artifact: the five arc IDs above and every other record that view
+enumerates at closeout carries a 1.7.3 `release` block plus a `retest` block (or an explicit
+owner reason); anything legitimately still unreleased stays listed with a stated reason. Issues
+#67, #62, and the release-gated half of #73 close with that evidence cited; deterministic
+`learning_ledger.py check` stays green.
 
-**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, then run `record-release` once per
-candidate that ships in it — the command takes a positional candidate ID plus both required
-flags, so the per-candidate form is
-`python3 scripts/learning_ledger.py --root . record-release <candidate_id> --version 1.7.3
---reference "sde-agents--v1.7.3"` (enumerate the IDs with `list --view awaiting-release`; the
-worked invocation lives in [`learning/README.md`](../learning/README.md)). Then execute the
-released-artifact retests the lifecycle requires (`record-retest`, same per-candidate shape) and
-close the issues on that evidence.
+**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, enumerate the backlog with
+`python3 scripts/learning_ledger.py --root . list --view awaiting-release`, then run both
+commands once per candidate — their flag shapes differ, so neither is a template for the other:
+
+```text
+python3 scripts/learning_ledger.py --root . record-release <candidate_id> \
+  --version 1.7.3 --reference "sde-agents--v1.7.3"
+python3 scripts/learning_ledger.py --root . record-retest <candidate_id> \
+  --result pass --environment "<released-artifact environment>" --reference "<evidence>"
+```
+
+The worked invocations live in [`learning/README.md`](../learning/README.md). Close the issues on
+that evidence.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -214,11 +222,12 @@ irreversible postconditions, authority lifetimes, inventory invariants, and secr
 **Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
-**Prerequisites:** None — REV-001's idiom is settled and released.
+**Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
+release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Next action:** Author the paired plan, reusing the released envelope idiom.
+**Next action:** Author the paired plan, reusing the merged envelope idiom.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
