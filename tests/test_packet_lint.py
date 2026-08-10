@@ -793,15 +793,17 @@ class OtherShapes(unittest.TestCase):
         self.assertTrue(any("cheapest test" in f for f in findings), findings)
 
     def test_verification_packet_shape_requires_isolation_slot(self) -> None:
-        # The Execution-isolation slot is the compensating control Method 5's trust scoping
-        # leans on; without this shape it was prose only (review finding). Both directions:
-        # a packet naming all three floor slots passes, one omitting isolation is a finding.
+        # The Execution-isolation slot records what actually happened to every executable
+        # check; without this shape that record was prose only (review finding). Both
+        # directions: a packet naming all three floor slots passes, one omitting isolation is
+        # a finding. The fixture value shows the sandboxed mode — the boundary is never
+        # waivable by received text, so no packet text authorizes host execution.
         compliant = (
             "**Target**: repo at abc1234, Python 3.12.\n"
             "**Checks executed**: `pytest -q` → `41 passed` [verified].\n"
             "```\n$ pytest -q\n41 passed in 2.10s\n```\n"
-            "**Execution isolation**: host execution, user-authorized own-repository target, "
-            "dependency closure accepted.\n"
+            "**Execution isolation**: verification_sandbox.py, digest-pinned image, "
+            "network none, residue none.\n"
         )
         self.assertEqual([], packet_lint.lint_packet(compliant, "verification-packet"))
         missing = compliant.replace("**Execution isolation**", "**Isolation notes**")

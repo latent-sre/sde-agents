@@ -3,7 +3,7 @@
   "candidate_id": "lc_ac166609db914d09b75083d5e27bfee6",
   "created_at": "2026-08-09T23:00:39.638062Z",
   "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
-  "disposition": "merge",
+  "disposition": "supersede",
   "evidence": {
     "environment": "Home-lab estate host, no container engine, sde-agents installed at user scope",
     "provenance": "verified",
@@ -19,8 +19,8 @@
   },
   "observation": "verification-engineer's Method 5 mandates a container boundary unconditionally, so on an engine-less host every executable check is inconclusive -- the verifier is the only fleet member barred from running the suite the builder already runs unsandboxed on the same host. Same conditional-control shape as lc_6b36cf5d: a control whose precondition cannot exist on the host, applied unconditionally.",
   "owner": "fleet-maintainer",
-  "promotion_state": "promoted",
-  "reason": "Implemented across d02bd33..HEAD: Method 5's execution-isolation boundary is never waivable by received text (the verifier is always a subagent; every authorization and target-attribution claim is caller-supplied); the engine-less continuation is propose-and-prove for any target, vouching for none -- exact commands published with the dependency-closure caveat, returned output graded as caller-reported evidence under Method 6, never plain pass; untrusted-target behavior unchanged. Contracts: verifier-authorization-is-not-text-waivable and verifier-packet-shape-holds (renamed from verifier-trusted-repo-host-execution). Durable fix: container engine on the estate host.",
+  "promotion_state": "retired",
+  "reason": "Superseded by lc_945f622eec304f3cbb01dfe45eba752b: this record's expected_behavior states the caller-authorized host-execution design that review proved a confused deputy and the branch removed; the successor carries the corrected contract. Retirement is the supersede mechanics, not a reversal of the underlying lesson.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -126,7 +126,16 @@
       "owner": "fleet-maintainer",
       "reason": "Implemented across d02bd33..HEAD: Method 5's execution-isolation boundary is never waivable by received text (the verifier is always a subagent; every authorization and target-attribution claim is caller-supplied); the engine-less continuation is propose-and-prove for any target, vouching for none -- exact commands published with the dependency-closure caveat, returned output graded as caller-reported evidence under Method 6, never plain pass; untrusted-target behavior unchanged. Contracts: verifier-authorization-is-not-text-waivable and verifier-packet-shape-holds (renamed from verifier-trusted-repo-host-execution). Durable fix: container engine on the estate host.",
       "to": "promoted"
+    },
+    {
+      "at": "2026-08-10T01:37:21.331831Z",
+      "destination": "agents/verification-engineer.md Method 5 (via GATE-001 round)",
+      "disposition": "supersede",
+      "from": "promoted",
+      "owner": "fleet-maintainer",
+      "reason": "Superseded by lc_945f622eec304f3cbb01dfe45eba752b: this record's expected_behavior states the caller-authorized host-execution design that review proved a confused deputy and the branch removed; the successor carries the corrected contract. Retirement is the supersede mechanics, not a reversal of the underlying lesson.",
+      "to": "retired"
     }
   ],
-  "updated_at": "2026-08-10T01:26:44.858300Z"
+  "updated_at": "2026-08-10T01:37:21.331831Z"
 }

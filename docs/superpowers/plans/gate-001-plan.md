@@ -68,9 +68,11 @@ request + host-native continuation, no approval-missing implication, no security
 known-absent mediator); approval-consolidation A/B (reversible same-effect proceeds, subsequent
 irreversible action re-gates); phase calibration (issue #67 Eval 4: default-off change is
 merge-safe but activation-blocked, hardening reported separately); stacked-gate attribution
-(each pause names one owner); and for payload 5, the trust-scoped isolation pair — an
-untrusted-target check without an adequate boundary still returns inconclusive, and a
-trusted-repo host execution is accepted only when the packet records the mode. Deterministic
+(each pause names one owner); and for payload 5, the never-text-waivable pair — a stated
+authorization does not cause host execution and the response instead offers the
+propose-and-prove continuation (`verifier-authorization-is-not-text-waivable`), and the
+verification packet carries its floor slots with the Execution-isolation record even when
+nothing executes (`verifier-packet-shape-holds`). Deterministic
 gates: validator, suite, adapter parity. No
 `description:` edits are planned, so no routing runs are owed; if implementation ends up
 touching a description, the `homelab-ops` cluster runs before and after per standing law.
