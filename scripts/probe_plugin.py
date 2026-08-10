@@ -333,10 +333,17 @@ def probe_workflow_contract(probe: "Probe") -> None:
     print("\n== the workflow platform contract ==")
     workspace = REPO / ".probe-tmp"
     plugin_copy = workspace / "plugin"
-    shutil.copytree(
-        REPO, plugin_copy,
-        ignore=shutil.ignore_patterns(".git", ".probe-tmp", "node_modules"),
-    )
+    # `.claude/worktrees` (the platform's nested-worktree home) is excluded root-anchored, not
+    # by basename — a basename ignore would silently probe a plugin copy missing any legitimate
+    # `worktrees/` directory a skill or fixture ever ships. Kept in step with tests/support.py's
+    # exclusions by hand; the suite's own copytree gets the same exclusion for the same reason.
+    def _ignore(directory: str, names: list[str]) -> set[str]:
+        ignored = set(names) & {".git", ".probe-tmp", "node_modules"}
+        if Path(directory) == REPO / ".claude":
+            ignored.add("worktrees")
+        return ignored
+
+    shutil.copytree(REPO, plugin_copy, ignore=_ignore)
     hook_log = workspace / "hook-log.jsonl"
     hooks_path = plugin_copy / "hooks" / "hooks.json"
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))

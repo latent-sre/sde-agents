@@ -9,6 +9,7 @@ see it.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import tempfile
@@ -214,6 +215,84 @@ class RepoPoolRestoreTests(unittest.TestCase):
         with repo_copy() as dst:
             for rel in files:
                 self.assertTrue((dst / rel).is_file(), rel)
+
+    def test_unignored_worktrees_directory_survives_every_borrow(self) -> None:
+        # Tripwire for the exclusion scoping: `.claude/worktrees` is ignored by repository-
+        # relative path, never by basename, so a legitimate `worktrees/` directory elsewhere in
+        # the tree must reach the copy and survive a restore cycle. A basename-level ignore
+        # would silently drop it from the tree under validation — the exact failure the path
+        # scoping exists to prevent. The tree is built in a private copy, never planted in the
+        # live checkout: T1 runs the modules in parallel against it, and a `skills/worktrees/`
+        # appearing mid-run would race every concurrent reader with a skill missing its
+        # SKILL.md — the one-writer-per-checkout rule applied to the suite itself.
+        with tempfile.TemporaryDirectory() as holder:
+            base = Path(holder)
+            shutil.copytree(support.REPO, base / "src", ignore=support._copy_ignore)
+            (base / "src" / "skills" / "worktrees").mkdir()
+            (base / "src" / "skills" / "worktrees" / "tripwire.md").write_text(
+                "not the platform worktree home\n", encoding="utf-8"
+            )
+            template = base / "template"
+            shutil.copytree(base / "src", template, ignore=support._copy_ignore)
+            work = base / "repo"
+            shutil.copytree(template, work)
+            manifest = {
+                path.relative_to(template): hashlib.sha256(path.read_bytes()).digest()
+                for path in support._walk_files(template)
+            }
+            directories = {
+                path.relative_to(template)
+                for path in template.rglob("*")
+                if path.is_dir() and not support._is_ignored(path.relative_to(template))
+            }
+            rel = Path("skills") / "worktrees" / "tripwire.md"
+            self.assertIn(rel, manifest)
+            self.assertEqual(
+                "not the platform worktree home\n", (work / rel).read_text(encoding="utf-8")
+            )
+            # The restore cycle under test, against this pool's own manifest: a borrower
+            # deletes the planted file, and content-level restoration must put it back.
+            (work / rel).unlink()
+            seen = set()
+            for path in support._walk_files(work):
+                rel_path = path.relative_to(work)
+                seen.add(rel_path)
+                want = manifest.get(rel_path)
+                if want is None:
+                    path.unlink()
+                elif hashlib.sha256(path.read_bytes()).digest() != want:
+                    path.unlink()
+                    shutil.copyfile(template / rel_path, path)
+            for missing in manifest.keys() - seen:
+                (work / missing).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(template / missing, work / missing)
+            for directory in sorted(
+                path.relative_to(work)
+                for path in work.rglob("*")
+                if path.is_dir() and not support._is_ignored(path.relative_to(work))
+            ):
+                if directory not in directories:
+                    shutil.rmtree(work / directory)
+            self.assertEqual(
+                "not the platform worktree home\n", (work / rel).read_text(encoding="utf-8")
+            )
+
+    def test_borrower_created_ignored_subtree_is_untouched_and_invisible(self) -> None:
+        # `.claude/worktrees` matches _IGNORED_PATHS, and its SUBTREE must match too: a
+        # borrower that plants a worktree-shaped tree mid-borrow (the live platform case —
+        # another session's nested checkout exists while the suite runs) must find it
+        # invisible to the content walks and intact after restore, never unlinked as an
+        # addition because only the exact path was ignored.
+        planted = Path(".claude") / "worktrees" / "agent-test" / "run_state.py"
+        with repo_copy() as dst:
+            (dst / planted).parent.mkdir(parents=True)
+            (dst / planted).write_text("live sibling checkout\n", encoding="utf-8")
+            walked = [p for p in support._walk_files(dst) if "agent-test" in str(p)]
+            self.assertEqual([], walked)
+        with repo_copy() as dst:
+            self.assertEqual(
+                "live sibling checkout\n", (dst / planted).read_text(encoding="utf-8")
+            )
 
 
 if __name__ == "__main__":

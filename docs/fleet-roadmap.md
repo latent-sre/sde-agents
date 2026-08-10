@@ -36,12 +36,16 @@ single tracker instead of leaking into memory or issue lists.
 
 #### SAFE-003 — resolve the dangling `contract_digest` reference
 
-**Status:** `ready` — a verified gap in shipped code, absorbed from the superseded control-plane
-proposal via the GRAPH-003 ruling.
+**Status:** `active` — the ruled repair is implemented on `round/safe-003` and awaiting operator
+review; a verified gap in shipped code, absorbed from the superseded control-plane proposal via
+the GRAPH-003 ruling.
 
-**Outcome:** `contract_digest` stops being a reserved slot that resolves to nothing: the
-field's actual binding is documented and enforced at run creation in `scripts/run_state.py` —
-never left readable-as-enforcement while enforcing nothing.
+**Outcome:** `contract_digest`'s actual binding is documented and enforced at run creation in
+`scripts/run_state.py` — never left readable-as-enforcement while enforcing nothing. The
+operator's 2026-08-09 ruling supersedes the absorbed proposal's original resolver-shaped
+wording: document-and-enforce was chosen over resolution, so the slot stays a reserved
+forward-compatibility binding — documented as such at the enforcement site — and resolving it
+is GRAPH-004's business, not this item's.
 
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md)
 (finding verified against `scripts/run_state.py:104,248-271,886`); absorbed into the accepted
@@ -52,14 +56,20 @@ never left readable-as-enforcement while enforcing nothing.
 
 **Acceptance:** Tests for creation-time enforcement of the documented binding;
 existing run-state tests and the
-deterministic gates stay green.
+deterministic gates stay green. Met on `round/safe-003`: `_validate_contract_digest`
+documents the slot at the enforcement site and rejects anything but a lowercase 64-character
+SHA-256 in the module's own error type, three tests in `tests/test_run_state.py` fire every
+rejection branch and assert no run survives one, and both gates are green (586 → 589 tests).
 
-**Next action:** Implement the ruled repair. The operator chose document-and-enforce
+**Next action:** Operator review of `round/safe-003`. The operator chose document-and-enforce
 2026-08-09: document the field's actual binding and enforce it at run creation with a test;
 the resolver stays trigger-bound on GRAPH-004 activating (re-verified same day: all seven
 `contract_digest` references in `scripts/run_state.py` are write-side — schema, validation, storage,
 echo — nothing resolves it). SAFE-002 closed without touching `scripts/run_state.py`, so this opens
-its own review context rather than piggybacking on that round.
+its own review context rather than piggybacking on that round. The documented shape is
+**required**, not null-or-digest: the column is `NOT NULL` and the CLI flag is `required`, so
+admitting null would have been a schema change against the version-1 hard-reject — the repair
+enforces the shape the shipped schema already declares, and no migration was needed.
 
 #### LEARN-002 — close the Learning-contract compliance gap
 
@@ -327,15 +337,15 @@ absorbed generated-prompt provenance control.
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
 [`WF-001 pilot note`](archive/2026-08/wf-001-pilot-run-2026-08.md) are the baseline for that
-call), or SAFE-003's repair chooses the resolver path and needs a real contract document to
-resolve to.
+call). SAFE-003 is no longer a trigger: its 2026-08-09 ruling chose document-and-enforce over
+the resolver path, so nothing there now needs a contract document to resolve to.
 
 **Acceptance:** The contract document exists, `contract_digest` resolves to it with a test, the
 workflow (if any) consuming it validates against it, and no judgment text lives outside
 canonical files.
 
-**Next action:** None until a trigger fires; SAFE-003's resolver decision is the likeliest
-ignition.
+**Next action:** None until a trigger fires; with SAFE-003 ruled away from the resolver, a
+second workflow conversion is now the only live ignition.
 
 #### EVAL-003 — capture a comparable full routing anchor
 
