@@ -243,45 +243,12 @@ routing baseline before any canonical edit.
 **Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
 paired plan and capture the Phase-1 baseline.
 
-#### GATE-001 — gate-owner attribution and same-effect approval consolidation
-
-**Status:** `active` — spec approved and paired plan authored 2026-08-09; the classification
-ownership is settled — **GATE-001 owns the five-tier risk/effect classification** (tiers
-classify effects generally, not broker-mediated effects only); LOOP-001 references it. The
-ownership follows the evidence: the consolidation rule is embedded in the tier text itself and
-is this item's deliverable, and a mis-defined tier at a gate is a safety error where at the
-lifecycle it is only a process error.
-
-**Outcome:** Every pause in a lab workflow names its gate owner (repository confirmation, host
-sandbox, plugin transport, reviewer, credential custody, irreversible action); an unavailable
-broker after exact approval yields an integration diagnosis and the supported host-native
-continuation rather than implying approval is missing; same-effect approvals consolidate across
-reversible corrections while initialization, credential destruction, recovery-material
-retirement, and teardown keep distinct unavoidable gates.
-
-**Source:** [`GATE-001 spec`](superpowers/specs/gate-001-gate-owner-attribution.md) (approved
-2026-08-09) and its [paired plan](superpowers/plans/gate-001-plan.md); issue #61 closeout
-criteria 2–5; ledger candidate `lc_6b36cf5d` (broker shipped without consumable transport,
-recurrence 2 — the 2026-08-09 estate audit added the per-change false-positive security flag);
-adjacent to SAFE-002 but distinct from its crash-ambiguity states.
-
-**Prerequisites:** None — the SAFE-002 sequencing question is settled by SAFE-002 having landed
-first; the spec builds on the broker's now-shipped `unknown`/reconciliation semantics instead of
-racing them.
-
-**Acceptance:** The spec's list; headline gates are the broker-unavailable-after-approval
-scenario, an approval-consolidation case that leaves irreversible gates intact, and issue #67's
-Eval 4 (phase calibration), which this round owns as classification owner.
-
-**Next action:** Operator review and merge of the round PR. Implementation is complete on
-`round/gate-001-implementation` (six deep-review rounds plus the operator's step-back strip;
-deterministic gates green; first live contract baseline captured 2026-08-10); contract
-calibration rides LEARN-002 per its docket.
-
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
-**Status:** `ready` — the shared-ownership prerequisite was ruled 2026-08-09: GATE-001 owns the
-five-tier classification; this spec references it.
+**Status:** `ready` — the shared-ownership prerequisite is fully settled: GATE-001 closed
+2026-08-10 ([outcome record](archive/2026-08/gate-001-outcome-2026-08-10.md)) and the five-tier
+classification it owns is shipped canonically in `agents/homelab-platform.md`'s
+change-authority section; this spec references that canonical text.
 
 **Outcome:** A retained field-feedback item has one visible lifecycle from sanitized packet
 through triage, owner and target release, paired evaluation, canonical change with adapter
@@ -296,8 +263,8 @@ release-tail record (a merged bump demonstrably not reaching live sessions) as i
 evidence of the merged≠released gap; issue #73 (Learning handoffs dropped by foreign
 coordinators in a 26-dispatch field run) as capture-is-not-closure evidence for Eval 1.
 
-**Prerequisites:** None — the shared-ownership ruling landed 2026-08-09: GATE-001 owns the
-five-tier risk/effect classification and this spec references it.
+**Prerequisites:** None — the classification this spec references is released canonical text
+(GATE-001, closed 2026-08-10).
 
 **Acceptance:** Issue #67's list; headline gates are its Evals 1–3 (capture is not closure;
 duplicates merge provenance; source PASS ≠ released retest) plus the no-new-machinery non-goal.

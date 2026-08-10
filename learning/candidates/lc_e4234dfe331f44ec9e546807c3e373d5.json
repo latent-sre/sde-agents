@@ -1,0 +1,52 @@
+{
+  "applicability": "eng-ladder description/body and the routing evals; triage pending -- import as a cluster case plus possible one-line body edit, or decline with reasons on the issue.",
+  "candidate_id": "lc_e4234dfe331f44ec9e546807c3e373d5",
+  "created_at": "2026-08-10T04:22:00.490730Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "Fleet routing, eng-ladder altitude selection",
+    "provenance": "sourced",
+    "revision": null,
+    "source_kind": "field-report",
+    "source_reference": "Issue #66 (2026-08-03): builder-owned work with one embedded principal decision over-routes to principal ownership"
+  },
+  "expected_behavior": "Altitude routing escalates the decision, not the task: builder-owned work with one embedded principal fork sends that fork up (per the report-the-decision-needed pattern) while the task stays with its builder.",
+  "fingerprint": "9e8747746af196b003ac7f7752751cc82378897d45900c1892a4aac02d22aaef",
+  "freshness": {
+    "as_of": "2026-08-10T04:22:00.490730Z",
+    "review_at": "2026-09-09T04:22:00.490730Z"
+  },
+  "observation": "Field report: a task that is overwhelmingly builder-scope but contains one embedded principal-altitude decision gets routed wholesale to principal ownership, inflating ceremony for the whole task instead of escalating the single decision.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Fleet routing, eng-ladder altitude selection",
+        "observed_at": "2026-08-10T04:22:00.490730Z",
+        "provenance": "sourced",
+        "revision": null,
+        "source_kind": "field-report",
+        "source_reference": "Issue #66 (2026-08-03): builder-owned work with one embedded principal decision over-routes to principal ownership"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T04:22:00.490730Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "eng-ladder routing guidance and its routing-cluster cases; excludes tasks that are genuinely majority-principal scope.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T04:22:00.490730Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-10T04:22:00.490730Z"
+}

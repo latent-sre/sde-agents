@@ -2,7 +2,9 @@
 
 **Status: approved** — drafted 2026-08-09, approved by the operator the same day (recorded at
 the PR #98 closeout). Authored together with the
-[GATE-001 spec](gate-001-gate-owner-attribution.md) under the operator's 2026-08-09 ruling:
+GATE-001 spec (retired to the
+[GATE-001 outcome record](../../archive/2026-08/gate-001-outcome-2026-08-10.md)) under the
+operator's 2026-08-09 ruling:
 GATE-001 owns the five-tier risk/effect classification; this round **references** it and defines
 no rival classification. Implements issue #67 under its own stated discipline: smallest
 mechanism, extending the existing `self-improve-loop` lifecycle and learning ledger — no
