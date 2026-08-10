@@ -1,0 +1,32 @@
+## Learning candidate block
+
+```
+Learning: candidate — Generated host adapters must be verified against their exact-artifact parity check before promotion; canonical-source PASS is never reportable as adapter/released-artifact PASS.
+Evidence: Third occurrence of the same divergence (adapter promoted/treated as validated without its exact-artifact parity check passing) — same behavior, same boundary (source vs. generated-adapter bytes), same expected result as the two existing skill-bank lessons on this topic. No new failure mode, environment, or artifact class introduced.
+Scope: Applies wherever a generated/regenerated host adapter is promoted from a canonical source in this fleet; scope is unchanged from the two existing lessons — this occurrence adds recurrence/provenance, not new territory.
+Provenance: [verified] — reported as a fresh, verified observation; date 2026-08-10. No file inspection performed in this response (planning-only), so exact artifact IDs of the two existing lessons are not cited here.
+Learning disposition: merge
+Promotion state: proposed
+Destination: the two existing owning lesson artifacts on generated-adapter validation in the skill bank / learning ledger (exact record IDs to be resolved by the receiving coordinator during triage, since this response performed no file inspection).
+Owner: the learning-ledger coordinator / skill-bank maintainer with write authority over those records.
+```
+
+## Explanation
+
+**Criteria and frozen baseline** — Baseline going in: the skill bank already owns two lessons covering "validate generated adapters before promoting them," each presumably differing in surface detail but sharing the same cause. Success here means the third occurrence strengthens that canonical record without duplicating it.
+
+**Evidence** — A new, independently verified observation reproduces the identical behavior→boundary→expected-result triad the two existing lessons already encode: a generated adapter was (or would have been) treated as validated without passing its own exact-artifact/parity check. Per the loop's recurrence rule, two occurrences count as recurrence only when they share that exact triad — this one does, against both existing entries.
+
+**Candidate** — Normalized to one testable rule (above): exact-artifact parity check gates adapter promotion; source-level PASS doesn't substitute. This is not a new rule — it restates what the existing lessons already assert.
+
+**Disposition — merge, not add/supersede/drop:**
+- Not **add**: there is no unowned scope. The fact is already owned by two current artifacts; the loop's inventory step explicitly forbids creating a second rule for a fact the fleet already owns.
+- Not **supersede**: nothing about the rule's meaning changed. This isn't newer evidence contradicting or refining the old rule — it's the same cause recurring under the same expected behavior.
+- Not **drop**: the observation is verified, not false, unsafe, or over-specific — dropping would discard legitimate corroborating evidence.
+- **Merge** is correct because the loop states directly: "a repeated occurrence of the same cause merges its provenance or recurrence into the canonical record even when it adds no new scope; do not call that skip merely because the rule already exists." This is exactly that case — same cause, zero incremental scope, so the right action is to fold this occurrence's provenance into the existing two records (strengthening recurrence count/freshness), not spawn a third overlapping lesson.
+
+**Destination and owner** — The two existing adapter-validation lesson artifacts are the destination; this response can't name their exact record IDs because it performed no file inspection (per the planning-only constraint). Resolving and merging into the specific artifact IDs is handed to the coordinator/owner with write authority over the skill bank — consistent with the boundary that authority does not expand and this loop cannot self-approve or self-write cross-session memory.
+
+**Verification** — Not run in this response by design (planning-only, no inspection, no edits). The merge is a proposal for the owning coordinator to triage; the standard promotion gates (targeted proof, regression/adverse proof, fresh evaluator, exact-artifact proof) apply at their end before this moves past `proposed`.
+
+**Promotion state — proposed** — Correct pairing for `merge`: `proposed`/`approved`/`promoted` are the only valid states for `add`, `merge`, or `supersede`. Since this candidate hasn't been independently triaged or written into the ledger yet, `proposed` (not `approved`/`promoted`) is the accurate state, and `quarantined` is excluded because this is a triaged full-retro output, not an intake-only handoff.

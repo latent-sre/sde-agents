@@ -1,0 +1,5 @@
+Runbook disposition: propose
+Prospective canonical path: unknown
+Missing evidence: owner, canonical inventory, current applicability, current configuration, edit authority, authoritative source, exact safe command, safe replay
+Owner: unknown
+Next verification: identify owner, inventory canonical runbooks, confirm current applicability, inspect current configuration, confirm edit authority, obtain authoritative source, obtain exact safe command, establish safe replay
