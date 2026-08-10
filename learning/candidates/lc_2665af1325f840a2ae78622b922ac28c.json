@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:20.513508Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-04T13:50:11.025464Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "released 1.7.3 artifact",
+    "recorded_at": "2026-08-10T21:54:20.665992Z",
+    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "result": "inconclusive"
   },
   "review_history": [
     {
@@ -84,5 +95,5 @@
       "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T19:00:46.744040Z"
+  "updated_at": "2026-08-10T21:54:20.665992Z"
 }

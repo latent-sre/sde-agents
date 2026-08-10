@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:20.226479Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-01T21:22:21.284260Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "tagged tree sde-agents--v1.7.3 (f6cfdb3), Windows 11 checkout, Python 3.12",
+    "recorded_at": "2026-08-10T21:54:20.378981Z",
+    "reference": "deterministic gates at the tag: 612/612 suite + validator clean; evals/baselines/2026-08-10-rel-173/conditions.md",
+    "result": "pass"
   },
   "schema_version": 1,
   "scope": "Fleet routing and behavioral benchmark artifacts.",
@@ -75,5 +86,5 @@
       "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-04T01:07:18.643452Z"
+  "updated_at": "2026-08-10T21:54:20.378981Z"
 }

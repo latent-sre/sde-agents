@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:21.689946Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-09T19:22:29.495938Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "installed plugin sde-agents@latent-sre 1.7.3, headless scratch-repo session",
+    "recorded_at": "2026-08-10T21:54:21.835379Z",
+    "reference": "workflow loaded and returned its merge record; evals/baselines/2026-08-10-rel-173/deep-review-released-retest.txt",
+    "result": "pass"
   },
   "review_history": [],
   "schema_version": 2,
@@ -76,5 +87,5 @@
       "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-10T20:26:16.330760Z"
+  "updated_at": "2026-08-10T21:54:21.835379Z"
 }
