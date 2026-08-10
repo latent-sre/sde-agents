@@ -429,6 +429,20 @@ def validate_behavioral_case(
         )
     if packet_shape == "runbook-proposal" and learning_mode is not None:
         findings.append("runbook-proposal cannot also declare packet_learning_mode")
+    if (
+        learning_mode is not None
+        and isinstance(packet_shape, str)
+        and packet_shape in packet_lint.SHAPES
+        and "learning" not in packet_lint.SHAPES[packet_shape]
+    ):
+        # lint_packet only grades the Learning block when the shape carries a `learning` slot,
+        # so this pairing validates, runs, and reports green while asserting nothing about the
+        # Learning block -- a silently-dropped configuration, the exact false-green class the
+        # frontmatter rules exist to prevent.
+        findings.append(
+            f"packet_learning_mode declared with shape {packet_shape!r}, which has no "
+            f"'learning' slot; the Learning grading would silently never run"
+        )
 
     semantic_oracle = case.get("semantic_oracle")
     if semantic_oracle is not None and (
