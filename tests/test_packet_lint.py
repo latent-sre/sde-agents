@@ -379,12 +379,141 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
                 "- **Destination:** scripts/packet_lint.py\n"
                 "- **Owner:** fleet-maintainer\n"
             ),
+            # The emphasis span opens before the label and closes inside the value. A live
+            # planning-only session emitted the whole canonical block this way and the reader saw
+            # no Learning field at all (LEARN-002 batch 1, self-improve-promotion-gate).
+            (
+                "**Learning: candidate — global field search -> one canonical block**\n"
+                "**Evidence: review finding at revision worktree in Windows**\n"
+                "**Scope: learning packet linting; excludes ledger transitions**\n"
+                "**Provenance: verified — current source inspection on 2026-08-01**\n"
+                "**Learning disposition: add**\n"
+                "**Promotion state: proposed**\n"
+                "**Destination: scripts/packet_lint.py**\n"
+                "**Owner: fleet-maintainer**\n"
+            ),
         )
         for packet in packets:
             with self.subTest(packet=packet):
                 self.assertEqual(
                     [], packet_lint.lint_learning_closeout(packet, "lifecycle-owner")
                 )
+
+    def test_decorated_span_reads_the_value_without_laundering_it(self) -> None:
+        """The span placement must recover the value, never excuse a bad one."""
+        no_divergence = (
+            "**Learning: candidate — generated adapters must carry a parity assertion**\n"
+        )
+        self.assertTrue(
+            any(
+                "must be `none` or `candidate" in finding
+                for finding in packet_lint.lint_learning_closeout(
+                    no_divergence, "lifecycle-owner"
+                )
+            ),
+            packet_lint.lint_learning_closeout(no_divergence, "lifecycle-owner"),
+        )
+
+        # A different label that merely starts with the field name stays excluded.
+        curve = "**Learning curve: candidate — steep -> shallow**\n"
+        self.assertEqual(
+            ["missing literal Learning: closeout; a prefix or dash is not the packet contract"],
+            packet_lint.lint_learning_closeout(curve, "lifecycle-owner"),
+        )
+
+        # Exact-field grading still compares the literal value, not the decorated line.
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "**Owner: fleet-maintainer**\n", {"Owner": "fleet-maintainer"}
+            ),
+        )
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "**Owner: fleet-maintainer** and the release coordinator\n",
+                {"Owner": "fleet-maintainer"},
+            )
+        )
+
+    def test_display_echoes_collapse_but_conflicts_still_count(self) -> None:
+        """A repeated value is display; a different value is a conflict and must still fail."""
+        # A bare section header above the block (learning-slot-operational-agent).
+        headered = "**Learning**:\n" + lifecycle_owner_learning_block("add", "proposed")
+        self.assertEqual(
+            [], packet_lint.lint_learning_closeout(headered, "lifecycle-owner")
+        )
+
+        # A summary line echoing the same decision the block repeats verbatim
+        # (learning-runbook-namespaces-compose).
+        echoed = (
+            "**Learning disposition: merge**\n"
+            "**Runbook disposition: update**\n\n"
+            "Learning disposition: merge\n"
+            "Runbook disposition: update\n"
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                echoed,
+                {"Learning disposition": "merge", "Runbook disposition": "update"},
+            ),
+        )
+
+        # The same field written twice inside the block, same rendering, is still two fields:
+        # only a differently-decorated echo is a rendering of another line.
+        repeated = "Learning disposition: merge\nLearning disposition: merge\n"
+        self.assertTrue(
+            packet_lint.lint_exact_fields(repeated, {"Learning disposition": "merge"})
+        )
+
+        # Two different values remain two fields, in both the exact-field and closeout paths.
+        conflicting = "Learning disposition: merge\nLearning disposition: add\n"
+        self.assertTrue(
+            packet_lint.lint_exact_fields(conflicting, {"Learning disposition": "merge"})
+        )
+        two_learnings = (
+            "Learning: none — no reusable signal\n"
+            + lifecycle_owner_learning_block("add", "proposed")
+        )
+        self.assertEqual(
+            ["Learning: must appear exactly once with a non-empty value"],
+            packet_lint.lint_learning_closeout(two_learnings, "lifecycle-owner"),
+        )
+
+        # An empty field with no valued twin still reports its own emptiness.
+        self.assertEqual(
+            ["Learning: closeout has no disposition value"],
+            packet_lint.lint_learning_closeout("Learning:\n", "lifecycle-owner"),
+        )
+
+    def test_closed_vocabulary_fields_tolerate_a_final_full_stop(self) -> None:
+        """`Promotion state: quarantined.` is the same value; `quarantined and approved` is not."""
+        intake = (
+            "Learning: candidate — drills stall -> the runbook states a stop condition\n"
+            "Evidence: two authorized restore drills\n"
+            "Scope: ops/widgets.md restore section; excludes other runbooks\n"
+            "Provenance: unverified — caller summary only, 2026-08-10\n"
+            "Learning disposition: add (proposed recommendation).\n"
+            "Promotion state: quarantined.\n"
+            "Destination: ops/widgets.md\n"
+            "Owner: runbook owner for ops/widgets.md\n"
+        )
+        self.assertEqual([], packet_lint.lint_learning_closeout(intake, "intake"))
+
+        widened = intake.replace(
+            "Promotion state: quarantined.", "Promotion state: quarantined and approved"
+        )
+        self.assertTrue(
+            any(
+                "Promotion state: quarantined" in finding
+                for finding in packet_lint.lint_learning_closeout(widened, "intake")
+            ),
+            packet_lint.lint_learning_closeout(widened, "intake"),
+        )
+        negated = intake.replace(
+            "Promotion state: quarantined.", "Promotion state: not quarantined"
+        )
+        self.assertTrue(packet_lint.lint_learning_closeout(negated, "intake"))
 
     def test_unknown_mode_fails_directly(self) -> None:
         with self.assertRaises(KeyError):
@@ -700,6 +829,42 @@ class TheInversion(unittest.TestCase):
 
     def test_verification_claim_with_evidence_passes(self) -> None:
         self.assertEqual([], packet_lint.lint_packet(COMPLIANT_REVIEW_PACKET, "review-packet"))
+
+    def test_negated_verified_is_a_disclosure_not_an_unevidenced_claim(self) -> None:
+        """The honest slots of a nothing-ran packet must not read as unbacked claims.
+
+        Recorded verbatim in the 2026-08-10 first-live verifier benchmark, where all three of
+        these lines were reported as verification claims with no command cited.
+        """
+        text = "\n".join((
+            "**Changed**: nothing — no check ran.",
+            "**Assumptions**: none load-bearing, and I am not treating them as verified.",
+            "**Verified**: nothing, with output to show — there is no output.",
+            "**Not verified**: everything — revision identity, existence of the path.",
+        ))
+        self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
+        # The affirmative claim on the same slot still needs evidence.
+        claimed = text.replace(
+            "**Verified**: nothing, with output to show — there is no output.",
+            "**Verified**: I verified the version constant.",
+        )
+        self.assertTrue(
+            any("no command or output cited" in f
+                for f in packet_lint.lint_packet(claimed, "review-packet")),
+            packet_lint.lint_packet(claimed, "review-packet"),
+        )
+
+        # A negation far from the word does not launder a claim beside it.
+        distant = text.replace(
+            "**Verified**: nothing, with output to show — there is no output.",
+            "**Verified**: this has not been fully reviewed by anyone, but I verified the fix.",
+        )
+        self.assertTrue(
+            any("no command or output cited" in f
+                for f in packet_lint.lint_packet(distant, "review-packet")),
+            packet_lint.lint_packet(distant, "review-packet"),
+        )
 
     def test_piped_test_run_as_evidence_is_a_finding(self) -> None:
         # The pipeline reports the LAST stage's status, and block buffering can push the runner's
