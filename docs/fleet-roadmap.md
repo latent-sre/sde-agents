@@ -322,11 +322,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **SMALL-006** — the AGENTS.md Map has no row for `scripts/ledger_drift.py`, the only
   CI-wired script missing from it. Source: PR #89 review note, imported at TIER-001 closeout
   ([outcome record](archive/2026-08/tier-001-outcome-2026-08-08.md)).
-- **SMALL-007** — the installed 1.7.0 `deep-review` workflow cannot load (`meta is not
-  defined`; body derived constants from the isolated meta export). Fixed at `74128d6`; closing
-  this line is the 1.7.1 release tail (tag, marketplace, plugin update, restart) plus one live
-  `deep-review` load on the released version. Source: 1.7.0 acceptance run `wf_c1db8dfb-b9f`,
-  2026-08-09; ledger candidate `lc_546acdcc`.
 
 ## Deferred decisions
 
