@@ -219,10 +219,11 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
-**Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
-re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
-suppression both hold); implementation remains gated on the Phase-0 host evidence the spec
-names (`codex --version` and the unmarked-TOML check on the SEC-01 host).
+**Status:** `active` — the host-neutral mechanism landed 2026-08-10 (issue #61 criterion 1);
+closing evidence is operator-owned and outstanding. The design premise was re-verified 2026-08-09
+against upstream HEAD `a16863f8` and at codex-cli 0.147.0 (skill filtering and spawn-schema
+suppression both hold), so implementation was not gated on the remaining Phase-0 one-liner: the
+unmanaged-TOML check bounds how a smoke run is *read*, not what the fix must be.
 
 **Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
 intent yields a model recommendation of the explicit onboarding workflow — never an implicit
@@ -233,15 +234,23 @@ issue #61 (failure layer identified 2026-08-02: skills hard-hidden from the mode
 delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited lane, smallest
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
-**Prerequisites:** `codex --version` and the unmanaged-TOML check from the SEC-01 Linux host
-(the spec's Phase 0 — a v1 spawn schema returns the spec to review); a fresh `homelab-ops`
-routing baseline before any canonical edit.
+**Landed:** `skills/onboarding-map/SKILL.md` — one canonical, model-visible, side-effect-free
+skill naming both workflows and their order, the only fleet component the Codex model can reach
+for onboarding intent; the README's Codex invocation contract; the packaging record's
+supported-but-limited consequence and its field-contradiction reopen trigger; four `homelab-ops`
+cases (issue cases 3–5 and 7, the last carried by cluster-wide negatives); and a test that fails
+if the map is ever marked explicit-only or stops naming a workflow.
 
-**Acceptance:** The spec's acceptance list; headline gates are no regression in the before/after
-`homelab-ops` diff, adapter parity, and one recorded Codex smoke run.
+**Prerequisites:** none remaining for implementation. The unmanaged-TOML check
+(`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`) on the SEC-01 Linux host still
+precedes the smoke run, since an unmanaged same-name TOML would explain a null result there.
 
-**Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
-paired plan and capture the Phase-1 baseline.
+**Acceptance:** The spec's list; headline gates are no regression in the before/after `homelab-ops`
+diff, adapter parity (**met** — regenerated and byte-checked), and one recorded Codex smoke run.
+
+**Next action:** Operator captures the paired `homelab-ops` run — `eval_baseline.py` reports
+`STALE` against the pre-change tree, so the 'before' side is a fresh capture from this branch's
+merge base, not a stored reuse — then the SEC-01 smoke run; both close the item.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
