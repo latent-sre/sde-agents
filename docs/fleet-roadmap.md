@@ -106,12 +106,17 @@ every state other than `promoted` and records only releases that happened.
 
 **Acceptance:** `learning_ledger.py list --view awaiting-release` no longer lists this arc's
 promoted candidates without a 1.7.3 `release` block; each has a `retest` block (or an explicit
-owner reason); issues #67/#62 close with that evidence cited; deterministic `learning_ledger.py
-check` stays green.
+owner reason); issues #67, #62, and the release-gated half of #73 close with that evidence
+cited; deterministic `learning_ledger.py check` stays green.
 
-**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, run
-`record-release --version 1.7.3` over the awaiting-release set that ships in it, execute the
-released-artifact retests the lifecycle requires, and close the issues on that evidence.
+**Next action:** Cut/confirm the `sde-agents--v1.7.3` tag, then run `record-release` once per
+candidate that ships in it — the command takes a positional candidate ID plus both required
+flags, so the per-candidate form is
+`python3 scripts/learning_ledger.py --root . record-release <candidate_id> --version 1.7.3
+--reference "sde-agents--v1.7.3"` (enumerate the IDs with `list --view awaiting-release`; the
+worked invocation lives in [`learning/README.md`](../learning/README.md)). Then execute the
+released-artifact retests the lifecycle requires (`record-retest`, same per-candidate shape) and
+close the issues on that evidence.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
