@@ -296,9 +296,9 @@ cases now exist (#103's positive as reshaped by `05417c8`, this branch's negativ
 measured run is owed.
 
 **Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
-measurement instead of a single anecdote: a ladder-cluster pair says whether builder-owned work
-carrying one embedded higher-altitude decision draws the required consult without summoning
-principal or distinguished *ownership*.
+measurement instead of a single anecdote, split by what firing-based grading can actually see:
+the positive says the consult-required shape draws `eng-ladder`; the negative says a
+builder-recordable embedded decision draws no principal or distinguished summon at all.
 
 **Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
 read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
@@ -310,10 +310,17 @@ residual).
 (`python scripts/eval_baseline.py evals/routing/ladder.json --model sonnet` → `STALE`, 2026-08-10),
 so a fresh capture is owed with or without this case.
 
-**Acceptance:** One recorded `scripts/eval_routing.py evals/routing/ladder.json --runs 3` run with
-the rates of both `pos-embedded-principal-fork-consult-required` and
-`neg-embedded-decision-not-principal-owned` reported. A negative that fires is evidence the
-Mode 1 text is insufficient — the repair then goes to the skill, never to the grader.
+**Acceptance:** One recorded
+```bash
+python3 scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir "evals/baselines/$(date +%F)-ladder"
+```
+run with the rates of both
+`pos-embedded-principal-fork-consult-required` and `neg-embedded-decision-not-principal-owned`
+reported. The pins are load-bearing: the runner writes `benchmark.json` and provenance only when
+`--output-dir` is supplied, and `eval_baseline.py` rejects unpinned runs as
+non-comparison-grade — without them the paid sessions leave no reusable artifact. A forbidden
+agent that fires is evidence the Mode 1 text is insufficient — the repair then goes to the
+skill, never to the grader.
 
 **Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
 
