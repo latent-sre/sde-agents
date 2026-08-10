@@ -277,8 +277,8 @@ import.
 **Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10
 ([outcome record](archive/2026-08/loop-001-outcome-2026-08-10.md)); this item sits upstream of
 that lifecycle's first state and can now be designed without a concurrent edit to the same
-skill text. The 1.7.3 released-retest tail is separate live work
-([REL-173](#rel-173--record-173-release-and-released-artifact-retest)).
+skill text. The 1.7.3 release-tail evidence now lives in that archived closeout, not in this
+live tracker.
 
 **Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the emitting
 side's contract is unchanged for callers that do route it; no new write authority is granted to a
