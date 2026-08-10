@@ -688,15 +688,21 @@ class PlatformAdapterTests(unittest.TestCase):
                         generated.read_text(encoding="utf-8"),
                     )
 
-        for skill_file, namespace in (
-            (canonical, "sde-agents:"),
-            (copilot_skill, ""),
-            (codex_skill, ""),
+        for skill_file, namespace, invocation in (
+            (canonical, "sde-agents:", "/sde-agents:"),
+            (copilot_skill, "", "/"),
+            (codex_skill, "", "$"),
         ):
             with self.subTest(skill=str(skill_file.relative_to(REPO))):
                 text = skill_file.read_text(encoding="utf-8")
                 for workflow in ("service-onboard", "host-onboard", "homelab-platform"):
                     self.assertIn(f"`{namespace}{workflow}`", text)
+                # The map's whole added value on a host that hides these workflows is naming how
+                # to invoke them THERE. A regression in the generator's per-host sigil would leave
+                # a Codex user typing Claude syntax that does nothing, and the fleet-wide
+                # `sde-agents:`-absence check above cannot see a sigil that is merely wrong.
+                for workflow in ("service-onboard", "host-onboard"):
+                    self.assertIn(f"`{invocation}{workflow}`", text)
 
     def test_non_claude_plugins_do_not_load_the_claude_guard(self) -> None:
         copilot = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))
