@@ -299,7 +299,8 @@ measured run is owed.
 measurement instead of a single anecdote, split by what firing-based grading can actually see:
 the positive says the consult-required shape draws `eng-ladder`; the negative says a
 builder-recordable embedded decision draws nothing but the builder — no principal, distinguished,
-or `eng-ladder` summon at all, since its prompt answers its own altitude question.
+or `eng-ladder` summon at all, since its prompt satisfies the scoped-work bypass (obvious owner,
+stated existing pattern) and answers its own altitude question.
 
 **Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
 read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
