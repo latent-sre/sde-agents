@@ -220,10 +220,10 @@ entered the tree. REV-001 remains free to add its envelope fields to that same s
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 Landed so far: the packet in `agents/homelab-platform.md`, the builder echo in
 `agents/sde-fullstack.md`, the lane-as-gate wording in `sde-agents:service-onboard` and
-`sde-agents:host-onboard`, the `handoff-packet` lint shape, adapter parity, and eight
+`sde-agents:host-onboard`, the `handoff-packet` lint shape, adapter parity, and nine
 `handoff-001`-tagged contracts in `evals/behavioral/contracts.json`.
 
-**Next action:** Run the eight `handoff-001` contracts on a credentialed session, paired
+**Next action:** Run the nine `handoff-001` contracts on a credentialed session, paired
 against the pre-change bytes under identical conditions, and record the rates. Evals 3 and 4
 additionally owe their turns-and-tokens measurement, which no offline grader substitutes for.
 Then the released-artifact retest the issue's close condition names.

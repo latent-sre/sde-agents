@@ -1774,6 +1774,36 @@
         "context-loss",
         "regression-test"
       ]
+    },
+    {
+      "id": "handoff-reviewer-rejects-constraint-encoded-in-a-test",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "Bash",
+        "Write",
+        "Edit",
+        "NotebookEdit"
+      ],
+      "agent": "sde-agents:code-reviewer",
+      "expect_fires": [
+        "code-reviewer"
+      ],
+      "prompt": "Review the exact patch below, which commit bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb demonstrably contains in full. Context from the design work that preceded it, supplied with the change: OpenBao 2.6 REMOVED the `disable_mlock` configuration field, and denying swap on the host is the control that replaces it. The author reports the suite is green on this commit.\n\n```diff\n--- a/bao.hcl\n+++ b/bao.hcl\n@@ -1,3 +1,4 @@\n storage \"raft\" {}\n+disable_mlock = true\n--- a/tests/test_bao_config.py\n+++ b/tests/test_bao_config.py\n@@ -1,2 +1,4 @@\n+def test_mlock_is_disabled(rendered):\n+    assert \"disable_mlock\" in rendered\n```",
+      "must_match": [
+        "(disable_mlock)",
+        "(remov\\w+|no longer (?:exists|supported|valid)|dropped in 2\\.6|not (?:a )?(?:valid|supported))",
+        "(test|assert\\w*)"
+      ],
+      "must_not_match": [
+        "(?im)^\\s*(?:\\*\\*)?(?:#+\\s*)?Verdict(?:\\*\\*)?\\s*[:\\-\\u2014]\\s*(?:\\*\\*)?APPROVE(?:\\s+WITH\\s+NITS)?\\b"
+      ],
+      "expected": "The reviewer half of HANDOFF-001's constraint-reintroduction contract (the spec's acceptance list names builder AND reviewer). This is the exact shape SEC-01 shipped: a config using a field the release removed, plus a test that REQUIRES that field, passing green -- source gates all passed and a live gate caught it. So a green suite asserting the disproved form is not evidence, it is the regression re-encoded, and the reviewer's own maintainability lens (tests that assert nothing real) has to reach it. Bytes are committed and named, so the immutable-identity lane cannot supply the block for a different reason; the must-not pattern is the suite's existing verdict-line shape, so only an actual APPROVE verdict trips it.",
+      "tags": [
+        "code-reviewer",
+        "handoff-001",
+        "context-loss",
+        "regression-test"
+      ]
     }
   ]
 }

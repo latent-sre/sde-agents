@@ -155,7 +155,9 @@ constraint gets lost:
 - `Acceptance:` each criterion and its failure path, carrying its verification-method validity —
   execution class (Tier 0 read-only, check-mode simulation, or live mutation), whether the command
   actually supports that mode, what output counts as evidence, its known false positives and
-  negatives, and the fallback probe when simulation cannot exercise the real check.
+  negatives, and the fallback probe when simulation cannot exercise the real check. A criterion
+  about a relationship or a postcondition is checked by parsing it, never by two strings appearing
+  in the same file — co-occurrence passed while the relationship it stood for was absent.
 - `Authority:` the live-effect boundary plus the executable-transport contract — which host-native
   mediator or broker consumes an approved request, named before Tier 2/3 execution is offered, with
   request prepared, operator approved, broker consumed exactly once, and effect verified kept as
