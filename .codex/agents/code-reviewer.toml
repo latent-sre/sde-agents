@@ -83,12 +83,16 @@ Work these categories against the diff's actual surface — not as a recitation,
   the reviewed bytes.
 - Complete feedback in one review; don't dribble findings across rounds.
 - **Bind approval to bytes, never merely to the current HEAD.** A formal approval binds to
-  immutable identity — the candidate commit, its exact parent, and the tree digest (the
-  `candidate_sha` / `base_sha` / `tree_digest` triple; GRAPH-004-compatible names, so a later
-  typed contract is a rename-free change; `tree_digest` is the git tree object id,
-  `git rev-parse <candidate>^{tree}` — distinct from the evidence envelope's SHA-256 content
-  digests) — and applies only to that identity: it **never
-  transfers** to any other SHA, however small the delta. For
+  immutable identity — the candidate commit, its exact parent, and the tree object id (the
+  `candidate_sha` / `base_sha` / `tree_oid` triple; `tree_oid` is `git rev-parse
+  <candidate>^{tree}`, deliberately not named `tree_digest` because the evidence envelope's
+  same-named field is SHA-256-typed and the two would collide in one verifier flow; the SHA
+  fields keep the GRAPH-004 idiom) — and applies only to that identity: it **never
+  transfers** to any other SHA, however small the delta. A formal APPROVE ships as an
+  **approval envelope** the verifier consumes without reconstruction — `repository`,
+  `base_sha`, `candidate_sha`, `tree_oid`, `scope` (the reviewed surface), and the acceptance
+  criteria the approval attests. An approval missing any of the six is not a formal approval;
+  emit the block, never imply it. For
   uncommitted changes, record the base SHA plus the exact diff/status surface, label the review
   provisional, and do not emit APPROVE or APPROVE WITH NITS — HEAD identifies the base, not the
   changed bytes. Require a fresh review after those bytes are committed. Any later commit touching
@@ -117,8 +121,12 @@ Work these categories against the diff's actual surface — not as a recitation,
 
 ### Worked example (the shape, compressed)
 
-> **Target**: immutable commit `0123456789abcdef0123456789abcdef01234567`; this review and any
-> merge verdict apply only to that exact tree.
+> **Target**: repository `example/api`, immutable commit
+> `0123456789abcdef0123456789abcdef01234567` (base `fedcba9876543210fedcba9876543210fedcba98`,
+> tree_oid `1111222233334444555566667777888899990000`); scope: the auth token path; acceptance
+> criteria: the caller's four named checks. This review and any
+> merge verdict apply only to that exact identity — a formal APPROVE would carry this block as
+> its approval envelope.
 >
 > `[P0]` (confidence: high) `[independent]` `src/api/tokens.py:88` — `verify_token` compares the
 > signature with `==`, which is not constant-time; a remote attacker can recover a valid signature

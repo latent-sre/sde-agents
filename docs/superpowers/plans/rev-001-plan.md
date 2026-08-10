@@ -14,16 +14,19 @@ generalization, never per-incident append.**
    the advisory mode and stays legal on a mutable tree. A formal **approval** binds to
    immutable identity — candidate commit, exact parent, tree digest — is refused or marked
    provisional when the tree is dirty, and **never transfers**: an approval for SHA A says
-   nothing about SHA B, however small the delta. Field names follow the GRAPH-004 idiom
-   (`candidate_sha`, `base_sha`, `tree_digest`) so later promotion to a typed contract is a
-   rename-free change. Rider `lc_2c04ead3` lands beside the evidence gate: a finding's
+   nothing about SHA B, however small the delta. Field names: `candidate_sha` and `base_sha`
+   keep the GRAPH-004 idiom; the third field is **`tree_oid`** (the git tree object id) —
+   review caught that the originally planned `tree_digest` name collides with
+   `evidence_envelope.py`'s SHA-256-typed field of the same name inside one verifier flow, so
+   the "rename-free" rationale was false for that field and the rename is the fix. Rider
+   `lc_2c04ead3` lands beside the evidence gate: a finding's
    reproduction claim carries its class — executed (you ran it, within the read-only
    boundary) or reasoned (label it so) — and a repro the reviewer did not run is never
    presented as the confirmed trigger; the underlying defect may still be real, but the
    stated cause inherits the label.
 2. **`agents/verification-engineer.md` — the envelope.** Method 1 already pins revision and
    criteria; it gains the envelope's missing half: verification of a *formal approval*
-   requires the approval envelope (repository, `base_sha`, `candidate_sha`, `tree_digest`,
+   requires the approval envelope (repository, `base_sha`, `candidate_sha`, `tree_oid`,
    scope, acceptance criteria), confirms identity before executing, and fails closed to
    inconclusive on mismatch, relevant uncommitted changes, or an unreproducible snapshot.
    Evidence destination is declared by the caller — no auto-committed bundles into product

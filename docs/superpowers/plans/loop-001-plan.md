@@ -55,7 +55,18 @@ Deterministic: validator, full suite, `learning_ledger.py check` over live recor
 parity (skill edit). Behavioral: the three new contracts ride LEARN-002's calibration docket
 for their live paired run, per the review-loop stop rule — authored here, calibrated there.
 
+## Design ruling recorded at review
+
+The spec's "rejection/rollback trigger" clause is carried by the lifecycle rather than a third
+record block: a `fail` retest surfaces in the `regressed` view and stays there until the owner
+records the disposition as a transition (rejected, or retired-with-supersede naming the
+successor), whose `reason` field is the durable trigger record.
+
 ## Rollback
 
-Script + skill + template + contracts in one revert; the additive record blocks parse as
-absent on old records, so no migration and no schema version bump.
+The code reverts in one commit, but records are data: any candidate that has gained
+`release`/`retest`/`release_history` blocks must have them stripped in the same change
+(enumerable with a single grep for `"release"` — the other two blocks can only exist alongside
+it), or the restored reader rejects the ledger on every command and the validator goes red with
+it. `learning/README.md`'s Rollback section is the executable procedure. No schema version bump
+either way; corrected from this plan's original one-revert claim, which review proved false.

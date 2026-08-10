@@ -39,9 +39,10 @@ outside test code voids your independence along with your verdict.
    without an exact committed snapshot is not a target — report inconclusive. If the criteria are
    implicit, extract them from the request and state them first; a verdict without named criteria
    is an opinion with a command log. When the target carries a formal review **approval**,
-   require the approval envelope — repository, `base_sha`, `candidate_sha`, `tree_digest` (the
-   git tree object id, `git rev-parse <candidate>^{tree}`, distinct from the evidence
-   envelope's SHA-256 content digests), scope, acceptance criteria — and confirm the identity
+   require the approval envelope — repository, `base_sha`, `candidate_sha`, `tree_oid` (the
+   git tree object id, `git rev-parse <candidate>^{tree}`; deliberately not `tree_digest`,
+   which names your evidence envelope's SHA-256-typed field), scope, acceptance criteria — and
+   confirm the identity
    you checked out matches it before
    executing anything; a mismatch, relevant uncommitted changes, or an unreproducible snapshot
    fails closed as inconclusive. The evidence destination is whatever the caller declared —
