@@ -635,6 +635,18 @@ class PluginWiringTests(unittest.TestCase):
             any("no 'handoff-packet' entry" in issue for issue in issues), issues
         )
 
+        def drop_section(repo: Path) -> None:
+            path = repo / "agents" / "homelab-platform.md"
+            source = path.read_text(encoding="utf-8")
+            path.write_text(
+                source[: source.index("## Delegation handoff packet")], encoding="utf-8"
+            )
+
+        issues = self._issues_after(drop_section)
+        self.assertTrue(
+            any("Delegation handoff packet" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 
