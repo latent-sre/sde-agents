@@ -175,8 +175,9 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### REV-001 — advisory/approval split and the review-to-verify envelope
 
-**Status:** `ready` — spec approved by the operator 2026-08-09, with the condition that the
-shared material-risk matrix grows by generalization, never per-incident append.
+**Status:** `active` — spec approved by the operator 2026-08-09, with the condition that the
+shared material-risk matrix grows by generalization, never per-incident append; implementation on
+the issue #62 branch.
 
 **Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
 and never transfers to changed bytes; the verifier requires that envelope and fails closed on
@@ -184,19 +185,20 @@ mismatch; reviewer and verifier share one material-risk matrix; caller-reported 
 independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
 remain legal as advisory mode.
 
-**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md); issue #62
-with its SEC-01 field closeouts; operator ruling 2026-08-03 (smallest mechanism,
-GRAPH-004-compatible field names — GRAPH-004 stays deferred).
+**Source:** [`REV-001 spec`](superpowers/specs/rev-001-immutable-review-envelope.md) and
+[`REV-001 plan`](superpowers/plans/rev-001-plan.md); issue #62 with its SEC-01 field closeouts;
+operator ruling 2026-08-03 (smallest mechanism, GRAPH-004-compatible field names — GRAPH-004
+stays deferred).
 
 **Prerequisites:** None hard; behavioral-contract additions ride the pinned harness.
 
 **Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
 no change to working-diff lane behavior.
 
-**Next action:** Author the paired plan. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3`
-completed their ledger transitions (proposed, with destinations `verification-engineer` and
-`code-reviewer`) and ride this round per the operator's 2026-08-09 direction — the paired plan
-admits them explicitly when it is authored.
+**Next action:** Operator review and merge of the round PR, then the behavioral suite's REV-001
+cases on the released bytes (T3, real API) before the closeout retires the spec and plan to an
+outcome record. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3` are admitted by the plan and
+promoted in the same change as their destination text.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 

@@ -2,7 +2,7 @@
   "applicability": "code-reviewer failure_scenario emission and builder-agent review-feedback handling; observed once at scale (5 findings in one round), single-occurrence so not yet recurrence.",
   "candidate_id": "lc_2c04ead31cc94f14bb029bfb243132b4",
   "created_at": "2026-08-04T00:32:31.740445Z",
-  "destination": "agents/code-reviewer.md",
+  "destination": "agents/code-reviewer.md Output format (via REV-001 round)",
   "disposition": "merge",
   "evidence": {
     "environment": "ansible-core 2.21.1, CPython 3.12.3, 11-host home-lab estate",
@@ -19,8 +19,8 @@
   },
   "observation": "A reviewer-supplied failure repro was accepted as the stated cause in 3 of 5 findings from one deep-review round, but running each repro showed the stated trigger did not reproduce while a narrower one did. The underlying defects were real in all three cases, so the findings were useful; the supplied rationale was not. Examples: a claim that a censored assert means fail_msg never reaches the operator (it does, via the error banner); a claim of two ConfigParser triggers where neither fires (interpolation is lazy per-key, and CPython auto-enables UTF-8 mode under LC_ALL=C); a claim that a document undercounted at two where the derived count was five across four roles.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Builder-consuming half already owned verbatim at sde-fullstack.md:108. Reviewer-emitting half exists only for security findings at code-reviewer.md:55. Fleet reviewers cannot execute code per code-reviewer.md:128, so the residue is traced-and-confirmed-by-reading versus assumed-runtime-semantics, not measured versus reasoned. Recurrence 1.",
+  "promotion_state": "promoted",
+  "reason": "Landed in the REV-001 round: the confidence bullet now requires every failure scenario to be labeled traced (path followed) or inferred (reasoned), so a consumer can tell which scenarios were walked.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Builder-consuming half already owned verbatim at sde-fullstack.md:108. Reviewer-emitting half exists only for security findings at code-reviewer.md:55. Fleet reviewers cannot execute code per code-reviewer.md:128, so the residue is traced-and-confirmed-by-reading versus assumed-runtime-semantics, not measured versus reasoned. Recurrence 1.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T06:37:37.591831Z",
+      "destination": "agents/code-reviewer.md Output format (via REV-001 round)",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "REV-001 spec approved 2026-08-09 admits this candidate; the reviewer-emitting half lands as a traced-versus-inferred label on the confidence bullet, matching the fleet's evidence discipline without claiming execution a reviewer cannot perform.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T06:37:47.254656Z",
+      "destination": "agents/code-reviewer.md Output format (via REV-001 round)",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed in the REV-001 round: the confidence bullet now requires every failure scenario to be labeled traced (path followed) or inferred (reasoned), so a consumer can tell which scenarios were walked.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:50:06.075011Z"
+  "updated_at": "2026-08-10T06:37:47.254656Z"
 }

@@ -217,7 +217,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "ladder-report-not-absorb",
             "verifier-fails-honestly-no-product-edit",
         }
-        self.assertEqual(52, len(self.document["cases"]))
+        self.assertEqual(57, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:

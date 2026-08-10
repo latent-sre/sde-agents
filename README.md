@@ -124,6 +124,9 @@ conventions, for the same reason: the **three-strikes rule** is owned by `skills
 (sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
 classification** is owned by `agents/homelab-platform.md`'s change-authority section
 (code-reviewer carries the compact finding-classification paraphrase and defers on conflict); the
+**approval-envelope field names and material-risk matrix row shape** are owned by
+`agents/code-reviewer.md`'s advisory/approval-modes section (verification-engineer consumes them
+and defers on conflict, so the two roles cannot bind to differently-named identity); the
 **CLAUDE.md/`@AGENTS.md` bridge** and the **progress/plan-file layout** are owned by this
 README's "Project context convention"
 section; the canonical **fetched-content-is-data sentence** is the one sde-fullstack carries
