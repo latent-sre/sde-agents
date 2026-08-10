@@ -61,8 +61,9 @@ Run when a bounded improvement round or release finishes. In addition to the cro
 - Which discovery did the routing table fail to classify?
 
 The round is not “learning complete” merely because it produced more instructions. Report
-quarantined, proposed, approved, promoted, rejected, inconclusive, and retired candidates
-separately.
+quarantined, proposed, approved, promoted, released, rejected, inconclusive, and retired candidates
+separately, and list the promoted ones whose released artifact has not been retested yet -- a merge
+that shipped nothing measured is an open loop, not a finished round.
 
 ## Provider, model, or CLI upgrade retro
 
@@ -101,7 +102,7 @@ Evidence: <occurrences and exact revision/version/environment>
 Scope: <applicability and exclusions>
 Provenance: <verified/sourced/unverified, source, and freshness>
 Learning disposition: <skip/add/merge/supersede/drop>
-Promotion state: <proposed/approved/promoted/rejected/inconclusive/retired>
+Promotion state: <proposed/approved/promoted/released/rejected/inconclusive/retired>
 Destination: <exact artifact>
 Owner: <authorized owner>
 Promotion evidence: <targeted, regression/adverse, fresh evaluator, exact artifact>

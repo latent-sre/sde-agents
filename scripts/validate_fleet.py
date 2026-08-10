@@ -283,7 +283,7 @@ LEARNING_LIFECYCLE_OWNER_PACKET_SLOT = """- **Learning**: end every non-trivial 
   `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
   `Provenance: <verified|sourced|unverified> — <source and freshness>`,
   `Learning disposition: <skip|add|merge|supersede|drop>`,
-  `Promotion state: <proposed|approved|promoted|rejected|inconclusive|retired>`,
+  `Promotion state: <proposed|approved|promoted|released|rejected|inconclusive|retired>`,
   `Destination: <owned artifact or handoff>`, and `Owner: <authorized owner>`. Choose one accepted
   disposition and one separate post-triage state. Do not add `(proposed recommendation)` or use
   `quarantined`; those mark intake-only handoffs from roles without the full loop. A lifecycle

@@ -53,6 +53,43 @@ class LearningLedgerTests(unittest.TestCase):
         values.update(overrides)
         return self.ledger.add(**values)  # type: ignore[arg-type]
 
+    def _promote(self, candidate_id: str) -> dict[str, object]:
+        record: dict[str, object] = {}
+        for state in ("proposed", "approved", "promoted"):
+            record = self.ledger.transition(
+                candidate_id,
+                promotion_state=state,
+                disposition="add",
+                destination="skill:self-improve-loop",
+                owner="fleet-maintainer",
+                reason=f"Reviewed evidence supports the {state} state.",
+            )
+        return record
+
+    def _retest(self, candidate_id: str, **overrides: object) -> dict[str, object]:
+        values: dict[str, object] = {
+            "released_version": "1.7.3",
+            "environment": "installed plugin 1.7.3, claude code cli",
+            "result": "pass",
+            "evidence": "The originating scenario ran on the released artifact and passed.",
+            "rollback_trigger": "Reopen the candidate if the released scenario regresses.",
+            "owner": "fleet-maintainer",
+            "reason": "Released-artifact retest of the originating scenario.",
+            "sensitivity_reviewed": True,
+        }
+        values.update(overrides)
+        return self.ledger.retest(candidate_id, **values)  # type: ignore[arg-type]
+
+    def _release(self, candidate_id: str) -> dict[str, object]:
+        return self.ledger.transition(
+            candidate_id,
+            promotion_state="released",
+            disposition="add",
+            destination="skill:self-improve-loop",
+            owner="fleet-maintainer",
+            reason="The shipped version carries the candidate and its scenario was retested.",
+        )
+
     def _cli(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(SCRIPT), "--root", str(self.root), *arguments],
@@ -584,6 +621,26 @@ class LearningLedgerTests(unittest.TestCase):
         ):
             self.ledger.check()
 
+    def test_schema_validation_rejects_a_hand_written_release_without_a_retest(self) -> None:
+        record = self._add()
+        candidate_id = str(record["candidate_id"])
+        self._promote(candidate_id)
+        self._advance(days=1)
+        self._retest(candidate_id)
+        released = self._release(candidate_id)
+
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        payload = json.loads(json.dumps(released))
+        # The state is only worth having if it cannot be written by hand either: strip the retest
+        # that certified this release and the record must stop validating.
+        payload["retest_history"] = []
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError,
+            "must carry a passed or explicitly waived released-artifact",
+        ):
+            self.ledger.check()
+
     def test_legacy_schema_record_remains_readable(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
@@ -594,10 +651,30 @@ class LearningLedgerTests(unittest.TestCase):
             payload["observation"], payload["expected_behavior"], payload["scope"]
         )
         del payload["review_history"]
+        del payload["retest_history"]
         path.write_text(json.dumps(payload), encoding="utf-8")
 
         checked = self.ledger.check()
         self.assertEqual(learning_ledger.LEGACY_SCHEMA_VERSION, checked[0]["schema_version"])
+
+    def test_review_schema_record_remains_readable_and_upgrades_on_retest(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["schema_version"] = learning_ledger.REVIEW_SCHEMA_VERSION
+        del payload["retest_history"]
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+        checked = self.ledger.check()
+        self.assertEqual(learning_ledger.REVIEW_SCHEMA_VERSION, checked[0]["schema_version"])
+
+        self._promote(candidate_id)
+        # A record only gains the newer shape in the write that needs it, so a schema-2 record is
+        # still readable above and becomes schema-3 exactly here.
+        upgraded = self._retest(candidate_id)
+        self.assertEqual(learning_ledger.SCHEMA_VERSION, upgraded["schema_version"])
+        self.assertEqual(1, len(upgraded["retest_history"]))
 
     def test_promoted_candidate_can_be_invalidated_but_disposition_must_fit_state(self) -> None:
         record = self._add()
@@ -656,6 +733,228 @@ class LearningLedgerTests(unittest.TestCase):
         self.assertEqual({stale["candidate_id"]}, stale_ids)
         pending_ids = {item["candidate_id"] for item in self.ledger.list_records("pending")}
         self.assertEqual({stale["candidate_id"], fresh["candidate_id"]}, pending_ids)
+
+    def test_merging_a_candidate_does_not_release_it_without_a_retest(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        promoted = self._promote(candidate_id)
+        self.assertEqual("promoted", promoted["promotion_state"])
+
+        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
+        before = path.read_bytes()
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError,
+            "cannot transition to released",
+        ):
+            self._release(candidate_id)
+        self.assertEqual(before, path.read_bytes())
+
+        # A failed released-artifact retest is evidence, not permission.
+        self._advance(days=1)
+        self._retest(candidate_id, result="fail", evidence="The released plugin still regressed.")
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError,
+            "cannot transition to released",
+        ):
+            self._release(candidate_id)
+
+        self._advance(days=1)
+        self._retest(candidate_id)
+        released = self._release(candidate_id)
+        self.assertEqual("released", released["promotion_state"])
+        self.assertEqual(2, len(released["retest_history"]))
+        self.ledger.check()
+
+    def test_waived_retest_closes_the_loop_only_with_a_recorded_reason(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        self._promote(candidate_id)
+        self._advance(days=1)
+        waived = self._retest(
+            candidate_id,
+            result="waived",
+            evidence="The originating estate retired the workflow before the release shipped.",
+            reason="Owner waived the retest: the originating scenario no longer exists.",
+        )
+        self.assertEqual("waived", waived["retest_history"][0]["result"])
+        released = self._release(candidate_id)
+        self.assertEqual("released", released["promotion_state"])
+
+    def test_release_cannot_inherit_a_retest_recorded_before_the_merge_it_certifies(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        self._promote(candidate_id)
+        self._advance(days=1)
+        self._retest(candidate_id)
+        self._advance(days=1)
+        self._release(candidate_id)
+
+        # A released candidate that regresses can be reopened and re-merged. The second merge is
+        # different bytes, so the first release's PASS must not certify it.
+        self._advance(days=1)
+        self.ledger.transition(
+            candidate_id,
+            promotion_state="rejected",
+            disposition="drop",
+            destination="proposal:none",
+            owner="fleet-maintainer",
+            reason="The released behavior regressed in the originating scenario.",
+        )
+        self._advance(days=1)
+        self.ledger.observe(
+            candidate_id,
+            provenance="verified",
+            source_kind="test",
+            source_reference="tests/test_worker.py::test_retry_budget_second",
+            revision="def456",
+            environment="python-3.13/windows",
+            sensitivity_reviewed=True,
+        )
+        for state in ("proposed", "approved", "promoted"):
+            self.ledger.transition(
+                candidate_id,
+                promotion_state=state,
+                disposition="add",
+                destination="skill:self-improve-loop",
+                owner="fleet-maintainer",
+                reason=f"The repaired change supports the {state} state.",
+            )
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError,
+            "cannot transition to released",
+        ):
+            self._release(candidate_id)
+
+    def test_retest_requires_a_merged_candidate_an_exact_version_and_an_attestation(self) -> None:
+        record = self._add()
+        candidate_id = record["candidate_id"]
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError,
+            "has nothing released to retest",
+        ):
+            self._retest(candidate_id)
+
+        self._promote(candidate_id)
+        self._advance(days=1)
+        for version in ("latest", "main", "1.7", "v1.7.3.4"):
+            with self.assertRaisesRegex(
+                learning_ledger.LedgerError,
+                "must name one exact released version",
+            ):
+                self._retest(candidate_id, released_version=version)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "sensitivity-reviewed"):
+            self._retest(candidate_id, sensitivity_reviewed=False)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "retest result must be one of"):
+            self._retest(candidate_id, result="green")
+        self.assertEqual(
+            [], json.loads(
+                (self.root / "learning" / "candidates" / f"{candidate_id}.json").read_text(
+                    encoding="utf-8"
+                )
+            )["retest_history"]
+        )
+
+    def test_awaiting_retest_view_holds_merged_candidates_until_the_release_is_recorded(
+        self,
+    ) -> None:
+        merged = self._add()
+        untouched = self._add(
+            observation="A verifier omitted the exact target revision in one evidence packet.",
+            expected_behavior="Every evidence packet binds the exact target revision.",
+            scope="verification evidence packets",
+            source_reference="tests/test_verifier.py::test_revision",
+        )
+        candidate_id = str(merged["candidate_id"])
+        self.assertEqual([], self.ledger.list_records("awaiting-retest"))
+
+        self._promote(candidate_id)
+        awaiting = self.ledger.list_records("awaiting-retest")
+        self.assertEqual([candidate_id], [item["candidate_id"] for item in awaiting])
+        self.assertIs(False, awaiting[0]["release_retested"])
+        self.assertNotIn(
+            candidate_id,
+            {item["candidate_id"] for item in self.ledger.list_records("pending")},
+        )
+        self.assertIn(
+            untouched["candidate_id"],
+            {item["candidate_id"] for item in self.ledger.list_records("pending")},
+        )
+
+        # A recorded retest is a measurement, not closure: the candidate stays listed until an
+        # owner records the released transition.
+        self._advance(days=1)
+        self._retest(candidate_id)
+        awaiting = self.ledger.list_records("awaiting-retest")
+        self.assertEqual([candidate_id], [item["candidate_id"] for item in awaiting])
+        self.assertIs(True, awaiting[0]["release_retested"])
+
+        self._release(candidate_id)
+        self.assertEqual([], self.ledger.list_records("awaiting-retest"))
+
+    def test_cli_retest_and_release_round_trip(self) -> None:
+        record = self._add()
+        candidate_id = str(record["candidate_id"])
+        self._promote(candidate_id)
+        blocked = self._cli(
+            "transition",
+            candidate_id,
+            "--promotion-state",
+            "released",
+            "--disposition",
+            "add",
+            "--destination",
+            "skill:self-improve-loop",
+            "--owner",
+            "fleet-maintainer",
+            "--reason",
+            "The shipped version carries the candidate.",
+        )
+        self.assertEqual(1, blocked.returncode)
+        self.assertIn("released-artifact retest", blocked.stderr)
+
+        retested = self._cli(
+            "retest",
+            candidate_id,
+            "--released-version",
+            "1.7.3",
+            "--environment",
+            "installed plugin 1.7.3, claude code cli",
+            "--result",
+            "pass",
+            "--evidence",
+            "The originating scenario ran on the released artifact and passed.",
+            "--rollback-trigger",
+            "Reopen the candidate if the released scenario regresses.",
+            "--owner",
+            "fleet-maintainer",
+            "--reason",
+            "Released-artifact retest of the originating scenario.",
+            "--sensitivity-reviewed",
+        )
+        self.assertEqual(0, retested.returncode, retested.stderr)
+        self.assertEqual("1.7.3", json.loads(retested.stdout)["retest_history"][0][
+            "released_version"
+        ])
+
+        released = self._cli(
+            "transition",
+            candidate_id,
+            "--promotion-state",
+            "released",
+            "--disposition",
+            "add",
+            "--destination",
+            "skill:self-improve-loop",
+            "--owner",
+            "fleet-maintainer",
+            "--reason",
+            "The shipped version carries the candidate.",
+        )
+        self.assertEqual(0, released.returncode, released.stderr)
+        self.assertEqual("released", json.loads(released.stdout)["promotion_state"])
+        listed = self._cli("list", "--view", "awaiting-retest")
+        self.assertEqual(0, listed.returncode, listed.stderr)
+        self.assertEqual([], json.loads(listed.stdout))
 
     def test_malformed_unknown_and_oversized_records_fail_closed(self) -> None:
         candidates = self.root / "learning" / "candidates"

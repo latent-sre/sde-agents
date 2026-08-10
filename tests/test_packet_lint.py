@@ -824,7 +824,7 @@ class OtherShapes(unittest.TestCase):
 class CanonicalLearningPrompts(unittest.TestCase):
     OWNER_AGENTS = ("prompt-engineer", "sde-fullstack", "verification-engineer")
     MATRIX_FRAGMENTS = (
-        "proposed|approved|promoted → add|merge|supersede",
+        "proposed|approved|promoted|released → add|merge|supersede",
         "inconclusive → skip",
         "rejected → skip|drop",
         "retired → skip|drop|merge|supersede",
@@ -836,6 +836,14 @@ class CanonicalLearningPrompts(unittest.TestCase):
             with self.subTest(name=name):
                 for fragment in self.MATRIX_FRAGMENTS:
                     self.assertIn(fragment, content)
+                # The fragments above pin wording; this pins coverage. A state added to the ledger
+                # that no lifecycle-owner prompt teaches would otherwise be storable but never
+                # emitted -- a lifecycle half the fleet cannot report.
+                taught = content.split("valid state → disposition pairs are", 1)[1].split(
+                    "Never emit another pair", 1
+                )[0]
+                for state in learning_ledger.STATE_DISPOSITIONS:
+                    self.assertIn(state, taught)
 
     def test_worked_examples_use_the_canonical_none_closeout(self) -> None:
         for name in ("prompt-engineer", "sde-fullstack"):

@@ -39,7 +39,8 @@ python scripts/learning_ledger.py --root <repo> add <bounded evidence fields>
 python scripts/learning_ledger.py --root <repo> observe <candidate-id> <new source fields>
 python scripts/learning_ledger.py --root <repo> transition <candidate-id> <reviewed decision fields>
 python scripts/learning_ledger.py --root <repo> review <candidate-id> <review fields>
-python scripts/learning_ledger.py --root <repo> list --view <pending|stale|all>
+python scripts/learning_ledger.py --root <repo> retest <candidate-id> <released-artifact result>
+python scripts/learning_ledger.py --root <repo> list --view <pending|stale|awaiting-retest|all>
 python scripts/learning_ledger.py --root <repo> check
 ```
 
@@ -55,9 +56,9 @@ anchor.
 ## Lifecycle and authority
 
 `quarantined` records have no disposition. Triaged records carry one of `skip`, `add`, `merge`,
-`supersede`, or `drop`, plus a separate state: `proposed`, `approved`, `promoted`, `rejected`,
-`inconclusive`, or `retired`. The ledger enforces valid state/disposition combinations and retains
-transition history.
+`supersede`, or `drop`, plus a separate state: `proposed`, `approved`, `promoted`, `released`,
+`rejected`, `inconclusive`, or `retired`. The ledger enforces valid state/disposition combinations
+and retains transition history.
 
 Returning `inconclusive`, `rejected`, or `retired` to `proposed` requires a distinct observation
 whose timestamp is later than the transition into that adverse state. A changed provenance label on
@@ -69,20 +70,25 @@ An explicit `review` records reviewer, rationale, and old/new deadlines, moves `
 and cannot cross `retention.expires_at`. It does not change the evidence `as_of` timestamp or
 recurrence count. Retention extension remains outside the CLI.
 
-Advancing to `proposed`, `approved`, or `promoted` requires a current review date and unexpired
-retention. Review a stale candidate explicitly before a positive transition; an expired candidate
+Advancing to `proposed`, `approved`, `promoted`, or `released` requires a current review date and
+unexpired retention. Review a stale candidate explicitly before a positive transition; an expired candidate
 cannot advance. Rejection and subtraction remain possible so old evidence can be invalidated or
 retired without first pretending it is current.
 
 No state authorizes the CLI to edit an agent, skill, test, runbook, or provider memory. `approved`
-records owner approval; `promoted` records that a separately reviewed change landed. `retired` is
+records owner approval; `promoted` records that a separately reviewed change landed. `released`
+records that a named released version was retested against the originating or an equivalent
+scenario, and it is reachable only after `retest` attaches a passed or explicitly waived result for
+the merge being released -- a source-level PASS is not a released-artifact PASS. `retired` is
 logical subtraction. Retention expiry only triggers review; physical deletion remains a separately
 reviewed Git change. Current repository and runtime evidence can invalidate any retained claim.
 
 ## Cross-task and maintenance use
 
 Start a cross-task or round retro from `list --view pending` and `list --view stale`, then bind each
-candidate back to its compact source references. Validate the store with `check` before and after a
+candidate back to its compact source references. A release or upgrade retro also runs
+`list --view awaiting-retest`, which names the merged candidates whose released artifact nobody has
+certified yet; nothing schedules that query, so a release that never asks leaves the loop open. Validate the store with `check` before and after a
 mutation. A read overlapping a write may fail closed on transient state; retry after the single
 writer completes rather than weakening validation.
 

@@ -121,14 +121,14 @@ Verdict first: pass, fail, or inconclusive — per criterion and overall — the
   `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
   `Provenance: <verified|sourced|unverified> — <source and freshness>`,
   `Learning disposition: <skip|add|merge|supersede|drop>`,
-  `Promotion state: <proposed|approved|promoted|rejected|inconclusive|retired>`,
+  `Promotion state: <proposed|approved|promoted|released|rejected|inconclusive|retired>`,
   `Destination: <owned artifact or handoff>`, and `Owner: <authorized owner>`. Choose one accepted
   disposition and one separate post-triage state. Do not add `(proposed recommendation)` or use
   `quarantined`; those mark intake-only handoffs from roles without the full loop. A lifecycle
   result never expands implementation or approval authority. Silence is not a disposition.
 
 For lifecycle-owner candidates, valid state → disposition pairs are
-`proposed|approved|promoted → add|merge|supersede`, `inconclusive → skip`,
+`proposed|approved|promoted|released → add|merge|supersede`, `inconclusive → skip`,
 `rejected → skip|drop`, and `retired → skip|drop|merge|supersede`. Never emit another pair.
 
 Label every load-bearing claim: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact — a verdict resting on an [unverified] execution is inconclusive, not a pass.

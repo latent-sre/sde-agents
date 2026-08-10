@@ -176,6 +176,31 @@ cause is unclear exits to `root-cause` rather than consuming another turn.
 Do not promote a candidate or merge or ship its artifact change while any applicable promotion gate
 is missing.
 
+## Closure gate: retest the released artifact
+
+Merging is not closure. Every gate above judges source, and a candidate can pass all seven yet fail
+in the installed release, another host adapter, or the workflow that reported it. The retained
+lifecycle therefore continues past the merge:
+
+```text
+field observation -> sanitized candidate -> duplicate check and triage -> owner and target release
+  -> frozen baseline and paired evaluation -> canonical change plus generated-adapter parity
+  -> released version -> originating or equivalent scenario retested on that released artifact
+  -> measured result attached, then closed, revised, or rejected
+```
+
+8. **Released-artifact retest** — after the change ships, rerun the originating or an equivalent
+   scenario against the exact released version and attach the measured result.
+
+Report a source-level PASS as a source-level PASS. A retained item closes as successful only on a
+named released version whose retest passed, or on an owner-recorded waiver stating that the retest
+is impossible or no longer applicable. A failed retest reopens the candidate; it does not quietly
+expire. Nothing schedules this — a release, an upgrade, or a retro asks for the outstanding list.
+
+For this fleet source, `scripts/learning_ledger.py` enforces the same rule on the record:
+`released` is reachable only after `retest` attaches a passed or waived result for the merge being
+released, and `list --view awaiting-retest` is that outstanding list.
+
 ## Improvement patterns
 
 - **Evaluator → optimizer:** one role proposes; a separate role critiques against explicit criteria;
@@ -204,9 +229,9 @@ For a full retro, report:
 - **Disposition** — exactly one of skip / add / merge / supersede / drop, with rationale;
 - **Destination and owner** — exact artifact, or an evidence-bound handoff if out of scope;
 - **Verification** — targeted, regression/adverse, fresh-context, and exact-artifact results;
-- **Promotion state** — proposed / approved / promoted / rejected / inconclusive / retired, plus
-  rollback and recheck trigger. `quarantined` belongs only to an intake-only agent handoff, not a
-  triaged full retro.
+- **Promotion state** — proposed / approved / promoted / released / rejected / inconclusive /
+  retired, plus rollback and recheck trigger. `released` requires the retest above; `quarantined`
+  belongs only to an intake-only agent handoff, not a triaged full retro.
 
 The decision lines are a machine-readable handoff contract. In a full retro or a planning-only
 decision, render the canonical candidate block on literal lines beginning `Learning: candidate`,
@@ -220,7 +245,7 @@ post-triage lifecycle state on `Promotion state:`. Missing but obtainable eviden
 
 The valid post-triage state → disposition pairs are:
 
-- `proposed`, `approved`, or `promoted` → `add`, `merge`, or `supersede`;
+- `proposed`, `approved`, `promoted`, or `released` → `add`, `merge`, or `supersede`;
 - `inconclusive` → `skip`;
 - `rejected` → `skip` or `drop`;
 - `retired` → `skip`, `drop`, `merge`, or `supersede`.

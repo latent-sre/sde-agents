@@ -186,6 +186,7 @@ LEARNING_STATE_DISPOSITIONS = {
     "proposed": frozenset({"add", "merge", "supersede"}),
     "approved": frozenset({"add", "merge", "supersede"}),
     "promoted": frozenset({"add", "merge", "supersede"}),
+    "released": frozenset({"add", "merge", "supersede"}),
     "inconclusive": frozenset({"skip"}),
     "rejected": frozenset({"skip", "drop"}),
     "retired": frozenset({"skip", "drop", "merge", "supersede"}),

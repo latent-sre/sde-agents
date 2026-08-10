@@ -21,8 +21,9 @@ from typing import Callable, Iterator, Mapping, Sequence
 
 
 LEGACY_SCHEMA_VERSION = 1
-SCHEMA_VERSION = 2
-SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, SCHEMA_VERSION}
+REVIEW_SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, REVIEW_SCHEMA_VERSION, SCHEMA_VERSION}
 PROVENANCE = {"verified", "sourced", "unverified"}
 DISPOSITIONS = {"skip", "add", "merge", "supersede", "drop"}
 PROMOTION_STATES = {
@@ -30,18 +31,28 @@ PROMOTION_STATES = {
     "proposed",
     "approved",
     "promoted",
+    "released",
     "inconclusive",
     "rejected",
     "retired",
 }
 PENDING_STATES = {"quarantined", "proposed", "approved", "inconclusive"}
+# `promoted` is deliberately absent from PENDING_STATES: the candidate's decision queue really is
+# done. What it still owes is a measurement, which the awaiting-retest view answers instead, so
+# the drift report keeps meaning "someone must decide" rather than "someone must measure".
+LIST_VIEWS = {"pending", "stale", "awaiting-retest", "all"}
 ADVERSE_STATES = {"inconclusive", "rejected", "retired"}
-FRESH_PROMOTION_STATES = {"proposed", "approved", "promoted"}
+FRESH_PROMOTION_STATES = {"proposed", "approved", "promoted", "released"}
 TRANSITIONS = {
     "quarantined": {"proposed", "inconclusive", "rejected"},
     "proposed": {"approved", "inconclusive", "rejected", "retired"},
     "approved": {"promoted", "inconclusive", "rejected", "retired"},
-    "promoted": {"rejected", "retired"},
+    # `promoted` means the canonical change merged. It is deliberately NOT terminal: a candidate
+    # can pass every source-level gate and still fail in the installed plugin, another host
+    # adapter, or the workflow that reported it. `released` is the only state that records the
+    # exact shipped version retested against the originating scenario.
+    "promoted": {"released", "rejected", "retired"},
+    "released": {"rejected", "retired"},
     "inconclusive": {"proposed", "rejected", "retired"},
     "rejected": {"proposed", "inconclusive"},
     "retired": {"proposed", "inconclusive"},
@@ -50,10 +61,19 @@ STATE_DISPOSITIONS = {
     "proposed": {"add", "merge", "supersede"},
     "approved": {"add", "merge", "supersede"},
     "promoted": {"add", "merge", "supersede"},
+    "released": {"add", "merge", "supersede"},
     "inconclusive": {"skip"},
     "rejected": {"skip", "drop"},
     "retired": {"skip", "drop", "merge", "supersede"},
 }
+# A released-artifact retest is evidence about the bytes users received, so its result class is
+# distinct from a source-level PASS. `waived` is the owner-approved escape hatch the closure rule
+# names -- retest impossible or no longer applicable -- and it is recorded, never implied.
+RETEST_RESULTS = {"pass", "fail", "waived"}
+RETEST_CLOSING_RESULTS = {"pass", "waived"}
+# The point of the gate is an EXACT released version. A loose token ("latest", "main", "current")
+# would satisfy a non-empty-string check while naming nothing retestable, so the shape is pinned.
+RELEASED_VERSION_RE = re.compile(r"^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$")
 
 CANDIDATE_ID_RE = re.compile(r"^lc_[0-9a-f]{32}$")
 SOURCE_KIND_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
@@ -63,6 +83,9 @@ MAX_FILE_BYTES = 64 * 1024
 MAX_SOURCE_REFS = 64
 MAX_TRANSITIONS = 32
 MAX_REVIEWS = 32
+# One release retest per shipped version, with room for a failed retest and its repair. A
+# candidate needing more than this is not awaiting a retest; it is a different candidate.
+MAX_RETESTS = 16
 MAX_OBSERVATION_LENGTH = 1_000
 FIELD_LIMITS = {
     "observation": MAX_OBSERVATION_LENGTH,
@@ -76,6 +99,10 @@ FIELD_LIMITS = {
     "destination": 256,
     "owner": 128,
     "reason": 1_000,
+    "released_version": 64,
+    "retest_environment": 256,
+    "retest_evidence": 500,
+    "rollback_trigger": 500,
 }
 RETENTION_POLICY = "review-or-expire"
 SENSITIVITY_STATEMENT = (
@@ -106,6 +133,16 @@ LEGACY_TOP_LEVEL_FIELDS = {
     "retention",
 }
 TOP_LEVEL_FIELDS = LEGACY_TOP_LEVEL_FIELDS | {"review_history"}
+RELEASE_TOP_LEVEL_FIELDS = TOP_LEVEL_FIELDS | {"retest_history"}
+# Field sets are version-keyed rather than "legacy or current" so a record written before a
+# shape extension stays readable exactly as written. A silent in-place migration of tracked
+# records would be indistinguishable from a hand edit in the Git diff that is this store's only
+# trust anchor.
+SCHEMA_FIELDS = {
+    LEGACY_SCHEMA_VERSION: LEGACY_TOP_LEVEL_FIELDS,
+    REVIEW_SCHEMA_VERSION: TOP_LEVEL_FIELDS,
+    SCHEMA_VERSION: RELEASE_TOP_LEVEL_FIELDS,
+}
 SOURCE_FIELDS = {
     "provenance",
     "source_kind",
@@ -129,6 +166,20 @@ REVIEW_FIELDS = {
     "review_at",
     "owner",
     "reason",
+}
+# A retest entry is evidence about ONE released artifact. Version, environment, result, and
+# rollback trigger travel together because a result without the version it was measured on is
+# exactly the source-PASS-reported-as-released-PASS confusion this record exists to prevent.
+RETEST_FIELDS = {
+    "at",
+    "released_version",
+    "environment",
+    "result",
+    "evidence",
+    "rollback_trigger",
+    "owner",
+    "reason",
+    "sensitivity_reviewed",
 }
 
 SECRET_PATTERNS = (
@@ -360,6 +411,30 @@ def _validate_candidate_id(value: object) -> str:
     return value
 
 
+def _retest_closes_loop(retest: Mapping[str, object]) -> bool:
+    """A retest that can carry a candidate to ``released``: it passed, or it was waived."""
+    return retest.get("result") in RETEST_CLOSING_RESULTS
+
+
+def _qualifying_retest_at(
+    retests: Sequence[tuple[datetime, Mapping[str, object]]],
+    promoted_at: datetime | None,
+    release_at: datetime,
+) -> bool:
+    """True when a closing retest was recorded for the merge that is being released.
+
+    The retest must land after the promotion it certifies and before the release transition.
+    Without the lower bound, a candidate rejected after release could reopen, re-merge, and
+    inherit the previous version's PASS -- a released-artifact result for bytes nobody ran.
+    """
+    return any(
+        _retest_closes_loop(retest)
+        and at <= release_at
+        and (promoted_at is None or at >= promoted_at)
+        for at, retest in retests
+    )
+
+
 def _safe_positive_days(value: object, field: str, *, allow_zero: bool) -> int:
     lower = 0 if allow_zero else 1
     if (
@@ -373,6 +448,50 @@ def _safe_positive_days(value: object, field: str, *, allow_zero: bool) -> int:
     return value
 
 
+def _upgrade_schema(record: dict[str, object]) -> None:
+    """Bring one record to the current shape, only in a write that needs the newer fields.
+
+    A record nobody touches keeps the exact bytes it was reviewed with, so an upgrade is never
+    an invisible sweep across the store: it appears in the same diff as the command that needed
+    the field.
+    """
+    if record["schema_version"] == SCHEMA_VERSION:
+        return
+    if record["schema_version"] == LEGACY_SCHEMA_VERSION:
+        record["fingerprint"] = candidate_fingerprint(
+            str(record["observation"]),
+            str(record["expected_behavior"]),
+            str(record["scope"]),
+            str(record["applicability"]),
+        )
+    record["schema_version"] = SCHEMA_VERSION
+    record.setdefault("review_history", [])
+    record.setdefault("retest_history", [])
+
+
+def _release_gate_state(
+    record: Mapping[str, object],
+) -> tuple[datetime | None, list[tuple[datetime, Mapping[str, object]]]]:
+    """The two inputs the released gate reads: the merge being certified, and its retests.
+
+    Both the gate in `transition` and the awaiting-retest view read this, so a candidate can
+    never be listed as retested by one and blocked by the other.
+    """
+    promoted_at = next(
+        (
+            _parse_timestamp(item["at"], "transition_history[].at")
+            for item in reversed(list(record["transition_history"]))
+            if item["to"] == "promoted"
+        ),
+        None,
+    )
+    retests = [
+        (_parse_timestamp(item["at"], "retest_history[].at"), item)
+        for item in record.get("retest_history", [])
+    ]
+    return promoted_at, retests
+
+
 def validate_candidate(record: Mapping[str, object]) -> None:
     missing_core = LEGACY_TOP_LEVEL_FIELDS - set(record)
     if missing_core:
@@ -384,9 +503,7 @@ def validate_candidate(record: Mapping[str, object]) -> None:
         or schema_version not in SUPPORTED_SCHEMA_VERSIONS
     ):
         raise LedgerError(f"unsupported schema_version: {schema_version!r}")
-    expected_fields = (
-        LEGACY_TOP_LEVEL_FIELDS if schema_version == LEGACY_SCHEMA_VERSION else TOP_LEVEL_FIELDS
-    )
+    expected_fields = SCHEMA_FIELDS[schema_version]
     _exact_fields(record, expected_fields, "candidate")
     candidate_id = _validate_candidate_id(record["candidate_id"])
     created = _parse_timestamp(record["created_at"], "created_at")
@@ -593,6 +710,58 @@ def validate_candidate(record: Mapping[str, object]) -> None:
         previous_review_time = at
     if review_history and review_at != previous_review_at:
         raise LedgerError("freshness.review_at must match the latest explicit review")
+
+    retest_history = record["retest_history"] if schema_version == SCHEMA_VERSION else []
+    if not isinstance(retest_history, list) or len(retest_history) > MAX_RETESTS:
+        raise LedgerError(f"retest_history must contain at most {MAX_RETESTS} entries")
+    retests: list[tuple[datetime, Mapping[str, object]]] = []
+    previous_retest_time = created
+    for index, item in enumerate(retest_history):
+        retest = _require_mapping(item, f"retest_history[{index}]")
+        _exact_fields(retest, RETEST_FIELDS, f"retest_history[{index}]")
+        at = _parse_timestamp(retest["at"], f"retest_history[{index}].at")
+        if at < previous_retest_time or at > updated:
+            raise LedgerError(
+                "retest history timestamps must be chronological and not in the future"
+            )
+        released_version = _safe_text(retest["released_version"], "released_version")
+        if not RELEASED_VERSION_RE.fullmatch(released_version or ""):
+            raise LedgerError(
+                f"retest_history[{index}].released_version must name one exact released version "
+                "(for example 1.7.3); a moving label such as 'latest' records no retestable artifact"
+            )
+        if retest["result"] not in RETEST_RESULTS:
+            raise LedgerError(
+                f"retest_history[{index}].result must be one of {sorted(RETEST_RESULTS)}"
+            )
+        if retest["sensitivity_reviewed"] is not True:
+            raise LedgerError(
+                f"retest_history[{index}].sensitivity_reviewed must be true; a retest record is "
+                "operator-attested evidence like every other ledger source"
+            )
+        _safe_text(retest["environment"], "retest_environment")
+        _safe_text(retest["evidence"], "retest_evidence")
+        _safe_text(retest["rollback_trigger"], "rollback_trigger")
+        for field in ("owner", "reason"):
+            _safe_text(retest[field], field)
+        retests.append((at, retest))
+        previous_retest_time = at
+
+    # The closure rule, enforced on the record rather than only in the command that writes it:
+    # `released` is reachable only with a released-artifact retest that passed or was explicitly
+    # waived. Without this, a hand-edited record could claim the loop closed on a source-level
+    # PASS -- the exact substitution the state exists to make impossible.
+    promoted_at: datetime | None = None
+    for index, item in enumerate(history):
+        at = _parse_timestamp(item["at"], f"transition_history[{index}].at")
+        if item["to"] == "promoted":
+            promoted_at = at
+        elif item["to"] == "released" and not _qualifying_retest_at(retests, promoted_at, at):
+            raise LedgerError(
+                "a released candidate must carry a passed or explicitly waived released-artifact "
+                "retest recorded after the promotion it releases; source-level PASS is not a "
+                "released-artifact PASS"
+            )
 
     # Staleness is a review trigger and a promotion gate. This consistency check rejects a
     # transition that contradicts the deadline recorded in the same file. The ledger is not an
@@ -876,6 +1045,7 @@ class LearningLedger:
                 "reason": None,
                 "transition_history": [],
                 "review_history": [],
+                "retest_history": [],
                 "applicability": applicability,
                 "freshness": {
                     "as_of": created_at,
@@ -1005,6 +1175,18 @@ class LearningLedger:
                         "record an explicit review first"
                     )
             history = record["transition_history"]
+            if promotion_state == "released":
+                # Fail closed on the loop's last gate. A merge, green deterministic gates, and
+                # adapter parity are all source-level evidence; none of them exercised the bytes
+                # a user installs. The retest is recorded first, by `retest`, precisely so this
+                # transition cannot be the place where a source PASS is relabelled.
+                promoted_at, retests = _release_gate_state(record)
+                if not _qualifying_retest_at(retests, promoted_at, now):
+                    raise LedgerError(
+                        "cannot transition to released: record a passed or explicitly waived "
+                        "released-artifact retest of the exact shipped version first; a "
+                        "source-level PASS is not a released-artifact PASS"
+                    )
             if current in ADVERSE_STATES and promotion_state == "proposed":
                 adverse_at = _parse_timestamp(history[-1]["at"], "latest adverse transition")
                 observations = [
@@ -1086,15 +1268,8 @@ class LearningLedger:
             if renewed_at > expires_at:
                 raise LedgerError("a review cannot renew review_at beyond retention expiry")
 
-            if record["schema_version"] == LEGACY_SCHEMA_VERSION:
-                record["schema_version"] = SCHEMA_VERSION
-                record["fingerprint"] = candidate_fingerprint(
-                    str(record["observation"]),
-                    str(record["expected_behavior"]),
-                    str(record["scope"]),
-                    str(record["applicability"]),
-                )
-                record["review_history"] = []
+            if record["schema_version"] != SCHEMA_VERSION:
+                _upgrade_schema(record)
             review_history = record["review_history"]
             if len(review_history) >= MAX_REVIEWS:
                 raise LedgerError(f"candidate reached its {MAX_REVIEWS}-review limit")
@@ -1114,6 +1289,82 @@ class LearningLedger:
             self._atomic_write(path, record, overwrite=True)
         return record
 
+    def retest(
+        self,
+        candidate_id: str,
+        *,
+        released_version: str,
+        environment: str,
+        result: str,
+        evidence: str,
+        rollback_trigger: str,
+        owner: str,
+        reason: str,
+        sensitivity_reviewed: bool,
+    ) -> dict[str, object]:
+        """Attach one released-artifact retest: what shipped, where it ran, and what happened.
+
+        This is an evidence command, like `observe`. It records a measurement and decides
+        nothing: a failed retest does not demote the candidate and a passed one does not promote
+        it. The lifecycle decision stays with `transition`, which is where an owner is named.
+        """
+        candidate_id = _validate_candidate_id(candidate_id)
+        if sensitivity_reviewed is not True:
+            raise LedgerError("--sensitivity-reviewed is required before recording a retest")
+        if not isinstance(result, str) or result not in RETEST_RESULTS:
+            raise LedgerError(f"retest result must be one of {sorted(RETEST_RESULTS)}")
+        released_version = _safe_text(released_version, "released_version") or ""
+        if not RELEASED_VERSION_RE.fullmatch(released_version):
+            raise LedgerError(
+                "released version must name one exact released version (for example 1.7.3); a "
+                "moving label such as 'latest' records no retestable artifact"
+            )
+        environment = _safe_text(environment, "retest_environment") or ""
+        evidence = _safe_text(evidence, "retest_evidence") or ""
+        rollback_trigger = _safe_text(rollback_trigger, "rollback_trigger") or ""
+        owner = _safe_text(owner, "owner") or ""
+        reason = _safe_text(reason, "reason") or ""
+        with self._writer():
+            path = self._candidate_path(candidate_id)
+            matches = [
+                record
+                for record in self._load_all()
+                if record["candidate_id"] == candidate_id
+            ]
+            if not matches:
+                raise LedgerError(f"candidate does not exist: {candidate_id}")
+            record = copy.deepcopy(matches[0])
+            current = str(record["promotion_state"])
+            if current not in {"promoted", "released"}:
+                raise LedgerError(
+                    f"a {current} candidate has nothing released to retest; record the retest "
+                    "after the change carrying it merges and ships"
+                )
+            now = self.now()
+            if now < _parse_timestamp(record["updated_at"], "updated_at"):
+                raise LedgerError("retest time cannot precede the current record")
+            _upgrade_schema(record)
+            retest_history = record["retest_history"]
+            if len(retest_history) >= MAX_RETESTS:
+                raise LedgerError(f"candidate reached its {MAX_RETESTS}-retest limit")
+            retested_at = _timestamp(now)
+            retest_history.append(
+                {
+                    "at": retested_at,
+                    "released_version": released_version,
+                    "environment": environment,
+                    "result": result,
+                    "evidence": evidence,
+                    "rollback_trigger": rollback_trigger,
+                    "owner": owner,
+                    "reason": reason,
+                    "sensitivity_reviewed": True,
+                }
+            )
+            record["updated_at"] = retested_at
+            self._atomic_write(path, record, overwrite=True)
+        return record
+
     def check(self) -> list[dict[str, object]]:
         lock_path = self._contained(self.candidates_dir / ".learning-ledger.lock")
         if lock_path.exists() or _is_link_or_reparse(lock_path):
@@ -1124,15 +1375,25 @@ class LearningLedger:
         return self._load_all()
 
     def list_records(self, view: str = "pending") -> list[dict[str, object]]:
-        if view not in {"pending", "stale", "all"}:
-            raise LedgerError("list view must be pending, stale, or all")
+        if view not in LIST_VIEWS:
+            raise LedgerError(f"list view must be one of {sorted(LIST_VIEWS)}")
         now = self.now()
         summaries: list[dict[str, object]] = []
         for record in self._load_all():
             stale = _parse_timestamp(record["freshness"]["review_at"], "freshness.review_at") <= now
+            promoted_at, retests = _release_gate_state(record)
+            # A merged candidate is the one state the loop used to lose: source gates are green,
+            # the issue looks finished, and nothing names what is still owed. This view is the
+            # query a release retro runs -- pulled, never scheduled. It holds a candidate until
+            # the `released` transition, because a recorded retest that nobody acted on has not
+            # closed anything either; `release_retested` says which of the two steps remains.
+            merged_not_released = record["promotion_state"] == "promoted"
+            release_retested = _qualifying_retest_at(retests, promoted_at, now)
             if view == "pending" and record["promotion_state"] not in PENDING_STATES:
                 continue
             if view == "stale" and not stale:
+                continue
+            if view == "awaiting-retest" and not merged_not_released:
                 continue
             summaries.append(
                 {
@@ -1144,6 +1405,7 @@ class LearningLedger:
                     "recurrence_count": record["recurrence"]["count"],
                     "review_at": record["freshness"]["review_at"],
                     "stale": stale,
+                    "release_retested": release_retested,
                     "scope": record["scope"],
                     "observation": record["observation"],
                 }
@@ -1204,8 +1466,38 @@ def _parser() -> argparse.ArgumentParser:
     review.add_argument("--owner", required=True)
     review.add_argument("--reason", required=True)
 
-    listing = commands.add_parser("list", help="surface pending, stale, or all candidates")
-    listing.add_argument("--view", choices=("pending", "stale", "all"), default="pending")
+    retest = commands.add_parser(
+        "retest",
+        help="attach a released-artifact retest result to a promoted candidate",
+    )
+    retest.add_argument("candidate_id")
+    retest.add_argument(
+        "--released-version",
+        required=True,
+        help="the exact released version retested, for example 1.7.3",
+    )
+    retest.add_argument(
+        "--environment",
+        required=True,
+        help="where the released artifact ran, for example 'installed plugin, codex host'",
+    )
+    retest.add_argument("--result", choices=sorted(RETEST_RESULTS), required=True)
+    retest.add_argument("--evidence", required=True)
+    retest.add_argument("--rollback-trigger", required=True)
+    retest.add_argument("--owner", required=True)
+    retest.add_argument("--reason", required=True)
+    retest.add_argument(
+        "--sensitivity-reviewed",
+        action="store_true",
+        required=True,
+        help="attest that the submitted fields contain no sensitive or executable material",
+    )
+
+    listing = commands.add_parser(
+        "list",
+        help="surface pending, stale, awaiting-retest, or all candidates",
+    )
+    listing.add_argument("--view", choices=sorted(LIST_VIEWS), default="pending")
     commands.add_parser("check", help="validate every candidate and fingerprint")
     return parser
 
@@ -1261,6 +1553,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 review_days=args.review_days,
                 owner=args.owner,
                 reason=args.reason,
+            )
+            _print_json(result)
+        elif args.command == "retest":
+            result = ledger.retest(
+                args.candidate_id,
+                released_version=args.released_version,
+                environment=args.environment,
+                result=args.result,
+                evidence=args.evidence,
+                rollback_trigger=args.rollback_trigger,
+                owner=args.owner,
+                reason=args.reason,
+                sensitivity_reviewed=args.sensitivity_reviewed,
             )
             _print_json(result)
         elif args.command == "list":

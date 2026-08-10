@@ -5,8 +5,8 @@ closes the gap between a useful observation in one task and a later, deliberate 
 is not agent memory, a prompt, a task queue, or an authority source.
 
 `scripts/learning_ledger.py` is the only supported writer. It can create candidate records, attach
-independent observations, record a reviewed lifecycle transition, list work, and validate the
-ledger. It never edits an agent, skill, runbook, test, roadmap, or other policy artifact. Promotion
+independent observations, record a reviewed lifecycle transition, attach a released-artifact retest
+result, list work, and validate the ledger. It never edits an agent, skill, runbook, test, roadmap, or other policy artifact. Promotion
 always remains a separate, write-authorized change with its own review and verification.
 
 ## Authority and trust boundary
@@ -30,6 +30,10 @@ always remains a separate, write-authorized change with its own review and verif
 - `promoted` means a separately authorized change was accepted; the ledger does not perform that
   change. Current repository or runtime evidence can later invalidate a candidate and transition
   it to `rejected` or `retired` through the allowed lifecycle.
+- `released` means a named released version was retested against the originating or an equivalent
+  scenario. It is unreachable until `retest` records a passed or explicitly waived result for the
+  merge being released, because every gate before it judged source: a candidate can pass them all
+  and still fail in the installed artifact, another host adapter, or the workflow that reported it.
 
 ## Receiving an agent Learning packet
 
@@ -54,7 +58,8 @@ maps only those bounded fields into `add`. If the stable claim already exists, t
 the returned candidate ID with `observe` instead. Agent prose is never parsed or executed
 automatically. Triage happens later with `transition`.
 
-Each successful `add`, `observe`, or `transition` prints one stable JSON object to stdout. Its
+Each successful `add`, `observe`, `transition`, `review`, or `retest` prints one stable JSON object
+to stdout. Its
 top-level `candidate_id` is the machine-readable handoff identifier. `list` prints a JSON array.
 Errors use a `learning-ledger error:` prefix on stderr and a non-zero exit status.
 
@@ -119,26 +124,57 @@ python scripts/learning_ledger.py `
 records the reviewer, reason, previous deadline, renewed deadline, and review time. It does not
 change `freshness.as_of`; that timestamp advances only when `observe` records distinct evidence.
 
+Attach a released-artifact retest to a merged candidate, then close the loop:
+
+```text
+python scripts/learning_ledger.py `
+  --root C:\path\to\repo `
+  retest lc_00000000000000000000000000000000 `
+  --released-version 1.7.3 `
+  --environment "installed plugin 1.7.3, claude code cli" `
+  --result pass `
+  --evidence "The originating scenario ran on the released artifact and passed." `
+  --rollback-trigger "Reopen the candidate if the released scenario regresses." `
+  --owner fleet-maintainer `
+  --reason "Released-artifact retest of the originating scenario." `
+  --sensitivity-reviewed
+```
+
+`retest` is evidence, not a decision: it records what shipped, where it ran, and what happened, and
+it never changes the promotion state. The candidate must already be `promoted` or `released`, the
+version must name one exact release (a moving label such as `latest` records no retestable
+artifact), and `--result` is `pass`, `fail`, or `waived`. `waived` is the owner-approved escape
+hatch for a retest that is impossible or no longer applicable, and its reason is stored with it.
+
 Surface work and validate the store:
 
 ```text
 python scripts/learning_ledger.py --root C:\path\to\repo list --view pending
 python scripts/learning_ledger.py --root C:\path\to\repo list --view stale
+python scripts/learning_ledger.py --root C:\path\to\repo list --view awaiting-retest
 python scripts/learning_ledger.py --root C:\path\to\repo check
 ```
 
 `list --view pending` covers quarantined, proposed, approved, and inconclusive records.
 `list --view stale` compares each explicit review timestamp with current UTC; staleness is
-independent of disposition.
+independent of disposition. `list --view awaiting-retest` lists merged candidates that have not
+reached `released`, each with a `release_retested` flag saying whether the measurement or only the
+transition is still owed. It is a pull query for a release or upgrade retro; nothing schedules it.
 
-Promotion state constrains disposition. `proposed`, `approved`, and `promoted` accept `add`,
-`merge`, or `supersede`; `inconclusive` accepts `skip`; `rejected` accepts `skip` or `drop`; and
-`retired` accepts `skip`, `drop`, `merge`, or `supersede`. This prevents contradictory records such
+Promotion state constrains disposition. `proposed`, `approved`, `promoted`, and `released` accept
+`add`, `merge`, or `supersede`; `inconclusive` accepts `skip`; `rejected` accepts `skip` or `drop`;
+and `retired` accepts `skip`, `drop`, `merge`, or `supersede`. This prevents contradictory records such
 as a promoted candidate whose disposition says to skip it. A transition back to `proposed` from an
 adverse state is additionally evidence-gated as described above.
 
-Transitions to `proposed`, `approved`, or `promoted` also require the current time to be before both
-`freshness.review_at` and `retention.expires_at`. A stale candidate must first receive an explicit
+Transitioning `promoted` to `released` additionally requires a passed or explicitly waived retest
+recorded after the promotion it releases and before the release itself, so a source-level PASS can
+never be reported as a released-artifact PASS and an older release's PASS cannot certify a later
+re-merge. The rule is enforced both by the command and by record validation, so a hand-written
+`released` record fails `check`.
+
+Transitions to `proposed`, `approved`, `promoted`, or `released` also require the current time to be
+before both `freshness.review_at` and `retention.expires_at`. A stale candidate must first receive an explicit
 `review`; an expired candidate cannot advance through a positive state. Adverse or subtractive
 transitions remain available so stale evidence can still be rejected, invalidated, or retired.
 
@@ -147,9 +183,10 @@ transitions remain available so stale evidence can still be rejected, invalidate
 Every JSON file under `learning/candidates/` contains schema version and opaque ID, ISO UTC
 timestamps, the bounded claim and stable fingerprint, compact evidence provenance and recurrence
 sources, sensitivity-review attestation, lifecycle and disposition fields, applicability, freshness,
-next review date, retention expiry, and (for schema version 2) explicit review history. Version 1
-records remain readable; new records use version 2 so the fingerprint includes applicability as
-part of the recurrence boundary. Duplicate recurrence identities are rejected with the existing ID
+next review date, retention expiry, explicit review history (schema version 2 and later), and
+released-artifact retest history (schema version 3). Versions 1 and 2 remain readable exactly as
+written; new records use version 3, and an older record is upgraded only by the write that needs a
+newer field. The version-2 fingerprint includes applicability as part of the recurrence boundary. Duplicate recurrence identities are rejected with the existing ID
 so the caller can use `observe` explicitly.
 
 The writer rejects unknown or malformed fields, invalid IDs and transitions, duplicate evidence,

@@ -37,8 +37,9 @@ Inventory current rules before choosing exactly one:
 | `drop` | Candidate is false, unsafe, redundant without new value, or over-specialized; or a retained lesson is obsolete | Rejection/removal evidence |
 
 Lifecycle state is separate from disposition: `quarantined` is untriaged intake; `proposed`,
-`approved`, and `promoted` describe progress toward an accepted change; `inconclusive`, `rejected`,
-and `retired` preserve uncertainty, failed admission, or logical subtraction. A read-only role can
+`approved`, and `promoted` describe progress toward an accepted change; `released` records that the
+shipped version was retested against the originating scenario; `inconclusive`, `rejected`, and
+`retired` preserve uncertainty, failed admission, or logical subtraction. A read-only role can
 return `merge` plus `proposed`, for example: the disposition is still merge, while the owner decides
 and performs the mutation.
 
