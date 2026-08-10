@@ -427,7 +427,9 @@ distinct contributions rather than discarding them:
   design decision to defend. This sharpens the WF-001 boundary language above.
 - **`contract_digest` is a dangling reference** — stored, validated, and echoed by
   `run_state.py` while nothing resolves it. A reserved slot that resolves to nothing reads as
-  enforcement and enforces nothing. Repair is SAFE-003 on the roadmap.
+  enforcement and enforces nothing. Repair closed as SAFE-003 (2026-08-10,
+  [outcome record](../archive/2026-08/safe-003-outcome-2026-08-10.md)): document-and-enforce at
+  run creation, required lowercase 64-hex shape, resolution left trigger-bound on GRAPH-004.
 - **A typed edge-contract pilot** (one real handoff as a host-neutral contract,
   `contract_digest` made resolvable) is worthwhile but not yet consumer-proven — GRAPH-004,
   trigger-bound per this record's own discipline.
