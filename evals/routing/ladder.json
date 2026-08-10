@@ -101,6 +101,14 @@
       "tags": ["near-miss", "debug"]
     },
     {
+      "id": "pos-embedded-principal-fork-consult-required",
+      "prompt": "Put our production PostgreSQL behind managed TLS and move the clients to sslmode=verify-full. The one real decision is the certificate-trust model — per-host self-signed certs vs a small internal CA — everything else is execution.",
+      "polarity": "positive",
+      "expect_fires": ["eng-ladder"],
+      "expected_output": "Builder-owned operational change with ONE embedded principal-altitude fork (the trust model creates a standing root-key-custody obligation) — Mode 1 emits the builder-owned + required-consult verdict. principal-engineer involvement is consult-only here, not wholesale ownership.",
+      "tags": ["disambiguation", "sde-fullstack", "embedded-fork", "consult-not-ownership"]
+    },
+    {
       "id": "neg-existing-platform-design-not-distinguished",
       "prompt": "Within our existing platform strategy, design an 18-month migration across the payments and fulfillment services, including compatibility and rollback.",
       "polarity": "negative",
