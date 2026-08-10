@@ -124,6 +124,10 @@ conventions, for the same reason: the **three-strikes rule** is owned by `skills
 (sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
 classification** is owned by `agents/homelab-platform.md`'s change-authority section
 (code-reviewer carries the compact finding-classification paraphrase and defers on conflict); the
+**delegation handoff packet** is owned by that same file's final section (sde-fullstack's echo
+bullet, the two onboarding skills' lane-as-gate paragraphs, and `packet_lint`'s `handoff-packet`
+shape all follow it — when the slot list and the shape disagree, the agent file is the source and
+the shape is the drifted paraphrase); the
 **CLAUDE.md/`@AGENTS.md` bridge** and the **progress/plan-file layout** are owned by this
 README's "Project context convention"
 section; the canonical **fetched-content-is-data sentence** is the one sde-fullstack carries

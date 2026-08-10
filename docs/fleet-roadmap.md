@@ -200,8 +200,9 @@ admits them explicitly when it is authored.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `ready` — spec approved by the operator 2026-08-09; **sequenced after REV-001** so
-the packet reuses that round's envelope idiom.
+**Status:** `ready` — the canonical packet, its deterministic grader, and the eight offline
+fixtures landed (issue #60). What remains is measurement, not design: the paired live runs and
+the released-artifact retest, neither runnable from a session without API credentials.
 
 **Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
 carry failed assumptions, verification-method validity, the executable-transport contract,
@@ -211,11 +212,21 @@ irreversible postconditions, authority lifetimes, inventory invariants, and secr
 **Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
-**Prerequisites:** REV-001's settled idiom.
+**Prerequisites:** REV-001's settled idiom — honored without waiting on it by reusing the
+idiom REV-001 will also build on: the fleet's existing labeled-line packet with a
+`scripts/packet_lint.py` shape (`handoff-packet`) grading its slots, so no third packet dialect
+entered the tree. REV-001 remains free to add its envelope fields to that same shape.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
+Landed so far: the packet in `agents/homelab-platform.md`, the builder echo in
+`agents/sde-fullstack.md`, the lane-as-gate wording in `sde-agents:service-onboard` and
+`sde-agents:host-onboard`, the `handoff-packet` lint shape, adapter parity, and eight
+`handoff-001`-tagged contracts in `evals/behavioral/contracts.json`.
 
-**Next action:** Hold for REV-001's settled idiom, then author the paired plan.
+**Next action:** Run the eight `handoff-001` contracts on a credentialed session, paired
+against the pre-change bytes under identical conditions, and record the rates. Evals 3 and 4
+additionally owe their turns-and-tokens measurement, which no offline grader substitutes for.
+Then the released-artifact retest the issue's close condition names.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 

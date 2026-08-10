@@ -596,6 +596,38 @@ class PluginWiringTests(unittest.TestCase):
         self.assertTrue(any("runtime tool" in issue and "BsaH" in issue for issue in issues), issues)
         self.assertTrue(any("matches the empty string" in issue for issue in issues), issues)
 
+    def test_handoff_packet_slot_drift_fails_the_fleet_gate(self) -> None:
+        # Renaming a canonical slot leaves packet_lint grading the old name: the behavioral cases
+        # stay green while asserting a packet the fleet no longer ships. Both directions of the
+        # link get a mutation, because a grader that has quietly stopped matching the definition
+        # is indistinguishable from one that passes.
+        def rename_canonical_slot(repo: Path) -> None:
+            path = repo / "agents" / "homelab-platform.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "- `Forbidden regressions:`", "- `Known bad:`"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(rename_canonical_slot)
+        self.assertTrue(
+            any("forbidden regressions" in issue for issue in issues), issues
+        )
+        self.assertTrue(any("known bad" in issue for issue in issues), issues)
+
+        def drop_shape(repo: Path) -> None:
+            path = repo / "scripts" / "packet_lint.py"
+            source = path.read_text(encoding="utf-8")
+            start = source.index('    "handoff-packet": (')
+            end = source.index('    "multi-agent-packet"')
+            path.write_text(source[:start] + source[end:], encoding="utf-8")
+
+        issues = self._issues_after(drop_shape)
+        self.assertTrue(
+            any("no 'handoff-packet' entry" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 

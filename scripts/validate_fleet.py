@@ -1061,6 +1061,8 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             "lightweight Learning handoff."
         )
 
+    issues.extend(validate_handoff_packet_shape(root))
+
     guard_path = root / "scripts" / "readonly-guard.py"
     if not guard_path.is_file():
         return issues + [f"{guard_path}: missing the read-only guard"]
@@ -1399,6 +1401,76 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
                             f"members — a non-member can never fire as this cluster, so the "
                             f"prohibition matches nothing and the negative passes vacuously."
                         )
+    return issues
+
+
+def validate_handoff_packet_shape(root: Path) -> list[str]:
+    """Pin homelab-platform's delegation packet to the shape that grades it.
+
+    The packet's whole job is carrying a constraint across a context boundary, and the only thing
+    proving it still does is `packet_lint`'s `handoff-packet` shape in the behavioral suite. Those
+    two live in different files, so renaming or dropping a canonical slot leaves the grader
+    asserting the old one: the suite stays green while measuring a packet the fleet no longer
+    ships — the exact green-but-meaningless failure a slot-shaped grader is supposed to catch.
+    Pin both directions here, where a mismatch is a commit-time error instead of a live-run
+    surprise.
+    """
+    owner = root / "agents" / "homelab-platform.md"
+    linter = root / "scripts" / "packet_lint.py"
+    if not owner.is_file() or not linter.is_file():
+        return []
+    try:
+        module = load_module_by_content(linter, "packet_lint_shapes")
+    except Exception as exc:
+        return [f"{linter}: cannot load packet shapes ({exc})"]
+    if module is None:
+        return [f"{linter}: cannot load packet shapes"]
+    shape = getattr(module, "SHAPES", {}).get("handoff-packet")
+    if shape is None:
+        return [
+            f"{linter}: SHAPES has no 'handoff-packet' entry, but "
+            f"{owner.relative_to(root).as_posix()} ships a delegation packet and behavioral "
+            "cases declare that shape. An undeclared shape fails those cases at load rather "
+            "than grading anything."
+        ]
+    section = re.search(
+        r"^##\s+Delegation handoff packet\b.*?(?=^##\s|\Z)",
+        read_text(owner),
+        re.MULTILINE | re.DOTALL,
+    )
+    if section is None:
+        return [
+            f"{owner}: no '## Delegation handoff packet' section, but scripts/packet_lint.py "
+            "declares a 'handoff-packet' shape and behavioral cases grade against it. The grader "
+            "would keep passing on a packet this agent no longer defines."
+        ]
+    # The canonical form is one `- \`Slot:\`` bullet per slot, which is also what the linter's
+    # start-of-line slot match consumes.
+    declared = [
+        match.group(1).strip().lower()
+        for match in re.finditer(r"^-\s+`([^`:]+):`", section.group(0), re.MULTILINE)
+    ]
+    issues: list[str] = []
+    missing = [slot for slot in shape if slot not in declared]
+    extra = [slot for slot in declared if slot not in shape]
+    if missing:
+        issues.append(
+            f"{owner}: the delegation packet no longer declares slot(s) {missing!r} that "
+            "scripts/packet_lint.py's 'handoff-packet' shape requires. Behavioral cases would "
+            "fail on a packet written exactly as this agent now specifies it."
+        )
+    if extra:
+        issues.append(
+            f"{owner}: the delegation packet declares slot(s) {extra!r} that "
+            "scripts/packet_lint.py's 'handoff-packet' shape does not grade. An ungraded slot is "
+            "the one that gets quietly dropped, which is the failure the packet exists to stop."
+        )
+    if not missing and not extra and declared != list(shape):
+        issues.append(
+            f"{owner}: the delegation packet's slot ORDER {declared!r} differs from "
+            f"scripts/packet_lint.py's {list(shape)!r}. The linter reports the first missing slot, "
+            "so a divergent order makes its findings point at the wrong line."
+        )
     return issues
 
 
