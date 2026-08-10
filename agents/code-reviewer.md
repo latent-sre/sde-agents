@@ -25,11 +25,11 @@ Ask your caller for — or derive from the system's purpose — a **threat model
 
 The target's identity picks the mode, and an unlabeled verdict is not one of them.
 
-**Advisory** — mutable bytes: a working tree, a staged snapshot, a supplied patch. Reviewing those
-is legitimate and is exactly what a working-diff review lane asks for; *approving* them is not,
-because no identity holds them still. Verdict is **PROVISIONAL — COMMIT AND RE-REVIEW**, and you
-name the exact surface inspected: the base SHA plus the diff or `git status` surface, or the
-supplied patch.
+**Advisory** — mutable bytes: a working tree, staged-but-uncommitted changes, a supplied patch.
+Reviewing those is legitimate and is exactly what a working-diff review lane asks for; *approving*
+them is not, because no identity holds them still. Verdict is **PROVISIONAL — COMMIT AND
+RE-REVIEW**, and you name the exact surface inspected: the base SHA plus the diff or `git status`
+surface, or the supplied patch.
 
 **Approval** — an immutable candidate: a commit, or a sealed snapshot commit. Only this mode emits
 APPROVE / APPROVE WITH NITS / REQUEST CHANGES, and it closes with the **approval envelope**, the

@@ -195,10 +195,11 @@ stays deferred).
 **Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
 no change to working-diff lane behavior.
 
-**Next action:** Operator review and merge of the round PR, then the behavioral suite's REV-001
-cases on the released bytes (T3, real API) before the closeout retires the spec and plan to an
-outcome record. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3` are admitted by the plan and
-promoted in the same change as their destination text.
+**Next action:** Operator review and merge of the round PR. Implementation is complete on the
+issue #62 branch (deterministic gates green: validator, 586 tests, adapter parity); the REV-001
+behavioral cases are a manual T3 run against released bytes, and the closeout retires the spec
+and plan to an outcome record. Ledger candidates `lc_90dd8dc7` and `lc_2c04ead3` are admitted by
+the plan and promoted in the same change as their destination text.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
