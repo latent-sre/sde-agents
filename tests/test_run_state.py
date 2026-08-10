@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -309,6 +311,56 @@ class RunStateTests(unittest.TestCase):
                 evidence=[self._evidence(status="inconclusive")],
                 expected_attempt_version=0,
             )
+
+    def test_malformed_contract_digest_never_creates_a_run(self) -> None:
+        rejected: list[object] = [
+            "",
+            "not-a-digest",
+            "a" * 63,
+            "a" * 65,
+            "A" * 64,
+            "a" * 63 + "g",
+            "a" * 64 + "\n",
+            None,
+            b"a" * 64,
+            1234,
+        ]
+        for index, value in enumerate(rejected):
+            run_id = f"run-rejected-{index}"
+            with self.subTest(contract_digest=value):
+                with self.assertRaisesRegex(run_state.StateError, "contract_digest must be"):
+                    self.store.start_run(
+                        run_id,
+                        input_revision="abc123",
+                        contract_digest=value,  # type: ignore[arg-type]
+                    )
+                # Fail-closed: the rejection has to leave no run behind, or the malformed digest
+                # is in the ledger anyway and the check only changed where it is visible.
+                with self.assertRaisesRegex(run_state.StateError, f"unknown run_id: {run_id}"):
+                    self.store.status(run_id=run_id)
+
+    def test_only_the_contract_digest_decides_the_same_run_creation(self) -> None:
+        # The rejection above must come from the digest and nothing else in the call, so this
+        # pair changes one character of one argument and nothing at all besides.
+        with self.assertRaisesRegex(run_state.StateError, "contract_digest must be"):
+            self.store.start_run("run-1", input_revision="abc123", contract_digest="a" * 63)
+        run = self.store.start_run("run-1", input_revision="abc123", contract_digest="a" * 64)
+        self.assertEqual("active", run["status"])
+
+    def test_accepted_contract_digest_is_stored_and_echoed_verbatim(self) -> None:
+        digest = hashlib.sha256(b"the contract this run is started under").hexdigest()
+        run = self.store.start_run("run-1", input_revision="abc123", contract_digest=digest)
+        self.assertEqual(digest, run["contract_digest"])
+        self.assertEqual(digest, self.store.status(run_id="run-1")["run"]["contract_digest"])
+        connection = sqlite3.connect(self.store.database)
+        try:
+            payload = connection.execute(
+                "SELECT payload_json FROM events WHERE entity_id = 'run-1' AND event_type = ?",
+                ("started",),
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(digest, json.loads(payload)["contract_digest"])
 
     def test_event_log_is_append_only_at_database_layer(self) -> None:
         self._start()
