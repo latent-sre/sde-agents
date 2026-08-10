@@ -53,9 +53,25 @@ def _validate_id(value: str, field: str) -> str:
     return value
 
 
-def _validate_digest(value: str, field: str) -> str:
-    if not evidence_envelope.SHA256_RE.fullmatch(value):
-        raise StateError(f"{field} must be a lowercase SHA-256 digest")
+# ``contract_digest`` names the contract a run was started under, and naming is all it does: the
+# store requires it at creation, writes it to the run row, echoes it in the ``started`` event and
+# in status output, and never reads it back. Nothing in this repository resolves a digest to a
+# contract document — that is GRAPH-004, deferred — so this is a reserved forward-compatibility
+# slot, never evidence that the named contract exists or matches. Shape is therefore the only
+# promise the field can keep, and creation is the only place to keep it: the ``started`` event is
+# append-only, so a malformed digest admitted here is permanent in the ledger and reads forever
+# after as a binding no later resolver can match. Non-strings are rejected here rather than left
+# to the regex, whose TypeError is an exception this module never raises and ``main`` does not
+# catch — it would surface as a traceback instead of a run-state error. (That hardening is
+# scoped to this field, the one SAFE-003 ruled on; the sibling creation arguments keep their
+# CLI-era assumptions and a library caller passing them non-strings still gets bare exceptions.)
+def _validate_contract_digest(value: object) -> str:
+    if not isinstance(value, str) or not evidence_envelope.SHA256_RE.fullmatch(value):
+        raise StateError(
+            "contract_digest must be a lowercase 64-character SHA-256 digest, not "
+            f"{value!r}: nothing resolves this value, so an unchecked one is stored and echoed "
+            "as a contract binding that no reader could ever match"
+        )
     return value
 
 
@@ -244,7 +260,7 @@ class StateStore:
         _validate_id(run_id, "run_id")
         if not input_revision.strip():
             raise StateError("input_revision must be non-empty")
-        _validate_digest(contract_digest, "contract_digest")
+        contract_digest = _validate_contract_digest(contract_digest)
         now = _timestamp(self.now())
         with self._transaction() as connection:
             connection.execute(
@@ -812,7 +828,12 @@ def _parser() -> argparse.ArgumentParser:
     start = commands.add_parser("start-run")
     start.add_argument("run_id")
     start.add_argument("--input-revision", required=True)
-    start.add_argument("--contract-digest", required=True)
+    start.add_argument(
+        "--contract-digest",
+        required=True,
+        help="lowercase 64-character SHA-256 naming the contract this run is started under; "
+        "recorded and echoed, resolved by nothing",
+    )
 
     add = commands.add_parser("add-task")
     add.add_argument("run_id")

@@ -26,7 +26,40 @@ REPO = Path(__file__).resolve().parents[1]
 # `.probe-tmp` is the live-probe workspace (`scripts/probe_plugin.py`), created and removed
 # inside the repository root; copying it races that removal, which invalidated a probe run when
 # the suite and the probe ran concurrently. The probe's own copytree already excludes it.
-_IGNORED_DIRS = {".git", "__pycache__", ".probe-tmp"}
+_IGNORED_DIRS = frozenset({".git", "__pycache__", ".probe-tmp"})
+
+# `.claude/worktrees/agent-*` is the platform's nested-worktree home: a second full checkout
+# that another session writes concurrently, so copying it both bloats every test template by
+# that checkout's size and races the other writer exactly as `.probe-tmp` did. The exclusion is
+# repository-relative and covers everything UNDER the path, never the bare basename: a basename
+# ignore would silently omit any legitimate `worktrees/` directory a later skill or fixture
+# ships, so the tree under validation would quietly stop matching the repository. The probe's
+# copytree (scripts/probe_plugin.py) carries the same exclusion for the same reason — the two
+# are kept in step by hand.
+_IGNORED_PATHS = frozenset({Path(".claude") / "worktrees"})
+
+
+def _is_ignored(relative: Path) -> bool:
+    return (
+        relative in _IGNORED_PATHS
+        or any(parent in _IGNORED_PATHS for parent in relative.parents)
+        or any(part in _IGNORED_DIRS for part in relative.parts)
+    )
+
+
+def _copy_ignore(directory: str, names: list[str]) -> set[str]:
+    """copytree callback: _IGNORED_DIRS by basename, _IGNORED_PATHS anchored at the repo root.
+
+    The copytree ignore callable drops only entries named in its return value — a synthetic
+    slash-joined name ignores nothing — so the anchored path is excluded by ignoring its final
+    component when its parent's callback fires.
+    """
+    ignored = set(names) & _IGNORED_DIRS
+    directory_path = Path(directory)
+    for anchored in _IGNORED_PATHS:
+        if directory_path == REPO / anchored.parent:
+            ignored.add(anchored.name)
+    return ignored
 
 
 def create_directory_link(target: Path, link: Path) -> None:
@@ -83,7 +116,7 @@ def _remove_link(path: Path) -> None:
 
 def _walk_files(root: Path) -> Iterator[Path]:
     for path in sorted(root.rglob("*")):
-        if any(part in _IGNORED_DIRS for part in path.relative_to(root).parts):
+        if _is_ignored(path.relative_to(root)):
             continue
         if path.is_file():
             yield path
@@ -105,7 +138,7 @@ class _RepoPool:
         self._holder = tempfile.TemporaryDirectory()
         base = Path(self._holder.name)
         self.template = base / "template"
-        shutil.copytree(REPO, self.template, ignore=shutil.ignore_patterns(*_IGNORED_DIRS))
+        shutil.copytree(REPO, self.template, ignore=_copy_ignore)
         self.work = base / "repo"
         shutil.copytree(self.template, self.work)
         self.manifest = {
@@ -115,15 +148,14 @@ class _RepoPool:
         self.directories = {
             path.relative_to(self.template)
             for path in self.template.rglob("*")
-            if path.is_dir()
-            and not any(part in _IGNORED_DIRS for part in path.relative_to(self.template).parts)
+            if path.is_dir() and not _is_ignored(path.relative_to(self.template))
         }
 
     def _remove_links_top_down(self, directory: Path) -> None:
         with os.scandir(directory) as entries:
             children = sorted(entries, key=lambda entry: entry.name)
         for entry in children:
-            if entry.name in _IGNORED_DIRS:
+            if _is_ignored(Path(entry.path).relative_to(self.work)):
                 continue
             path = Path(entry.path)
             if _is_link(path):
@@ -175,8 +207,7 @@ class _RepoPool:
         for rel in sorted(
             path.relative_to(self.work)
             for path in self.work.rglob("*")
-            if path.is_dir()
-            and not any(part in _IGNORED_DIRS for part in path.relative_to(self.work).parts)
+            if path.is_dir() and not _is_ignored(path.relative_to(self.work))
         ):
             if rel not in self.directories:
                 target = self.work / rel
@@ -193,9 +224,9 @@ def repo_copy() -> Iterator[Path]:
 
     Wiring invariants are proven against a copy of the actual repo, not a synthetic fixture
     that could drift away from it. tests/ stays in the copy: AGENTS.md names `tests/fixtures/`,
-    and the guide drift check resolves every multi-segment path it asserts. Only `.git` and
-    `__pycache__` are excluded — one is not part of the tree under validation, the other is
-    machine-local byproduct that would make copies differ between runs.
+    and the guide drift check resolves every multi-segment path it asserts. Exclusions are
+    exactly `_IGNORED_DIRS` — see its comment for why each entry is not part of the tree under
+    validation.
 
     Callers may mutate file contents, add files or symlinks, or delete anything under the
     yielded path, and must not touch it after the with-block: the tree is pooled, and the next

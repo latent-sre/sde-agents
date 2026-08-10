@@ -134,6 +134,36 @@ _HEDGE_RE = re.compile("|".join(HEDGE_PATTERNS), re.IGNORECASE)
 _CLAIM_RE = re.compile("|".join(VERIFICATION_CLAIM_PATTERNS), re.IGNORECASE)
 _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
+# A NEGATED "verified" is a disclosure, not a claim, and demanding evidence for it inverts the
+# inversion this linter exists for. The bare-word pattern above fired on the two honest slots a
+# verification packet must contain when nothing ran -- recorded verbatim in
+# evals/baselines/2026-08-10-gate-001-first-live/verifier.json:
+#   "- What was verified: nothing, with output to show -- there is no output."
+#   "- What wasn't verified: everything -- revision identity, existence of the path, ..."
+# plus "... I am not treating them as verified". Each was reported as an unevidenced verification
+# claim: a false RED against the packet's own honesty slots. The window is deliberately short, so
+# "This has not been fully tested, but I verified the fix works" still fires; a missed exotic
+# negation is a silent non-fire, the safe direction. Only the bare-word pattern is exempted --
+# "tests pass" and its siblings are unaffected.
+_CLAIM_NEGATION_RE = re.compile(
+    r"(?:\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b)"
+    r"[^\r\n]{0,24}\bverified\b"
+    r"|\bverified\b[*_`\s]*[:—-]\s*(?:nothing|none|n/?a)\b",
+    re.IGNORECASE,
+)
+
+
+def _unevidenced_claim(line: str) -> re.Match | None:
+    """The first verification claim on this line that is not a negated `verified` disclosure."""
+    exempt = [match.span() for match in _CLAIM_NEGATION_RE.finditer(line)]
+    for match in _CLAIM_RE.finditer(line):
+        if match.group(0).casefold() == "verified" and any(
+            start <= match.start() and match.end() <= end for start, end in exempt
+        ):
+            continue
+        return match
+    return None
+
 # Exit-status provenance. Field-observed twice: a completion claim cited a status that was not the
 # tested process's own. `runner; other` reports `other`'s status over the runner's failure,
 # `runner | filter` reports the filter's status while block buffering can push the runner's summary
@@ -267,6 +297,14 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
     Prefix matching is intentionally insufficient for Learning: ``Learning curve:`` and
     ``Learning - none`` must not satisfy a machine-readable closeout merely because normalization
     makes both begin with the word "learning".
+
+    Three decoration placements are read, all display-only. The third — an emphasis span that opens
+    before the label and closes somewhere inside the value, ``**Learning: candidate** - <value>`` —
+    was a false RED: a planning-only session emitted the complete canonical block that way and the
+    reader saw no Learning field at all, reporting the closeout as missing while it was present and
+    correct (LEARN-002 batch 1, ``self-improve-promotion-gate``). Rejecting a rendering difference
+    is the mirror of a false green and just as harmful, so the span's closing marker is removed from
+    the value rather than the line being discarded.
     """
     literal_label = re.escape(label)
     decoration = r"\*\*|__|\*|_|`"
@@ -274,15 +312,64 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
         r"^\s*(?:>\s*)*(?:(?:[-*+]|\d+[.)])\s+)?(?:#{1,6}\s+)?(?:"
         rf"(?P<outside>{decoration}){literal_label}(?P=outside)\s*:|"
         rf"(?P<inside>{decoration}){literal_label}\s*:(?P=inside)|"
+        rf"(?P<span>{decoration}){literal_label}\s*:|"
         rf"{literal_label}\s*:"
         r")\s*(?P<value>.*?)\s*$",
         re.IGNORECASE,
     )
-    return [
-        (index, match.group("value").strip())
-        for index, line in enumerate(lines)
-        if (match := pattern.match(line))
-    ]
+    occurrences: list[tuple[int, str, bool]] = []
+    for index, line in enumerate(lines):
+        match = pattern.match(line)
+        if match is None:
+            continue
+        value = match.group("value").strip()
+        # The span alternative consumed the OPENING marker only; its partner can still sit right
+        # after the first value token. Drop that one shape only so ``candidate** - x`` reads as
+        # ``candidate - x`` and an exact field value still compares literally. An unterminated
+        # span or unrelated markdown later in the value stays untouched.
+        if opener := match.group("span"):
+            split = value.split(maxsplit=1)
+            first = split[0] if split else ""
+            if first.endswith(opener):
+                first = first[:-len(opener)]
+                value = " ".join((first, split[1])) if len(split) == 2 else first
+                value = value.strip()
+        decorated = any(
+            match.group(name) for name in ("outside", "inside", "span")
+        )
+        occurrences.append((index, value, bool(decorated)))
+    return _collapse_display_echoes(occurrences)
+
+
+def _collapse_display_echoes(
+    occurrences: list[tuple[int, str, bool]]
+) -> list[tuple[int, str]]:
+    """Drop occurrences that carry no value a reader could mistake for a second contract.
+
+    Two shapes are display, not data, and both were false REDs on real sessions (LEARN-002
+    batch 2). A bare section header above the block — ``**Learning**:`` then the canonical
+    ``Learning: candidate ...`` line — read as two Learning fields and failed the exactly-once
+    rule (``learning-slot-operational-agent``). A prose summary echoing a decision the block then
+    repeats verbatim — ``**Learning disposition: merge**`` above ``Learning disposition: merge``
+    — read as two and failed exact-field grading (``learning-runbook-namespaces-compose``).
+
+    What the exactly-once rule actually guards is a CONFLICT: two lines claiming different values,
+    so no reader can tell which is the contract. That is preserved exactly. So is the narrower
+    reading that the same field written twice inside the machine-readable block is malformed: a
+    repeat collapses only when its decoration DIFFERS from the line it echoes, which is what makes
+    it a rendering of that line rather than a second copy of the field.
+    """
+    valued = [item for item in occurrences if item[1]]
+    if not valued:
+        return [(index, value) for index, value, _ in occurrences]
+    seen: dict[str, bool] = {}
+    collapsed: list[tuple[int, str]] = []
+    for index, value, decorated in valued:
+        if value in seen and seen[value] != decorated:
+            continue
+        seen.setdefault(value, decorated)
+        collapsed.append((index, value))
+    return collapsed
 
 
 def _literal_field_values(label: str, lines: list[str]) -> list[str]:
@@ -317,6 +404,11 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"
             )
     return findings
+
+
+def _strip_sentence_punctuation(value: str) -> str:
+    """Remove trailing sentence punctuation from a closed-vocabulary field value."""
+    return value.rstrip(" .;,")
 
 
 def _is_semantic_placeholder(value: str) -> bool:
@@ -443,7 +535,11 @@ def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
                 "Learning candidate Provenance: detail is a semantic placeholder, not a source"
             )
 
-    disposition = field_values.get("learning disposition", "")
+    # A closed-vocabulary field ending a sentence is the same value: an intake handoff wrote
+    # `Promotion state: quarantined.` and failed the enum fullmatch on the full stop alone
+    # (LEARN-002 batch 2, learning-slot-readonly-agent). Only trailing sentence punctuation is
+    # removed, so `quarantined and approved` and `not quarantined` still fail.
+    disposition = _strip_sentence_punctuation(field_values.get("learning disposition", ""))
     disposition_values = "|".join(LEARNING_DISPOSITIONS)
     if disposition:
         if learning_mode == "intake" and not re.fullmatch(
@@ -463,7 +559,7 @@ def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
                 "without the intake-only proposed recommendation marker"
             )
 
-    promotion_state = field_values.get("promotion state", "")
+    promotion_state = _strip_sentence_punctuation(field_values.get("promotion state", ""))
     if promotion_state:
         if learning_mode == "intake" and not re.fullmatch(
             "quarantined", promotion_state, re.IGNORECASE
@@ -555,7 +651,7 @@ def lint_packet(
         # not a free-standing "verified" completion claim. Its shape is validated above; grading
         # the enum again as prose would reject every honest candidate handoff.
         is_learning_provenance = bool(_literal_field_values("provenance", [line]))
-        if _CLAIM_RE.search(stripped) and not is_learning_provenance:
+        if _unevidenced_claim(stripped) and not is_learning_provenance:
             window = _window(lines, index)
             if not _EVIDENCE_RE.search(window):
                 findings.append(

@@ -1,0 +1,9 @@
+I'll check what's actually there before running anything — verifying at an unpinned or nonexistent target isn't a check, it's theater.
+
+
+<Bash Read filesystem>
+File does not exist.
+
+
+<Bash Read filesystem>
+{}

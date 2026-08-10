@@ -1,0 +1,154 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.226 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "37e0203fd2ae309c462ead6f4793c2db9dd0fe749bfb03904c866f35e122602f"
+      }
+    ],
+    "selection": {
+      "expression": "verifier-blocked-is-inconclusive",
+      "limit": null,
+      "case_ids": [
+        "verifier-blocked-is-inconclusive"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "4c10fafcaab99db3333f391ace55b67990ee37058eba6e8aa9e6f6c0c5daf850"
+    },
+    "evaluator": {
+      "sha256": "fca289cec0fcc679af954ca41f17cffc77134523aebb5188b73d2b43f61f3bee",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "8f68d16133ccd25ba3bc1fe9da666ceb8ba05a0e87aa5a9875fea9a959c88c8e"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "187161b87dddccac74fca3031c56faf2c8ce133978ad1bd79c8676fa205edf16"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "bb073ed56ec478219d04b19cc47612a636eb8a9cdaf3eaf91f43c0cb9a607426"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "91a30989af34b04adcb8245c1b80352eebd0c76f9592a2247cd9439846bf5d45"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "9abd28ae420a43b1d924a3cab753c839a6fa71c4289c8c491b80316c7a94ab9c",
+      "files_hashed": 109,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "b2835ad41db5dd99e8b57f57e8ce20cb4b716346",
+      "git_dirty": true,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "verifier-blocked-is-inconclusive",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(inconclusive)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 757
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 974
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 740
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "cli_version": "2.1.226 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "5a3dc105b570ce1fa0bceffdd68ecfcb0a48152ba9500d7c11c89bef747bc1af"
+      }
+    ],
+    "selection": {
+      "expression": "self-improve-canonical-triaged-candidate",
+      "limit": null,
+      "case_ids": [
+        "self-improve-canonical-triaged-candidate"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "3ea4aad6806c6af3153b2fa7f8bacbdfa466ba537830e7f898268c8116dc3ab9"
+    },
+    "evaluator": {
+      "sha256": "0fef385f516f4853d0df41a12e558b05481c4175993d9a2e274c3516704ebc95",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "2392118568954e43f7d2ebe86e24f554e3c6b2e17cb567a0c4d7f6db1e854e68"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "187161b87dddccac74fca3031c56faf2c8ce133978ad1bd79c8676fa205edf16"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "281177cb86890639be34425e29fbbe51ec7b1bf6246fb300ba481ac07455eaf0"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "8fda20f7dbc0456ca8c14b0317674f87427a38b7398994e8d8c96884162a8490"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "3e93565a4f9abad9a8b6976d2d9c27d836e2aa9c57353cc1c04e7fda8a390d0c",
+      "files_hashed": 109,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "b2835ad41db5dd99e8b57f57e8ce20cb4b716346",
+      "git_dirty": true,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "self-improve-canonical-triaged-candidate",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*candidate\\\\b.*(?:->|\u2192)'",
+        "missing required pattern: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}provenance(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*(?:verified|sourced|unverified)\\\\b.+'",
+        "packet: Learning: must be `none` or `candidate \u2014 <observed -> expected>`"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 1891
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2034
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1617
+        }
+      ]
+    }
+  ]
+}

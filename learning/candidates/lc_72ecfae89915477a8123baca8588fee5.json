@@ -1,0 +1,62 @@
+{
+  "applicability": "Review planning for substantial rounds; a ruling on cost (Codex passes are external runtime) belongs to the operator before this becomes standing guidance.",
+  "candidate_id": "lc_72ecfae89915477a8123baca8588fee5",
+  "created_at": "2026-08-10T06:31:41.452934Z",
+  "destination": "AGENTS.md Validate before you push (instrument-pairing guidance)",
+  "disposition": "add",
+  "evidence": {
+    "environment": "Fleet source repository, round/loop-rev-001",
+    "provenance": "verified",
+    "revision": "31f6334",
+    "source_kind": "session-retro",
+    "source_reference": "LOOP/REV round 2026-08-10: fleet deep-review rounds found doc-truth/registry/ownership drift; Codex adversarial rounds found executed lifecycle-semantics defects (ran list_records, watched records vanish); overlap between the instruments' finding sets was near zero across two cycles"
+  },
+  "expected_behavior": "A round that ships lifecycle or state-machine code alongside canonical prose gets both instrument classes before its executed-verdict gate: one static pass for doc/registry truth, one executing adversarial pass for semantics — neither substitutes for the other.",
+  "fingerprint": "44da2d8edef1365deb0eacb5944c0ae576ad16edd80da1597c4c90d7af908bce",
+  "freshness": {
+    "as_of": "2026-08-10T06:31:41.452934Z",
+    "review_at": "2026-09-09T06:31:41.452934Z"
+  },
+  "observation": "Two review instruments with different postures — the fleet's read-only prose/threat lanes and an executing adversarial reviewer — produced nearly disjoint finding sets across two full cycles of the same branch: the static lanes caught documentation-truth, ownership-registry, and contract-drift defects no execution would surface, while the executing reviewer caught lifecycle-semantics defects (views that lose records, unrecordable state cycles) that six prior static rounds of a comparable change class never found.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Round retro 2026-08-10; near-zero overlap measured across two cycles. Awaits an operator cost ruling before implementation.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Fleet source repository, round/loop-rev-001",
+        "observed_at": "2026-08-10T06:31:41.452934Z",
+        "provenance": "verified",
+        "revision": "31f6334",
+        "source_kind": "session-retro",
+        "source_reference": "LOOP/REV round 2026-08-10: fleet deep-review rounds found doc-truth/registry/ownership drift; Codex adversarial rounds found executed lifecycle-semantics defects (ran list_records, watched records vanish); overlap between the instruments' finding sets was near zero across two cycles"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T06:31:41.452934Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Fleet round review strategy for changes mixing scripts with canonical prose; excludes trivial doc-only or mechanical changes where one instrument suffices.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T06:31:41.452934Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-10T06:31:41.797371Z",
+      "destination": "AGENTS.md Validate before you push (instrument-pairing guidance)",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Round retro 2026-08-10; near-zero overlap measured across two cycles. Awaits an operator cost ruling before implementation.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-10T06:31:41.797371Z"
+}

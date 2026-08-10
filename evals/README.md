@@ -183,9 +183,11 @@ one non-empty `expect_fires` XOR `expect_all_fires` contract, an explicit runtim
 and a positive semantic output oracle are configuration errors. Typed `exact_fields` assertions
 require one literal label with one exact value; a matching substring or duplicate conflicting line
 cannot satisfy them. A
-`runbook_required_gaps` list additionally binds a proposal case to the exact prompt-declared gap
-set; every gap must have its corresponding closed-vocabulary verification, and missing owner or
-inventory evidence cannot coexist with an invented concrete owner or path. Learning candidate
+`runbook_required_gaps` list additionally binds a proposal case to its prompt-declared gap set as a
+floor — every declared gap must be reported, and reporting a further gap from the closed vocabulary
+is allowed because a prompt that names six unavailable things has not said the other two are
+available; every gap must have its corresponding closed-vocabulary verification, and missing owner
+or inventory evidence cannot coexist with an invented concrete owner or path. Learning candidate
 blocks likewise reject unresolved or punctuation-only values and provenance without
 source/freshness detail. Runbook paths reject traversal, trailing-dot aliases, and Windows reserved
 device names. These failures exit before model cost can produce a misleading benchmark.

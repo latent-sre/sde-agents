@@ -191,7 +191,10 @@ input-validation guard lands in the same change as a test that makes it fire; wh
 hard to stage, prove the branch non-vacuous by mutation (remove it and watch the test fail). An
 untested guard reads as enforcement while enforcing nothing — the exact silent failure the
 validator rules exist to catch, and it will pass every existing check because no check knows the
-branch is there.
+branch is there. The doc-side twin is equally binding: prose that calls an invariant "validated"
+or "enforced" lands with the reader check and its firing test, or it is reworded as writer
+behavior — a prose claim of enforcement with no guard behind it survives every check for the
+same reason an untested guard does (executed-verification finding, 2026-08-10).
 
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`

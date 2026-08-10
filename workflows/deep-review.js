@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first.',
+  description: 'Two parallel code-reviewer lanes (correctness + security threat model) over the ambient working tree, schema-typed packets, deterministic merge record. Also the final static-review gate over a multi-commit branch, including one already reviewed per-task: it takes no brief, so it does not inherit the caller hypotheses a steered per-task loop carries — but its lanes are read-only reviewers that run nothing, so the verdict stacks on T1 and acceptance verification, never replaces them. args (optional) is a single git ref used as the diff base, resolved through merge-base with HEAD — never a target to check out, never a range, never prose/focus text; default base is the merge base with main. To review another branch, check it out first. The static-review signal is the returned verdict, gated on confirmed_criticals (P0/P1) and the lane verdicts — never an empty findings list, since P2/P3 nits do not block — and each lane names what it did not examine in not_checked, preserved in the record for the consumer to read.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
     { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },
@@ -8,12 +8,14 @@ export const meta = {
 }
 
 // Lane model policy (operator ruling 2026-08-09). Review lanes are neither workers nor
-// measurement pins, so the worker ceiling and the eval doctrine both leave them unpinned -- and
+// measurement pins, so the worker doctrine and the eval doctrine both leave them unpinned -- and
 // unpinned meant silently inheriting the session model, which billed a Fable session ~152k
 // tokens per round for no measured review-quality gain. The lanes pin to `opus`: its documented
 // review profile (high precision AND recall, accurate at lower effort) is the fit for judgment
-// work, at half Fable's rate. Scope is mechanical git enumeration -- worker-shaped -- so it runs
-// under the standing worker ceiling at `sonnet`. Aliases only, never full model IDs: an alias
+// work, at half Fable's rate. Scope is mechanical git enumeration, which fits the lower tier
+// at `sonnet` (operator re-ruling 2026-08-10: workers default opus, lower when the task is
+// genuinely mechanical -- this is the canonical mechanical case). Aliases only, never full
+// model IDs: an alias
 // follows the model line's upgrades, a pinned ID silently freezes review quality at last
 // generation.
 // To pin lower, edit the meta.phases `model` literals above -- deliberately NOT an args or

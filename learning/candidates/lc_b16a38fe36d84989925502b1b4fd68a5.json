@@ -1,0 +1,62 @@
+{
+  "applicability": "sde-fullstack Receiving-review-findings and the coordinator's findings-routing briefs.",
+  "candidate_id": "lc_b16a38fe36d84989925502b1b4fd68a5",
+  "created_at": "2026-08-10T06:31:42.584582Z",
+  "destination": "agents/sde-fullstack.md Receiving review findings",
+  "disposition": "merge",
+  "evidence": {
+    "environment": "Fleet source repository",
+    "provenance": "verified",
+    "revision": "31f6334",
+    "source_kind": "session-retro",
+    "source_reference": "GATE-001 round 4 (residue purge: removed design surviving in fixture/comment/plan) and LOOP/REV round 2 (builder fixed the flagged CLI enumeration, missed the same stale semantic two paragraphs up in the same file — P1, caught by both instruments independently)"
+  },
+  "expected_behavior": "A fix responding to a stale-semantics finding sweeps the entire artifact (and its declared paraphrase copies) for every statement of the old semantic before closing the finding; the flagged lines are the pointer, not the scope.",
+  "fingerprint": "64db5853686005bea916b32807f9f72cc83e199da1ca1032168125bda61f2086",
+  "freshness": {
+    "as_of": "2026-08-10T06:31:42.584582Z",
+    "review_at": "2026-09-09T06:31:42.584582Z"
+  },
+  "observation": "Twice in two consecutive rounds, a fix to flagged stale text left the same stale semantic standing elsewhere in the same artifact: fixes were scoped to the flagged lines, and the residue became the next round's critical. The second occurrence was fixed correctly only because the brief said sweep the whole file, not just the flagged lines.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Fleet source repository",
+        "observed_at": "2026-08-10T06:31:42.584582Z",
+        "provenance": "verified",
+        "revision": "31f6334",
+        "source_kind": "session-retro",
+        "source_reference": "GATE-001 round 4 (residue purge: removed design surviving in fixture/comment/plan) and LOOP/REV round 2 (builder fixed the flagged CLI enumeration, missed the same stale semantic two paragraphs up in the same file — P1, caught by both instruments independently)"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T06:31:42.584582Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Documentation and prose fixes in canonical artifacts responding to review findings; excludes code fixes where the test names the scope.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T06:31:42.584582Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-10T06:31:42.924840Z",
+      "destination": "agents/sde-fullstack.md Receiving review findings",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-10T06:31:42.924840Z"
+}

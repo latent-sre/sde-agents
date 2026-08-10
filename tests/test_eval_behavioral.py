@@ -217,7 +217,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "ladder-report-not-absorb",
             "verifier-fails-honestly-no-product-edit",
         }
-        self.assertEqual(61, len(self.document["cases"]))
+        self.assertEqual(67, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
@@ -602,6 +602,35 @@ class RunbookProposalPacketTest(unittest.TestCase):
                     text,
                 )
                 self._assert_proposal_rejected(text)
+
+    def test_case_oracle_admits_additional_genuinely_missing_gaps(self) -> None:
+        """The declared set is a floor, not a ceiling — the observed live answer reported eight.
+
+        `current applicability` and `edit authority` are unestablished by the same prompt and are
+        named triggers of the runbook skill's own `propose` rule, so reporting them is correct.
+        Each still has to carry its matching verification, which is what keeps this from being a
+        blanket pass.
+        """
+        gaps = list(eval_behavioral._RUNBOOK_PROPOSAL_GAPS)
+        verifications = list(eval_behavioral._RUNBOOK_PROPOSAL_VERIFICATIONS)
+        self.assertTrue(set(self.case["runbook_required_gaps"]) < set(gaps))
+        text = re.sub(
+            r"(?m)^Missing evidence:.*$", "Missing evidence: " + ", ".join(gaps), self.valid
+        )
+        text = re.sub(
+            r"(?m)^Next verification:.*$",
+            "Next verification: " + ", ".join(verifications),
+            text,
+        )
+        self.assertEqual([], eval_behavioral.assert_case(text, self.case, {"runbook"}))
+
+        # ... but an extra gap whose verification is absent is still rejected.
+        broken = re.sub(
+            r"(?m)^Next verification:.*$",
+            "Next verification: " + ", ".join(verifications[:-1]),
+            text,
+        )
+        self._assert_proposal_rejected(broken)
 
     def test_unknown_path_and_owner_imply_inventory_and_owner_gaps(self) -> None:
         packet = (

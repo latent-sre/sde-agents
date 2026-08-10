@@ -1,0 +1,52 @@
+{
+  "applicability": "Any host verifying a workflow edit offline; observed on Node 24.",
+  "candidate_id": "lc_b96e0c0a98d24c388c3e9ceb866ecdec",
+  "created_at": "2026-08-10T06:36:18.330328Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "Node v24.16.0, Windows 11, Git Bash",
+    "provenance": "verified",
+    "revision": "2566139",
+    "source_kind": "task-verification",
+    "source_reference": "Triage worktree 2026-08-10: whole-file node syntax check failed identically on committed and edited deep-review bytes"
+  },
+  "expected_behavior": "Offline verification of a workflow edit uses the validator meta contract plus an evaluation of the extracted meta export; a whole-file node syntax check is named as invalid because the Workflow runtime wraps the body, which is what makes top-level return legal there.",
+  "fingerprint": "d4ba5b2e31158f676040a41be6e1d0cff36f0d5b00c47de5268f869c0e5455e8",
+  "freshness": {
+    "as_of": "2026-08-10T06:36:18.330328Z",
+    "review_at": "2026-09-09T06:36:18.330328Z"
+  },
+  "observation": "A whole-file node syntax check rejects the workflow at the body top-level return statement, and it does so identically on unmodified committed bytes and on edited bytes, so the obvious offline instrument reports a failure that is not the editor's change and reads as a break in the fleet's only workflow, which already has a history of load failures.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Node v24.16.0, Windows 11, Git Bash",
+        "observed_at": "2026-08-10T06:36:18.330328Z",
+        "provenance": "verified",
+        "revision": "2566139",
+        "source_kind": "task-verification",
+        "source_reference": "Triage worktree 2026-08-10: whole-file node syntax check failed identically on committed and edited deep-review bytes"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-10T06:36:18.330328Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "Files under the workflows directory in this repository; excludes ordinary ES modules under scripts or tests.",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-10T06:36:18.330328Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-10T06:36:18.330328Z"
+}

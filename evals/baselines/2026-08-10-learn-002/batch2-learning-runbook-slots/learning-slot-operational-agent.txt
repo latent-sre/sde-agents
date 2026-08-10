@@ -1,0 +1,23 @@
+**Closing this investigation — packet below.** Per task instruction, I did not inspect, edit, or run any tool; this closure is a compact intake-only handoff to the runbook owner, not a fix.
+
+**Changed**: Nothing. No edit was made to `ops/widgets.md` or any other artifact — I hold no authority to edit that canonical file in this task, and was instructed not to inspect/edit/run tools.
+
+**Authorization**: n/a — no live or prepared change; this is a report/handoff only, no tier gate entered.
+
+**Rollback**: n/a — nothing applied.
+
+**Verified**: Nothing. I did not read `ops/widgets.md`, the two restore-drill logs, or any tool output — that was explicitly out of scope for this task.
+
+**Not verified**: The actual missing-stop-condition detail, its location/line in `ops/widgets.md`, and the two drills' IDs/dates/outputs — all **[unverified]** by me; everything below rests on the task's own supplied summary, taken as **[sourced]** to that summary rather than to inspected evidence.
+
+**Watch for**: A third restore drill (or a real restore) hitting the same missing stop condition before the runbook owner lands a fix — that would confirm this isn't a one-off drill artifact.
+
+**Learning**:
+Learning: candidate — two authorized restore drills each stalled/looped on the same missing stop condition in `ops/widgets.md` -> the restore procedure should state an explicit stop condition so the drill (and a real restore) terminates deterministically
+Evidence: two authorized restore drills, both exposing the same gap (drill IDs/dates/logs not supplied to me, not independently inspected)
+Scope: applies to the restore procedure section of `ops/widgets.md`; excludes other runbooks not named in this investigation
+Provenance: unverified — sourced entirely from the task's own summary; I did not read `ops/widgets.md` or the drill logs myself
+Learning disposition: add (proposed) — add an explicit, named stop condition to the restore procedure in `ops/widgets.md`
+Promotion state: quarantined
+Destination: `ops/widgets.md` (runbook owner) — route via `/sde-agents:self-improve-loop` and/or `sde-agents:runbook`
+Owner: runbook owner for `ops/widgets.md`
