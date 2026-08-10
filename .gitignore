@@ -23,4 +23,6 @@ probe-transcript.jsonl
 # lock and same-directory atomic-write temporaries must never enter a review with `git add -A`.
 learning/candidates/.learning-ledger.lock
 learning/candidates/.lc_*.tmp
+# Claude's per-session worktrees are local execution state, never repository content or
+# submodules. A tracked gitlink here is unusable without .gitmodules and breaks clean clones.
 .claude/worktrees/

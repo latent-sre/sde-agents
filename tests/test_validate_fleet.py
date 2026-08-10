@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,6 +30,18 @@ VALID_AGENT = (
 
 
 class FleetValidatorTests(unittest.TestCase):
+    def test_transient_claude_worktrees_are_ignored_and_never_tracked(self) -> None:
+        ignore = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
+        self.assertIn(".claude/worktrees/", ignore)
+        tracked = subprocess.run(
+            ["git", "ls-files", "--stage", ".claude/worktrees"],
+            cwd=REPO,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.assertEqual("", tracked.stdout)
+
     def test_valid_fleet_and_generated_inventory(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(FIXTURES / "valid")
         self.assertEqual([], issues)

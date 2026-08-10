@@ -106,31 +106,46 @@ python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <re
 timestamp once per promotion cycle; a second call within the same cycle is refused, not a silent
 overwrite. A candidate may legally reject and re-promote (fresh evidence required); a release
 recorded after that later promotion is a genuinely new cycle, so `record-release` archives the
-completed `{release, retest}` pair into `release_history` and starts a fresh current pair, rather
-than refusing the second cycle outright. `record-retest` is legal only once a release is recorded
-and stamps its own fields: `pass` and `fail` are settled and single-shot, but `inconclusive` may
-be re-recorded in place -- it means the retest could not reach a verdict, not that it passed or
-failed, so it must stay retriable. A `fail` result is a loud pointer that the candidate's
-destination regressed in the field, not a silent write, and the same signal is returned to a
-programmatic caller (a transient `regression` key on the returned record, never persisted), not
-only printed to the CLI's stderr. All three blocks are additive: a candidate written before this
-lifecycle existed stays valid carrying none of them, with no migration and no schema version
-bump. Neither `record-release` nor `record-retest` checks `freshness.review_at` or
-`retention.expires_at` -- each records a fact about what already happened, not a new promotion
-judgment.
+completed cycle into `release_history` and starts a fresh current cycle with no inherited attempts.
+New cycles store an ordered `retests` history; shipped singular `retest` records and archived
+`{release, retest}` entries remain readable, and the next retry or release-cycle archive migrates
+the current singular form. `record-retest` is legal only once a release is recorded. Fail and
+inconclusive attempts remain visible and retryable; PASS alone closes that released cycle and
+refuses later attempts. A
+`fail` result is a loud pointer that the candidate's destination regressed in the field, not a
+silent write, and the same signal is returned to a programmatic caller (a transient `regression`
+key on the returned record, never persisted), not only printed to the CLI's stderr. These fields
+are additive: a candidate written before this lifecycle existed stays valid carrying none of them,
+with no migration and no schema version bump. Neither `record-release` nor `record-retest` checks
+`freshness.review_at` or `retention.expires_at` -- each records a fact about what already happened,
+not a new promotion judgment.
+
+Validation replays the exact promotion state at every current and archived release timestamp; an
+earlier promotion followed by rejection cannot authorize a later release. Release cycles must be
+chronological and map to distinct promotion transitions. Each cycle validates its own chronological
+attempts, archived attempts must predate the next actual release, and no attempt is carried into
+the fresh cycle created by `record-release`. Promotion alone does not change the installed
+artifact, so a retest between a fresh promotion and its release still belongs to the prior release.
+Once a release exists, any transition at that exact release timestamp is refused, and a later
+release cycle must advance beyond the current record timestamp; the timestamp model never guesses
+an order between same-clock lifecycle events.
 
 Closure is fail-closed: a field-feedback item closes as successful only with an exact
-released-version retest recorded, or the owner's explicit reason that a retest is impossible or
-no longer applicable. Source-eval PASS from a `promoted` candidate is never reportable as
+released-version PASS retest recorded, or the owner's explicit reason that a retest is impossible
+or no longer applicable. Source-eval PASS from a `promoted` candidate is never reportable as
 released-artifact PASS -- the two remain distinct result classes, the same discipline REV-001
 applies to caller-reported versus independently executed evidence. Three views make the lifecycle
 pull-based, never scheduled: `awaiting-retest` surfaces every promoted candidate carrying a
-release but no settled retest (none yet, or an `inconclusive` one); `regressed` surfaces promoted
-candidates whose retest `result` is `fail`, staying listed until an owner transitions the
-candidate away from `promoted`, so a settled fail cannot vanish from every actionable view;
-`awaiting-release` surfaces promoted candidates with no release block at all -- the
-merged-but-unreleased backlog. A release or upgrade retro reads these; nothing here schedules or
-runs anything itself.
+release whose attempt history has no PASS, including failed and inconclusive attempts; `regressed`
+surfaces promoted candidates with a failed attempt and no later PASS; and `awaiting-release`
+surfaces promoted candidates whose latest promotion has not shipped yet -- either no release block
+or an older cycle's release still current. A release or upgrade retro reads these; nothing here
+schedules or runs anything itself.
+
+List summaries keep `destination` as the current candidate-head destination and add
+`release_destination` for the destination bound to the installed release's promotion. Regression
+signals use `release_destination`; after re-promotion they never mislabel a failure of the still
+installed older release as a failure of the unreleased candidate destination.
 
 ## Cross-task and maintenance use
 

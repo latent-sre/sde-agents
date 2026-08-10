@@ -175,9 +175,10 @@ cause is unclear exits to `root-cause` rather than consuming another turn.
 
 Do not promote a candidate or merge or ship its artifact change while any applicable promotion gate
 is missing. And promotion is not the end of the lifecycle for plugin-shipped destinations: a
-field-feedback item closes as successful only with an exact released-version retest recorded
-(the ledger's `record-release`/`record-retest` blocks), or the owner's explicit reason retest is
-impossible — source-eval PASS is never reportable as released-artifact PASS. The full
+field-feedback item closes as successful only with an exact released-version PASS retest recorded
+(the ledger's `record-release` plus ordered `record-retest` attempt history), or the owner's
+explicit reason retest is impossible — source-eval PASS is never reportable as released-artifact
+PASS. The full
 retained-feedback lifecycle lives in [references/learning-ledger.md](references/learning-ledger.md).
 
 ## Improvement patterns

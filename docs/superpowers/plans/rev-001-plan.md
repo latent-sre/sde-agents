@@ -46,12 +46,23 @@ generalization, never per-incident append.**
    verifier side; the reviewer side gains the matching line: "fresh immutable review plus
    caller-reported test evidence" and "independent verifier executed the approved target" are
    distinct result classes, never collapsed into one PASS.
-5. **Behavioral contracts** — the envelope refusal paths: `reviewer-approval-does-not-transfer`
-   (approval for SHA A asked to bless SHA B → refuses, re-review required) and
-   `verifier-envelope-mismatch-fails-closed` (envelope names one SHA, checkout resolves
-   another → inconclusive before anything executes). Positives-first graders. The existing
-   `reviewer-uncommitted-bytes-are-not-approvable` / `reviewer-committed-bytes-remain-approvable`
-   pair already pins the dirty-tree boundary and stays untouched.
+5. **Behavioral contracts** — independent envelope paths:
+   `reviewer-approval-does-not-transfer` (approval for SHA A asked to bless SHA B → refuses,
+   re-review required), the existing `verifier-envelope-mismatch-fails-closed` candidate-SHA
+   mismatch, plus `verifier-envelope-base-mismatch-fails-closed` and
+   `verifier-envelope-tree-mismatch-fails-closed`. The latter two derive observed identity from
+   `HEAD`, `HEAD^1`, and `HEAD^{tree}` so neither can collapse into the candidate mismatch or
+   confuse the exact parent with the merge base. `reviewer-formal-approval-emits-envelope` is
+   the positive counterpart and requires literal APPROVE plus all exact supplied values, not
+   merely six field labels. The existing dirty-tree pair stays untouched.
+6. **`workflows/deep-review.js` — review-found envelope repair.** A clean-tree `merge` or
+   `merge-with-nits` requires both reviewer lanes to independently confirm and echo one exact
+   approval envelope: repository, `candidate_sha` equal to `HEAD`, `base_sha` equal to the
+   candidate's exact first parent (`HEAD^1`, never the merge base), `tree_oid` equal to
+   `HEAD^{tree}`, scope, and acceptance criteria. Missing or mismatched fields fail closed to
+   inconclusive. The dirty-tree path remains advisory and requires no formal envelope. A
+   deterministic workflow fixture proves a positive multi-commit branch, the dirty advisory
+   control, a missing envelope from either lane, and every lane-by-field mismatch.
 
 ## Hard constraint (from the spec, restated for the builder)
 
@@ -61,10 +72,12 @@ refusal anywhere.
 
 ## Verification payloads
 
-Deterministic gates plus adapter parity; the two new contracts join LEARN-002's calibration
-docket for live runs. Working-diff lanes demonstrably unaffected: the deep-review run on this
-very branch is the fixture (it reviews a mutable-tree diff and must keep doing so).
+Deterministic gates plus adapter parity; the five REV-001 contracts join LEARN-002's calibration
+docket for live runs. Working-diff lanes remain advisory through the deterministic dirty-tree
+fixture; a clean multi-commit fixture separately proves approval binds to the candidate's exact
+parent rather than its older merge base.
 
 ## Rollback
 
-Prompt-level edits to two agents plus contracts — one revert commit; no script changes.
+Prompt-level edits to two agents, the workflow repair, its deterministic fixture, and contracts
+— one revert commit; no new runtime dependency.
