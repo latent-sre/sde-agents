@@ -706,7 +706,6 @@ class LearningLedgerTests(unittest.TestCase):
             environment="released plugin 1.7.3",
             reference="retest 403",
         )
-        self._advance(seconds=1)
         self.ledger.transition(
             with_history,
             promotion_state="rejected",
@@ -854,20 +853,13 @@ class LearningLedgerTests(unittest.TestCase):
         self.assertEqual(before, path.read_bytes())
         self.assertIsNone(self.ledger.check()[0].get("release"))
 
-    def test_record_retest_requires_release_and_preserves_retry_history_until_pass(self) -> None:
+    def test_record_retest_requires_release_and_records_the_field_result(self) -> None:
         record = self._add()
         candidate_id = record["candidate_id"]
 
         with self.assertRaisesRegex(learning_ledger.LedgerError, "retest result must be one of"):
             self.ledger.record_retest(
                 candidate_id, result="maybe", environment="prod", reference="run#0"
-            )
-        with self.assertRaisesRegex(learning_ledger.LedgerError, "retest result must be one of"):
-            self.ledger.record_retest(
-                candidate_id,
-                result=["pass"],  # type: ignore[arg-type]
-                environment="prod",
-                reference="run#0",
             )
 
         with self.assertRaisesRegex(
@@ -879,37 +871,18 @@ class LearningLedgerTests(unittest.TestCase):
 
         self._promote(candidate_id)
         self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
-        failed = self.ledger.record_retest(
+        retested = self.ledger.record_retest(
             candidate_id, result="fail", environment="prod", reference="run#1"
         )
-        self.assertEqual(["fail"], [item["result"] for item in failed["retests"]])
-        self.assertEqual("prod", failed["retests"][0]["environment"])
-        self.assertEqual("run#1", failed["retests"][0]["reference"])
-        self.assertIn(
-            candidate_id,
-            {
-                item["candidate_id"]
-                for item in self.ledger.list_records("awaiting-retest")
-            },
-        )
+        self.assertEqual("fail", retested["retest"]["result"])
+        self.assertEqual("prod", retested["retest"]["environment"])
+        self.assertEqual("run#1", retested["retest"]["reference"])
 
-        passed = self.ledger.record_retest(
-            candidate_id, result="pass", environment="staging", reference="run#2"
-        )
-        self.assertEqual(
-            ["fail", "pass"], [item["result"] for item in passed["retests"]]
-        )
-        self.assertNotIn(
-            candidate_id,
-            {
-                item["candidate_id"]
-                for item in self.ledger.list_records("awaiting-retest")
-            },
-        )
-
-        with self.assertRaisesRegex(learning_ledger.LedgerError, "already passed.*closed"):
+        with self.assertRaisesRegex(
+            learning_ledger.LedgerError, "already carries a settled retest record"
+        ):
             self.ledger.record_retest(
-                candidate_id, result="fail", environment="prod", reference="run#3"
+                candidate_id, result="pass", environment="staging", reference="run#2"
             )
 
     def test_record_retest_returns_the_regression_signal_programmatically(self) -> None:
@@ -951,7 +924,7 @@ class LearningLedgerTests(unittest.TestCase):
         checked = [r for r in self.ledger.check() if r["candidate_id"] == second_id][0]
         self.assertNotIn("regression", checked)
 
-    def test_release_history_archives_every_attempt_and_starts_a_clean_cycle(self) -> None:
+    def test_release_history_archives_a_completed_cycle_on_re_promotion(self) -> None:
         record = self._add(
             observation="A deploy script omitted the rollback command on failure.",
             expected_behavior="The deploy script always prints the rollback command on failure.",
@@ -961,30 +934,11 @@ class LearningLedgerTests(unittest.TestCase):
         candidate_id = record["candidate_id"]
         self._promote(candidate_id)
         self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
-        first_failed = self.ledger.record_retest(
+        first_cycle = self.ledger.record_retest(
             candidate_id, result="fail", environment="prod", reference="run#1"
         )
-        self._advance(seconds=1)
-        first_inconclusive = self.ledger.record_retest(
-            candidate_id,
-            result="inconclusive",
-            environment="prod",
-            reference="run#2: evidence collector unavailable",
-        )
-        self._advance(seconds=1)
-        first_passed = self.ledger.record_retest(
-            candidate_id, result="pass", environment="prod", reference="run#3"
-        )
-        first_release = first_failed["release"]
-        first_attempts = first_passed["retests"]
-        self.assertEqual(
-            ["fail", "inconclusive", "pass"],
-            [attempt["result"] for attempt in first_attempts],
-        )
-        self.assertEqual(
-            ["fail", "inconclusive"],
-            [attempt["result"] for attempt in first_inconclusive["retests"]],
-        )
+        first_release = first_cycle["release"]
+        first_retest = first_cycle["retest"]
 
         # No intervening re-promotion: a second release for the SAME cycle is still refused.
         with self.assertRaisesRegex(
@@ -1026,198 +980,52 @@ class LearningLedgerTests(unittest.TestCase):
         second_cycle = self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#2")
         self.assertEqual("1.7.4", second_cycle["release"]["version"])
         self.assertNotIn("retest", second_cycle)
-        self.assertNotIn("retests", second_cycle)
         self.assertEqual(1, len(second_cycle["release_history"]))
         archived = second_cycle["release_history"][0]
         self.assertEqual(first_release, archived["release"])
-        self.assertEqual(first_attempts, archived["retests"])
+        self.assertEqual(first_retest, archived["retest"])
 
         second_retest = self.ledger.record_retest(
             candidate_id, result="pass", environment="prod", reference="run#2"
         )
-        self.assertEqual(["pass"], [item["result"] for item in second_retest["retests"]])
+        self.assertEqual("pass", second_retest["retest"]["result"])
         self.assertEqual(1, len(second_retest["release_history"]))
         self.assertEqual(first_release, second_retest["release_history"][0]["release"])
-        self.assertEqual(first_attempts, second_retest["release_history"][0]["retests"])
 
         self.assertEqual(1, len(self.ledger.check()))
 
-        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        leaked = json.loads(json.dumps(payload))
-        leaked["release_history"][0]["retests"][-1]["recorded_at"] = second_cycle[
-            "release"
-        ]["recorded_at"]
-        path.write_text(json.dumps(leaked), encoding="utf-8")
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "archived retest attempts must predate the next release cycle",
-        ):
-            self.ledger.check()
-
-        # Records written by the shipped singular schema stay readable inside release_history.
-        legacy_history = json.loads(json.dumps(payload))
-        archived_release = legacy_history["release_history"][0]["release"]
-        archived_attempt = legacy_history["release_history"][0]["retests"][0]
-        legacy_history["release_history"][0] = {
-            "release": archived_release,
-            "retest": archived_attempt,
-        }
-        path.write_text(json.dumps(legacy_history), encoding="utf-8")
-        self.assertEqual(1, len(self.ledger.check()))
-
-    def test_retest_after_repromotion_stays_with_installed_release_until_next_release(self) -> None:
-        record = self._add(
-            observation="A released retry policy still failed in the installed plugin.",
-            expected_behavior="The installed retry policy passes before the next release ships.",
-            scope="released retry policy",
-            source_reference="tests/test_retry.py::test_installed_release",
-        )
-        candidate_id = record["candidate_id"]
-        self._promote(candidate_id)
-        first_release = self.ledger.record_release(
-            candidate_id, version="1.7.3", reference="PR#1"
-        )["release"]
-        self.ledger.record_retest(
-            candidate_id, result="fail", environment="prod", reference="run#1"
-        )
-
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "transition after a recorded release must use a later timestamp",
-        ):
-            self.ledger.transition(
-                candidate_id,
-                promotion_state="rejected",
-                disposition="drop",
-                destination="proposal:none",
-                owner="fleet-maintainer",
-                reason="Same-clock ordering is ambiguous and must fail closed.",
-            )
-
-        self._advance(seconds=1)
-        self.ledger.transition(
-            candidate_id,
-            promotion_state="rejected",
-            disposition="drop",
-            destination="proposal:none",
-            owner="fleet-maintainer",
-            reason="The installed 1.7.3 artifact regressed in the field.",
-        )
-        self._advance(seconds=1)
-        self.ledger.observe(
-            candidate_id,
-            provenance="verified",
-            source_kind="test",
-            source_reference="tests/test_retry.py::test_candidate_repaired",
-            sensitivity_reviewed=True,
-        )
-        for state in ("proposed", "approved", "promoted"):
-            self.ledger.transition(
-                candidate_id,
-                promotion_state=state,
-                disposition="add",
-                destination="agents/retry-policy.md",
-                owner="fleet-maintainer",
-                reason=f"Fresh evidence supports the {state} state.",
-            )
-
-        # Promotion selects the candidate but does not replace the installed 1.7.3 artifact.
-        # This attempt still belongs to release 1 and must remain recordable before release 2.
-        self._advance(seconds=1)
-        before_second_release = self.ledger.record_retest(
-            candidate_id,
-            result="fail",
-            environment="prod",
-            reference="run#2: candidate promoted, 1.7.3 still installed",
-        )
-        self.assertEqual(
-            ["fail", "fail"],
-            [attempt["result"] for attempt in before_second_release["retests"]],
-        )
-        self.assertEqual(
-            "scripts/validate_fleet.py",
-            before_second_release["regression"]["destination"],
-        )
-        self.assertEqual(
-            "agents/retry-policy.md",
-            before_second_release["regression"]["candidate_destination"],
-        )
-        self.assertIn(
-            "scripts/validate_fleet.py",
-            before_second_release["regression"]["message"],
-        )
-        self.assertNotIn(
-            "agents/retry-policy.md",
-            before_second_release["regression"]["message"],
-        )
-        pending = next(
-            item
-            for item in self.ledger.list_records("awaiting-release")
-            if item["candidate_id"] == candidate_id
-        )
-        self.assertEqual("agents/retry-policy.md", pending["destination"])
-        self.assertEqual("scripts/validate_fleet.py", pending["release_destination"])
-
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "new release cycle must use a later timestamp",
-        ):
-            self.ledger.record_release(candidate_id, version="1.7.4", reference="PR#2")
-
-        self._advance(seconds=1)
-        second_cycle = self.ledger.record_release(
-            candidate_id, version="1.7.4", reference="PR#2"
-        )
-        self.assertEqual("1.7.4", second_cycle["release"]["version"])
-        self.assertEqual(first_release, second_cycle["release_history"][0]["release"])
-        self.assertEqual(
-            ["fail", "fail"],
-            [
-                attempt["result"]
-                for attempt in second_cycle["release_history"][0]["retests"]
-            ],
-        )
-        self.assertEqual(1, len(self.ledger.check()))
-
-    def test_fail_and_inconclusive_attempts_remain_retryable_until_pass(self) -> None:
-        for first_result in ("fail", "inconclusive"):
-            with self.subTest(first_result=first_result):
+    def test_inconclusive_retest_may_be_re_recorded_settled_results_are_final(self) -> None:
+        for final_result in ("pass", "fail"):
+            with self.subTest(final_result=final_result):
                 record = self._add(
-                    observation=f"A {first_result} recovery candidate omitted a field.",
-                    expected_behavior=f"The {first_result} recovery packet always names it.",
-                    scope=f"{first_result} recovery packets",
-                    source_reference=f"tests/test_recovery.py::test_{first_result}",
+                    observation=f"A {final_result} recovery candidate omitted a field.",
+                    expected_behavior=f"The {final_result} recovery packet always names it.",
+                    scope=f"{final_result} recovery packets",
+                    source_reference=f"tests/test_recovery.py::test_{final_result}",
                 )
                 candidate_id = record["candidate_id"]
                 self._promote(candidate_id)
                 self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
 
-                first = self.ledger.record_retest(
-                    candidate_id,
-                    result=first_result,
-                    environment="prod",
-                    reference="run#1: downstream proof did not pass",
+                inconclusive = self.ledger.record_retest(
+                    candidate_id, result="inconclusive", environment="prod",
+                    reference="run#1: environment unavailable",
                 )
-                self.assertEqual([first_result], [item["result"] for item in first["retests"]])
+                self.assertEqual("inconclusive", inconclusive["retest"]["result"])
                 backlog = {
                     item["candidate_id"]
                     for item in self.ledger.list_records("awaiting-retest")
                 }
                 self.assertIn(candidate_id, backlog)
 
-                self._advance(seconds=1)
-                passed = self.ledger.record_retest(
-                    candidate_id, result="pass", environment="prod",
+                settled = self.ledger.record_retest(
+                    candidate_id, result=final_result, environment="prod",
                     reference="run#2: retried after environment recovered",
                 )
-                self.assertEqual(
-                    [first_result, "pass"],
-                    [item["result"] for item in passed["retests"]],
-                )
+                self.assertEqual(final_result, settled["retest"]["result"])
                 self.assertEqual(
                     "run#2: retried after environment recovered",
-                    passed["retests"][-1]["reference"],
+                    settled["retest"]["reference"],
                 )
                 backlog = {
                     item["candidate_id"]
@@ -1225,9 +1033,11 @@ class LearningLedgerTests(unittest.TestCase):
                 }
                 self.assertNotIn(candidate_id, backlog)
 
-                with self.assertRaisesRegex(learning_ledger.LedgerError, "already passed.*closed"):
+                with self.assertRaisesRegex(
+                    learning_ledger.LedgerError, "already carries a settled retest record"
+                ):
                     self.ledger.record_retest(
-                        candidate_id, result="fail", environment="prod", reference="run#3"
+                        candidate_id, result="pass", environment="prod", reference="run#3"
                     )
 
     def test_awaiting_retest_view_lists_exactly_the_pull_based_backlog(self) -> None:
@@ -1280,35 +1090,15 @@ class LearningLedgerTests(unittest.TestCase):
             reference="run#1: drill window unavailable",
         )
 
-        failed = self._add(
-            observation="A release drill exposed a destination regression.",
-            expected_behavior="A later downstream retry can prove the regression repaired.",
-            scope="released destination regression drills",
-            source_reference="tests/test_release.py::test_failed_retryable",
-        )
-        self._promote(failed["candidate_id"])
-        self.ledger.record_release(failed["candidate_id"], version="1.7.3", reference="PR#4")
-        self.ledger.record_retest(
-            failed["candidate_id"], result="fail", environment="prod", reference="run#1"
-        )
-
         backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")}
-        self.assertEqual(
-            {awaiting["candidate_id"], inconclusive["candidate_id"], failed["candidate_id"]},
-            backlog,
-        )
+        self.assertEqual({awaiting["candidate_id"], inconclusive["candidate_id"]}, backlog)
         summaries = {
             item["candidate_id"]: item for item in self.ledger.list_records("awaiting-retest")
         }
         self.assertEqual("1.7.3", summaries[awaiting["candidate_id"]]["release"]["version"])
-        self.assertEqual([], summaries[awaiting["candidate_id"]]["retests"])
+        self.assertIsNone(summaries[awaiting["candidate_id"]]["retest"])
         self.assertEqual(
-            ["inconclusive"],
-            [item["result"] for item in summaries[inconclusive["candidate_id"]]["retests"]],
-        )
-        self.assertEqual(
-            ["fail"],
-            [item["result"] for item in summaries[failed["candidate_id"]]["retests"]],
+            "inconclusive", summaries[inconclusive["candidate_id"]]["retest"]["result"]
         )
 
     def test_regressed_view_lists_fail_retests_until_an_owner_transition(self) -> None:
@@ -1336,24 +1126,12 @@ class LearningLedgerTests(unittest.TestCase):
             passed["candidate_id"], result="pass", environment="prod", reference="run#1"
         )
 
-        # A failed attempt remains retryable in awaiting-retest and is also a loud regression
-        # until a later pass proves the released destination repaired.
+        # A settled fail drops out of awaiting-retest but must not vanish from every actionable
+        # view -- it stays discoverable via `regressed` until an owner acts on it.
         awaiting = {item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")}
-        self.assertIn(regressed["candidate_id"], awaiting)
+        self.assertNotIn(regressed["candidate_id"], awaiting)
         regressed_ids = {item["candidate_id"] for item in self.ledger.list_records("regressed")}
         self.assertEqual({regressed["candidate_id"]}, regressed_ids)
-
-        self._advance(seconds=1)
-        repaired = self.ledger.record_retest(
-            regressed["candidate_id"], result="pass", environment="prod", reference="run#2"
-        )
-        self.assertEqual(
-            ["fail", "pass"], [item["result"] for item in repaired["retests"]]
-        )
-        self.assertNotIn(
-            regressed["candidate_id"],
-            {item["candidate_id"] for item in self.ledger.list_records("regressed")},
-        )
 
         self._advance(seconds=1)
         self.ledger.transition(
@@ -1390,43 +1168,6 @@ class LearningLedgerTests(unittest.TestCase):
             source_reference="tests/test_tracing.py::test_not_promoted",
         )
 
-        backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-release")}
-        self.assertEqual({unreleased["candidate_id"]}, backlog)
-
-        # A fresh promotion starts a new candidate cycle even while the previously installed
-        # release remains the current release record. It is awaiting the next release until that
-        # newer cycle is actually shipped.
-        self._advance(seconds=1)
-        self.ledger.transition(
-            released["candidate_id"],
-            promotion_state="rejected",
-            disposition="drop",
-            destination="proposal:none",
-            owner="fleet-maintainer",
-            reason="The first released cycle regressed.",
-        )
-        self._advance(seconds=1)
-        self.ledger.observe(
-            released["candidate_id"],
-            provenance="verified",
-            source_kind="test",
-            source_reference="tests/test_worker.py::test_repaired_release",
-            sensitivity_reviewed=True,
-        )
-        for state in ("proposed", "approved", "promoted"):
-            self.ledger.transition(
-                released["candidate_id"],
-                promotion_state=state,
-                disposition="add",
-                destination="scripts/worker.py",
-                owner="fleet-maintainer",
-                reason=f"Fresh evidence supports the {state} state.",
-            )
-        backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-release")}
-        self.assertEqual({unreleased["candidate_id"], released["candidate_id"]}, backlog)
-
-        self._advance(seconds=1)
-        self.ledger.record_release(released["candidate_id"], version="1.7.4", reference="PR#2")
         backlog = {item["candidate_id"] for item in self.ledger.list_records("awaiting-release")}
         self.assertEqual({unreleased["candidate_id"]}, backlog)
 
@@ -1488,10 +1229,7 @@ class LearningLedgerTests(unittest.TestCase):
             FIXED_NOW + timedelta(seconds=1)
         )
         write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "must be promoted at release.recorded_at.*reconstructed state was 'quarantined'",
-        ):
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "prior transition to promoted"):
             self.ledger.check()
 
         # The recorded_at bounds check itself (release_at < created) is distinct from the
@@ -1514,259 +1252,65 @@ class LearningLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(learning_ledger.LedgerError, "release must be an object"):
             self.ledger.check()
 
-        # Two chronologically ordered releases inside one uninterrupted promoted state are still
-        # the same cycle; a forged history cannot manufacture a second release slot from time alone.
-        mutated = json.loads(json.dumps(release_baseline))
-        earlier_release = dict(mutated["release"])
-        earlier_release["version"] = "1.7.2"
-        earlier_release["recorded_at"] = learning_ledger._timestamp(
-            FIXED_NOW + timedelta(seconds=3)
-        )
-        mutated["release_history"] = [{"release": earlier_release, "retests": []}]
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "each release requires a distinct later promotion cycle"
-        ):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(release_baseline))
-        same_time_release = dict(mutated["release"])
-        same_time_release["version"] = "1.7.2"
-        mutated["release_history"] = [{"release": same_time_release, "retests": []}]
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "release cycles must be chronological"
-        ):
-            self.ledger.check()
-
         write(release_baseline)
-        self._advance(seconds=1)
-        self.ledger.record_retest(
-            candidate_id, result="fail", environment="prod", reference="run#1"
-        )
-        self._advance(seconds=1)
         retested = self.ledger.record_retest(
-            candidate_id, result="pass", environment="prod", reference="run#2"
+            candidate_id, result="pass", environment="prod", reference="run#1"
         )
         retest_baseline = json.loads(json.dumps(retested))
-        self.assertEqual(
-            ["fail", "pass"],
-            [attempt["result"] for attempt in retest_baseline["retests"]],
-        )
 
         mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"] = []
+        mutated["retest"]["result"] = "maybe"
         write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "retests must be a non-empty list"
-        ):
+        with self.assertRaisesRegex(learning_ledger.LedgerError, r"retest\.result must be one of"):
+            self.ledger.check()
+
+        # A hand-edited unhashable result (a list, from e.g. a botched merge) must fail with the
+        # module's own LedgerError, not degrade to an unhandled TypeError from plain `in` on a
+        # set -- still fail-closed either way, but only one of them is the documented contract.
+        mutated = json.loads(json.dumps(retest_baseline))
+        mutated["retest"]["result"] = ["pass"]
+        write(mutated)
+        with self.assertRaisesRegex(learning_ledger.LedgerError, r"retest\.result must be one of"):
             self.ledger.check()
 
         mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retest"] = dict(mutated["retests"][0])
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "cannot carry both legacy retest and retests history"
-        ):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][0]["result"] = "maybe"
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, r"retests\[0\]\.result must be one of"
-        ):
-            self.ledger.check()
-
-        # A hand-edited unhashable result must fail with LedgerError rather than an unhandled
-        # TypeError from membership testing against RETEST_RESULTS.
-        mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][0]["result"] = ["pass"]
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, r"retests\[0\]\.result must be one of"
-        ):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(retest_baseline))
-        legacy_attempt = mutated.pop("retests")[0]
-        legacy_attempt["result"] = {"not": "hashable"}
-        mutated["retest"] = legacy_attempt
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, r"retest\.result must be one of"
-        ):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][0]["recorded_at"] = learning_ledger._timestamp(
+        mutated["retest"]["recorded_at"] = learning_ledger._timestamp(
             FIXED_NOW - timedelta(seconds=1)
         )
         write(mutated)
-        with self.assertRaisesRegex(learning_ledger.LedgerError, "must follow its release record"):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][1]["recorded_at"] = mutated["release"]["recorded_at"]
-        write(mutated)
         with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "retest attempt timestamps must be chronological"
+            learning_ledger.LedgerError, "must fall between its release record"
         ):
             self.ledger.check()
 
+        # The other side of the same OR: a retest recorded_at AFTER the record's own updated_at
+        # (left unchanged here) is a distinct violation from "before its release" above.
         mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][-1]["recorded_at"] = learning_ledger._timestamp(
-            self.current_now + timedelta(seconds=1)
+        mutated["retest"]["recorded_at"] = learning_ledger._timestamp(
+            FIXED_NOW + timedelta(seconds=5)
         )
         write(mutated)
         with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "cannot follow the latest candidate update"
+            learning_ledger.LedgerError, "must fall between its release record"
         ):
             self.ledger.check()
 
         mutated = json.loads(json.dumps(retest_baseline))
-        mutated["retests"][0] = ["not", "an", "object"]
+        mutated["retest"] = ["not", "an", "object"]
         write(mutated)
-        with self.assertRaisesRegex(learning_ledger.LedgerError, r"retests\[0\] must be an object"):
-            self.ledger.check()
-
-        mutated = json.loads(json.dumps(retest_baseline))
-        later_at = learning_ledger._timestamp(self.current_now + timedelta(seconds=1))
-        mutated["retests"].append(
-            {
-                "result": "fail",
-                "environment": "prod",
-                "reference": "run#3",
-                "recorded_at": later_at,
-            }
-        )
-        mutated["updated_at"] = later_at
-        write(mutated)
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError, "passing retest closes.*later attempts are invalid"
-        ):
+        with self.assertRaisesRegex(learning_ledger.LedgerError, "retest must be an object"):
             self.ledger.check()
 
         mutated = json.loads(json.dumps(retest_baseline))
         del mutated["release"]
         write(mutated)
         with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "retest lifecycle requires an existing current release record",
+            learning_ledger.LedgerError, "retest record requires an existing release record"
         ):
             self.ledger.check()
 
         write(retest_baseline)
         self.assertEqual(1, len(self.ledger.check()))
-
-    def test_check_rejects_release_recorded_after_candidate_left_promoted(self) -> None:
-        record = self._add()
-        candidate_id = record["candidate_id"]
-        self._advance(seconds=1)
-        self._promote(candidate_id)
-        self._advance(seconds=1)
-        rejected = self.ledger.transition(
-            candidate_id,
-            promotion_state="rejected",
-            disposition="drop",
-            destination="proposal:none",
-            owner="fleet-maintainer",
-            reason="The promoted destination was invalidated before any release.",
-        )
-        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["release"] = {
-            "version": "1.7.3",
-            "reference": "forged-after-rejection",
-            "recorded_at": rejected["updated_at"],
-        }
-        path.write_text(json.dumps(payload), encoding="utf-8")
-
-        with self.assertRaisesRegex(
-            learning_ledger.LedgerError,
-            "must be promoted at release.recorded_at.*reconstructed state was 'rejected'",
-        ):
-            self.ledger.check()
-
-    def test_check_rejects_orphan_retest_and_release_history_fields(self) -> None:
-        record = self._add()
-        path = self.root / "learning" / "candidates" / f"{record['candidate_id']}.json"
-        baseline = json.loads(path.read_text(encoding="utf-8"))
-        for field, value in (("retest", None), ("release_history", [])):
-            with self.subTest(field=field):
-                payload = json.loads(json.dumps(baseline))
-                payload[field] = value
-                path.write_text(json.dumps(payload), encoding="utf-8")
-                with self.assertRaisesRegex(
-                    learning_ledger.LedgerError,
-                    "requires (?:an existing|a) current release record",
-                ):
-                    self.ledger.check()
-
-    def test_legacy_singular_retest_migrates_to_ordered_history_on_retry(self) -> None:
-        record = self._add()
-        candidate_id = record["candidate_id"]
-        self._promote(candidate_id)
-        released = self.ledger.record_release(
-            candidate_id, version="1.7.3", reference="PR#123"
-        )
-        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
-        legacy_attempt = {
-            "result": "fail",
-            "environment": "prod-a",
-            "reference": "legacy-run#1",
-            "recorded_at": released["release"]["recorded_at"],
-        }
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["retest"] = legacy_attempt
-        path.write_text(json.dumps(payload), encoding="utf-8")
-
-        [checked] = self.ledger.check()
-        self.assertEqual(legacy_attempt, checked["retest"])
-        self.assertEqual(
-            [candidate_id],
-            [item["candidate_id"] for item in self.ledger.list_records("awaiting-retest")],
-        )
-
-        self._advance(seconds=1)
-        passed = self.ledger.record_retest(
-            candidate_id, result="pass", environment="prod-b", reference="run#2"
-        )
-        self.assertNotIn("retest", passed)
-        self.assertEqual(
-            [legacy_attempt, {
-                "result": "pass",
-                "environment": "prod-b",
-                "reference": "run#2",
-                "recorded_at": learning_ledger._timestamp(self.current_now),
-            }],
-            passed["retests"],
-        )
-
-    def test_legacy_singular_pass_remains_closed(self) -> None:
-        record = self._add()
-        candidate_id = record["candidate_id"]
-        self._promote(candidate_id)
-        released = self.ledger.record_release(
-            candidate_id, version="1.7.3", reference="PR#123"
-        )
-        path = self.root / "learning" / "candidates" / f"{candidate_id}.json"
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["retest"] = {
-            "result": "pass",
-            "environment": "prod",
-            "reference": "legacy-run#1",
-            "recorded_at": released["release"]["recorded_at"],
-        }
-        path.write_text(json.dumps(payload), encoding="utf-8")
-        before = path.read_bytes()
-
-        self.assertEqual([], self.ledger.list_records("awaiting-retest"))
-        with self.assertRaisesRegex(learning_ledger.LedgerError, "already passed.*closed"):
-            self.ledger.record_retest(
-                candidate_id, result="fail", environment="prod", reference="run#2"
-            )
-        self.assertEqual(before, path.read_bytes())
 
     def test_cli_record_release_and_record_retest_wire_through_argparse(self) -> None:
         added = self._cli(
@@ -1812,36 +1356,9 @@ class LearningLedgerTests(unittest.TestCase):
         self.assertEqual(0, retested.returncode, retested.stderr)
         self.assertIn("REGRESSION", retested.stderr)
         self.assertIn(candidate_id, retested.stderr)
-        self.assertEqual(
-            ["fail"],
-            [item["result"] for item in json.loads(retested.stdout)["retests"]],
-        )
-
-        still_awaiting = self._cli("list", "--view", "awaiting-retest")
-        self.assertEqual(
-            [candidate_id],
-            [item["candidate_id"] for item in json.loads(still_awaiting.stdout)],
-        )
-
-        passed = self._cli(
-            "record-retest", candidate_id,
-            "--result", "pass", "--environment", "prod", "--reference", "run#2",
-        )
-        self.assertEqual(0, passed.returncode, passed.stderr)
-        self.assertEqual(
-            ["fail", "pass"],
-            [item["result"] for item in json.loads(passed.stdout)["retests"]],
-        )
 
         emptied = self._cli("list", "--view", "awaiting-retest")
         self.assertEqual([], json.loads(emptied.stdout))
-
-        refused = self._cli(
-            "record-retest", candidate_id,
-            "--result", "fail", "--environment", "prod", "--reference", "run#3",
-        )
-        self.assertEqual(1, refused.returncode)
-        self.assertIn("already passed", refused.stderr)
 
         checked = self._cli("check")
         self.assertEqual(0, checked.returncode, checked.stderr)

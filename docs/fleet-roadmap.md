@@ -187,12 +187,11 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### REV-001 — advisory/approval split and the review-to-verify envelope
 
-**Status:** `active — review/verification closeout` — the approved canonical reviewer/verifier
-payloads, five behavioral contracts, and clean-tree approval-envelope reducer are implemented on
-the round branch. Remaining: commit-bound review, independent verification, and PR closeout. The
-shared material-risk matrix still grows by generalization, never per-incident append.
+**Status:** `active` — spec approved 2026-08-09 (growth-by-generalization condition carried
+into the matrix text itself); paired plan authored and implemented 2026-08-10 on
+`round/loop-rev-001` together with LOOP-001.
 
-**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree object id)
+**Outcome:** A formal review approval binds to immutable identity (commit, parent, tree digest)
 and never transfers to changed bytes; the verifier requires that envelope and fails closed on
 mismatch; reviewer and verifier share one material-risk matrix; caller-reported and
 independently-executed evidence stay distinct classes. The fleet's working-diff review lanes
@@ -208,11 +207,10 @@ GRAPH-004-compatible field names — GRAPH-004 stays deferred).
 **Acceptance:** The spec's list; headline gates are the #62 scenario evals, adapter parity, and
 no change to working-diff lane behavior.
 
-**Next action:** Commit the integrated round bytes, obtain an exact-HEAD review and independent
-verification against the emitted approval envelope, then complete PR closeout. Both riders landed
-with the round (`lc_90dd8dc7` → verification-engineer's whole-branch cold-rerun rule,
-`lc_2c04ead3` → code-reviewer's repro-evidence-class rule); the five REV contracts calibrate in
-LEARN-002's docket.
+**Next action:** Operator review and merge of the round PR (`round/loop-rev-001`). Both riders
+landed with the round (`lc_90dd8dc7` → verification-engineer's whole-branch cold-rerun rule,
+`lc_2c04ead3` → code-reviewer's repro-evidence-class rule); the two envelope contracts calibrate
+in LEARN-002's docket.
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 

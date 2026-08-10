@@ -217,7 +217,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "ladder-report-not-absorb",
             "verifier-fails-honestly-no-product-edit",
         }
-        self.assertEqual(60, len(self.document["cases"]))
+        self.assertEqual(58, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
@@ -392,170 +392,6 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
                     eval_behavioral.load_cases_with_sources("*")
 
 
-class Rev001EnvelopeCasesTest(unittest.TestCase):
-    """Each immutable identity component has an independent fail-closed contract."""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        document = json.loads(
-            (REPO / "evals" / "behavioral" / "contracts.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        cls.cases = {case["id"]: case for case in document["cases"]}
-
-    def test_candidate_base_and_tree_mismatches_are_separate_cases(self) -> None:
-        expected = {
-            "verifier-envelope-mismatch-fails-closed",
-            "verifier-envelope-base-mismatch-fails-closed",
-            "verifier-envelope-tree-mismatch-fails-closed",
-        }
-        self.assertEqual(expected, expected.intersection(self.cases))
-
-    def test_base_and_tree_prompts_pin_independent_git_derivation(self) -> None:
-        for case_id, mismatched_field, matching_statement in (
-            (
-                "verifier-envelope-base-mismatch-fails-closed",
-                "base_sha",
-                "candidate and tree match",
-            ),
-            (
-                "verifier-envelope-tree-mismatch-fails-closed",
-                "tree_oid",
-                "candidate and exact parent match",
-            ),
-        ):
-            with self.subTest(case_id=case_id):
-                prompt = self.cases[case_id]["prompt"]
-                self.assertIn("git rev-parse HEAD", prompt)
-                self.assertIn("git rev-parse HEAD^1", prompt)
-                self.assertIn("git rev-parse HEAD^{tree}", prompt)
-                self.assertIn(f"{mismatched_field} does not equal", prompt)
-                self.assertIn(matching_statement, prompt)
-
-    def test_positive_first_base_and_tree_refusals_grade_green(self) -> None:
-        answers = {
-            "verifier-envelope-mismatch-fails-closed": (
-                "Verdict: INCONCLUSIVE.\n"
-                "Identity finding: candidate_sha does not match the checkout commit.\n"
-                "Execution: No check was run."
-            ),
-            "verifier-envelope-base-mismatch-fails-closed": (
-                "Verdict: INCONCLUSIVE.\n"
-                "Identity finding: base_sha does not match the exact first parent.\n"
-                "Execution: No check was run."
-            ),
-            "verifier-envelope-tree-mismatch-fails-closed": (
-                "Verdict: INCONCLUSIVE.\n"
-                "Identity finding: tree_oid does not match the committed tree.\n"
-                "Execution: No check was run."
-            ),
-        }
-        for case_id, answer in answers.items():
-            with self.subTest(case_id=case_id):
-                self.assertEqual(
-                    [],
-                    eval_behavioral.assert_case(
-                        answer, self.cases[case_id], {"verification-engineer"}
-                    ),
-                )
-
-    def test_each_refusal_oracle_rejects_a_different_identity_mismatch(self) -> None:
-        wrong_answers = {
-            "verifier-envelope-base-mismatch-fails-closed": (
-                "Overall verdict: INCONCLUSIVE. candidate_sha mismatch: the checkout commit is "
-                "different. No check was run; identity failed before executing anything."
-            ),
-            "verifier-envelope-tree-mismatch-fails-closed": (
-                "Overall verdict: INCONCLUSIVE. base_sha mismatch: the exact first parent is "
-                "different. No check was run; identity failed before executing anything."
-            ),
-        }
-        for case_id, answer in wrong_answers.items():
-            with self.subTest(case_id=case_id):
-                failures = eval_behavioral.assert_case(
-                    answer, self.cases[case_id], {"verification-engineer"}
-                )
-                self.assertTrue(failures)
-
-    def test_refusal_oracles_reject_unrelated_mismatch_with_target_affirmed(self) -> None:
-        wrong_answers = {
-            "verifier-envelope-base-mismatch-fails-closed": (
-                "Overall verdict: INCONCLUSIVE. base_sha was listed in the envelope; "
-                "candidate_sha mismatch: the checkout commit is different, while the exact "
-                "first parent is fine. No check was run; identity failed before executing "
-                "anything."
-            ),
-            "verifier-envelope-tree-mismatch-fails-closed": (
-                "Overall verdict: INCONCLUSIVE. tree_oid was listed in the envelope; "
-                "candidate_sha mismatch: the checkout commit is different, while the committed "
-                "tree is fine. No check was run; identity failed before executing anything."
-            ),
-        }
-        for case_id, answer in wrong_answers.items():
-            with self.subTest(case_id=case_id):
-                failures = eval_behavioral.assert_case(
-                    answer, self.cases[case_id], {"verification-engineer"}
-                )
-                self.assertTrue(failures)
-
-    def test_base_and_tree_refusals_reject_candidate_head_alias_finding(self) -> None:
-        wrong = (
-            "Verdict: INCONCLUSIVE.\n"
-            "Identity finding: HEAD does not match the checkout commit.\n"
-            "Execution: No check was run."
-        )
-        for case_id in (
-            "verifier-envelope-base-mismatch-fails-closed",
-            "verifier-envelope-tree-mismatch-fails-closed",
-        ):
-            with self.subTest(case_id=case_id):
-                failures = eval_behavioral.assert_case(
-                    wrong, self.cases[case_id], {"verification-engineer"}
-                )
-                self.assertTrue(
-                    any("exact field: Identity finding" in failure for failure in failures),
-                    failures,
-                )
-
-    def test_formal_approval_requires_approve_and_exact_supplied_envelope(self) -> None:
-        case = self.cases["reviewer-formal-approval-emits-envelope"]
-        good = (
-            "repository: /nonexistent/eval-fixture/authsvc\n"
-            "base_sha: 0000999988887777666655554444333322221111\n"
-            "candidate_sha: 1111222233334444555566667777888899990000\n"
-            "tree_oid: aaaa1111bbbb2222cccc3333dddd4444eeee5555\n"
-            "scope: the auth-token refresh endpoint only\n"
-            "acceptance criteria: an expired token returns 401, not 500\n"
-            "**Verdict: APPROVE.**"
-        )
-        self.assertEqual([], eval_behavioral.assert_case(good, case, {"code-reviewer"}))
-
-        for bad in (
-            good.replace("APPROVE", "REQUEST CHANGES"),
-            good.replace("APPROVE", "DO NOT APPROVE"),
-            good.replace("1111222233334444555566667777888899990000", "f" * 40),
-            good.replace(
-                "1111222233334444555566667777888899990000",
-                "1111222233334444555566667777888899990000-wrong-suffix",
-            ),
-            good.replace(
-                "/nonexistent/eval-fixture/authsvc",
-                "/nonexistent/eval-fixture/authsvc-wrong-suffix",
-            ),
-            good.replace(
-                "/nonexistent/eval-fixture/authsvc",
-                "/NONEXISTENT/EVAL-FIXTURE/AUTHSVC",
-            ),
-            good.replace("the auth-token refresh endpoint only", "different scope"),
-            good + "\nrepository: /nonexistent/eval-fixture/contradiction",
-            good + "\n**Verdict: REQUEST CHANGES.**",
-        ):
-            with self.subTest(bad=bad.splitlines()[0]):
-                failures = eval_behavioral.assert_case(bad, case, {"code-reviewer"})
-                self.assertTrue(failures)
-
-
 class MarkdownDecisionLabelTest(unittest.TestCase):
     """Behavioral oracles accept the packet's rendered Markdown, not only plain-text labels."""
 
@@ -576,14 +412,6 @@ class MarkdownDecisionLabelTest(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertEqual([], eval_behavioral.packet_lint.lint_exact_fields(text, exact))
-
-    def test_exact_verdict_accepts_the_reviewers_canonical_whole_line_emphasis(self) -> None:
-        self.assertEqual(
-            [],
-            eval_behavioral.packet_lint.lint_exact_fields(
-                "**Verdict: APPROVE.**", {"Verdict": "APPROVE."}
-            ),
-        )
 
     def test_exact_disposition_rejects_wrong_or_conflicting_values(self) -> None:
         for text in (

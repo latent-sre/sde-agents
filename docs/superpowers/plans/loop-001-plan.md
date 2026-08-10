@@ -9,36 +9,30 @@ round is active, then retired to an outcome record. Evidence base at authoring: 
 
 ## Design decision the spec left to the plan
 
-**Fields, not new lifecycle states.** The merged≠released distinction lands as optional record
-blocks on a promoted candidate: `release` (version, reference, recorded_at), ordered `retests`
-attempts (result, environment, reference, recorded_at), and `release_history` for completed
-promotion cycles. Shipped singular `retest` records remain read-compatible and migrate on retry or
-release-cycle archive.
-New `promotion_state` values would ripple through the three declared STATE_DISPOSITIONS mirrors,
-the packet grammar, and every learning contract for no added power. Closure remains a judgment the
-records make legible, enforced fail-closed at the tooling layer.
+**Fields, not new lifecycle states.** The merged≠released distinction lands as optional
+record blocks on a promoted candidate — `release` (version, reference, recorded_at) and
+`retest` (result, environment, reference, recorded_at) — because new `promotion_state` values
+would ripple through the three declared STATE_DISPOSITIONS mirrors, the packet grammar, and
+every learning contract, violating the no-grader-loosened constraint for no added power.
+Closure remains a judgment the records make legible, enforced fail-closed at the tooling layer:
 
 ## Payloads
 
 1. **`scripts/learning_ledger.py`** — two subcommands, additive schema:
    - `record-release <id> --version --reference` — legal only on a `promoted` candidate;
-     stamps one release per promotion cycle; after a fresh re-promotion, archives the prior
-     release and all of its attempts and starts a clean cycle.
+     stamps the release block; rejects a second release block (a later release is a new
+     record's business).
    - `record-retest <id> --result {pass,fail,inconclusive} --environment --reference` — legal
-     only when a release block exists; appends ordered attempts. Fail and inconclusive remain
-     retryable; PASS alone closes the cycle. A `fail` result emits and returns a loud regression
-     pointer.
-   - `list` gains pull-based `awaiting-retest`, `regressed`, and `awaiting-release` views. Failed
-     attempts remain in both actionable retry and regression views until PASS or owner action.
-   - Release identity resolves from its bound promotion transition, not mutable record-head
-     destination metadata. Same-clock post-release transitions and later-release writes fail
-     closed instead of inventing event order.
-   - `check` replays exact promotion state at each release, validates distinct chronological
-     release cycles and their attempt ordering, and rejects attempts crossing cycle boundaries.
+     only when a release block exists; stamps the retest block. A `fail` result prints a
+     loud pointer that the candidate's destination regressed in the field.
+   - `list` gains `--view awaiting-retest`: promoted candidates carrying `release` but no
+     `retest` — the pull-based discovery surface (spec item 5); a release or upgrade retro
+     reads it, nothing schedules it.
+   - `check` validates both blocks' shapes and their ordering invariants.
 2. **`skills/self-improve-loop`** — the lifecycle statement (spec item 1) lands in
    [`references/learning-ledger.md`] as the governing shape for retained field feedback, with
    SKILL.md gaining only the closure rule sentence: *a field-feedback item closes as
-   successful only with an exact released-version PASS retest recorded, or the owner's explicit
+   successful only with an exact released-version retest recorded, or the owner's explicit
    reason it is impossible; source-eval PASS is never reportable as released PASS.*
 3. **`.github/ISSUE_TEMPLATE/field-feedback.md`** — the minimum contract made visible where
    issues are the destination (spec item 4): sanitized packet, duplicate check, owner, target
@@ -50,11 +44,10 @@ records make legible, enforced fail-closed at the tooling layer.
    positives-first per the stop-rule lesson. Evals 4–5 belong to GATE-001 (closed, shipped);
    Evals 6–7 are covered by the existing promotion-gate and sensitivity contracts — recorded
    here as the spec requires.
-5. **Tests** — subcommand happy/fail-closed paths in `tests/test_learning_ledger.py`: release before
-   promotion and forged promotion→rejection→release are rejected; fail→retry→PASS and
-   inconclusive→retry preserve ordered history; singular current and archived forms remain
-   readable; archived attempts cannot leak into a later cycle; PASS alone closes; and all three
-   pull views are exact. Every defensive guard lands with the test that fires it.
+5. **Tests** — subcommand happy/fail-closed paths in `tests/test_learning_ledger.py`
+   (release-before-promoted rejected, retest-before-release rejected, double-release rejected,
+   awaiting-retest view exact), per the defensive-branch playbook: every guard lands with the
+   test that fires it.
 
 ## Verification payloads
 
@@ -64,16 +57,16 @@ for their live paired run, per the review-loop stop rule — authored here, cali
 
 ## Design ruling recorded at review
 
-The spec's "rejection/rollback trigger" clause is carried by the lifecycle rather than another
-record block: a `fail` attempt surfaces in `regressed` while remaining retryable in
-`awaiting-retest`. A later PASS proves repair; otherwise the owner records a transition (rejected,
-or retired-with-supersede naming the successor), whose `reason` field is the durable trigger.
+The spec's "rejection/rollback trigger" clause is carried by the lifecycle rather than a third
+record block: a `fail` retest surfaces in the `regressed` view and stays there until the owner
+records the disposition as a transition (rejected, or retired-with-supersede naming the
+successor), whose `reason` field is the durable trigger record.
 
 ## Rollback
 
 The code reverts in one commit, but records are data: any candidate that has gained
-`release`/`retest`/`retests`/`release_history` fields must have them stripped in the same change
-(enumerable with a single grep for `"release"` — the other fields can only exist alongside it), or
-the restored reader rejects the ledger on every command and the validator goes red with it.
-`learning/README.md`'s Rollback section is the executable procedure. No schema version bump either
-way; corrected from this plan's original one-revert claim, which review proved false.
+`release`/`retest`/`release_history` blocks must have them stripped in the same change
+(enumerable with a single grep for `"release"` — the other two blocks can only exist alongside
+it), or the restored reader rejects the ledger on every command and the validator goes red with
+it. `learning/README.md`'s Rollback section is the executable procedure. No schema version bump
+either way; corrected from this plan's original one-revert claim, which review proved false.
