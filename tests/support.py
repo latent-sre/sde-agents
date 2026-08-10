@@ -31,15 +31,20 @@ _IGNORED_DIRS = frozenset({".git", "__pycache__", ".probe-tmp"})
 # `.claude/worktrees/agent-*` is the platform's nested-worktree home: a second full checkout
 # that another session writes concurrently, so copying it both bloats every test template by
 # that checkout's size and races the other writer exactly as `.probe-tmp` did. The exclusion is
-# repository-relative, never the bare basename: a basename ignore would silently omit any
-# legitimate `worktrees/` directory a later skill or fixture ships, so the tree under validation
-# would quietly stop matching the repository. The probe's copytree (scripts/probe_plugin.py)
-# carries the same exclusion for the same reason — the two are kept in step by hand.
+# repository-relative and covers everything UNDER the path, never the bare basename: a basename
+# ignore would silently omit any legitimate `worktrees/` directory a later skill or fixture
+# ships, so the tree under validation would quietly stop matching the repository. The probe's
+# copytree (scripts/probe_plugin.py) carries the same exclusion for the same reason — the two
+# are kept in step by hand.
 _IGNORED_PATHS = frozenset({Path(".claude") / "worktrees"})
 
 
 def _is_ignored(relative: Path) -> bool:
-    return relative in _IGNORED_PATHS or any(part in _IGNORED_DIRS for part in relative.parts)
+    return (
+        relative in _IGNORED_PATHS
+        or any(parent in _IGNORED_PATHS for parent in relative.parents)
+        or any(part in _IGNORED_DIRS for part in relative.parts)
+    )
 
 
 def _copy_ignore(directory: str, names: list[str]) -> set[str]:

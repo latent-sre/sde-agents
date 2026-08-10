@@ -246,6 +246,23 @@ class RepoPoolRestoreTests(unittest.TestCase):
         finally:
             pool._holder.cleanup()
 
+    def test_borrower_created_ignored_subtree_is_untouched_and_invisible(self) -> None:
+        # `.claude/worktrees` matches _IGNORED_PATHS, and its SUBTREE must match too: a
+        # borrower that plants a worktree-shaped tree mid-borrow (the live platform case —
+        # another session's nested checkout exists while the suite runs) must find it
+        # invisible to the content walks and intact after restore, never unlinked as an
+        # addition because only the exact path was ignored.
+        planted = Path(".claude") / "worktrees" / "agent-test" / "run_state.py"
+        with repo_copy() as dst:
+            (dst / planted).parent.mkdir(parents=True)
+            (dst / planted).write_text("live sibling checkout\n", encoding="utf-8")
+            walked = [p for p in support._walk_files(dst) if "agent-test" in str(p)]
+            self.assertEqual([], walked)
+        with repo_copy() as dst:
+            self.assertEqual(
+                "live sibling checkout\n", (dst / planted).read_text(encoding="utf-8")
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
