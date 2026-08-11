@@ -647,6 +647,26 @@ class PluginWiringTests(unittest.TestCase):
             any("Delegation handoff packet" in issue for issue in issues), issues
         )
 
+        def swap_adjacent_slots(repo: Path) -> None:
+            # Reordering keeps both slot sets equal, so the missing/extra checks above see
+            # nothing. The linter reports the first missing slot by position, which is how a
+            # divergent order sends a real finding to the wrong line.
+            path = repo / "agents" / "homelab-platform.md"
+            source = path.read_text(encoding="utf-8")
+            mutated, count = re.subn(
+                r"^(-\s+`Blocking:`[^\n]*\n)(-\s+`Open lanes:`[^\n]*\n)",
+                r"\2\1",
+                source,
+                flags=re.MULTILINE,
+            )
+            self.assertEqual(1, count, "the adjacent Blocking/Open lanes bullets were not found")
+            path.write_text(mutated, encoding="utf-8")
+
+        issues = self._issues_after(swap_adjacent_slots)
+        self.assertTrue(
+            any("slot ORDER" in issue and "differs from" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 
