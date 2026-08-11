@@ -172,7 +172,10 @@ Learning closeout and candidate fields, reviewer approval boundaries, adversaria
 instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
 learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
 verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
-validation. The runner prints the selected case and session count before starting;
+validation, plus proportional onboarding handoffs that preserve discovered constraints without
+turning a simple build into packet ceremony. Each case artifact records input/output usage and
+duration per run; an unavailable value is `null`, never a fabricated zero. The runner prints the
+selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the

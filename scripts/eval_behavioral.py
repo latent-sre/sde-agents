@@ -947,6 +947,7 @@ def main(argv: list[str] | None = None) -> int:
     results: dict[str, list[list[str]]] = {case["id"]: [] for case in cases}
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
+    durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
     observed_models: set[str] = set()
 
     def execute(job: tuple[dict, int]) -> tuple[int, str, list[str], str | None, dict]:
@@ -1046,6 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
                     {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
                     if has_usage else None
                 )
+                durations[case["id"]].append(stats["duration_ms"])
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")
@@ -1073,6 +1075,7 @@ def main(argv: list[str] | None = None) -> int:
             "failures": sorted({f for failures in runs for f in failures}),
             "notes": notes[case["id"]],
             "usage_per_run": usage[case["id"]],
+            "duration_ms_per_run": durations[case["id"]],
         })
 
     print("-" * 100)

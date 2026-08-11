@@ -155,6 +155,9 @@ conventions, for the same reason: the **three-strikes rule** is owned by `skills
 (sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
 classification** is owned by `agents/homelab-platform.md`'s change-authority section
 (code-reviewer carries the compact finding-classification paraphrase and defers on conflict);
+the **onboarding handoff** trigger, fields, and authority boundary are owned by
+`agents/homelab-platform.md` (`agents/sde-fullstack.md` carries the consumer paraphrase and defers
+on conflict);
 the **shared material-risk matrix** is owned by `agents/code-reviewer.md` (verification-engineer
 carries it verbatim and defers on conflict); the
 **CLAUDE.md/`@AGENTS.md` bridge** and the **progress/plan-file layout** are owned by this

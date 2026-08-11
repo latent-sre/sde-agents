@@ -168,8 +168,8 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `ready` — spec approved by the operator 2026-08-09. The REV-001 sequencing
-condition is met: that round closed 2026-08-10
+**Status:** `active` — lean re-plan authorized by the operator 2026-08-11; spec approved
+2026-08-09. The REV-001 sequencing condition is met: that round closed 2026-08-10
 ([outcome record](archive/2026-08/rev-001-outcome-2026-08-10.md)) with the envelope idiom
 settled — `candidate_sha`/`base_sha`/`tree_oid` and the six-field approval envelope.
 
@@ -178,7 +178,8 @@ carry failed assumptions, verification-method validity, the executable-transport
 irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
 — and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
 
-**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
+**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) and
+its [paired lean plan](superpowers/plans/handoff-001-plan.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
 **Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
@@ -186,7 +187,15 @@ release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Next action:** Author the paired plan, reusing the merged envelope idiom.
+**Current evidence:** The working candidate contains the lean producer, consumer, six focused
+contracts, and regenerated adapters. On 2026-08-11, T0 passed, all 618 tests across 29 modules
+passed, and `claude plugin validate . --strict` passed. No paid session has run; total result
+duration is available, but exact first-artifact latency remains unmeasured.
+
+**Next action:** Operator ruling on whether first-artifact streaming instrumentation is worth its
+added evaluator complexity, then approval of the plan's exact model and 36-session paired capture.
+The recommended lean default is no new streaming instrument: report total artifact-containing
+response duration honestly and leave exact first-artifact latency open rather than manufacture it.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
