@@ -1465,12 +1465,9 @@ def validate_handoff_packet_shape(root: Path) -> list[str]:
             "scripts/packet_lint.py's 'handoff-packet' shape does not grade. An ungraded slot is "
             "the one that gets quietly dropped, which is the failure the packet exists to stop."
         )
-    if not missing and not extra and declared != list(shape):
-        issues.append(
-            f"{owner}: the delegation packet's slot ORDER {declared!r} differs from "
-            f"scripts/packet_lint.py's {list(shape)!r}. The linter reports the first missing slot, "
-            "so a divergent order makes its findings point at the wrong line."
-        )
+    # Deliberately no order comparison: packet_lint matches slots anywhere in the packet, so a
+    # reordered canonical list grades identically. Failing the gate on order would block a
+    # harmless edit while claiming a linter behavior that does not exist.
     return issues
 
 

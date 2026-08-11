@@ -64,9 +64,12 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # homelab-platform's DELEGATION handoff, emitted before a builder starts rather than after work
     # ends. Thirteen slots and deliberately no scaling clause: this packet exists because a
     # constraint dropped between design and builder came back three times in one onboarding (twice
-    # with a regression test that required the wrong form), so the canonical text requires every
-    # line, `none` when empty. A shape that let a slot vanish would grade the exact failure it was
-    # built to catch as compliant. The proportional short form the agent may use instead is not a
+    # with a regression test that required the wrong form). The canonical text asks the writer for
+    # every line, `none` when empty; what THIS shape guarantees is narrower — every slot heading is
+    # present (a vanished slot is a finding), Deliverable and Acceptance carry more than `none`
+    # (SUBSTANTIVE_SLOTS below), and Verified facts cites a probe with an observed result
+    # (PROBED_SLOTS below). `none`-when-empty on the remaining slots is writer discipline the
+    # linter does not check. The proportional short form the agent may use instead is not a
     # compressed packet and is not graded here — it emits no packet at all, by design.
     # `verified facts` also reaches the verification-claim rule below: a packet whose facts and
     # acceptance criteria cite no command anywhere near them is reported, which is the point —

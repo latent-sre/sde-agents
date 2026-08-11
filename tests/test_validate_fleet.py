@@ -648,9 +648,9 @@ class PluginWiringTests(unittest.TestCase):
         )
 
         def swap_adjacent_slots(repo: Path) -> None:
-            # Reordering keeps both slot sets equal, so the missing/extra checks above see
-            # nothing. The linter reports the first missing slot by position, which is how a
-            # divergent order sends a real finding to the wrong line.
+            # Reordering keeps both slot sets equal, and packet_lint matches slots anywhere in a
+            # packet, so a reordered canonical list grades identically. The gate deliberately
+            # accepts it; failing here would block a harmless edit (review finding, PR #108).
             path = repo / "agents" / "homelab-platform.md"
             source = path.read_text(encoding="utf-8")
             mutated, count = re.subn(
@@ -663,9 +663,7 @@ class PluginWiringTests(unittest.TestCase):
             path.write_text(mutated, encoding="utf-8")
 
         issues = self._issues_after(swap_adjacent_slots)
-        self.assertTrue(
-            any("slot ORDER" in issue and "differs from" in issue for issue in issues), issues
-        )
+        self.assertEqual([], issues)
 
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
