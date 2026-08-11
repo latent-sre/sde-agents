@@ -19,8 +19,8 @@
   },
   "observation": "A reviewer-supplied failure repro was accepted as the stated cause in 3 of 5 findings from one deep-review round, but running each repro showed the stated trigger did not reproduce while a narrower one did. The underlying defects were real in all three cases, so the findings were useful; the supplied rationale was not. Examples: a claim that a censored assert means fail_msg never reaches the operator (it does, via the error banner); a claim of two ConfigParser triggers where neither fires (interpolation is lazy per-key, and CPython auto-enables UTF-8 mode under LC_ALL=C); a claim that a document undercounted at two where the derived count was five across four roles.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Builder-consuming half already owned verbatim at sde-fullstack.md:108. Reviewer-emitting half exists only for security findings at code-reviewer.md:55. Fleet reviewers cannot execute code per code-reviewer.md:128, so the residue is traced-and-confirmed-by-reading versus assumed-runtime-semantics, not measured versus reasoned. Recurrence 1.",
+  "promotion_state": "promoted",
+  "reason": "Promoted on the 1.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 1.7.3 waits on the tag.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:20.814997Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-04T00:32:31.740445Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "released 1.7.3 artifact",
+    "recorded_at": "2026-08-10T21:54:20.961864Z",
+    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "result": "inconclusive"
   },
   "review_history": [],
   "schema_version": 2,
@@ -56,7 +67,25 @@
       "owner": "fleet-maintainer",
       "reason": "Builder-consuming half already owned verbatim at sde-fullstack.md:108. Reviewer-emitting half exists only for security findings at code-reviewer.md:55. Fleet reviewers cannot execute code per code-reviewer.md:128, so the residue is traced-and-confirmed-by-reading versus assumed-runtime-semantics, not measured versus reasoned. Recurrence 1.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T20:26:16.693361Z",
+      "destination": "agents/code-reviewer.md",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "REV-001 rider landed in PR #109: code-reviewer labels reproduction claims executed or reasoned and never presents an unrun repro as the confirmed cause. Approve for promotion on this closeout.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T20:26:16.797298Z",
+      "destination": "agents/code-reviewer.md",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Promoted on the 1.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 1.7.3 waits on the tag.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:50:06.075011Z"
+  "updated_at": "2026-08-10T21:54:20.961864Z"
 }

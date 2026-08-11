@@ -19,8 +19,8 @@
   },
   "observation": "On a multi-task branch, one task enabled a 24-hour on-disk fact cache while another task pruned fact-gathering from playbooks on the basis of a static audit. Each task passed its own review. The second task's live verification ran after the first had landed, so its green check proved the warm-cache world rather than a cold one, and the roles deliberately excluded from the prune were exactly those exposed to stale facts. No per-task gate could see the interaction; only the final whole-branch review did.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Revision binding at verification-engineer.md:38-41 reaches revision and runtime versions only; a sibling tasks landed shared-config change is neither, and the file-scoped re-review trigger at code-reviewer.md:78-79 never fires for it. Precedent phrasing already exists at skills/runbook/SKILL.md:136-138. Recurrence 1.",
+  "promotion_state": "promoted",
+  "reason": "Promoted on the 1.7.3 closeout: Method 4 whole-branch cold-rerun rule is canonical in agents/verification-engineer.md. record-release for 1.7.3 waits on the tag.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:23.435206Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-04T00:32:53.100368Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "released 1.7.3 artifact",
+    "recorded_at": "2026-08-10T21:54:23.592152Z",
+    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "result": "inconclusive"
   },
   "review_history": [],
   "schema_version": 2,
@@ -56,7 +67,25 @@
       "owner": "fleet-maintainer",
       "reason": "Revision binding at verification-engineer.md:38-41 reaches revision and runtime versions only; a sibling tasks landed shared-config change is neither, and the file-scoped re-review trigger at code-reviewer.md:78-79 never fires for it. Precedent phrasing already exists at skills/runbook/SKILL.md:136-138. Recurrence 1.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T20:26:16.459980Z",
+      "destination": "agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "REV-001 rider landed in PR #109: verification-engineer Method 4 now requires whole-branch cold rerun when any task edited shared execution configuration. Approve for promotion on this closeout.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T20:26:16.563607Z",
+      "destination": "agents/verification-engineer.md",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Promoted on the 1.7.3 closeout: Method 4 whole-branch cold-rerun rule is canonical in agents/verification-engineer.md. record-release for 1.7.3 waits on the tag.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T13:50:06.311991Z"
+  "updated_at": "2026-08-10T21:54:23.592152Z"
 }

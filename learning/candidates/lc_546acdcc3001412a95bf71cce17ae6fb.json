@@ -19,8 +19,8 @@
   },
   "observation": "A workflow shipped validator-green and unloadable twice from the same file in opposite directions: 3b9885e placed constants before meta (caught in PR #95 review), then the #95 repair derived body constants FROM meta and every installed-1.7.0 invocation died at load with 'meta is not defined' (run wf_c1db8dfb-b9f, zero agents) -- caught only by the release acceptance run. The validator models the platform contract statically; only a live load proves it.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Triage 2026-08-09: this is a live instance of LOOP-001's merged-vs-released gap (source-green, released, broken in the field until a released-artifact check ran). The validator now bans both observed unloadable shapes deterministically (74128d6, 7590a95); the residual lesson -- a workflow-shape release owes one live load -- joins LOOP-001's lifecycle when its drafted spec is approved, like lc_74f04730.",
+  "promotion_state": "promoted",
+  "reason": "Promoted on the 1.7.3 closeout: unloadable workflow shapes are validator-banned and the released-retest lifecycle owns the residual live-load discipline. record-release for 1.7.3 waits on the tag.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -34,9 +34,20 @@
       }
     ]
   },
+  "release": {
+    "recorded_at": "2026-08-10T21:54:21.689946Z",
+    "reference": "sde-agents--v1.7.3",
+    "version": "1.7.3"
+  },
   "retention": {
     "expires_at": "2027-08-09T19:22:29.495938Z",
     "policy": "review-or-expire"
+  },
+  "retest": {
+    "environment": "installed plugin sde-agents@latent-sre 1.7.3, headless scratch-repo session",
+    "recorded_at": "2026-08-10T21:54:21.835379Z",
+    "reference": "workflow loaded and returned its merge record; evals/baselines/2026-08-10-rel-173/deep-review-released-retest.txt",
+    "result": "pass"
   },
   "review_history": [],
   "schema_version": 2,
@@ -56,7 +67,25 @@
       "owner": "fleet-maintainer",
       "reason": "Triage 2026-08-09: this is a live instance of LOOP-001's merged-vs-released gap (source-green, released, broken in the field until a released-artifact check ran). The validator now bans both observed unloadable shapes deterministically (74128d6, 7590a95); the residual lesson -- a workflow-shape release owes one live load -- joins LOOP-001's lifecycle when its drafted spec is approved, like lc_74f04730.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-10T20:26:16.227639Z",
+      "destination": "docs/fleet-roadmap.md LOOP-001",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "LOOP-001 implementation merged as PR #109: the residual lesson (workflow-shape release owes one live load; validator-green is not loadable) joins the released-retest lifecycle this candidate already targeted. Approve for promotion on this closeout.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-10T20:26:16.330760Z",
+      "destination": "docs/fleet-roadmap.md LOOP-001",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Promoted on the 1.7.3 closeout: unloadable workflow shapes are validator-banned and the released-retest lifecycle owns the residual live-load discipline. record-release for 1.7.3 waits on the tag.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-09T19:22:39.907944Z"
+  "updated_at": "2026-08-10T21:54:21.835379Z"
 }

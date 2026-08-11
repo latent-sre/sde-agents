@@ -1,0 +1,50 @@
+warning: in the working copy of 'calc.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'calc.py', LF will be replaced by CRLF the next time Git touches it
+The `sde-agents:deep-review` workflow completed. Verdict, verbatim:
+
+```
+"verdict": "provisional-commit-and-re-review"
+```
+
+with `"confirmed_criticals": 0`.
+
+Full result JSON:
+
+```json
+{
+  "verdict": "provisional-commit-and-re-review",
+  "head_sha": "530fd848a00352ae0a8d43f3ff3b722551cf5918",
+  "confirmed_criticals": 0,
+  "review": {
+    "findings": [
+      {
+        "file": ".../calc.py",
+        "line": 4,
+        "claim": "New top-level function `sub` is separated from `add` by a single blank line; PEP 8 (E302) specifies two blank lines between top-level definitions.",
+        "severity": "P3",
+        "evidence": "verified",
+        "failure_scenario": "Cosmetic only; no runtime effect. If a PEP 8 linter (flake8/ruff) is ever added to this repo or its CI, calc.py:4 fails with E302. No linter is configured today, so nothing catches it now."
+      }
+    ],
+    "verdict": "provisional-commit-and-re-review",
+    "not_checked": "Ran nothing (read-only mandate) — no test execution, no import check. Repo has no tests, no pyproject.toml/setup.py, no CI config. Untracked 0-byte retest-output.txt inspected but out of diff scope. No CLAUDE.md/AGENTS.md to audit against. No remote/PR context available."
+  },
+  "security": {
+    "findings": [],
+    "verdict": "provisional-commit-and-re-review",
+    "not_checked": "Read-only mandate — nothing executed, no test suite exists. Correctness dimensions out of lane (owned by review lane). No callers of add/sub exist in the tracked tree. .git internals not inspected. Untracked 0-byte retest-output.txt considered and dropped as speculative, not a defect. Verdict is provisional solely because git status reports a dirty tree (caused by that untracked file) — the reviewed calc.py bytes are byte-identical to the committed blob."
+  },
+  "scope": {
+    "base_ref": "merge-base(HEAD, main) = 58bf4f36b4d716d91782e39c13a43fbda72b0f85 (== main tip)",
+    "head_sha": "530fd848a00352ae0a8d43f3ff3b722551cf5918",
+    "tree_dirty": true,
+    "changed_files": ["calc.py"],
+    "diff_summary": "calc.py: added `sub(a, b)` returning `a - b`, after existing `add(a, b)`. 3 insertions, 0 deletions."
+  }
+}
+```
+
+`★ Insight ─────────────────────────────────────`
+The verdict `provisional-commit-and-re-review` isn't a rejection — it's specifically because `git status` reports the tree as dirty (due to that untracked, empty `retest-output.txt` at the repo root, unrelated to the diff). Both lanes independently confirmed the tracked bytes of `calc.py` are byte-identical to the committed blob, so the substantive review — zero P0/P1 findings, one cosmetic P3 (missing a blank line per PEP 8 E302) — is otherwise a clean pass. This is a good example of why the skill instructs reading the verdict field rather than inferring pass/fail from whether findings is empty: an empty security findings list plus zero criticals still yields "provisional," not "approved," because tree cleanliness is a separate gate from finding severity.
+`─────────────────────────────────────────────────`
+EXIT: 0
