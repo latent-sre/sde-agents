@@ -698,13 +698,27 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     return issues, sorted(names)
 
 
-def _flow_scalar_closes(value: str) -> bool:
-    """True when a quoted YAML flow scalar's opening quote closes on the same line.
+# After a flow scalar's closing quote YAML permits only whitespace, or a comment introduced by a
+# `#` that is itself preceded by whitespace. `"ok"oops` and `"ok"#c` are trailing tokens, and a
+# conforming parser refuses the document over either.
+_SCALAR_TAIL_RE = re.compile(r"\s*|\s+#.*")
 
-    Both escape forms are honored — a doubled `''` inside a single-quoted scalar and a
-    backslash escape inside a double-quoted one — because a value that merely LOOKS unterminated
-    would be a false red on a legal file, and the caller's whole point is that only the strict
-    parser can see the difference.
+
+def _flow_scalar_defect(value: str) -> str | None:
+    """Name why a quoted YAML flow scalar is malformed, or return None when it is legal.
+
+    Two failure shapes, one cause: YAML ends a flow scalar at the FIRST unescaped matching quote,
+    so "does a quote appear later in the line" is not the question. Asking only that let
+    `description: "ok"oops` through, and — worse, because it reads as ordinary prose —
+    `description: 'Use the agent's output`, which closes at the apostrophe in "agent's" and leaves
+    `s output` as trailing tokens (review finding, PR #120). Both are files a strict parser
+    refuses while this repository's own reader takes the line and every generated copy
+    re-serializes what it took.
+
+    Both escape forms are honored — a doubled `''` inside a single-quoted scalar and a backslash
+    escape inside a double-quoted one — because a value that merely LOOKS malformed would be a
+    false red on a legal file, and the caller's whole point is that only the strict parser can see
+    the difference.
     """
     quote = value[0]
     index = 1
@@ -717,21 +731,29 @@ def _flow_scalar_closes(value: str) -> bool:
             if quote == "'" and value[index + 1: index + 2] == "'":
                 index += 2
                 continue
-            return True
+            tail = value[index + 1:]
+            if _SCALAR_TAIL_RE.fullmatch(tail):
+                return None
+            return (
+                f"closes its {quote} quote and then carries the trailing token(s) {tail.strip()!r}"
+            )
         index += 1
-    return False
+    return f"opens a {quote} quote that never closes on its line"
 
 
 def validate_yaml_scalar_quoting(root: Path) -> list[str]:
-    """Reject a plain frontmatter scalar that a conforming YAML parser refuses to read.
+    """Reject a frontmatter scalar that a conforming YAML parser refuses to read.
 
-    A plain (unquoted) YAML scalar may not contain `: ` — a real parser reads it as a nested
-    mapping key and raises "mapping values are not allowed here". Nothing else in this repository
-    can see that: `parse_frontmatter` above is a hand-rolled subset that reads to end of line, and
-    every generated host copy re-serializes the value through `json.dumps`, so the offending bytes
-    exist only in the canonical file and every check downstream of them passes. The failure lands
-    on whichever host loads frontmatter with a strict parser — the component does not error, it
-    does not load, and the fleet ships one skill silently absent. Quote the value.
+    Two ways to write one, and the rule owes both. A plain (unquoted) scalar may not contain `: `
+    — a real parser reads it as a nested mapping key and raises "mapping values are not allowed
+    here". A QUOTED scalar fails differently: it must close on its line, and only whitespace or a
+    comment may follow the closing quote, so `"ok"oops` and `'Use the agent's output` are refused
+    too (`_flow_scalar_defect` above names which). Nothing else in this repository can see either:
+    `parse_frontmatter` above is a hand-rolled subset that reads to end of line, and every
+    generated host copy re-serializes the value through `json.dumps`, so the offending bytes exist
+    only in the canonical file and every check downstream of them passes. The failure lands on
+    whichever host loads frontmatter with a strict parser — the component does not error, it does
+    not load, and the fleet ships one skill silently absent. Quote the value, and close the quote.
     """
 
     issues: list[str] = []
@@ -759,8 +781,9 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
             value = value.strip()
             if key not in PROSE_SCALAR_FIELDS or not value:
                 continue
-            # A quoted scalar may hold anything — but only once its quote CLOSES. Skipping on the
-            # opening character alone left the rule's own failure mode reachable one typo over:
+            # A quoted scalar may hold anything — but only once its quote CLOSES, and closes with
+            # nothing but whitespace or a comment after it. Skipping on the opening character
+            # alone left the rule's own failure mode reachable one typo over:
             # `description: "Use when routing: requests` is read to end of line by
             # `parse_frontmatter` above, re-serialized into valid generated copies, and passed
             # here, while a strict parser runs past the newline hunting the close quote and
@@ -769,15 +792,16 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
             # is enough: a value this repository's parser truncates at the newline is broken for
             # the fleet whether or not YAML would eventually have accepted it.
             if value[0] in "\"'":
-                if _flow_scalar_closes(value):
+                defect = _flow_scalar_defect(value)
+                if defect is None:
                     continue
                 issues.append(
-                    f"{path}: {key!r} frontmatter value opens a {value[0]} quote that never "
-                    f"closes on its line. This validator's parser stops at the newline and every "
-                    f"generated copy re-serializes the truncated value it read, so the whole "
-                    f"fleet validates; a conforming YAML parser reads on past the newline and "
-                    f"refuses the file, dropping the component with no error anyone sees. Close "
-                    f"the quote."
+                    f"{path}: {key!r} frontmatter value {defect}. This validator's parser takes "
+                    f"the whole line and every generated copy re-serializes what it took, so the "
+                    f"whole fleet validates; a conforming YAML parser stops at the first "
+                    f"unescaped closing quote and refuses the file over what it finds next — "
+                    f"nothing, or a trailing token — dropping the component with no error anyone "
+                    f"sees. Close the quote, and put nothing after it."
                 )
                 continue
             # A flow collection (`argument-hint: [a path: here]`) parses too — badly, as a list of

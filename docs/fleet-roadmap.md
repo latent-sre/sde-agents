@@ -208,10 +208,15 @@ delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited la
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
 **Prerequisites:** the spec's Phase 0, unchanged and still blocking — `codex --version` and
-`grep -L "Managed by sde-agents" "${CODEX_HOME:-$HOME/.codex}"/agents/*.toml`, both from the
-SEC-01 Linux host. The fallback is load-bearing: `CODEX_HOME` unset is the documented default
-(`scripts/install_codex_agents.py:170`), and the bare form expands to `/agents/*.toml` and errors
-without inspecting anything, so the evidence this gate blocks on would never be collected. No
+`grep -rLs --include='*.toml' "Managed by sde-agents" "${CODEX_HOME:-$HOME/.codex}/agents"`, both
+from the SEC-01 Linux host. **Empty output is the pass**, and reading it that way is what the form
+buys: the exit status is not the signal, since `grep` returns 1 for no match and 2 for a missing
+path. Every piece is load-bearing. `CODEX_HOME` unset is the documented default
+(`scripts/install_codex_agents.py:170`), and a bare `$CODEX_HOME` expands to `/agents/*.toml`,
+inspecting nothing. `-s` plus a directory argument replaces the `*.toml` glob, which does not
+expand when the directory is absent or holds no TOMLs — both of which mean "nothing unmanaged" —
+and hands `grep` a literal pattern to fail on, so the two states that should read as clean
+produced an error instead. No
 codex-cli version has ever been measured on that host. The only Codex CLI version this repository
 records from a run is `codex-cli 0.145.0` (2026-07-31 SAFE-001 host conformance,
 `evals/baselines/2026-07-31-p0-p1/host-conformance/`). `rust-v0.147.0` is an upstream GitHub

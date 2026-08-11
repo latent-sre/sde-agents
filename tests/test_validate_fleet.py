@@ -114,8 +114,40 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertIn("skills", unterminated[0])
         self.assertIn("'description'", unterminated[0])
 
+    def test_quoted_prose_scalar_with_a_trailing_token_is_reported(self) -> None:
+        """Closing somewhere on the line is not the bar; closing with nothing after it is.
+
+        YAML ends a flow scalar at the FIRST unescaped matching quote, so a scan that returned
+        True on finding one accepted two shapes a strict parser refuses (review finding, PR #120).
+        The fixture carries both: `"...ok"oops` is visibly wrong, and
+        `'Use the agent's output` reads as ordinary prose while closing at the apostrophe in
+        "agent's" and leaving `s output` as trailing tokens -- the one an author would actually
+        write, and the one no reader catches.
+        """
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "trailing-token-yaml-scalar", check_inventory=False
+        )
+        trailing = [issue for issue in issues if "carries the trailing token" in issue]
+        self.assertEqual(2, len(trailing), issues)
+        self.assertEqual(
+            {"'description'", "'argument-hint'"},
+            {
+                issue.split(" frontmatter value ")[0].rsplit(" ", 1)[1]
+                for issue in trailing
+            },
+        )
+        # Each finding must quote the token it found, not merely say one exists: the two shapes
+        # need different repairs, and an author cannot tell which is theirs from a generic message.
+        self.assertTrue(any("'oops'" in issue for issue in trailing), trailing)
+        self.assertTrue(any("'s output'" in issue for issue in trailing), trailing)
+
     def test_closed_quotes_and_their_escapes_are_not_reported(self) -> None:
-        """The false-red direction, which is why the closing scan honors both escape forms."""
+        """The false-red direction, which is why the closing scan honors both escape forms.
+
+        The last two are the precision controls the trailing-token repair owes: whitespace and a
+        legal ` #` comment are the only things YAML permits after a closing quote, so rejecting
+        them would trade the silent loss for a ban on ordinary frontmatter.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "agents").mkdir()
@@ -126,6 +158,8 @@ class FleetValidatorTests(unittest.TestCase):
                 'description: "Use when applying conventions: the ordinary quoted form."',
                 "description: 'Use when applying the lab''s conventions: a doubled quote.'",
                 'description: "Use when the value quotes a \\"name: value\\" pair inline."',
+                'description: "Use when applying conventions."   ',
+                'description: "Use when applying conventions." # why this one is quoted',
             ):
                 with self.subTest(description=description):
                     skill.joinpath("SKILL.md").write_text(
