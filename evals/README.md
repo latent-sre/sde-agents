@@ -123,8 +123,9 @@ a shorter timeout excludes more runs and therefore moves every rate in the artif
 Each run is a fresh headless `claude -p … --plugin-dir .` session — a fresh *conversation*, which
 is **not** configuration isolation: the session still inherits everything under the user's
 `CLAUDE_CONFIG_DIR` (personal agents, skills, plugins, global CLAUDE.md), and a junction
-deployment makes the fleet register twice, bare and namespaced, in every run (measured 2026-07-29
-by `scripts/probe_isolation.py`). `--clean-room` relocates the configuration to a temporary
+deployment makes the fleet register twice, bare and namespaced, in every run (measured in the
+[archived 2026-07-29 isolation outcome](../docs/archive/2026-07/verification-round-outcomes-2026-07-29.md)).
+`--clean-room` relocates the configuration to a temporary
 directory holding only credentials (`scripts/eval_clean_room.py`) and is recorded in `conditions`
 — artifacts that differ on it measured different routing competitions and must not be diffed
 against each other. The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
@@ -165,13 +166,12 @@ python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
 including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
 five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
-patterns per case. Sixty-seven contracts are seeded. They cover packet completeness, semantic
+patterns per case. Forty-six contracts are seeded. They cover packet completeness, semantic
 Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
 instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
 learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
-verification isolation and honest inconclusive verdicts, prompt-eval separation, multi-agent
-validation, and the delegation handoff — whether a disproved constraint, a verification method's
-validity, and an unworked lane survive a design-to-builder boundary (the `handoff-001` tag).
+verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
+validation.
 The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
 inventory.
 

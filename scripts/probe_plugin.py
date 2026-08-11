@@ -33,6 +33,7 @@ as one: those are reported INCONCLUSIVE (exit 2), never PASS.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
@@ -448,7 +449,12 @@ def probe_workflow_contract(probe: "Probe") -> None:
     )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    # Parse before checking the CLI or touching the probe workspace. A plain `--help` is an
+    # inspection command; it must never start paid API sessions or remove prior probe evidence.
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.parse_args(argv)
+
     probe = Probe()
     if CLAUDE is None:
         print("claude CLI not found on PATH; cannot run the behavioral probe", file=sys.stderr)

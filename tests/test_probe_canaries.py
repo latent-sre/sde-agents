@@ -10,12 +10,31 @@ tripwire.
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import unittest
+from unittest import mock
 
+from scripts import probe_plugin
 from tests.support import REPO
 
 
 class ProbeCanaryTests(unittest.TestCase):
+    def test_help_exits_before_any_live_probe_or_workspace_change(self) -> None:
+        output = io.StringIO()
+        with (
+            mock.patch.object(probe_plugin, "run") as run,
+            mock.patch.object(probe_plugin, "_remove_workspace") as remove_workspace,
+            contextlib.redirect_stdout(output),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            probe_plugin.main(["--help"])
+
+        self.assertEqual(0, raised.exception.code)
+        self.assertIn("usage:", output.getvalue())
+        run.assert_not_called()
+        remove_workspace.assert_not_called()
+
     def test_backend_craft_canary_is_present(self) -> None:
         text = (REPO / "skills" / "backend-craft" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn(

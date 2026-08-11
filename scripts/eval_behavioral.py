@@ -880,11 +880,6 @@ def load_cases_with_sources(selector: str) -> tuple[list[dict], list[Path]]:
     return cases, sources
 
 
-def load_cases(selector: str | None) -> list[dict]:
-    """Backward-compatible public helper; None retains the historical all-cases behavior."""
-    return load_cases_with_sources(selector or "*")[0]
-
-
 def main(argv: list[str] | None = None) -> int:
     if _EXECUTING_EVALUATOR_SOURCE is None:
         # Importing a module does not expose the source buffer Python compiled. Re-enter through

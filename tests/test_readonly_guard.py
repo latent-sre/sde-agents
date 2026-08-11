@@ -142,7 +142,6 @@ ALLOWED = [
     "find . -name '*.py'",
     "find . -type f -name '*.md'",
     "echo hello",
-    "diff a.txt b.txt",
     "jq '.name' package.json",
     # pipelines: every segment must be a reader, and these are
     "git log -p src/app.py | grep -e def",
@@ -167,6 +166,12 @@ ALLOWED = [
 ]
 
 DENIED = [
+    # Whole reader-like surfaces stay closed when their options can execute another program.
+    # Reviewers already have `git diff`, `cmp`, and ordinary metadata readers.
+    "file README.md",
+    "file -C -m proof.magic",
+    "diff a.txt b.txt",
+    "diff --paginate a.txt b.txt",
     # --- git writes -------------------------------------------------------------------------
     # check-attr stays off _GIT_READ until a review need earns it (the check-ignore bar) —
     # this pin proves adding check-ignore did not silently open its sibling.

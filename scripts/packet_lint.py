@@ -61,26 +61,6 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # "Checks executed: none" without naming what could not run cannot pass as green.
     "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
     "design-packet": ("decisions", "assumptions", "weakest point"),
-    # homelab-platform's DELEGATION handoff, emitted before a builder starts rather than after work
-    # ends. Thirteen slots and deliberately no scaling clause: this packet exists because a
-    # constraint dropped between design and builder came back three times in one onboarding (twice
-    # with a regression test that required the wrong form). The canonical text asks the writer for
-    # every line, `none` when empty; what THIS shape guarantees is narrower — every slot heading is
-    # present as a real LABEL (STRICT_LABEL_SHAPES below; a vanished slot, and prose that merely
-    # opens with the word, are both findings), every occurrence of Deliverable and Acceptance
-    # carries more than `none` (SUBSTANTIVE_SLOTS below), and a populated Verified facts cites its
-    # own probe with an observed result (PROBED_SLOTS below). `none`-when-empty on the remaining
-    # slots is writer discipline the linter does not check. The proportional short form the agent
-    # may use instead is not a compressed packet and is not graded here — it emits no packet at
-    # all, by design. Verification-method validity is what this packet exists to carry, so the
-    # `verified facts` section answers to its own rule INSTEAD of the shared verification-claim
-    # rule below: that rule's three-line window let a command in the NEXT slot stand as evidence
-    # for an unmeasured fact, and it reddened the canonical `Verified facts: none`.
-    "handoff-packet": (
-        "deliverable", "fixed decisions", "sources", "verified facts", "forbidden regressions",
-        "acceptance", "authority", "irreversible", "temporary authority", "inventory invariants",
-        "blocking", "open lanes", "out of scope",
-    ),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),
     "postmortem": (
@@ -92,80 +72,6 @@ SHAPES: dict[str, tuple[str, ...]] = {
 # therefore written as the heading text an agent actually emits ("where we got lucky", not
 # "lucky"). There is deliberately no shape for lab-incident: that skill declares no fixed packet,
 # and a shape that cannot match real output would fail every honest run.
-
-# Slots that carry the delegation itself. `none` is a legal answer almost everywhere in a handoff
-# -- `Irreversible: none` is the GOOD outcome, and the agent's own rule is that an empty line says
-# `none` rather than vanishing -- but a packet whose Deliverable and Acceptance are both `none`
-# hands over no work and states no bar, and every structural check above still reports it green
-# (reproduced through the shipped CLI, adversarial review of PR #108). The packet is emitted
-# because there IS a bounded artifact and a way to check it; those two lines are that claim, so
-# emptying them empties the packet while passing every slot test.
-SUBSTANTIVE_SLOTS: dict[str, tuple[str, ...]] = {
-    "handoff-packet": ("deliverable", "acceptance"),
-}
-# Slots where a cited probe must show what it printed. `Verified facts: none; $ true` parked a
-# command token beside the slot, cleared the shared verification-claim rule's "showed something"
-# bar, and reported nothing that was ever observed. Verification-method validity is precisely what
-# this packet exists to carry downstream, so a probe with no result is not a measurement.
-PROBED_SLOTS: dict[str, tuple[str, ...]] = {
-    "handoff-packet": ("verified facts",),
-}
-# What counts as a cited probe: the shell-prompt form, or the exact command in backticks. The
-# canonical text asks for "the probe that measured it, quoted as the exact command" and fixes no
-# display form, so restricting this to `$ ...` false-failed a compliant `` `bao version` printed
-# `OpenBao v2.6.1` `` -- the slot cited its probe and the packet still reddened (review finding,
-# PR #108). A backticked span counts only when it holds a space -- `` `disable_mlock` `` is a field
-# name, not a command -- AND only when its first token has a command's shape: lowercase, no
-# uppercase anywhere in it. "Any multiword quoted span" was the first attempt and it read a quoted
-# RESULT as the probe that produced it: `Verified facts: version is `OpenBao v2.6.1`` cited no
-# command at all, yet the quoted value satisfied the probe check and the leftover `is` satisfied
-# the result check, so an unmeasured constraint graded green (review finding, PR #108). A result
-# carries a capital or a bare number (`OpenBao v2.6.1`, `12 hosts`); a command does not.
-_BACKTICK_COMMAND = r"`[a-z][a-z0-9._/-]*\s+[^`\n]*`"
-_PROBE_RE = re.compile(rf"\$\s+\S|{_BACKTICK_COMMAND}")
-# A populated `Verified facts` slot must cite its own probe. Opening the slot with `none` is the
-# agent's own empty-line spelling and a disclosure, not a fact, so it owes nothing -- but only in
-# that leading position, and only for the probe REQUIREMENT: `none; $ true` still cites a probe
-# and still owes the result below.
-_NO_FACTS_DISCLOSURE_RE = re.compile(
-    r"^(?:none|n/?a|nothing)\s*(?:[.;,:\N{EM DASH}\N{EN DASH}-]|$)", re.IGNORECASE
-)
-# The command's own text is not its result. Scanning the raw line let `$ swapon --show` satisfy the
-# result oracle through its own flag, which is the "any nearby command token" defect this rule
-# exists to close, reintroduced one layer down (executed review). Blank the command span first --
-# INCLUDING the backticks that quote it, which is how a packet actually writes a command. Blanking
-# only the `$...` text left the delimiters behind for the quoted-value clause below to read as a
-# result: `none; `$ true`` produced `` ` ` `` and passed, and two commands in a row were worse
-# still, the leftover backtick of one pairing with the leftover of the next (`` `, ` ``). The
-# replacement is a newline rather than a space so no clause here can ever span a blanked region.
-#
-# The unquoted arm stops at an inline result arrow. Running it to end of line consumed the result
-# it was supposed to leave behind, so the compliant `$ bao version -> OpenBao v2.6.1` reddened as
-# "no observed result" (review finding, PR #108). Only an arrow terminates it: `;` and `|` chain
-# commands, and stopping there would hand the oracle `; output unavailable because it was not run`
-# as an observation -- the exact disclaimer-as-evidence bypass this rule already rejects.
-_COMMAND_SPAN_RE = re.compile(
-    rf"`\$[^`\n]*`|\$(?:(?!->|\N{{RIGHTWARDS ARROW}}|=>)[^`\n])*|{_BACKTICK_COMMAND}"
-)
-_OBSERVED_RESULT_RE = re.compile(
-    r"\N{RIGHTWARDS ARROW}|->|=>|\bprint(?:s|ed)?\b|\breport(?:s|ed)?\b|\breturn(?:s|ed)?\b"
-    r"|\bshow(?:s|ed|n)?\b|\boutput\b|\bempty\b|\bnothing\b"
-    r"|\bexit(?:s|ed)?\s+(?:code\s+)?\d+\b|\b\d+\s+passed\b"
-    # A result stated BEFORE the probe is the agent file's own rendering -- the constraint, then
-    # the exact command that measured it (agents/homelab-platform.md:133-134 fixes no order). So
-    # an indicative statement or a quoted value counts: "OpenBao is v2.6.1 (`$ bao version`)" and
-    # "swap is off on this host (`$ swapon --show`)" are measurements, and requiring an arrow
-    # after the command reddened both.
-    #
-    # The bare copula is a KNOWINGLY low bar, kept after review rather than by oversight. It is
-    # what admits "swap is off" -- a real result carrying neither a digit nor a quoted value -- and
-    # the cost is that "this is documented; $ true" would also pass. Raising it means rejecting
-    # honest no-digit facts, which is the false-RED direction this rule has already been repaired
-    # for twice. The weight against an empty slot is carried by SUBSTANTIVE_SLOTS and the shared
-    # verification-claim rule, not by this clause.
-    r"|`[^`\n]+`|\b\d[\w.]*\b|\b(?:is|was|are|were|has|have|had)\b",
-    re.IGNORECASE,
-)
 
 # The canonical evidence labels. A claim carrying any of these has declared its footing.
 LABELS = ("[verified]", "[sourced]", "[unverified]")
@@ -342,17 +248,9 @@ _LEARNING_CANDIDATE_RE = re.compile(
 )
 
 
-# An ordered list is display, not data. `1. **Deliverable:** ...` is the same packet as
-# `- **Deliverable:** ...`, but the numeric marker survives decoration stripping (`.` and digits
-# are not decoration), so every slot read as missing and a complete packet graded RED -- a false
-# red against an ordinary Markdown rendering (review finding, PR #108). Anchored to the start of
-# the line so a version like `1.7.3` inside a value is untouched.
-_ORDERED_MARKER_RE = re.compile(r"^(\s*(?:>\s*)*)\d+[.)]\s+")
-
-
 def _normalize(line: str) -> str:
     """Strip markdown decoration so a slot heading matches however it was formatted."""
-    return re.sub(r"[*_`#>\-\s]+", " ", _ORDERED_MARKER_RE.sub(r"\1", line)).strip().lower()
+    return re.sub(r"[*_`#>\-\s]+", " ", line).strip().lower()
 
 
 def _has_label(line: str) -> bool:
@@ -364,43 +262,8 @@ def _window(lines: list[str], index: int, radius: int = 3) -> str:
     return "\n".join(lines[max(0, index - radius): index + radius + 1])
 
 
-# Shapes whose slot names are a machine contract a downstream reader consumes by label, not free
-# prose a human skims. Only these require the label BOUNDARY. The looser prefix test elsewhere is
-# deliberate: "Changed files: ..." is an ordinary, compliant `changed` heading in a review packet,
-# and demanding `Changed:` there would red honest output. A delegation packet is different --
-# `agents/homelab-platform.md` pins each label verbatim (`Deliverable:`) because a builder in a
-# fresh context reads them, so `Deliverable unavailable: none` and `Deliverable work will be
-# staged` are not that packet even though both open with the word (review findings, PR #108).
-STRICT_LABEL_SHAPES = frozenset({"handoff-packet"})
-# Normalization collapses an ASCII hyphen into a space, so `Deliverable - staged unit` loses the
-# only thing distinguishing it from prose. Recovering it from the raw line keeps a legal rendering
-# out of the false-red column without loosening the normalized test.
-_RAW_LABEL_PREFIX = r"^[\s>*_`#+-]*"
-# The fallback exists ONLY to recover a spaced ASCII hyphen (`Deliverable - value`), the one
-# separator normalization eats. Accepting a hyphen with no space before it made a hyphenated word
-# into a label: `Deliverable-unavailable: none` and `Deliverable-like prose says none` both passed
-# the shape while the readable `Deliverable:` label was absent (review finding, PR #108). `:` and
-# the en/em dashes survive normalization and are matched there, so this tail needs only the hyphen.
-_RAW_LABEL_TAIL = r"[*_`]*\s+-\s"
-
-
-def _is_slot_label(slot: str, normalized_line: str, raw_line: str, strict: bool) -> bool:
-    """True when this line labels ``slot``; ``strict`` demands the label boundary."""
-    if not strict:
-        return normalized_line.startswith(slot)
-    if re.match(rf"{re.escape(slot)}(?:\s*[:\N{{EM DASH}}\N{{EN DASH}}]|$)", normalized_line):
-        return True
-    return bool(
-        re.match(
-            rf"{_RAW_LABEL_PREFIX}{re.escape(slot)}{_RAW_LABEL_TAIL}",
-            _ORDERED_MARKER_RE.sub("", raw_line),
-            re.IGNORECASE,
-        )
-    )
-
-
-def _slot_present(slot: str, lines: list[str], normalized_lines: list[str], shape: str) -> bool:
-    """True when some line LABELS the slot -- i.e. the slot is a locatable heading.
+def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
+    """True when some line BEGINS with the slot -- i.e. the slot is a heading or label.
 
     Substring-over-the-whole-document was the original check and it false-passed twice (found in
     review): "**Not verified**: ..." contains "verified", so a packet that never reported what it
@@ -409,72 +272,7 @@ def _slot_present(slot: str, lines: list[str], normalized_lines: list[str], shap
     packet at all. Anchoring to the start of a line is what makes the slot a locatable SECTION,
     which is the whole promise the packet contract makes to a caller.
     """
-    strict = shape in STRICT_LABEL_SHAPES
-    return any(
-        _is_slot_label(slot, normalized, raw, strict)
-        for raw, normalized in zip(lines, normalized_lines)
-    )
-
-
-def _slot_heading(normalized_line: str, raw_line: str, shape: str) -> bool:
-    """True when the line is a slot HEADING, not prose that merely opens with the slot word.
-
-    A section boundary needs the separator: "Blocking issues were reviewed ..." is a sentence,
-    while "**Blocking**: ...", "### Blocking", and "Blocking — ..." are headings. Treating the
-    bare prefix as a boundary truncated the preceding slot's continuation, so a correctly filled
-    slot read as empty (executed review). Normalization has already stripped `#`, `*`, and the
-    ASCII hyphen, so what remains to distinguish them is `:`, a dash, or end of line. A section
-    boundary is always read strictly, whatever the shape's presence rule is: a loose boundary
-    truncates the slot ABOVE it, which is the false-red direction.
-    """
-    return any(
-        _is_slot_label(slot, normalized_line, raw_line, True) for slot in SHAPES[shape]
-    )
-
-
-def _slot_sections(
-    slot: str, lines: list[str], normalized: list[str], shape: str
-) -> list[tuple[str, str, range]]:
-    """Return each occurrence of ``slot`` as (normalized value, raw section text, line range).
-
-    A slot's content does not always sit on its heading line: a wrapped sentence and a nested
-    bullet list are both ordinary packet prose. Reading only the heading line would report a false
-    RED against a correctly filled slot -- the mirror of the false green these value rules close,
-    and just as harmful. The section ends at the next line beginning any slot of the same shape,
-    which is exactly the boundary a reader uses to find where a slot stops.
-    """
-    sections: list[tuple[str, str, range]] = []
-    strict = shape in STRICT_LABEL_SHAPES
-    for index, line in enumerate(normalized):
-        if not _is_slot_label(slot, line, lines[index], strict):
-            continue
-        value_parts = [line[len(slot):].lstrip(" :\N{EM DASH}\N{EN DASH}-")]
-        raw_parts = [lines[index]]
-        end = index + 1
-        for offset in range(index + 1, len(normalized)):
-            if _slot_heading(normalized[offset], lines[offset], shape):
-                break
-            value_parts.append(normalized[offset])
-            raw_parts.append(lines[offset])
-            end = offset + 1
-        sections.append(
-            (
-                " ".join(part for part in value_parts if part).strip(),
-                "\n".join(raw_parts),
-                range(index, end),
-            )
-        )
-    return sections
-
-
-def _slot_carries_a_value(value: str) -> bool:
-    """False when a slot value is empty or a bare `none`/`n/a` -- no content, only a line."""
-    trimmed = _strip_sentence_punctuation(value).rstrip(" \N{EM DASH}\N{EN DASH}-")
-    return (
-        bool(trimmed)
-        and not _is_semantic_placeholder(trimmed)
-        and _has_substantive_token(trimmed)
-    )
+    return any(line.startswith(slot) for line in normalized_lines)
 
 
 def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str]]:
@@ -813,46 +611,8 @@ def lint_packet(
     # 1. Required slots, each matched as a HEADING (see _slot_present). A missing slot is the whole
     #    point of the check: the packet contract exists so the caller can locate those fields.
     for slot in SHAPES[shape]:
-        if not _slot_present(slot, lines, normalized, shape):
+        if not _slot_present(slot, normalized):
             findings.append(f"missing required packet slot: {slot!r}")
-
-    # 1b. Present-but-empty slots, for the shapes where a slot IS the contract. A structural check
-    #     that only locates headings grades an all-`none` packet as compliant. EVERY occurrence
-    #     must carry the value, not just one: `Acceptance: none` above a populated `Acceptance`
-    #     left a fresh builder two answers and no way to tell which is the contract, and the
-    #     any()-form reported it green (review finding, PR #108).
-    for slot in SUBSTANTIVE_SLOTS.get(shape, ()):
-        sections = _slot_sections(slot, lines, normalized, shape)
-        if sections and not all(_slot_carries_a_value(value) for value, _, _ in sections):
-            findings.append(
-                f"packet slot {slot!r} is present but empty: a delegation whose {slot} is "
-                f"`none` hands over no work and no bar, and every heading check still reports "
-                f"the packet complete"
-            )
-
-    # 1c. The measurement slot, graded whole. A probe with nothing observed beside it is not a
-    #     measurement, and a fact with no probe at all is "an assumption wearing the word"
-    #     (agents/homelab-platform.md). Both are read INSIDE the section: the shared claim rule
-    #     below has a three-line window, so a command sitting in the next slot supplied the
-    #     evidence for an unmeasured fact and the packet passed (review finding, PR #108). That
-    #     rule is exempted over these lines in exchange -- this is the stricter reader of the two.
-    probed_section_lines: set[int] = set()
-    for slot in PROBED_SLOTS.get(shape, ()):
-        for value, raw, span in _slot_sections(slot, lines, normalized, shape):
-            probed_section_lines.update(span)
-            if _PROBE_RE.search(raw):
-                if not _OBSERVED_RESULT_RE.search(_COMMAND_SPAN_RE.sub("\n", raw)):
-                    findings.append(
-                        f"packet slot {slot!r} cites a probe with no observed result: a bare "
-                        f"command satisfies every evidence check nearby while reporting nothing "
-                        f"that was ever measured"
-                    )
-            elif _slot_carries_a_value(value) and not _NO_FACTS_DISCLOSURE_RE.match(value):
-                findings.append(
-                    f"packet slot {slot!r} states a fact but cites no probe of its own: an "
-                    f"environment constraint with no command that measured it is an assumption "
-                    f"wearing the word, and a command in a neighbouring slot is not its evidence"
-                )
 
     if "learning" in SHAPES[shape]:
         findings.extend(lint_learning_closeout(text, learning_mode))
@@ -875,11 +635,7 @@ def lint_packet(
         # not a free-standing "verified" completion claim. Its shape is validated above; grading
         # the enum again as prose would reject every honest candidate handoff.
         is_learning_provenance = bool(_literal_field_values("provenance", [line]))
-        if (
-            _unevidenced_claim(stripped)
-            and not is_learning_provenance
-            and index not in probed_section_lines
-        ):
+        if _unevidenced_claim(stripped) and not is_learning_provenance:
             window = _window(lines, index)
             if not _EVIDENCE_RE.search(window):
                 findings.append(

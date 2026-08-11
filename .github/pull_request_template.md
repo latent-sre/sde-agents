@@ -42,7 +42,6 @@ genuinely does not apply and say so in one line; do not leave a heading with not
      above instead. -->
 
 - [ ] `python3 scripts/validate_fleet.py` — clean
-- [ ] `python3 scripts/generate_platform_adapters.py --check` — all host copies current
 - [ ] `python3 scripts/run_tests.py` — all passing (count: )
 - [ ] `claude plugin validate . --strict` — passing
 

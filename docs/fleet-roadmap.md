@@ -168,7 +168,7 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `active` — spec approved by the operator 2026-08-09. The REV-001 sequencing
+**Status:** `ready` — spec approved by the operator 2026-08-09. The REV-001 sequencing
 condition is met: that round closed 2026-08-10
 ([outcome record](archive/2026-08/rev-001-outcome-2026-08-10.md)) with the envelope idiom
 settled — `candidate_sha`/`base_sha`/`tree_oid` and the six-field approval envelope.
@@ -178,23 +178,15 @@ carry failed assumptions, verification-method validity, the executable-transport
 irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
 — and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
 
-**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) and
-its [paired plan](superpowers/plans/handoff-001-plan.md);
+**Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
 **Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
 release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
-Landed so far: the packet in `agents/homelab-platform.md`, the builder echo in
-`agents/sde-fullstack.md`, the lane-as-gate wording in `sde-agents:service-onboard` and
-`sde-agents:host-onboard`, the `handoff-packet` lint shape, adapter parity, and nine
-`handoff-001`-tagged contracts in `evals/behavioral/contracts.json`.
 
-**Next action:** Run the nine `handoff-001` contracts on a credentialed session, paired
-against the pre-change bytes under identical conditions, and record the rates. Evals 3 and 4
-additionally owe their turns-and-tokens measurement, which no offline grader substitutes for.
-Then the released-artifact retest the issue's close condition names.
+**Next action:** Author the paired plan, reusing the merged envelope idiom.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
@@ -415,7 +407,8 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    the case design — or grade agent members differently — before spending a full-suite capture.
 
 3. **Configuration contamination is measured — and refuted as the agent-positive suppressor**
-   (2026-07-29, phase 1 of this item). `scripts/probe_isolation.py` showed every eval session had
+   (2026-07-29, phase 1 of this item). The
+   [archived isolation outcome](archive/2026-07/verification-round-outcomes-2026-07-29.md) showed every eval session had
    been inheriting 134 operator-side entries, with the fleet registered twice (9 bare via the
    junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
    (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent

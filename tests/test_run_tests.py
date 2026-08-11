@@ -8,9 +8,11 @@ the real suite inside itself.
 """
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import run_tests
 from tests.support import run_main
@@ -25,6 +27,11 @@ FAILING = (
     "import unittest\n"
     "class Bad(unittest.TestCase):\n"
     "    def test_broken(self): self.fail('deliberate')\n"
+)
+NON_ASCII_FAILING = (
+    "import unittest\n"
+    "class Bad(unittest.TestCase):\n"
+    "    def test_broken(self): self.fail('em dash —')\n"
 )
 
 
@@ -50,6 +57,18 @@ class ParallelRunnerTests(unittest.TestCase):
         # The failing module's own traceback must surface without -v, or diagnosing a red CI
         # run would require a local re-run just to see what failed.
         self.assertIn("deliberate", out)
+
+    def test_child_output_is_forced_to_utf8_even_under_a_legacy_parent_encoding(self) -> None:
+        """Windows CI must not decode CP-1252 test output into an unprintable replacement char."""
+        with tempfile.TemporaryDirectory() as tmp:
+            module = Path(tmp) / "test_non_ascii.py"
+            module.write_text(NON_ASCII_FAILING, encoding="utf-8")
+            with mock.patch.dict(os.environ, {"PYTHONIOENCODING": "cp1252"}):
+                _, code, output, _ = run_tests.run_module(Path(tmp), module, [])
+
+        self.assertEqual(1, code)
+        self.assertIn("em dash —", output)
+        self.assertNotIn("\ufffd", output)
 
     def test_discovering_no_modules_is_an_error_not_an_empty_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
