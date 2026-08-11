@@ -44,9 +44,9 @@
         "environment": null,
         "observed_at": "2026-08-11T05:01:10.039082Z",
         "provenance": "verified",
-        "revision": null,
+        "revision": "46c3bac",
         "source_kind": "review",
-        "source_reference": "PR #121 merged 04:59:33Z; last review 04:53:08Z on 4cb355d, none on final head 46c3bac"
+        "source_reference": "PR #121 merged 04:59:33Z with final head 46c3bac unreviewed; last pass 04:53:08Z on 4cb355d"
       }
     ]
   },
