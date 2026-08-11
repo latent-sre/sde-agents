@@ -1,0 +1,62 @@
+{
+  "applicability": "exact_fields oracles in evals/behavioral/contracts.json; excludes proximity must_match patterns and Learning-block labels fixed by agent prose",
+  "candidate_id": "lc_ead7462e54894fb6a5ef2b6cd37db24e",
+  "created_at": "2026-08-11T04:27:46.599519Z",
+  "destination": "evals/README.md grader-authoring guidance",
+  "disposition": "add",
+  "evidence": {
+    "environment": "python-3.12/windows",
+    "provenance": "verified",
+    "revision": "3ee9c38",
+    "source_kind": "review",
+    "source_reference": "PR #116 refs/pull/116/head 3ee9c38 evals/behavioral/contracts.json"
+  },
+  "expected_behavior": "An exact-value oracle quotes a literal the prompt states or a fleet document defines, and the prompt's wording for a relation matches the oracle's word for word.",
+  "fingerprint": "ac613c7921a39ff5356e76622cbd765246aee1318d47ee0adfcffd593cae8a0c",
+  "freshness": {
+    "as_of": "2026-08-11T04:27:46.599519Z",
+    "review_at": "2026-09-10T04:27:46.599519Z"
+  },
+  "observation": "Two behavioral cases pinned exact-value oracles to English sentences that appear in no agent or skill definition, and each case prompt worded the relation differently from its own oracle -- prompt 'does not equal the exact parent' against a required 'does not match the exact first parent' -- so a correct answer reds on spelling.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Each such grader costs three clean-room sessions to discover and produces uninterpretable data until repaired; the rule is cheaper than the measurement.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "python-3.12/windows",
+        "observed_at": "2026-08-11T04:27:46.599519Z",
+        "provenance": "verified",
+        "revision": "3ee9c38",
+        "source_kind": "review",
+        "source_reference": "PR #116 refs/pull/116/head 3ee9c38 evals/behavioral/contracts.json"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-11T04:27:46.599519Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "exact-value graders in the behavioral contract suite",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-11T04:27:46.599519Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-11T04:27:46.727853Z",
+      "destination": "evals/README.md grader-authoring guidance",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Each such grader costs three clean-room sessions to discover and produces uninterpretable data until repaired; the rule is cheaper than the measurement.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-11T04:27:46.727853Z"
+}

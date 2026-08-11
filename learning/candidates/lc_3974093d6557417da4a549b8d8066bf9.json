@@ -1,0 +1,62 @@
+{
+  "applicability": "validated on-disk record stores with an exact-field reader; excludes append-only logs and stores with no schema validation",
+  "candidate_id": "lc_3974093d6557417da4a549b8d8066bf9",
+  "created_at": "2026-08-11T04:27:46.011165Z",
+  "destination": "AGENTS.md Change playbooks (record-shape change)",
+  "disposition": "add",
+  "evidence": {
+    "environment": "python-3.12/windows",
+    "provenance": "verified",
+    "revision": "e8f0205",
+    "source_kind": "review",
+    "source_reference": "PR #116 refs/pull/116/head e8f0205 scripts/learning_ledger.py"
+  },
+  "expected_behavior": "A record-shape change states its migration decision explicitly -- one-shot, version-gated, or a permanent compatibility reader with its dual-form cost accepted -- and says what rollback does to a record that already moved.",
+  "fingerprint": "a014ac237175842e65c0021e15adcc5de7ec8975288280c2ede88c8614160499",
+  "freshness": {
+    "as_of": "2026-08-11T04:27:46.011165Z",
+    "review_at": "2026-09-10T04:27:46.011165Z"
+  },
+  "observation": "A ledger rework changed record shape and migrated on first write. A normalizing reader kept both shapes readable, so nothing broke -- but that reader was an implementation detail rather than a stated choice, and two consequences rode in unchosen: 11 of 26 shipped records can never converge because their write path is refused, so the dual-form code paths are permanent rather than transitional, and rollback silently changed meaning -- stripping the new key from an already-migrated record also deletes the attempt the old shape held.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Traced in the reverted implementation: the reader normalizes both shapes, so readability was never at risk. What is missing is the decision and its rollback statement, not a forced migration.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "python-3.12/windows",
+        "observed_at": "2026-08-11T04:27:46.011165Z",
+        "provenance": "verified",
+        "revision": "e8f0205",
+        "source_kind": "review",
+        "source_reference": "PR #116 refs/pull/116/head e8f0205 scripts/learning_ledger.py"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-11T04:27:46.011165Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "record-shape changes to validated on-disk stores",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-11T04:27:46.011165Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-11T04:27:46.145974Z",
+      "destination": "AGENTS.md Change playbooks (record-shape change)",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Traced in the reverted implementation: the reader normalizes both shapes, so readability was never at risk. What is missing is the decision and its rollback statement, not a forced migration.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-11T04:27:46.145974Z"
+}
