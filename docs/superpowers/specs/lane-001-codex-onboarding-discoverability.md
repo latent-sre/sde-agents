@@ -108,8 +108,17 @@ Record `codex --version` first, then in a fresh session with the fleet installed
 - `codex --version` from the SEC-01 Linux host. The design premise is the v2 spawn schema; if
   that host runs v1 (no "omit unless explicitly asked" line), the diagnosis shifts back toward
   description quality and this spec returns to review before implementation.
-- `grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml` (default `~/.codex/agents`) — any
-  unmarked file is import-vintage; a stale `homelab-platform` there would confound the smoke run.
+- `[ ! -d "${CODEX_HOME:-$HOME/.codex}/agents" ] || grep -rL --include='*.toml' "Managed by
+  sde-agents" "${CODEX_HOME:-$HOME/.codex}/agents"` — any unmarked file is import-vintage; a stale
+  `homelab-platform` there would confound the smoke run. **Empty output is the pass.**
+
+  *Amended 2026-08-11 (mechanical only, semantics unchanged): the original one-liner was
+  `grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml` (default `~/.codex/agents`). With
+  `CODEX_HOME` unset — the documented default — it expanded to `/agents/*.toml` and inspected
+  nothing, and with the directory absent or holding no TOMLs the glob did not expand and `grep`
+  errored on a literal pattern, so the two states that mean "nothing unmanaged" read as failures.
+  The gate, its blocking status, and what counts as a pass are unchanged; only the expansion is.
+  Merging the pull request that carries this amendment is the operator's approval of it.*
 
 ## Rollback and freshness
 

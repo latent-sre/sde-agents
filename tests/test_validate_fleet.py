@@ -141,12 +141,78 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertTrue(any("'oops'" in issue for issue in trailing), trailing)
         self.assertTrue(any("'s output'" in issue for issue in trailing), trailing)
 
+    def test_trailing_comment_is_rejected_because_this_parser_keeps_it(self) -> None:
+        """Deliberately stricter than YAML, and the reversal of an earlier ruling here.
+
+        A ` # comment` after the closing quote is legal YAML, so this rule first ACCEPTED it. That
+        was wrong for this repository: `parse_frontmatter` is not comment-aware and strips only the
+        outer quote characters, so `description: "Use when routing." # note` parses to
+        `Use when routing." # note` -- closing quote and comment intact -- and every generated host
+        copy ships that as the description. The executed parse is the evidence, and it is asserted
+        here so the rule cannot drift back to the YAML-shaped answer.
+        """
+        line = 'description: "Use when routing." # note'
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "agents").mkdir()
+            (root / "agents" / "builder.md").write_text(VALID_AGENT, encoding="utf-8")
+            skill = root / "skills" / "craft"
+            skill.mkdir(parents=True)
+            path = skill / "SKILL.md"
+            path.write_text(
+                f"---\nname: craft\n{line}\nargument-hint: [the file to change]\n---\n\n# Craft\n",
+                encoding="utf-8",
+            )
+            # What the generators would actually consume, read from the shipped parser.
+            self.assertEqual(
+                'Use when routing." # note',
+                validate_fleet.parse_frontmatter(path)["description"],
+            )
+            issues = validate_fleet.validate_yaml_scalar_quoting(root)
+            self.assertEqual(1, len(issues), issues)
+            self.assertIn("carries the comment", issues[0])
+            self.assertIn("deliberately stricter than YAML", issues[0])
+
+    def test_invalid_double_quoted_escape_is_reported(self) -> None:
+        """`\\q` is not a YAML escape, and skipping backslash-plus-one accepted every such typo.
+
+        A Windows path in a description is how an author writes one by accident, and the parser
+        here keeps the backslash while a conforming one refuses the document -- the same silent
+        absence, through the escape set instead of the quote (review finding, PR #120).
+        """
+        for value, expected in (
+            # The finding must quote the offending sequence: "invalid escape" alone leaves an
+            # author hunting a backslash in a 900-character description.
+            ('"Use C:\\q for the path."', repr("\\q")),
+            ('"Use \\z here."', repr("\\z")),
+            ('"Use \\x2 here."', "malformed hex escape"),
+            # No closing quote at all, so the backslash has nothing to escape. `"...\\"` is a
+            # DIFFERENT shape -- there the backslash escapes the quote and the honest diagnosis is
+            # "never closes", which the unterminated test already covers.
+            ('"Ends on a backslash \\', "dangling backslash"),
+        ):
+            with self.subTest(value=value):
+                defect = validate_fleet._flow_scalar_defect(value)
+                self.assertIsNotNone(defect, value)
+                self.assertIn(expected, defect)
+
+    def test_single_quoted_scalars_have_no_backslash_escapes(self) -> None:
+        """YAML gives single-quoted scalars no backslash escapes, so validating them would invent
+        a rule the parser does not have -- and `'...C:\\q...'` is a legal, ordinary value."""
+        self.assertIsNone(
+            validate_fleet._flow_scalar_defect("'Use C:\\q for the path.'")
+        )
+        # The doubled-quote escape is the only one single-quoted YAML has, and it must still work.
+        self.assertIsNone(
+            validate_fleet._flow_scalar_defect("'Use the lab''s path.'")
+        )
+
     def test_closed_quotes_and_their_escapes_are_not_reported(self) -> None:
         """The false-red direction, which is why the closing scan honors both escape forms.
 
-        The last two are the precision controls the trailing-token repair owes: whitespace and a
-        legal ` #` comment are the only things YAML permits after a closing quote, so rejecting
-        them would trade the silent loss for a ban on ordinary frontmatter.
+        The escape rows are the precision controls the escape-set repair owes: `\\"`, `\\\\`, the
+        named escapes, and a well-formed `\\x` hex escape are all legal and must survive, or the
+        repair trades the silent loss for a ban on ordinary frontmatter.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -159,7 +225,9 @@ class FleetValidatorTests(unittest.TestCase):
                 "description: 'Use when applying the lab''s conventions: a doubled quote.'",
                 'description: "Use when the value quotes a \\"name: value\\" pair inline."',
                 'description: "Use when applying conventions."   ',
-                'description: "Use when applying conventions." # why this one is quoted',
+                'description: "Use when a path needs a \\\\ backslash."',
+                'description: "Use when a tab \\t or newline \\n is meant."',
+                'description: "Use when the code point \\x41 is meant."',
             ):
                 with self.subTest(description=description):
                     skill.joinpath("SKILL.md").write_text(

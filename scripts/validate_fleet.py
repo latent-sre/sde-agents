@@ -698,44 +698,89 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     return issues, sorted(names)
 
 
-# After a flow scalar's closing quote YAML permits only whitespace, or a comment introduced by a
-# `#` that is itself preceded by whitespace. `"ok"oops` and `"ok"#c` are trailing tokens, and a
-# conforming parser refuses the document over either.
-_SCALAR_TAIL_RE = re.compile(r"\s*|\s+#.*")
+# YAML's complete double-quoted escape set (spec 1.2 §7.3.1): these single characters, plus
+# `\x`/`\u`/`\U` with exactly 2/4/8 hex digits. Anything else is "found unknown escape character"
+# and the parser refuses the document. Skipping backslash-plus-one unconditionally let
+# `description: "Use C:\q"` through (review finding, PR #120) — a Windows path in a description is
+# exactly how an author writes that by accident. Single-quoted scalars are deliberately absent from
+# this map: YAML gives them no backslash escapes at all, so a backslash there is one literal
+# character and validating it would invent a rule the parser does not have.
+_DOUBLE_QUOTE_ESCAPES = frozenset('0abtnvfre"/\\N_LP \t')
+_HEX_ESCAPE_WIDTHS = {"x": 2, "u": 4, "U": 8}
+_HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 
 
 def _flow_scalar_defect(value: str) -> str | None:
-    """Name why a quoted YAML flow scalar is malformed, or return None when it is legal.
+    """Name why a quoted YAML flow scalar is unusable here, or return None when it is fine.
 
-    Two failure shapes, one cause: YAML ends a flow scalar at the FIRST unescaped matching quote,
-    so "does a quote appear later in the line" is not the question. Asking only that let
-    `description: "ok"oops` through, and — worse, because it reads as ordinary prose —
-    `description: 'Use the agent's output`, which closes at the apostrophe in "agent's" and leaves
-    `s output` as trailing tokens (review finding, PR #120). Both are files a strict parser
-    refuses while this repository's own reader takes the line and every generated copy
-    re-serializes what it took.
+    YAML ends a flow scalar at the FIRST unescaped matching quote, so "does a quote appear later
+    in the line" is not the question. Asking only that let `description: "ok"oops` through, and —
+    worse, because it reads as ordinary prose — `description: 'Use the agent's output`, which
+    closes at the apostrophe in "agent's" and leaves `s output` as trailing tokens.
 
-    Both escape forms are honored — a doubled `''` inside a single-quoted scalar and a backslash
-    escape inside a double-quoted one — because a value that merely LOOKS malformed would be a
-    false red on a legal file, and the caller's whole point is that only the strict parser can see
-    the difference.
+    **One case is deliberately stricter than YAML**, and it is the only place in this rule that
+    rejects a legal document. YAML drops a ` # comment` after a closing quote; `parse_frontmatter`
+    above is not comment-aware — it takes the line and calls `.strip("'\\"")`, which removes the
+    outer quote characters and nothing else. So `description: "Use when routing." # note` parses to
+    `Use when routing." # note` and every generated host copy ships that string as the description
+    (executed, PR #120). Accepting it because YAML would was the wrong call: the fleet's readers are
+    this parser and the hosts downstream of it, not a conforming one.
+
+    Escapes are honored in both directions — a doubled `''` inside a single-quoted scalar and the
+    real escape set inside a double-quoted one — because a value that merely LOOKS malformed would
+    be a false red on a legal file, and the caller's whole point is that only the strict parser can
+    see the difference.
     """
     quote = value[0]
     index = 1
     while index < len(value):
         char = value[index]
         if quote == '"' and char == "\\":
+            following = value[index + 1: index + 2]
+            if not following:
+                return (
+                    "ends on a dangling backslash with nothing to escape, so the scalar never "
+                    "closes"
+                )
+            width = _HEX_ESCAPE_WIDTHS.get(following)
+            if width is not None:
+                digits = value[index + 2: index + 2 + width]
+                if len(digits) != width or not set(digits) <= _HEX_DIGITS:
+                    return (
+                        f"carries the malformed hex escape "
+                        f"{value[index: index + 2 + width]!r}, which needs exactly {width} hex "
+                        f"digits; a conforming YAML parser refuses the document over it"
+                    )
+                index += 2 + width
+                continue
+            if following not in _DOUBLE_QUOTE_ESCAPES:
+                return (
+                    f"carries the invalid escape sequence {value[index: index + 2]!r}; a "
+                    f"conforming YAML parser refuses the document with 'found unknown escape "
+                    f"character', while this validator's parser keeps the backslash and every "
+                    f"generated copy ships it"
+                )
             index += 2
             continue
         if char == quote:
             if quote == "'" and value[index + 1: index + 2] == "'":
                 index += 2
                 continue
-            tail = value[index + 1:]
-            if _SCALAR_TAIL_RE.fullmatch(tail):
+            tail = value[index + 1:].strip()
+            if not tail:
                 return None
+            if tail.startswith("#"):
+                return (
+                    f"closes its {quote} quote and then carries the comment {tail!r}. YAML would "
+                    f"drop that comment, but `parse_frontmatter` in this file is not "
+                    f"comment-aware: it strips only the outer quote characters, so the value "
+                    f"becomes {value.strip(chr(39) + chr(34))!r} and every generated host copy "
+                    f"ships the comment as literal description text. This rule is deliberately "
+                    f"stricter than YAML here"
+                )
             return (
-                f"closes its {quote} quote and then carries the trailing token(s) {tail.strip()!r}"
+                f"closes its {quote} quote and then carries the trailing token(s) {tail!r}, which "
+                f"a conforming YAML parser refuses"
             )
         index += 1
     return f"opens a {quote} quote that never closes on its line"
@@ -746,14 +791,19 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
 
     Two ways to write one, and the rule owes both. A plain (unquoted) scalar may not contain `: `
     — a real parser reads it as a nested mapping key and raises "mapping values are not allowed
-    here". A QUOTED scalar fails differently: it must close on its line, and only whitespace or a
-    comment may follow the closing quote, so `"ok"oops` and `'Use the agent's output` are refused
-    too (`_flow_scalar_defect` above names which). Nothing else in this repository can see either:
-    `parse_frontmatter` above is a hand-rolled subset that reads to end of line, and every
-    generated host copy re-serializes the value through `json.dumps`, so the offending bytes exist
-    only in the canonical file and every check downstream of them passes. The failure lands on
-    whichever host loads frontmatter with a strict parser — the component does not error, it does
-    not load, and the fleet ships one skill silently absent. Quote the value, and close the quote.
+    here". A QUOTED scalar fails differently: it must close on its line, carry only escapes YAML
+    defines, and be followed by nothing, so `"ok"oops`, `'Use the agent's output`, and `"Use C:\\q"`
+    are refused too (`_flow_scalar_defect` above names which). Nothing else in this repository can
+    see any of them: `parse_frontmatter` above is a hand-rolled subset that reads to end of line,
+    and every generated host copy re-serializes the value through `json.dumps`, so the offending
+    bytes exist only in the canonical file and every check downstream of them passes. The failure
+    lands on whichever host loads frontmatter with a strict parser — the component does not error,
+    it does not load, and the fleet ships one skill silently absent.
+
+    One case is stricter than YAML on purpose: a ` # comment` after the closing quote is legal YAML
+    and is still rejected, because `parse_frontmatter` is not comment-aware and would ship the
+    comment as literal description text on every host. The rule serves this repository's readers,
+    not a conforming one. Quote the value, close the quote, and put nothing after it.
     """
 
     issues: list[str] = []
@@ -781,27 +831,26 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
             value = value.strip()
             if key not in PROSE_SCALAR_FIELDS or not value:
                 continue
-            # A quoted scalar may hold anything — but only once its quote CLOSES, and closes with
-            # nothing but whitespace or a comment after it. Skipping on the opening character
-            # alone left the rule's own failure mode reachable one typo over:
+            # A quoted scalar may hold anything — but only once its quote CLOSES, closes with
+            # nothing after it, and escapes nothing YAML does not define. Skipping on the opening
+            # character alone left the rule's own failure mode reachable one typo over:
             # `description: "Use when routing: requests` is read to end of line by
             # `parse_frontmatter` above, re-serialized into valid generated copies, and passed
             # here, while a strict parser runs past the newline hunting the close quote and
             # refuses the file — the same silently absent component, arrived at differently
-            # (review finding, PR #107). The two readers disagreeing is the provable part, and it
-            # is enough: a value this repository's parser truncates at the newline is broken for
-            # the fleet whether or not YAML would eventually have accepted it.
+            # (review finding, PR #107). Each shape carries its own consequence in the message,
+            # because they do not share one: most are files a conforming parser refuses, while the
+            # trailing-comment case is legal YAML that only THIS repository's reader mangles.
             if value[0] in "\"'":
                 defect = _flow_scalar_defect(value)
                 if defect is None:
                     continue
                 issues.append(
-                    f"{path}: {key!r} frontmatter value {defect}. This validator's parser takes "
-                    f"the whole line and every generated copy re-serializes what it took, so the "
-                    f"whole fleet validates; a conforming YAML parser stops at the first "
-                    f"unescaped closing quote and refuses the file over what it finds next — "
-                    f"nothing, or a trailing token — dropping the component with no error anyone "
-                    f"sees. Close the quote, and put nothing after it."
+                    f"{path}: {key!r} frontmatter value {defect}. Nothing downstream can see it: "
+                    f"this validator's parser takes the whole line and every generated copy "
+                    f"re-serializes what it took, so the fleet validates while the host either "
+                    f"drops the component with no error anyone sees or ships the wrong string. "
+                    f"Close the quote, and put nothing after it."
                 )
                 continue
             # A flow collection (`argument-hint: [a path: here]`) parses too — badly, as a list of
