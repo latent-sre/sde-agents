@@ -542,6 +542,19 @@ class RequiredSlots(unittest.TestCase):
         text = "### CHANGED\nstuff\n### Assumptions\nnone\n### Verified\n`pytest -q` → 3 passed\n### NOT VERIFIED\nnothing"
         self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
 
+    def test_ordered_list_markers_are_display_not_packet_data(self) -> None:
+        for marker in (".", ")"):
+            text = "\n".join(
+                (
+                    f"1{marker} **Changed**: the parser.",
+                    f"2{marker} **Assumptions**: none.",
+                    f"3{marker} **Verified**: `python -m unittest` → 1 passed.",
+                    f"4{marker} **Not verified**: nothing.",
+                )
+            )
+            with self.subTest(marker=marker):
+                self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
+
     def test_unknown_shape_raises(self) -> None:
         with self.assertRaises(KeyError):
             packet_lint.lint_packet("anything", "no-such-shape")

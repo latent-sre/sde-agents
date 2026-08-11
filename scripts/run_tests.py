@@ -66,9 +66,10 @@ def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[P
         sys.executable, "-m", "unittest", "discover",
         "-s", str(start_dir), "-p", module.name, *passthrough,
     ]
-    # Windows inherits the parent's legacy console encoding unless told otherwise. Decoding
-    # that CP-1252 output as UTF-8 produced replacement characters which the parent console
-    # could then fail to print, hiding the actual test failure behind a UnicodeEncodeError.
+    # Windows inherits the parent's legacy console encoding unless told otherwise. Force normal
+    # Python text through UTF-8, but keep decoding total: os.write() and native grandchildren can
+    # still emit arbitrary bytes. ASCII-safe escapes preserve that evidence without letting one
+    # undecodable byte hide every module verdict and the aggregate summary.
     child_env = os.environ.copy()
     child_env["PYTHONIOENCODING"] = "utf-8"
     child_env["PYTHONUTF8"] = "1"
@@ -77,6 +78,7 @@ def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[P
         capture_output=True,
         text=True,
         encoding="utf-8",
+        errors="backslashreplace",
         env=child_env,
     )
     return module, proc.returncode, proc.stdout + proc.stderr, argv

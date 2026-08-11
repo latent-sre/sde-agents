@@ -116,5 +116,21 @@ class CleanEnvironmentTest(unittest.TestCase):
             {"provider": "anthropic", "auth": "credentials-file-copy"},
             eval_clean_room.auth_provider_mode({}, clean_room=True),
         )
+
+
+class AuthenticationFailureClassificationTest(unittest.TestCase):
+    def test_stderr_only_auth_failure_is_unavailable_case_insensitively(self) -> None:
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.raise_if_auth_failed(
+                "", 1, "NOT LOGGED IN · PLEASE RUN /LOGIN"
+            )
+
+    def test_resultless_transcript_auth_failure_is_unavailable(self) -> None:
+        transcript = '{"type":"system","subtype":"authentication_failed"}'
+
+        with self.assertRaises(eval_clean_room.AuthUnavailable):
+            eval_clean_room.raise_if_auth_failed(transcript, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

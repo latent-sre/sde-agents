@@ -248,9 +248,16 @@ _LEARNING_CANDIDATE_RE = re.compile(
 )
 
 
+# An ordered-list marker is display, not packet data. Strip only a leading marker followed by
+# whitespace so ordinary values such as version 1.7.3 remain untouched.
+_ORDERED_MARKER_RE = re.compile(r"^(\s*(?:>\s*)*)\d+[.)]\s+")
+
+
 def _normalize(line: str) -> str:
     """Strip markdown decoration so a slot heading matches however it was formatted."""
-    return re.sub(r"[*_`#>\-\s]+", " ", line).strip().lower()
+    return re.sub(
+        r"[*_`#>\-\s]+", " ", _ORDERED_MARKER_RE.sub(r"\1", line)
+    ).strip().lower()
 
 
 def _has_label(line: str) -> bool:

@@ -112,8 +112,9 @@ for routing even if the CLI then exited non-zero — it routed somewhere, possib
 entirely, and that is a real negative sample and a real positive miss. A structured error result is
 never a no-route sample; a component firing observed before that error may remain explicitly
 labeled partial evidence. Behavioral assertions are stricter: they require exit zero and a final
-non-error result. Authentication failure aborts the whole batch with exit 2 and writes no benchmark.
-These rules prevent quota, API, runner, or expired-session text from becoming a false green.
+non-error result. Authentication failure or missing namespaced fleet registration aborts the whole
+batch with exit 2 and writes no benchmark. These rules prevent quota, API, runner, expired-session,
+or absent-plugin state from becoming a false green.
 
 The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
 longer than that before its first tool call, so **the timeout and the model are one decision** —
@@ -131,9 +132,9 @@ directory holding only credentials (`scripts/eval_clean_room.py`) and is recorde
 against each other. The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
 to also write a `benchmark.json` there for before/after diffing. Exit codes separate the two things
 you would do about them — `0` all passed, `1` a case failed (a routing verdict to investigate), `3`
-nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage or
-authentication error for which no benchmark was written. You *can* gate on non-zero — but see the
-caveat.
+nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage,
+authentication, or registration error for which no benchmark was written. You *can* gate on
+non-zero — but see the caveat.
 
 ## How to read the results, and the caveat
 
@@ -166,14 +167,13 @@ python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
 including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
 five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
-patterns per case. Forty-six contracts are seeded. They cover packet completeness, semantic
+patterns per case. The seeded inventory covers packet completeness, semantic
 Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
 instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
 learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
 verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
-validation.
-The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
-inventory.
+validation. The runner prints the selected case and session count before starting;
+`evals/behavioral/contracts.json` is the authoritative inventory.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or

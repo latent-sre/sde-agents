@@ -62,6 +62,7 @@ CLAUDE = shutil.which("claude")
 FLEET_AGENTS = frozenset(p.stem for p in (REPO / "agents").glob("*.md"))
 FLEET_SKILLS = frozenset(p.name for p in (REPO / "skills").iterdir() if p.is_dir()) if (REPO / "skills").is_dir() else frozenset()
 FLEET = FLEET_AGENTS | FLEET_SKILLS
+NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENTS)
 
 PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v3"
 
@@ -110,6 +111,10 @@ class ProvenanceError(RuntimeError):
 
 class EvalAuthUnavailable(RuntimeError):
     """A model session could not authenticate, so the batch produced no valid benchmark."""
+
+
+class EvalRegistrationUnavailable(RuntimeError):
+    """The session did not prove that the namespaced fleet under test was registered."""
 
 
 _CLEAN_ROOM_MODULE = None
@@ -672,7 +677,7 @@ def _string_values(obj) -> list[str]:
 
 def transcript_stats(stdout: str) -> dict:
     """Measurement conditions read off one stream-json transcript:
-    {input_tokens, output_tokens, duration_ms, model, completed, result_error}.
+    {input_tokens, output_tokens, duration_ms, model, completed, result_error, fleet_registered}.
 
     Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
     baseline, and two parsers would eventually disagree about one transcript — so this is the one
@@ -682,6 +687,7 @@ def transcript_stats(stdout: str) -> dict:
     input_tokens = output_tokens = duration = model = None
     completed = False
     result_error = False
+    fleet_registered = False
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -689,6 +695,16 @@ def transcript_stats(stdout: str) -> dict:
             continue
         if not isinstance(event, dict):
             continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            agents = event.get("agents")
+            fleet_registered = fleet_registered or (
+                isinstance(agents, list)
+                and any(
+                    isinstance(name, str)
+                    and name in NAMESPACED_FLEET_AGENTS
+                    for name in agents
+                )
+            )
         if event.get("type") == "result":
             usage = event.get("usage") or {}
             input_tokens = usage.get("input_tokens", input_tokens)
@@ -713,7 +729,7 @@ def transcript_stats(stdout: str) -> dict:
                 model = candidate
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
             "duration_ms": duration, "model": model, "completed": completed,
-            "result_error": result_error}
+            "result_error": result_error, "fleet_registered": fleet_registered}
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
@@ -722,7 +738,8 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
 
     Ordinary runner trouble never raises: this drives a flaky, sometimes long-running subprocess,
     and a routing eval only needs the FIRST routing decision, not a completed session. Authentication
-    failure is the exception because it invalidates the whole batch and raises EvalAuthUnavailable.
+    failure and missing namespaced fleet registration are exceptions because either invalidates the
+    whole batch rather than describing routing variance.
     A timeout is expected rather than exceptional — the transcript captured up to that point almost
     always already contains the Skill or Agent call we grade on. So: parse whatever stdout exists
     whether the run exits, times out, or errors, and set `error` only when the transcript cannot
@@ -773,6 +790,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
         note = f"{note}; {result_note}" if note else result_note
 
     fired = sorted(components_fired(stdout))
+    registered = stats["fleet_registered"]
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
     # reached its non-error `result` event routed somewhere — possibly off the fleet entirely, which
     # is a real negative sample and a real positive miss — even if the CLI then exited non-zero;
@@ -784,7 +802,14 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     # rule applies to an error result: a component call observed before the error is real, but the
     # error result's silence can never green a negative.
     usable = bool(fired) or session_completed
-    error = note if (note and not usable) else None
+    if usable and not registered:
+        raise EvalRegistrationUnavailable(
+            "system/init did not register a known namespaced sde-agents agent; "
+            "--plugin-dir did not load the fleet under test"
+        )
+    # Exit status cannot turn silence into evidence: a clean process with no firing or completed
+    # result is still an unusable sample and must not green a negative case.
+    error = None if usable else (note or "no usable transcript")
     return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": observed_model,
             "error": error, "note": note}
 
@@ -1137,14 +1162,14 @@ def main(argv: list[str] | None = None) -> int:
             for c, i in work
         }
         done = 0
-        auth_failure: EvalAuthUnavailable | None = None
+        fatal_measurement_failure: EvalAuthUnavailable | EvalRegistrationUnavailable | None = None
         try:
             for future in concurrent.futures.as_completed(futures):
                 case_id, run_index = futures[future]
                 try:
                     result = future.result()
-                except EvalAuthUnavailable as exc:
-                    auth_failure = exc
+                except (EvalAuthUnavailable, EvalRegistrationUnavailable) as exc:
+                    fatal_measurement_failure = exc
                     for pending in futures:
                         pending.cancel()
                     break
@@ -1154,15 +1179,15 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             # subprocess.run cannot interrupt work already started; pending sessions can still be
             # cancelled, limiting the outage to at most the configured concurrency.
-            pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
+            pool.shutdown(wait=True, cancel_futures=fatal_measurement_failure is not None)
         try:
             verify_frozen_plugin(execution_plugin_dir, execution_plugin_identity)
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)
             return 2
-        if auth_failure is not None:
+        if fatal_measurement_failure is not None:
             print(
-                f"\neval aborted: {auth_failure}; benchmark.json was not written",
+                f"\neval aborted: {fatal_measurement_failure}; benchmark.json was not written",
                 file=sys.stderr,
             )
             return 2

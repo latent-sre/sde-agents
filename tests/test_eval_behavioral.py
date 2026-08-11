@@ -224,6 +224,16 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
                 else:
                     self.assertEqual(["Skill"], case["allowed_tools"])
 
+    def test_public_load_cases_none_retains_all_cases_compatibility(self) -> None:
+        expected, _ = eval_behavioral.load_cases_with_sources("*")
+
+        actual = _eval_behavioral_bootstrap.load_cases(None)
+
+        self.assertEqual(
+            [case["id"] for case in expected],
+            [case["id"] for case in actual],
+        )
+
     def test_unknown_root_and_case_fields_are_rejected(self) -> None:
         root_typo = {**self.document, "notse": self.document["notes"]}
         case_typo = {

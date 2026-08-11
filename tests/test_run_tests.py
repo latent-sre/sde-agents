@@ -33,6 +33,13 @@ NON_ASCII_FAILING = (
     "class Bad(unittest.TestCase):\n"
     "    def test_broken(self): self.fail('em dash —')\n"
 )
+RAW_BYTES_FAILING = (
+    "import os, unittest\n"
+    "class Raw(unittest.TestCase):\n"
+    "    def test_raw(self):\n"
+    "        os.write(2, bytes([255]))\n"
+    "        self.fail('raw child output')\n"
+)
 
 
 class ParallelRunnerTests(unittest.TestCase):
@@ -69,6 +76,18 @@ class ParallelRunnerTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("em dash —", output)
         self.assertNotIn("\ufffd", output)
+
+    def test_raw_child_bytes_do_not_crash_the_parent_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            module = Path(tmp) / "test_raw.py"
+            module.write_text(RAW_BYTES_FAILING, encoding="utf-8")
+            code, output = self._run(Path(tmp))
+
+        self.assertEqual(1, code, output)
+        self.assertIn("test_raw.py: FAILED", output)
+        self.assertIn(r"\xff", output)
+        self.assertIn("raw child output", output)
+        self.assertIn("Ran 1 tests across 1 modules", output)
 
     def test_discovering_no_modules_is_an_error_not_an_empty_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

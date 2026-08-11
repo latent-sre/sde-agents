@@ -83,6 +83,17 @@ def generic_error_transcript(message: str = "provider request failed") -> str:
     })
 
 
+def fleet_registration_transcript(*agents: str) -> str:
+    registered = agents or ("sde-agents:code-reviewer",)
+    return json.dumps(
+        {
+            "type": "system",
+            "subtype": "init",
+            "agents": list(registered),
+        }
+    )
+
+
 class ComponentDetectionTest(unittest.TestCase):
     def test_detects_namespaced_skill(self) -> None:
         self.assertEqual(
@@ -344,7 +355,9 @@ class CliValidationTest(unittest.TestCase):
 class RunUsabilityTest(unittest.TestCase):
     """Which troubled runs count as measurements — the line between 'routed elsewhere' and 'blank'."""
 
-    def _run_with_stdout(self, stdout: str, returncode: int = 1) -> dict:
+    def _run_with_stdout(
+        self, stdout: str, returncode: int = 1, *, registered: bool = True
+    ) -> dict:
         # `run_once`'s post-processing, exercised without spawning a session: monkeypatch the
         # subprocess call so the pure grading half runs against a synthetic transcript.
         import subprocess as sp
@@ -353,6 +366,8 @@ class RunUsabilityTest(unittest.TestCase):
             stderr = "boom"
 
         proc = _Proc()
+        if registered:
+            stdout = "\n".join(part for part in (fleet_registration_transcript(), stdout) if part)
         proc.returncode, proc.stdout = returncode, stdout
         original_run, original_claude = sp.run, eval_routing.CLAUDE
         eval_routing.CLAUDE = "claude"
@@ -376,6 +391,40 @@ class RunUsabilityTest(unittest.TestCase):
         self.assertEqual([], run["fired"])
         self.assertIn("exit 1", run["note"])
 
+    def test_completed_session_without_init_aborts_the_measurement(self) -> None:
+        stdout = json.dumps({"type": "result", "duration_ms": 10})
+
+        with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
+            self._run_with_stdout(stdout, returncode=0, registered=False)
+
+    def test_completed_session_without_namespaced_agent_registration_aborts(self) -> None:
+        stdout = "\n".join(
+            (
+                fleet_registration_transcript("personal-agent"),
+                json.dumps({"type": "result", "duration_ms": 10}),
+            )
+        )
+
+        with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
+            self._run_with_stdout(stdout, returncode=0, registered=False)
+
+    def test_unknown_namespaced_agent_does_not_prove_fleet_registration(self) -> None:
+        stdout = "\n".join(
+            (
+                fleet_registration_transcript("sde-agents:not-a-real-agent"),
+                json.dumps({"type": "result", "duration_ms": 10}),
+            )
+        )
+
+        with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
+            self._run_with_stdout(stdout, returncode=0, registered=False)
+
+    def test_partial_firing_without_registration_aborts_the_measurement(self) -> None:
+        stdout = transcript(skill_use("sde-agents:prompt-craft"))
+
+        with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
+            self._run_with_stdout(stdout, registered=False)
+
     def test_nonzero_non_error_result_mentioning_auth_is_still_a_measurement(self) -> None:
         stdout = json.dumps({
             "type": "result",
@@ -387,9 +436,18 @@ class RunUsabilityTest(unittest.TestCase):
         self.assertIsNone(run["error"], run)
         self.assertEqual([], run["fired"])
 
-    def test_session_that_produced_nothing_is_an_error(self) -> None:
-        run = self._run_with_stdout("")
-        self.assertIsNotNone(run["error"])
+    def test_zero_exit_session_that_produced_nothing_is_inconclusive(self) -> None:
+        run = self._run_with_stdout("", returncode=0)
+        self.assertEqual("no usable transcript", run["error"])
+
+        case = {
+            "id": "neg",
+            "polarity": "negative",
+            "expect_not_fires": ["prompt-craft"],
+        }
+        scored = eval_routing.score_case(case, [run], {"prompt-craft"}, threshold=0.5)
+        self.assertTrue(scored["inconclusive"], scored)
+        self.assertFalse(scored["passed"], scored)
 
     def test_structured_auth_failure_is_never_a_routing_measurement(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "authentication failed"):
@@ -434,7 +492,12 @@ class RunUsabilityTest(unittest.TestCase):
 
         class _Proc:
             returncode = 0
-            stdout = json.dumps({"type": "result", "model": "claude-opus-4-5-20260101"})
+            stdout = "\n".join(
+                (
+                    fleet_registration_transcript(),
+                    json.dumps({"type": "result", "model": "claude-opus-4-5-20260101"}),
+                )
+            )
             stderr = ""
 
         original_run, original_claude = sp.run, eval_routing.CLAUDE
@@ -1108,6 +1171,73 @@ class ProvenanceTest(unittest.TestCase):
 
             self.assertEqual(2, code)
             self.assertFalse((output / "benchmark.json").exists())
+
+    def test_routing_batch_cancels_queued_runs_after_registration_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve()
+            plugin = base / "plugin"
+            plugin.mkdir()
+            self._plugin(plugin)
+            cluster = base / "cluster.json"
+            cluster.write_text(json.dumps({
+                "cluster": "probe",
+                "members": ["prompt-craft"],
+                "cases": [{
+                    "id": "neg-probe",
+                    "polarity": "negative",
+                    "prompt": "probe",
+                    "expect_not_fires": ["prompt-craft"],
+                }],
+            }), encoding="utf-8")
+            output = base / "output"
+
+            fatal = eval_routing.concurrent.futures.Future()
+            fatal.set_exception(
+                eval_routing.EvalRegistrationUnavailable("fleet was not registered")
+            )
+            queued = (
+                eval_routing.concurrent.futures.Future(),
+                eval_routing.concurrent.futures.Future(),
+            )
+            submitted = iter((fatal, *queued))
+
+            class RecordingPool:
+                shutdown_call = None
+
+                def submit(self, *args, **kwargs):
+                    return next(submitted)
+
+                def shutdown(self, *, wait, cancel_futures):
+                    self.shutdown_call = (wait, cancel_futures)
+
+            pool = RecordingPool()
+
+            original_claude = eval_routing.CLAUDE
+            eval_routing.CLAUDE = "claude"
+            try:
+                with (
+                    mock.patch.object(
+                        eval_routing.concurrent.futures,
+                        "ThreadPoolExecutor",
+                        return_value=pool,
+                    ),
+                    mock.patch.object(
+                        eval_routing.concurrent.futures,
+                        "as_completed",
+                        return_value=iter((fatal,)),
+                    ),
+                ):
+                    code = eval_routing.main([
+                        str(cluster), "--runs", "3", "--concurrency", "1",
+                        "--plugin-dir", str(plugin), "--output-dir", str(output),
+                    ])
+            finally:
+                eval_routing.CLAUDE = original_claude
+
+            self.assertEqual(2, code)
+            self.assertFalse((output / "benchmark.json").exists())
+            self.assertTrue(all(future.cancelled() for future in queued))
+            self.assertEqual((True, True), pool.shutdown_call)
 
 
 if __name__ == "__main__":
