@@ -1,0 +1,88 @@
+{
+  "applicability": "repositories whose review signal is an asynchronous bot pass; excludes repositories with a blocking required-review gate, which enforces this mechanically",
+  "candidate_id": "lc_030fc2054ced48b19f3849c92b6cf2fc",
+  "created_at": "2026-08-11T04:35:36.262817Z",
+  "destination": "AGENTS.md Opening a pull request (automated review lands after you open)",
+  "disposition": "add",
+  "evidence": {
+    "environment": "github-pr/latent-sre-sde-agents",
+    "provenance": "verified",
+    "revision": "ad0f17e",
+    "source_kind": "review",
+    "source_reference": "PR #116 merge/revert timeline and PR #121 review comments"
+  },
+  "expected_behavior": "A pull request is not reported finished, and not merged, until the automated review passes have landed and every comment is dispositioned as applied or declined with a reason.",
+  "fingerprint": "66c35514bdd184ef09ef9ea3cb51c6b158c647d243314574348653efd692404f",
+  "freshness": {
+    "as_of": "2026-08-11T04:35:36.379335Z",
+    "review_at": "2026-09-10T04:35:36.262817Z"
+  },
+  "observation": "This repository's automated review posts two to five minutes after a pull request is opened. A PR merged four minutes after opening was reverted when its P1 landed two minutes after the merge, and a later PR was reported finished at open while three valid comments were still in flight -- one of them a correct refutation of a claim that would otherwise have promoted an unsupported rule into AGENTS.md.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "promoted",
+  "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
+  "recurrence": {
+    "count": 2,
+    "sources": [
+      {
+        "environment": "github-pr/latent-sre-sde-agents",
+        "observed_at": "2026-08-11T04:35:36.262817Z",
+        "provenance": "verified",
+        "revision": "ad0f17e",
+        "source_kind": "review",
+        "source_reference": "PR #116 merge/revert timeline and PR #121 review comments"
+      },
+      {
+        "environment": null,
+        "observed_at": "2026-08-11T04:35:36.379335Z",
+        "provenance": "verified",
+        "revision": null,
+        "source_kind": "review",
+        "source_reference": "PR #121 comments 03:17-03:19Z, three valid, one refuting a filed candidate"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-11T04:35:36.262817Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "pull request completion reporting and merge timing",
+  "sensitivity_review": {
+    "attestation_count": 2,
+    "attested": true,
+    "last_attested_at": "2026-08-11T04:35:36.379335Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-11T04:35:36.508761Z",
+      "destination": "AGENTS.md Opening a pull request (automated review lands after you open)",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-11T04:35:36.637215Z",
+      "destination": "AGENTS.md Opening a pull request (automated review lands after you open)",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-11T04:35:36.769978Z",
+      "destination": "AGENTS.md Opening a pull request (automated review lands after you open)",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
+      "to": "promoted"
+    }
+  ],
+  "updated_at": "2026-08-11T04:35:36.769978Z"
+}
