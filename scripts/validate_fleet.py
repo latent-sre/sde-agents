@@ -708,6 +708,15 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
 _DOUBLE_QUOTE_ESCAPES = frozenset('0abtnvfre"/\\N_LP \t')
 _HEX_ESCAPE_WIDTHS = {"x": 2, "u": 4, "U": 8}
 _HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+# A well-formed `\u`/`\U` escape can still name something that is not a character. YAML escapes
+# denote scalar VALUES, and the surrogate block exists only to encode pairs inside UTF-16 — a lone
+# one is not a code point a loader can produce, and nothing above U+10FFFF exists at all. Counting
+# hex digits accepted both (review finding, PR #120), so a description could carry `\uD800` and
+# still ship: this validator keeps the bytes, a strict loader refuses the document, and the
+# component goes missing with no error. `\x` needs no range check — two hex digits cannot leave
+# 0x00-0xFF.
+_SURROGATE_RANGE = range(0xD800, 0xE000)
+_MAX_CODE_POINT = 0x10FFFF
 
 
 def _flow_scalar_defect(value: str) -> str | None:
@@ -751,6 +760,22 @@ def _flow_scalar_defect(value: str) -> str | None:
                         f"{value[index: index + 2 + width]!r}, which needs exactly {width} hex "
                         f"digits; a conforming YAML parser refuses the document over it"
                     )
+                if following in "uU":
+                    code_point = int(digits, 16)
+                    if code_point in _SURROGATE_RANGE:
+                        return (
+                            f"escapes the lone surrogate U+{code_point:04X} "
+                            f"({value[index: index + 2 + width]!r}); surrogates encode UTF-16 "
+                            f"pairs and are not scalar values, so a strict loader refuses the "
+                            f"document while this parser keeps the bytes"
+                        )
+                    if code_point > _MAX_CODE_POINT:
+                        return (
+                            f"escapes U+{code_point:04X} "
+                            f"({value[index: index + 2 + width]!r}), above the Unicode maximum "
+                            f"U+{_MAX_CODE_POINT:04X}; no such character exists, so a strict "
+                            f"loader refuses the document while this parser keeps the bytes"
+                        )
                 index += 2 + width
                 continue
             if following not in _DOUBLE_QUOTE_ESCAPES:
@@ -792,8 +817,9 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
     Two ways to write one, and the rule owes both. A plain (unquoted) scalar may not contain `: `
     — a real parser reads it as a nested mapping key and raises "mapping values are not allowed
     here". A QUOTED scalar fails differently: it must close on its line, carry only escapes YAML
-    defines, and be followed by nothing, so `"ok"oops`, `'Use the agent's output`, and `"Use C:\\q"`
-    are refused too (`_flow_scalar_defect` above names which). Nothing else in this repository can
+    defines *naming code points that exist*, and be followed by nothing — so `"ok"oops`,
+    `'Use the agent's output`, `"Use C:\\q"`, and `"\\uD800"` are refused too
+    (`_flow_scalar_defect` above names which). Nothing else in this repository can
     see any of them: `parse_frontmatter` above is a hand-rolled subset that reads to end of line,
     and every generated host copy re-serializes the value through `json.dumps`, so the offending
     bytes exist only in the canonical file and every check downstream of them passes. The failure

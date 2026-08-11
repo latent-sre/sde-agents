@@ -186,6 +186,11 @@ class FleetValidatorTests(unittest.TestCase):
             ('"Use C:\\q for the path."', repr("\\q")),
             ('"Use \\z here."', repr("\\z")),
             ('"Use \\x2 here."', "malformed hex escape"),
+            # Syntactically complete and still not a character: counting hex digits accepted both.
+            ('"Use \\uD800 here."', "lone surrogate U+D800"),
+            # U+ notation is not zero-padded past four digits, so the escape's eight digits and
+            # the code point's rendering deliberately differ.
+            ('"Use \\U00110000 here."', "U+110000"),
             # No closing quote at all, so the backslash has nothing to escape. `"...\\"` is a
             # DIFFERENT shape -- there the backslash escapes the quote and the honest diagnosis is
             # "never closes", which the unterminated test already covers.
@@ -212,7 +217,9 @@ class FleetValidatorTests(unittest.TestCase):
 
         The escape rows are the precision controls the escape-set repair owes: `\\"`, `\\\\`, the
         named escapes, and a well-formed `\\x` hex escape are all legal and must survive, or the
-        repair trades the silent loss for a ban on ordinary frontmatter.
+        repair trades the silent loss for a ban on ordinary frontmatter. The last three sit on the
+        code-point range check's own boundaries -- one below the surrogate block, one above it, and
+        the maximum code point -- because an off-by-one there would reject legal text.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -228,6 +235,9 @@ class FleetValidatorTests(unittest.TestCase):
                 'description: "Use when a path needs a \\\\ backslash."',
                 'description: "Use when a tab \\t or newline \\n is meant."',
                 'description: "Use when the code point \\x41 is meant."',
+                'description: "Use when \\uD7FF, just below the surrogate block, is meant."',
+                'description: "Use when \\uE000, just above the surrogate block, is meant."',
+                'description: "Use when \\U0010FFFF, the maximum code point, is meant."',
             ):
                 with self.subTest(description=description):
                     skill.joinpath("SKILL.md").write_text(
