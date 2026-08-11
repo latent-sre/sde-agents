@@ -96,6 +96,45 @@ class FleetValidatorTests(unittest.TestCase):
             {issue.split("unquoted ")[1].split(" frontmatter")[0] for issue in quoting_issues},
         )
 
+    def test_unterminated_quoted_prose_scalar_is_reported(self) -> None:
+        """The rule skipped on the OPENING quote, which left its own failure one typo away.
+
+        The fixture's skill opens a double quote and never closes it. `parse_frontmatter` reads to
+        end of line and returns a truncated but plausible value, the generated copies re-serialize
+        exactly that, and every check passed -- while a strict parser hunts the close quote past
+        the newline and refuses the file, dropping the component silently. The fixture's AGENT is
+        the control: the same colon-space inside a CLOSED quote must stay unreported, or the
+        repair would have traded one silent loss for a ban on quoted prose.
+        """
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "unterminated-yaml-scalar", check_inventory=False
+        )
+        unterminated = [issue for issue in issues if "never closes on its line" in issue]
+        self.assertEqual(1, len(unterminated), issues)
+        self.assertIn("skills", unterminated[0])
+        self.assertIn("'description'", unterminated[0])
+
+    def test_closed_quotes_and_their_escapes_are_not_reported(self) -> None:
+        """The false-red direction, which is why the closing scan honors both escape forms."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "agents").mkdir()
+            (root / "agents" / "builder.md").write_text(VALID_AGENT, encoding="utf-8")
+            skill = root / "skills" / "craft"
+            skill.mkdir(parents=True)
+            for description in (
+                'description: "Use when applying conventions: the ordinary quoted form."',
+                "description: 'Use when applying the lab''s conventions: a doubled quote.'",
+                'description: "Use when the value quotes a \\"name: value\\" pair inline."',
+            ):
+                with self.subTest(description=description):
+                    skill.joinpath("SKILL.md").write_text(
+                        f"---\nname: craft\n{description}\n"
+                        "argument-hint: [the file to change]\n---\n\n# Craft\n",
+                        encoding="utf-8",
+                    )
+                    self.assertEqual([], validate_fleet.validate_yaml_scalar_quoting(root))
+
     def test_flow_collection_argument_hint_is_not_reported(self) -> None:
         """Every fleet skill writes `argument-hint: [a hint]`, which YAML reads as a flow sequence.
 

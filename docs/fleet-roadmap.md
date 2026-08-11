@@ -208,7 +208,10 @@ delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited la
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
 **Prerequisites:** the spec's Phase 0, unchanged and still blocking — `codex --version` and
-`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`, both from the SEC-01 Linux host. No
+`grep -L "Managed by sde-agents" "${CODEX_HOME:-$HOME/.codex}"/agents/*.toml`, both from the
+SEC-01 Linux host. The fallback is load-bearing: `CODEX_HOME` unset is the documented default
+(`scripts/install_codex_agents.py:170`), and the bare form expands to `/agents/*.toml` and errors
+without inspecting anything, so the evidence this gate blocks on would never be collected. No
 codex-cli version has ever been measured on that host. The only Codex CLI version this repository
 records from a run is `codex-cli 0.145.0` (2026-07-31 SAFE-001 host conformance,
 `evals/baselines/2026-07-31-p0-p1/host-conformance/`). `rust-v0.147.0` is an upstream GitHub

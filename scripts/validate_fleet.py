@@ -698,6 +698,30 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     return issues, sorted(names)
 
 
+def _flow_scalar_closes(value: str) -> bool:
+    """True when a quoted YAML flow scalar's opening quote closes on the same line.
+
+    Both escape forms are honored — a doubled `''` inside a single-quoted scalar and a
+    backslash escape inside a double-quoted one — because a value that merely LOOKS unterminated
+    would be a false red on a legal file, and the caller's whole point is that only the strict
+    parser can see the difference.
+    """
+    quote = value[0]
+    index = 1
+    while index < len(value):
+        char = value[index]
+        if quote == '"' and char == "\\":
+            index += 2
+            continue
+        if char == quote:
+            if quote == "'" and value[index + 1: index + 2] == "'":
+                index += 2
+                continue
+            return True
+        index += 1
+    return False
+
+
 def validate_yaml_scalar_quoting(root: Path) -> list[str]:
     """Reject a plain frontmatter scalar that a conforming YAML parser refuses to read.
 
@@ -735,10 +759,31 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
             value = value.strip()
             if key not in PROSE_SCALAR_FIELDS or not value:
                 continue
-            # A quoted scalar may hold anything; a flow collection (`argument-hint: [a path: here]`)
-            # parses too — badly, as a list of one-pair mappings, but it PARSES, and this rule may
-            # only claim what it can prove: that a strict parser refuses the file outright.
-            if value[0] in "\"'[{":
+            # A quoted scalar may hold anything — but only once its quote CLOSES. Skipping on the
+            # opening character alone left the rule's own failure mode reachable one typo over:
+            # `description: "Use when routing: requests` is read to end of line by
+            # `parse_frontmatter` above, re-serialized into valid generated copies, and passed
+            # here, while a strict parser runs past the newline hunting the close quote and
+            # refuses the file — the same silently absent component, arrived at differently
+            # (review finding, PR #107). The two readers disagreeing is the provable part, and it
+            # is enough: a value this repository's parser truncates at the newline is broken for
+            # the fleet whether or not YAML would eventually have accepted it.
+            if value[0] in "\"'":
+                if _flow_scalar_closes(value):
+                    continue
+                issues.append(
+                    f"{path}: {key!r} frontmatter value opens a {value[0]} quote that never "
+                    f"closes on its line. This validator's parser stops at the newline and every "
+                    f"generated copy re-serializes the truncated value it read, so the whole "
+                    f"fleet validates; a conforming YAML parser reads on past the newline and "
+                    f"refuses the file, dropping the component with no error anyone sees. Close "
+                    f"the quote."
+                )
+                continue
+            # A flow collection (`argument-hint: [a path: here]`) parses too — badly, as a list of
+            # one-pair mappings, but it PARSES, and this rule may only claim what it can prove:
+            # that a strict parser refuses the file outright.
+            if value[0] in "[{":
                 continue
             if ": " in value:
                 issues.append(
