@@ -1,0 +1,62 @@
+{
+  "applicability": "code-level messages naming an authority; excludes prompts, which are writer behavior by construction",
+  "candidate_id": "lc_b7e21dca0888431fbbf4243341f80e1f",
+  "created_at": "2026-08-11T04:44:45.241829Z",
+  "destination": "AGENTS.md Adding a defensive branch to a fleet script (diagnostic-message twin)",
+  "disposition": "merge",
+  "evidence": {
+    "environment": "python-3.12/windows",
+    "provenance": "verified",
+    "revision": "3ee9c38",
+    "source_kind": "review",
+    "source_reference": "PR #116 3ee9c38 workflows/deep-review.js guard and scope dispatch"
+  },
+  "expected_behavior": "A diagnostic states what was actually compared. Where it names an external authority as the source of truth, the comparison is against a value independently obtained from that authority -- captured once and reused is fine -- never against a copy the compared party authored itself.",
+  "fingerprint": "658af4db4a571808f35f36f6e57ca5f9642447322e2727074ce2e26db29edf05",
+  "freshness": {
+    "as_of": "2026-08-11T04:44:45.241829Z",
+    "review_at": "2026-09-10T04:44:45.241829Z"
+  },
+  "observation": "A workflow guard compared two fields of one agent-reported packet -- candidate_sha and its own declared alias head_sha, both produced by a single delegated 'git rev-parse HEAD' the scope agent was asked to run -- and reported their disagreement as 'scope candidate_sha did not match git HEAD'. Git was consulted, but not by the comparison: the guard cannot tell which copy is wrong, and names an authority it did not re-read, sending an operator to check a value that matches.",
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Sibling of the shipped doc-side twin rule in the same section: that rule governs prose claiming enforcement, this governs a message claiming a check it did not perform. Merging generalizes one rule rather than appending a second entry.",
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "python-3.12/windows",
+        "observed_at": "2026-08-11T04:44:45.241829Z",
+        "provenance": "verified",
+        "revision": "3ee9c38",
+        "source_kind": "review",
+        "source_reference": "PR #116 3ee9c38 workflows/deep-review.js guard and scope dispatch"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-11T04:44:45.241829Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "diagnostic messages emitted by fleet scripts and workflows",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-11T04:44:45.241829Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [
+    {
+      "at": "2026-08-11T04:44:45.372849Z",
+      "destination": "AGENTS.md Adding a defensive branch to a fleet script (diagnostic-message twin)",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Sibling of the shipped doc-side twin rule in the same section: that rule governs prose claiming enforcement, this governs a message claiming a check it did not perform. Merging generalizes one rule rather than appending a second entry.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-11T04:44:45.372849Z"
+}

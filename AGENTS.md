@@ -203,7 +203,7 @@ disposition.
 
 ## Opening a pull request
 
-`.github/pull_request_template.md` is the shape. Two things about it are load-bearing:
+`.github/pull_request_template.md` is the shape. Three things about it are load-bearing:
 
 - **Claim plus consequence.** Every line says what changed *and* what it means — "removed `ag`,
   whose exec-flag surface cannot be enumerated without the binary" rather than "removed `ag`". Same
@@ -213,6 +213,16 @@ disposition.
   situational — a description edit owes a before/after routing run, a guard or hook edit owes the
   probe, a validator rule owes a test proven to fail without it, and a canonical fleet edit owes
   regenerated host adapters. Fill the rows you tripped.
+- **The automated review arrives after you open, not with it.** Copilot and Codex post two to five
+  minutes behind `gh pr create`, so a PR reported finished at open is reported before its review
+  exists. Wait for both passes **on the current head**, then disposition every comment — applied,
+  or declined with the reason. Applying one writes new bytes, and the passes that cleared the
+  previous head never saw them: the last review-driven edit owes another wait, or the gate is
+  satisfiable by a review of code the fix already replaced. Three rounds paid for this line — a PR
+  merged four minutes after opening carried a P1 that landed two minutes *after* the merge and cost
+  a revert; a later PR's unread comments correctly refuted a claim that would otherwise have
+  promoted an unsupported rule into this file; and the head-binding clause exists because the first
+  draft of this very rule shipped with that loophole in it.
 
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.
