@@ -11,8 +11,8 @@
     "source_kind": "review",
     "source_reference": "PR #119 be1bd0b builder session reading a parked shared checkout"
   },
-  "expected_behavior": "Before reading a working tree as a named base, confirm git rev-parse HEAD is that base AND the tree is clean -- a matching HEAD over staged, unstaged, or untracked changes still yields bytes the revision does not contain. Where either is unavailable, read blobs from the revision itself with git show <rev>:<path>.",
-  "fingerprint": "911401957675da0ae20c59193f55259dcedbe25f3c8670c97652a88b4e2bb9ff",
+  "expected_behavior": "Read the named revision rather than a tree standing in for it: git show <rev>:<path> is the revision's bytes unconditionally. A working tree can diverge from a matching HEAD in ways a status check does not report -- untracked-but-ignored paths, and tracked paths carrying assume-unchanged or skip-worktree, both reproduced -- so these are an open list, not a checklist to clear. Where a tree read is unavoidable, confirm git rev-parse HEAD is the base, confirm cleanliness for the paths read, inspect git ls-files -v for index flags, and record that the read was tree-based so a later reader knows which guarantee it carries.",
+  "fingerprint": "d10b8f2722b18192fa9fb89f00eb1def7532fd7899b870a431d5d36f0d9b0a6a",
   "freshness": {
     "as_of": "2026-08-11T04:44:45.944585Z",
     "review_at": "2026-09-10T04:44:45.834606Z"
