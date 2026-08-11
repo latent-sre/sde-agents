@@ -113,10 +113,20 @@ PROBED_SLOTS: dict[str, tuple[str, ...]] = {
 # silent non-fire -- the safe direction -- and a slot that cites nothing at all is still reported
 # by the shared verification-claim rule below.
 _PROBE_RE = re.compile(r"\$\s+\S")
+# The command's own text is not its result. Scanning the raw line let `$ swapon --show` satisfy the
+# result oracle through its own flag, which is the "any nearby command token" defect this rule
+# exists to close, reintroduced one layer down (executed review). Blank the command span first.
+_COMMAND_SPAN_RE = re.compile(r"\$[^`\n]*")
 _OBSERVED_RESULT_RE = re.compile(
     r"\N{RIGHTWARDS ARROW}|->|=>|\bprint(?:s|ed)?\b|\breport(?:s|ed)?\b|\breturn(?:s|ed)?\b"
     r"|\bshow(?:s|ed|n)?\b|\boutput\b|\bempty\b|\bnothing\b"
-    r"|\bexit(?:s|ed)?\s+(?:code\s+)?\d+\b|\b\d+\s+passed\b",
+    r"|\bexit(?:s|ed)?\s+(?:code\s+)?\d+\b|\b\d+\s+passed\b"
+    # A result stated BEFORE the probe is the agent file's own rendering -- the constraint, then
+    # the exact command that measured it (agents/homelab-platform.md:133-134 fixes no order). So
+    # an indicative statement or a quoted value counts: "OpenBao is v2.6.1 (`$ bao version`)" and
+    # "swap is off on this host (`$ swapon --show`)" are measurements, and requiring an arrow
+    # after the command reddened both.
+    r"|`[^`\n]+`|\b\d[\w.]*\b|\b(?:is|was|are|were|has|have|had)\b",
     re.IGNORECASE,
 )
 
@@ -322,6 +332,21 @@ def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
     return any(line.startswith(slot) for line in normalized_lines)
 
 
+def _slot_heading(normalized_line: str, shape: str) -> bool:
+    """True when the line is a slot HEADING, not prose that merely opens with the slot word.
+
+    A section boundary needs the separator: "Blocking issues were reviewed ..." is a sentence,
+    while "**Blocking**: ...", "### Blocking", and "Blocking — ..." are headings. Treating the
+    bare prefix as a boundary truncated the preceding slot's continuation, so a correctly filled
+    slot read as empty (executed review). Normalization has already stripped `#`, `*`, and the
+    ASCII hyphen, so what remains to distinguish them is `:`, a dash, or end of line.
+    """
+    return any(
+        re.match(rf"{re.escape(slot)}(?:\s*[:\N{{EM DASH}}\N{{EN DASH}}]|$)", normalized_line)
+        for slot in SHAPES[shape]
+    )
+
+
 def _slot_sections(
     slot: str, lines: list[str], normalized: list[str], shape: str
 ) -> list[tuple[str, str]]:
@@ -333,7 +358,6 @@ def _slot_sections(
     and just as harmful. The section ends at the next line beginning any slot of the same shape,
     which is exactly the boundary a reader uses to find where a slot stops.
     """
-    boundaries = SHAPES[shape]
     sections: list[tuple[str, str]] = []
     for index, line in enumerate(normalized):
         if not line.startswith(slot):
@@ -341,7 +365,7 @@ def _slot_sections(
         value_parts = [line[len(slot):].lstrip(" :\N{EM DASH}\N{EN DASH}-")]
         raw_parts = [lines[index]]
         for offset in range(index + 1, len(normalized)):
-            if any(normalized[offset].startswith(other) for other in boundaries):
+            if _slot_heading(normalized[offset], shape):
                 break
             value_parts.append(normalized[offset])
             raw_parts.append(lines[offset])
@@ -714,7 +738,8 @@ def lint_packet(
     # 1c. A probe with nothing observed beside it. Citing a command is not measuring anything.
     for slot in PROBED_SLOTS.get(shape, ()):
         for _value, raw in _slot_sections(slot, lines, normalized, shape):
-            if _PROBE_RE.search(raw) and not _OBSERVED_RESULT_RE.search(raw):
+            beside_the_command = _COMMAND_SPAN_RE.sub(" ", raw)
+            if _PROBE_RE.search(raw) and not _OBSERVED_RESULT_RE.search(beside_the_command):
                 findings.append(
                     f"packet slot {slot!r} cites a probe with no observed result: a bare command "
                     f"satisfies every evidence check nearby while reporting nothing that was "

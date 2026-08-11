@@ -1120,6 +1120,78 @@ class OtherShapes(unittest.TestCase):
             packet_lint.lint_packet(honest, "handoff-packet"),
         )
 
+    def test_handoff_accepts_a_result_stated_before_its_probe(self) -> None:
+        # `agents/homelab-platform.md:133-134` asks for "each environment constraint with the
+        # probe that measured it, quoted as the exact command" — it fixes no order, so stating
+        # the fact and then quoting the probe is a conforming packet. The first version of this
+        # rule required a result token AFTER the command and reddened exactly that rendering.
+        for facts in (
+            "- **Verified facts**: OpenBao is v2.6.1 (`$ bao version`).",
+            "- **Verified facts**: the removed flag is absent in 2.6.1 "
+            "(`$ bao server -verify-only`).",
+            "- **Verified facts**: swap is off on this host (`$ swapon --show`).",
+        ):
+            with self.subTest(facts=facts):
+                packet = self.EMPTY_HANDOFF.replace(
+                    "- **Verified facts**: none; $ true", facts
+                )
+                self.assertFalse(
+                    [f for f in packet_lint.lint_packet(packet, "handoff-packet")
+                     if "no observed result" in f],
+                    packet_lint.lint_packet(packet, "handoff-packet"),
+                )
+
+    def test_handoff_result_oracle_ignores_the_command_it_scans_beside(self) -> None:
+        # The rule exists to reject "any nearby command token" as evidence, so reading the
+        # command's OWN text as the observed result reintroduces the defect one layer down:
+        # `$ swapon --show` satisfied the oracle through the flag `--show`. With the command
+        # span blanked, a probe whose only "result" is its own flags still fires.
+        packet = self.EMPTY_HANDOFF.replace(
+            "- **Verified facts**: none; $ true",
+            "- **Verified facts**: none; $ swapon --show",
+        )
+        self.assertTrue(
+            any("no observed result" in f
+                for f in packet_lint.lint_packet(packet, "handoff-packet")),
+            packet_lint.lint_packet(packet, "handoff-packet"),
+        )
+
+    def test_prose_line_starting_with_a_slot_word_does_not_end_a_section(self) -> None:
+        # A slot heading is a slot word followed by a separator. Treating any line that merely
+        # begins with the word as a boundary truncates a slot's continuation, so a correctly
+        # filled slot reads as empty — a false RED produced by the reader, not the packet.
+        packet = (
+            "- **Deliverable**:\n"
+            "  Blocking issues were reviewed and none apply to Tier 1; the artifact is a "
+            "staged `bao.hcl`, unapplied.\n"
+            "- **Fixed decisions**: none\n"
+            "- **Sources**: none\n"
+            "- **Verified facts**: none\n"
+            "- **Forbidden regressions**: none\n"
+            "- **Acceptance**: the config parses; `$ bao operator validate-config` exits 0.\n"
+            "- **Authority**: none\n"
+            "- **Irreversible**: none\n"
+            "- **Temporary authority**: none\n"
+            "- **Inventory invariants**: none\n"
+            "- **Blocking**: none\n"
+            "- **Open lanes**: none\n"
+            "- **Out of scope**: none\n"
+        )
+        self.assertEqual([], packet_lint.lint_packet(packet, "handoff-packet"))
+
+    def test_value_rule_slots_must_exist_in_the_shape_they_name(self) -> None:
+        # A typo in either map disarms its rule silently: the slot is simply never found, and
+        # the packet passes as though the rule had run.
+        for name, mapping in (
+            ("SUBSTANTIVE_SLOTS", packet_lint.SUBSTANTIVE_SLOTS),
+            ("PROBED_SLOTS", packet_lint.PROBED_SLOTS),
+        ):
+            for shape, slots in mapping.items():
+                with self.subTest(mapping=name, shape=shape):
+                    self.assertIn(shape, packet_lint.SHAPES)
+                    for slot in slots:
+                        self.assertIn(slot, packet_lint.SHAPES[shape])
+
     def test_handoff_slot_value_may_continue_on_following_lines(self) -> None:
         # A wrapped slot or a nested bullet list is ordinary packet prose. Reading only the
         # heading line would report a false RED against a correctly filled slot — the mirror of
