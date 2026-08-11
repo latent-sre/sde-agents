@@ -115,8 +115,13 @@ PROBED_SLOTS: dict[str, tuple[str, ...]] = {
 _PROBE_RE = re.compile(r"\$\s+\S")
 # The command's own text is not its result. Scanning the raw line let `$ swapon --show` satisfy the
 # result oracle through its own flag, which is the "any nearby command token" defect this rule
-# exists to close, reintroduced one layer down (executed review). Blank the command span first.
-_COMMAND_SPAN_RE = re.compile(r"\$[^`\n]*")
+# exists to close, reintroduced one layer down (executed review). Blank the command span first --
+# INCLUDING the backticks that quote it, which is how a packet actually writes a command. Blanking
+# only the `$...` text left the delimiters behind for the quoted-value clause below to read as a
+# result: `none; `$ true`` produced `` ` ` `` and passed, and two commands in a row were worse
+# still, the leftover backtick of one pairing with the leftover of the next (`` `, ` ``). The
+# replacement is a newline rather than a space so no clause here can ever span a blanked region.
+_COMMAND_SPAN_RE = re.compile(r"`\$[^`\n]*`|\$[^`\n]*")
 _OBSERVED_RESULT_RE = re.compile(
     r"\N{RIGHTWARDS ARROW}|->|=>|\bprint(?:s|ed)?\b|\breport(?:s|ed)?\b|\breturn(?:s|ed)?\b"
     r"|\bshow(?:s|ed|n)?\b|\boutput\b|\bempty\b|\bnothing\b"
@@ -126,6 +131,13 @@ _OBSERVED_RESULT_RE = re.compile(
     # an indicative statement or a quoted value counts: "OpenBao is v2.6.1 (`$ bao version`)" and
     # "swap is off on this host (`$ swapon --show`)" are measurements, and requiring an arrow
     # after the command reddened both.
+    #
+    # The bare copula is a KNOWINGLY low bar, kept after review rather than by oversight. It is
+    # what admits "swap is off" -- a real result carrying neither a digit nor a quoted value -- and
+    # the cost is that "this is documented; $ true" would also pass. Raising it means rejecting
+    # honest no-digit facts, which is the false-RED direction this rule has already been repaired
+    # for twice. The weight against an empty slot is carried by SUBSTANTIVE_SLOTS and the shared
+    # verification-claim rule, not by this clause.
     r"|`[^`\n]+`|\b\d[\w.]*\b|\b(?:is|was|are|were|has|have|had)\b",
     re.IGNORECASE,
 )
@@ -738,7 +750,7 @@ def lint_packet(
     # 1c. A probe with nothing observed beside it. Citing a command is not measuring anything.
     for slot in PROBED_SLOTS.get(shape, ()):
         for _value, raw in _slot_sections(slot, lines, normalized, shape):
-            beside_the_command = _COMMAND_SPAN_RE.sub(" ", raw)
+            beside_the_command = _COMMAND_SPAN_RE.sub("\n", raw)
             if _PROBE_RE.search(raw) and not _OBSERVED_RESULT_RE.search(beside_the_command):
                 findings.append(
                     f"packet slot {slot!r} cites a probe with no observed result: a bare command "

@@ -1156,6 +1156,43 @@ class OtherShapes(unittest.TestCase):
             packet_lint.lint_packet(packet, "handoff-packet"),
         )
 
+    def test_backticked_probe_with_no_result_still_fires(self) -> None:
+        # A packet quotes its commands, so `$ true` inside backticks is the CANONICAL spelling of
+        # the bypass — and blanking only the `$...` text left the enclosing backticks behind, which
+        # the result oracle then read as a quoted value. Two commands in a row were worse: the
+        # leftover backtick of one paired with the leftover of the next ("`, `"). Both spellings
+        # must fire, or the rule is armed only against the spelling nobody writes.
+        for facts in (
+            "- **Verified facts**: none; `$ true`",
+            "- **Verified facts**: `$ bao version`, `$ swapon --show`.",
+        ):
+            with self.subTest(facts=facts):
+                packet = self.EMPTY_HANDOFF.replace(
+                    "- **Verified facts**: none; $ true", facts
+                )
+                self.assertTrue(
+                    any("no observed result" in f
+                        for f in packet_lint.lint_packet(packet, "handoff-packet")),
+                    packet_lint.lint_packet(packet, "handoff-packet"),
+                )
+
+    def test_backticked_probe_with_a_result_still_passes(self) -> None:
+        # The other direction: consuming the backticks must not swallow a quoted RESULT that
+        # happens to sit beside the command.
+        for facts in (
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: OpenBao is v2.6.1 (`$ bao version`).",
+        ):
+            with self.subTest(facts=facts):
+                packet = self.EMPTY_HANDOFF.replace(
+                    "- **Verified facts**: none; $ true", facts
+                )
+                self.assertFalse(
+                    [f for f in packet_lint.lint_packet(packet, "handoff-packet")
+                     if "no observed result" in f],
+                    packet_lint.lint_packet(packet, "handoff-packet"),
+                )
+
     def test_prose_line_starting_with_a_slot_word_does_not_end_a_section(self) -> None:
         # A slot heading is a slot word followed by a separator. Treating any line that merely
         # begins with the word as a boundary truncates a slot's continuation, so a correctly
