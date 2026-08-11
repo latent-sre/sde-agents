@@ -682,6 +682,28 @@ class PluginWiringTests(unittest.TestCase):
             any("cannot load packet shapes" in issue for issue in issues), issues
         )
 
+        def drop_the_only_consumer(repo: Path) -> None:
+            # Owner and grader agreeing proves nothing while no behavioral case declares the
+            # shape: the case stays schema-valid on its `must_match` alone, the thirteen slots
+            # stop being graded, and every check kept passing (review finding, PR #108 —
+            # reproduced at zero validator issues before this branch existed).
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            # Only the handoff consumer: popping the field from every case breaks two unrelated
+            # ones and the red would then come from their schema errors, not from this branch.
+            removed = 0
+            for case in document["cases"]:
+                if case.get("packet_shape") == "handoff-packet":
+                    del case["packet_shape"]
+                    removed += 1
+            self.assertEqual(1, removed, "the handoff-packet consumer case was not found")
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(drop_the_only_consumer)
+        self.assertTrue(
+            any("graded by nothing" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 

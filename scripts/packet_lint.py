@@ -114,9 +114,14 @@ PROBED_SLOTS: dict[str, tuple[str, ...]] = {
 # canonical text asks for "the probe that measured it, quoted as the exact command" and fixes no
 # display form, so restricting this to `$ ...` false-failed a compliant `` `bao version` printed
 # `OpenBao v2.6.1` `` -- the slot cited its probe and the packet still reddened (review finding,
-# PR #108). A backticked span counts only when it holds a space: `` `disable_mlock` `` is a field
-# name, not a command.
-_BACKTICK_COMMAND = r"`[^`\n]*\s[^`\n]*`"
+# PR #108). A backticked span counts only when it holds a space -- `` `disable_mlock` `` is a field
+# name, not a command -- AND only when its first token has a command's shape: lowercase, no
+# uppercase anywhere in it. "Any multiword quoted span" was the first attempt and it read a quoted
+# RESULT as the probe that produced it: `Verified facts: version is `OpenBao v2.6.1`` cited no
+# command at all, yet the quoted value satisfied the probe check and the leftover `is` satisfied
+# the result check, so an unmeasured constraint graded green (review finding, PR #108). A result
+# carries a capital or a bare number (`OpenBao v2.6.1`, `12 hosts`); a command does not.
+_BACKTICK_COMMAND = r"`[a-z][a-z0-9._/-]*\s+[^`\n]*`"
 _PROBE_RE = re.compile(rf"\$\s+\S|{_BACKTICK_COMMAND}")
 # A populated `Verified facts` slot must cite its own probe. Opening the slot with `none` is the
 # agent's own empty-line spelling and a disclosure, not a fact, so it owes nothing -- but only in
@@ -371,7 +376,12 @@ STRICT_LABEL_SHAPES = frozenset({"handoff-packet"})
 # only thing distinguishing it from prose. Recovering it from the raw line keeps a legal rendering
 # out of the false-red column without loosening the normalized test.
 _RAW_LABEL_PREFIX = r"^[\s>*_`#+-]*"
-_RAW_LABEL_TAIL = r"[*_`]*\s*[-:\N{EN DASH}\N{EM DASH}]"
+# The fallback exists ONLY to recover a spaced ASCII hyphen (`Deliverable - value`), the one
+# separator normalization eats. Accepting a hyphen with no space before it made a hyphenated word
+# into a label: `Deliverable-unavailable: none` and `Deliverable-like prose says none` both passed
+# the shape while the readable `Deliverable:` label was absent (review finding, PR #108). `:` and
+# the en/em dashes survive normalization and are matched there, so this tail needs only the hyphen.
+_RAW_LABEL_TAIL = r"[*_`]*\s+-\s"
 
 
 def _is_slot_label(slot: str, normalized_line: str, raw_line: str, strict: bool) -> bool:

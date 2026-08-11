@@ -1433,6 +1433,30 @@ def validate_handoff_packet_shape(root: Path) -> list[str]:
             "cases declare that shape. An undeclared shape fails those cases at load rather "
             "than grading anything."
         ]
+    # Owner and grader agreeing is only half the link. The shape grades nothing until a shipped
+    # behavioral case declares it, and dropping that one `packet_shape` field is silent in every
+    # direction: the case stays schema-valid on its `must_match` alone, and this rule kept
+    # reporting agreement between two things that had stopped being consulted (review finding,
+    # PR #108 — reproduced at zero validator issues). The consumer is the third leg.
+    contracts = root / "evals" / "behavioral" / "contracts.json"
+    if contracts.is_file():
+        try:
+            document = json.loads(read_text(contracts))
+            consumers = [
+                case.get("id")
+                for case in document.get("cases", [])
+                if isinstance(case, dict) and case.get("packet_shape") == "handoff-packet"
+            ]
+        except (json.JSONDecodeError, AttributeError):
+            consumers = None  # the behavioral schema rule owns malformed contract files
+        if consumers is not None and not consumers:
+            return [
+                f"{contracts}: no behavioral case declares 'packet_shape': 'handoff-packet', so "
+                f"the thirteen delegation slots are graded by nothing. "
+                f"{owner.relative_to(root).as_posix()} still ships the packet and "
+                f"scripts/packet_lint.py still declares the shape, so every check here agrees "
+                "while the live contract measures no packet at all."
+            ]
     section = re.search(
         r"^##\s+Delegation handoff packet\b.*?(?=^##\s|\Z)",
         read_text(owner),

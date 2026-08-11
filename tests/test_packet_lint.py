@@ -1393,6 +1393,41 @@ class OtherShapes(unittest.TestCase):
             packet_lint.lint_packet(disclaimed, "handoff-packet"),
         )
 
+    def test_a_quoted_result_is_not_a_cited_probe(self) -> None:
+        # "Any multiword backticked span is a command" read a quoted RESULT as the probe that
+        # produced it: the value satisfied the probe check and the leftover `is` satisfied the
+        # result check, so a fact nothing measured graded green (review finding, PR #108). A
+        # result carries a capital or a bare number; a command's first token does not.
+        unmeasured = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: version is `OpenBao v2.6.1`",
+        )
+        findings = packet_lint.lint_packet(unmeasured, "handoff-packet")
+        self.assertTrue(any("cites no probe of its own" in f for f in findings), findings)
+
+        # The other direction: a real backticked command must still count, or this repair
+        # re-opens the false RED the backtick arm was added for.
+        measured = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: `bao version` printed `OpenBao v2.6.1`.",
+        )
+        self.assertEqual([], packet_lint.lint_packet(measured, "handoff-packet"))
+
+    def test_a_hyphenated_word_is_not_a_slot_label(self) -> None:
+        # The raw fallback exists only to recover a SPACED hyphen separator, the one normalization
+        # eats. Accepting a hyphen with no space before it turned a hyphenated word into a label,
+        # so `Deliverable-unavailable: none` satisfied the shape while the readable `Deliverable:`
+        # label a builder is told to find was absent.
+        for bad in ("- Deliverable-unavailable: none", "Deliverable-like prose says none"):
+            with self.subTest(line=bad):
+                lines = self.FILLED_HANDOFF.splitlines()
+                lines[0] = bad
+                findings = packet_lint.lint_packet("\n".join(lines), "handoff-packet")
+                self.assertTrue(
+                    any("missing required packet slot: 'deliverable'" in f for f in findings),
+                    findings,
+                )
+
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.
         self.assertIn("review-packet", packet_lint.SHAPES)
