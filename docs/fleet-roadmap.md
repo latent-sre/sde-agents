@@ -219,11 +219,13 @@ issue #60 with three-occurrence recurrence evidence and its field-derived sectio
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
-**Status:** `active` — the host-neutral mechanism landed 2026-08-10 (issue #61 criterion 1);
-closing evidence is operator-owned and outstanding. The design premise was re-verified 2026-08-09
-against upstream HEAD `a16863f8` and at codex-cli 0.147.0 (skill filtering and spawn-schema
-suppression both hold), so implementation was not gated on the remaining Phase-0 one-liner: the
-unmanaged-TOML check bounds how a smoke run is *read*, not what the fix must be.
+**Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
+re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
+suppression both hold). A host-neutral implementation candidate is open as PR #107 — a
+model-visible `onboarding-map` skill with its cluster cases, README lane section, and decision
+amendment — and its deterministic gates and adapter parity are green. That is packaging evidence,
+not lane evidence: nothing on that branch measures a Codex host, the spec's Phase-0 host evidence
+is still outstanding, and `superpowers/plans/` holds no LANE-001 plan, so no round is running.
 
 **Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
 intent yields a model recommendation of the explicit onboarding workflow — never an implicit
@@ -234,23 +236,29 @@ issue #61 (failure layer identified 2026-08-02: skills hard-hidden from the mode
 delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited lane, smallest
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
-**Landed:** `skills/onboarding-map/SKILL.md` — one canonical, model-visible, side-effect-free
-skill naming both workflows and their order, the only fleet component the Codex model can reach
-for onboarding intent; the README's Codex invocation contract; the packaging record's
-supported-but-limited consequence and its field-contradiction reopen trigger; four `homelab-ops`
-cases (issue cases 3–5 and 7, the last carried by cluster-wide negatives); and a test that fails
-if the map is ever marked explicit-only or stops naming a workflow.
+**Prerequisites:** the spec's Phase 0, unchanged and still blocking — `codex --version` and
+`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`, both from the SEC-01 Linux host. No
+codex-cli version has ever been measured on that host. The only Codex CLI version this repository
+records from a run is `codex-cli 0.145.0` (2026-07-31 SAFE-001 host conformance,
+`evals/baselines/2026-07-31-p0-p1/host-conformance/`). `rust-v0.147.0` is an upstream GitHub
+release tag quoted in a researcher packet — `learning/candidates/`, candidate
+`lc_9e5728c32b23494296f9bec3881c12d2` — not an observation of any host, and citing it as one is
+what let this item read as evidence-backed. Waiving Phase 0 takes an operator-approved spec
+amendment, not a roadmap sentence.
 
-**Prerequisites:** none remaining for implementation. The unmanaged-TOML check
-(`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`) on the SEC-01 Linux host still
-precedes the smoke run, since an unmanaged same-name TOML would explain a null result there.
+**Acceptance:** The spec's list. Three gates are open, all operator-owned:
 
-**Acceptance:** The spec's list; headline gates are no regression in the before/after `homelab-ops`
-diff, adapter parity (**met** — regenerated and byte-checked), and one recorded Codex smoke run.
+1. Phase 0's two one-liners from SEC-01, or that spec amendment.
+2. The paired `homelab-ops` before/after captures. `eval_baseline.py` returns `STALE` for this
+   cluster, so the 'before' side is a fresh capture at merge base `4fef0ce`, not a stored reuse.
+3. The recorded Codex smoke run (spec line 92), which must exercise a **released** artifact. The
+   1.7.3 release records 19 skills (`evals/baselines/2026-08-10-rel-173/conditions.md`) and this
+   map would be the twentieth, so the run waits on a 1.7.4 release tail and is filed through the
+   ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source PASS is never
+   reportable as released-artifact PASS, is exactly this case.
 
-**Next action:** Operator captures the paired `homelab-ops` run — `eval_baseline.py` reports
-`STALE` against the pre-change tree, so the 'before' side is a fresh capture from this branch's
-merge base, not a stored reuse — then the SEC-01 smoke run; both close the item.
+**Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then captures
+the paired routing run; the smoke run follows the 1.7.4 release.
 
 #### LOOP-001 — released-version retest closes the field-feedback loop
 
