@@ -89,6 +89,34 @@ SHAPES: dict[str, tuple[str, ...]] = {
 # "lucky"). There is deliberately no shape for lab-incident: that skill declares no fixed packet,
 # and a shape that cannot match real output would fail every honest run.
 
+# Slots that carry the delegation itself. `none` is a legal answer almost everywhere in a handoff
+# -- `Irreversible: none` is the GOOD outcome, and the agent's own rule is that an empty line says
+# `none` rather than vanishing -- but a packet whose Deliverable and Acceptance are both `none`
+# hands over no work and states no bar, and every structural check above still reports it green
+# (reproduced through the shipped CLI, adversarial review of PR #108). The packet is emitted
+# because there IS a bounded artifact and a way to check it; those two lines are that claim, so
+# emptying them empties the packet while passing every slot test.
+SUBSTANTIVE_SLOTS: dict[str, tuple[str, ...]] = {
+    "handoff-packet": ("deliverable", "acceptance"),
+}
+# Slots where a cited probe must show what it printed. `Verified facts: none; $ true` parked a
+# command token beside the slot, cleared the shared verification-claim rule's "showed something"
+# bar, and reported nothing that was ever observed. Verification-method validity is precisely what
+# this packet exists to carry downstream, so a probe with no result is not a measurement.
+PROBED_SLOTS: dict[str, tuple[str, ...]] = {
+    "handoff-packet": ("verified facts",),
+}
+# Only the shell-prompt form counts as a cited probe here. A probe written some other way is a
+# silent non-fire -- the safe direction -- and a slot that cites nothing at all is still reported
+# by the shared verification-claim rule below.
+_PROBE_RE = re.compile(r"\$\s+\S")
+_OBSERVED_RESULT_RE = re.compile(
+    r"\N{RIGHTWARDS ARROW}|->|=>|\bprint(?:s|ed)?\b|\breport(?:s|ed)?\b|\breturn(?:s|ed)?\b"
+    r"|\bshow(?:s|ed|n)?\b|\boutput\b|\bempty\b|\bnothing\b"
+    r"|\bexit(?:s|ed)?\s+(?:code\s+)?\d+\b|\b\d+\s+passed\b",
+    re.IGNORECASE,
+)
+
 # The canonical evidence labels. A claim carrying any of these has declared its footing.
 LABELS = ("[verified]", "[sourced]", "[unverified]")
 
@@ -289,6 +317,45 @@ def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
     which is the whole promise the packet contract makes to a caller.
     """
     return any(line.startswith(slot) for line in normalized_lines)
+
+
+def _slot_sections(
+    slot: str, lines: list[str], normalized: list[str], shape: str
+) -> list[tuple[str, str]]:
+    """Return each occurrence of ``slot`` as its (normalized value, raw section text).
+
+    A slot's content does not always sit on its heading line: a wrapped sentence and a nested
+    bullet list are both ordinary packet prose. Reading only the heading line would report a false
+    RED against a correctly filled slot -- the mirror of the false green these value rules close,
+    and just as harmful. The section ends at the next line beginning any slot of the same shape,
+    which is exactly the boundary a reader uses to find where a slot stops.
+    """
+    boundaries = SHAPES[shape]
+    sections: list[tuple[str, str]] = []
+    for index, line in enumerate(normalized):
+        if not line.startswith(slot):
+            continue
+        value_parts = [line[len(slot):].lstrip(" :\N{EM DASH}\N{EN DASH}-")]
+        raw_parts = [lines[index]]
+        for offset in range(index + 1, len(normalized)):
+            if any(normalized[offset].startswith(other) for other in boundaries):
+                break
+            value_parts.append(normalized[offset])
+            raw_parts.append(lines[offset])
+        sections.append(
+            (" ".join(part for part in value_parts if part).strip(), "\n".join(raw_parts))
+        )
+    return sections
+
+
+def _slot_carries_a_value(value: str) -> bool:
+    """False when a slot value is empty or a bare `none`/`n/a` -- no content, only a line."""
+    trimmed = _strip_sentence_punctuation(value).rstrip(" \N{EM DASH}\N{EN DASH}-")
+    return (
+        bool(trimmed)
+        and not _is_semantic_placeholder(trimmed)
+        and _has_substantive_token(trimmed)
+    )
 
 
 def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str]]:
@@ -629,6 +696,27 @@ def lint_packet(
     for slot in SHAPES[shape]:
         if not _slot_present(slot, normalized):
             findings.append(f"missing required packet slot: {slot!r}")
+
+    # 1b. Present-but-empty slots, for the shapes where a slot IS the contract. A structural check
+    #     that only locates headings grades an all-`none` packet as compliant.
+    for slot in SUBSTANTIVE_SLOTS.get(shape, ()):
+        sections = _slot_sections(slot, lines, normalized, shape)
+        if sections and not any(_slot_carries_a_value(value) for value, _ in sections):
+            findings.append(
+                f"packet slot {slot!r} is present but empty: a delegation whose {slot} is "
+                f"`none` hands over no work and no bar, and every heading check still reports "
+                f"the packet complete"
+            )
+
+    # 1c. A probe with nothing observed beside it. Citing a command is not measuring anything.
+    for slot in PROBED_SLOTS.get(shape, ()):
+        for _value, raw in _slot_sections(slot, lines, normalized, shape):
+            if _PROBE_RE.search(raw) and not _OBSERVED_RESULT_RE.search(raw):
+                findings.append(
+                    f"packet slot {slot!r} cites a probe with no observed result: a bare command "
+                    f"satisfies every evidence check nearby while reporting nothing that was "
+                    f"ever measured"
+                )
 
     if "learning" in SHAPES[shape]:
         findings.extend(lint_learning_closeout(text, learning_mode))

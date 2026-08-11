@@ -7,7 +7,9 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts import learning_ledger
 from scripts import packet_lint
@@ -1048,6 +1050,99 @@ class OtherShapes(unittest.TestCase):
         self.assertTrue(
             any("no command or output cited" in finding for finding in findings), findings
         )
+
+    # The delegation packet an adversarial review drove through the shipped CLI: every slot
+    # present, every substantive one `none`, the forbidden-regressions line carrying only the
+    # keywords its behavioral case greps for, and a command token parked beside `Verified facts`
+    # so the shared verification-claim rule found evidence. It reported `packet OK`, exit 0 —
+    # a handoff that delegates no work, states no bar, and measured nothing, graded green.
+    EMPTY_HANDOFF = (
+        "- **Deliverable**: none\n"
+        "- **Fixed decisions**: none\n"
+        "- **Sources**: none\n"
+        "- **Verified facts**: none; $ true\n"
+        "- **Forbidden regressions**: operator validate-config, swap\n"
+        "- **Acceptance**: none\n"
+        "- **Authority**: none\n"
+        "- **Irreversible**: none\n"
+        "- **Temporary authority**: none\n"
+        "- **Inventory invariants**: none\n"
+        "- **Blocking**: none\n"
+        "- **Open lanes**: none\n"
+        "- **Out of scope**: none\n"
+    )
+
+    def test_handoff_packet_rejects_an_empty_deliverable_and_acceptance(self) -> None:
+        findings = packet_lint.lint_packet(self.EMPTY_HANDOFF, "handoff-packet")
+        self.assertTrue(any("'deliverable'" in f for f in findings), findings)
+        self.assertTrue(any("'acceptance'" in f for f in findings), findings)
+
+    def test_handoff_packet_probe_with_no_observed_result_is_not_evidence(self) -> None:
+        findings = packet_lint.lint_packet(self.EMPTY_HANDOFF, "handoff-packet")
+        self.assertTrue(
+            any("no observed result" in f for f in findings), findings
+        )
+
+    def test_shipped_cli_rejects_the_empty_delegation_packet(self) -> None:
+        # The bypass was demonstrated through the CLI, so the CLI is where it is pinned: a
+        # module-only assertion would leave the shipped entry point unproven.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "handoff.txt"
+            path.write_text(self.EMPTY_HANDOFF, encoding="utf-8")
+            self.assertEqual(
+                1, packet_lint.main(["--shape", "handoff-packet", str(path)])
+            )
+
+    def test_optional_handoff_slots_may_still_be_none(self) -> None:
+        # The agent's own rule is that an empty line says `none`, and `Irreversible: none` is the
+        # good outcome. Only the two slots that make a delegation a delegation are required to
+        # carry a value; a check that rejected every `none` would train packet padding.
+        one_slot_filled = self.EMPTY_HANDOFF.replace(
+            "- **Deliverable**: none", "- **Deliverable**: a staged `bao.hcl`, unapplied."
+        ).replace(
+            "- **Acceptance**: none",
+            "- **Acceptance**: the config parses under `$ bao operator validate-config` → "
+            "`exit 0`, Tier 0 read-only.",
+        ).replace("- **Verified facts**: none; $ true", "- **Verified facts**: none")
+        self.assertEqual([], packet_lint.lint_packet(one_slot_filled, "handoff-packet"))
+
+    def test_handoff_verified_facts_may_report_no_probes_without_a_result(self) -> None:
+        # Precision check for the probe rule: it fires on a CITED probe with nothing observed,
+        # not on an honest slot that reports there were none. Without this, the rule would be
+        # satisfied by padding rather than by measurement.
+        honest = self.EMPTY_HANDOFF.replace(
+            "- **Verified facts**: none; $ true",
+            "- **Verified facts**: none — the design work supplied no probes.",
+        )
+        self.assertFalse(
+            [f for f in packet_lint.lint_packet(honest, "handoff-packet")
+             if "no observed result" in f],
+            packet_lint.lint_packet(honest, "handoff-packet"),
+        )
+
+    def test_handoff_slot_value_may_continue_on_following_lines(self) -> None:
+        # A wrapped slot or a nested bullet list is ordinary packet prose. Reading only the
+        # heading line would report a false RED against a correctly filled slot — the mirror of
+        # the false green this rule closes, and just as harmful.
+        wrapped = (
+            "- **Deliverable**:\n"
+            "  - a staged `bao.hcl` and its unit, unapplied. Tier 1 only.\n"
+            "- **Fixed decisions**: none\n"
+            "- **Sources**: none\n"
+            "- **Verified facts**:\n"
+            "  - `$ bao version` → `OpenBao v2.6.1` [sourced].\n"
+            "- **Forbidden regressions**: none\n"
+            "- **Acceptance**:\n"
+            "  - the config parses; `$ bao operator validate-config` exits 0, Tier 0 read-only.\n"
+            "- **Authority**: none\n"
+            "- **Irreversible**: none\n"
+            "- **Temporary authority**: none\n"
+            "- **Inventory invariants**: none\n"
+            "- **Blocking**: none\n"
+            "- **Open lanes**: none\n"
+            "- **Out of scope**: none\n"
+        )
+        self.assertEqual([], packet_lint.lint_packet(wrapped, "handoff-packet"))
 
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.
