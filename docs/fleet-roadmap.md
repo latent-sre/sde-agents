@@ -207,9 +207,16 @@ issue #61 (failure layer identified 2026-08-02: skills hard-hidden from the mode
 delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited lane, smallest
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
-**Prerequisites:** the spec's Phase 0, unchanged and still blocking — `codex --version` and
-`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`, both from the SEC-01 Linux host. No
-codex-cli version has ever been measured on that host. The only Codex CLI version this repository
+**Prerequisites:** the spec's Phase 0, still blocking; the
+[LANE-001 spec](superpowers/specs/lane-001-codex-onboarding-discoverability.md) owns both
+one-liners and their exact form, and its 2026-08-11 amendment note records the one mechanical
+change they have had. Read them there rather than from this paraphrase: `codex --version` and the
+unmanaged-TOML check, both from the SEC-01 Linux host, with **empty output as the pass** — the
+exit status is not the signal, since `grep` returns 1 for no match and 2 for an unreadable path.
+That distinction is the point of the amended form: absent directory is a clean pass through the
+`-d` guard, while a genuine read error still reaches stderr instead of being silenced into the
+same empty output. No codex-cli version has ever been measured on that host. The only Codex CLI
+version this repository
 records from a run is `codex-cli 0.145.0` (2026-07-31 SAFE-001 host conformance,
 `evals/baselines/2026-07-31-p0-p1/host-conformance/`). `rust-v0.147.0` is an upstream GitHub
 release tag quoted in a researcher packet — `learning/candidates/`, candidate
