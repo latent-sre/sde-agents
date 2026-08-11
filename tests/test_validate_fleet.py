@@ -34,16 +34,34 @@ class FleetValidatorTests(unittest.TestCase):
     # one in as a 160000 gitlink. That happened on three commits (fbb142e, 31f6334, 62629b9)
     # and stayed invisible until a release-tag dry-run surfaced it by hand: a gitlink with no
     # .gitmodules entry is unusable, so clean clones and archives get an empty directory where
-    # a checkout should be, and nothing in the suite said a word. Pure file read, so this half
-    # still runs in a source export with no git history.
+    # a checkout should be, and nothing in the suite said a word.
+    # A literal line-presence check misses the case where a later rule negates the pattern; use
+    # `git check-ignore` to verify that the effective ignore decision is correct.
+    @unittest.skipUnless(
+        (REPO / ".git").exists() and shutil.which("git"),
+        "not a git checkout or git binary absent -- cannot check effective ignore",
+    )
     def test_claude_worktrees_are_gitignored(self) -> None:
-        ignore = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
-        self.assertIn(".claude/worktrees/", ignore)
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", ".claude/worktrees/fake"],
+            cwd=REPO,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(
+            0,
+            result.returncode,
+            ".claude/worktrees/ is not effectively gitignored (check-ignore exit code != 0); "
+            "a later rule may be negating the pattern",
+        )
 
     # Deliberately generalized past the incident: this repository has no submodules, so ANY
     # tracked gitlink is the same defect. Scoped to `.claude/worktrees` it would go green the
     # first time a host puts its transient checkouts somewhere else.
-    @unittest.skipUnless((REPO / ".git").exists(), "not a git checkout -- no index to inspect")
+    @unittest.skipUnless(
+        (REPO / ".git").exists() and shutil.which("git"),
+        "not a git checkout or git binary absent -- no index to inspect",
+    )
     def test_no_gitlink_is_tracked_anywhere(self) -> None:
         staged = subprocess.run(
             ["git", "ls-files", "--stage"],

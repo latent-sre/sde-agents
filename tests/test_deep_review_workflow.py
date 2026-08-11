@@ -66,7 +66,7 @@ const agent = async (prompt, options) => {
   }
   return payload.responses[options.label]
 }
-const parallel = async (lanes) => Promise.all(lanes.map((lane) => lane()))
+const parallel = async (lanes) => Promise.all(lanes.map((lane) => lane().catch(() => null)))
 const execute = async () => {
 __WORKFLOW_BODY__
 }
@@ -160,6 +160,9 @@ class DeepReviewExecutionTests(unittest.TestCase):
             ("merge-with-nits", False, packet("approve-with-nits"), packet()),
             ("do-not-merge", False, packet("request-changes"), packet()),
             ("do-not-merge", False, packet(findings=[CRITICAL_FINDING]), packet()),
+            # dirty tree: blocking conditions take precedence over tree state
+            ("do-not-merge", True, packet(findings=[CRITICAL_FINDING]), packet()),
+            ("do-not-merge", True, packet("request-changes"), packet()),
             ("provisional-commit-and-re-review", True, packet(), packet()),
         ]
         for expected, dirty, review, security in cases:
