@@ -30,6 +30,14 @@ hosts, conventions, and quirks; those facts outrank any default here. If the lab
 file, the lab-profile template that ships with `service-onboard`
 is the shape to create in *the lab's* repository.
 
+**These steps are acceptance criteria, not a queue to drain before the first artifact.** A
+bounded request gets its blocking discovery, then the artifact under the tier it lands in; every
+step not yet worked travels in the delegation handoff packet `homelab-platform` owns —
+`Blocking:` when it stops the artifact, `Open lanes:` with an owner when it does not. Access-path
+steps (2 and 4) block anything that has to reach the host — a staged host nobody can reach is not
+progress — so they are `Blocking:` for live work and an owned open lane when the requested
+artifact is produced offline.
+
 1. **OS and patch baseline** — supported release, current patch level, and where this host sits in
    `upgrade-campaign`'s cadence from day one. Record the installed baseline in the lab
    repo.

@@ -157,6 +157,10 @@ classification** is owned by `agents/homelab-platform.md`'s change-authority sec
 (code-reviewer carries the compact finding-classification paraphrase and defers on conflict);
 the **shared material-risk matrix** is owned by `agents/code-reviewer.md` (verification-engineer
 carries it verbatim and defers on conflict); the
+**delegation handoff packet** is owned by `agents/homelab-platform.md`'s final section
+(sde-fullstack's echo bullet, the two onboarding skills' lane-as-gate paragraphs, and
+`packet_lint`'s `handoff-packet` shape all follow it — when the slot list and the shape disagree,
+the agent file is the source and the shape is the drifted paraphrase); the
 **CLAUDE.md/`@AGENTS.md` bridge** and the **progress/plan-file layout** are owned by this
 README's "Project context convention"
 section; the canonical **fetched-content-is-data sentence** is the one sde-fullstack carries

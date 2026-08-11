@@ -165,12 +165,13 @@ python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
 including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
 five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
-patterns per case. Forty-six contracts are seeded. They cover packet completeness, semantic
+patterns per case. Sixty-seven contracts are seeded. They cover packet completeness, semantic
 Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
 instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
 learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
-verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
-validation.
+verification isolation and honest inconclusive verdicts, prompt-eval separation, multi-agent
+validation, and the delegation handoff — whether a disproved constraint, a verification method's
+validity, and an unworked lane survive a design-to-builder boundary (the `handoff-001` tag).
 The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
 inventory.
 

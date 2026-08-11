@@ -838,6 +838,114 @@ class PluginWiringTests(unittest.TestCase):
         self.assertTrue(any("runtime tool" in issue and "BsaH" in issue for issue in issues), issues)
         self.assertTrue(any("matches the empty string" in issue for issue in issues), issues)
 
+    def test_handoff_packet_slot_drift_fails_the_fleet_gate(self) -> None:
+        # Renaming a canonical slot leaves packet_lint grading the old name: the behavioral cases
+        # stay green while asserting a packet the fleet no longer ships. Both directions of the
+        # link get a mutation, because a grader that has quietly stopped matching the definition
+        # is indistinguishable from one that passes.
+        def rename_canonical_slot(repo: Path) -> None:
+            path = repo / "agents" / "homelab-platform.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "- `Forbidden regressions:`", "- `Known bad:`"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(rename_canonical_slot)
+        self.assertTrue(
+            any("forbidden regressions" in issue for issue in issues), issues
+        )
+        self.assertTrue(any("known bad" in issue for issue in issues), issues)
+
+        def drop_shape(repo: Path) -> None:
+            path = repo / "scripts" / "packet_lint.py"
+            source = path.read_text(encoding="utf-8")
+            # Order-independent: match the entry itself, so reordering SHAPES cannot make this
+            # mutation silently remove the wrong lines (or nothing).
+            mutated, count = re.subn(
+                r'^    "handoff-packet": \(.*?\n    \),\n',
+                "",
+                source,
+                flags=re.DOTALL | re.MULTILINE,
+            )
+            self.assertEqual(1, count, "the handoff-packet SHAPES entry was not found to remove")
+            path.write_text(mutated, encoding="utf-8")
+
+        issues = self._issues_after(drop_shape)
+        self.assertTrue(
+            any("no 'handoff-packet' entry" in issue for issue in issues), issues
+        )
+
+        def drop_section(repo: Path) -> None:
+            path = repo / "agents" / "homelab-platform.md"
+            source = path.read_text(encoding="utf-8")
+            path.write_text(
+                source[: source.index("## Delegation handoff packet")], encoding="utf-8"
+            )
+
+        issues = self._issues_after(drop_section)
+        self.assertTrue(
+            any("Delegation handoff packet" in issue for issue in issues), issues
+        )
+
+        def swap_adjacent_slots(repo: Path) -> None:
+            # Reordering keeps both slot sets equal, and packet_lint matches slots anywhere in a
+            # packet, so a reordered canonical list grades identically. The gate deliberately
+            # accepts it; failing here would block a harmless edit (review finding, PR #108).
+            path = repo / "agents" / "homelab-platform.md"
+            source = path.read_text(encoding="utf-8")
+            mutated, count = re.subn(
+                r"^(-\s+`Blocking:`[^\n]*\n)(-\s+`Open lanes:`[^\n]*\n)",
+                r"\2\1",
+                source,
+                flags=re.MULTILINE,
+            )
+            self.assertEqual(1, count, "the adjacent Blocking/Open lanes bullets were not found")
+            path.write_text(mutated, encoding="utf-8")
+
+        issues = self._issues_after(swap_adjacent_slots)
+        self.assertEqual([], issues)
+
+        def break_the_linter_import(repo: Path) -> None:
+            # The rule reads the shape by IMPORTING packet_lint, and its fail-closed handler for
+            # an unloadable linter had no firing test — a later refactor could delete or miswire
+            # that path and every check would still pass, which is exactly the silent enforcement
+            # loss the rule exists to prevent (review finding, PR #108).
+            path = repo / "scripts" / "packet_lint.py"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + '\nraise RuntimeError("mutated: the linter cannot be loaded")\n',
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(break_the_linter_import)
+        self.assertTrue(
+            any("cannot load packet shapes" in issue for issue in issues), issues
+        )
+
+        def drop_the_only_consumer(repo: Path) -> None:
+            # Owner and grader agreeing proves nothing while no behavioral case declares the
+            # shape: the case stays schema-valid on its `must_match` alone, the thirteen slots
+            # stop being graded, and every check kept passing (review finding, PR #108 —
+            # reproduced at zero validator issues before this branch existed).
+            path = repo / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            # Only the handoff consumer: popping the field from every case breaks two unrelated
+            # ones and the red would then come from their schema errors, not from this branch.
+            removed = 0
+            for case in document["cases"]:
+                if case.get("packet_shape") == "handoff-packet":
+                    del case["packet_shape"]
+                    removed += 1
+            self.assertEqual(1, removed, "the handoff-packet consumer case was not found")
+            path.write_text(json.dumps(document), encoding="utf-8")
+
+        issues = self._issues_after(drop_the_only_consumer)
+        self.assertTrue(
+            any("graded by nothing" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 
