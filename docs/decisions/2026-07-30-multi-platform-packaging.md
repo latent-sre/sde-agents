@@ -1,6 +1,8 @@
 # Multi-platform packaging and authority adapters
 
-**Status:** Accepted and implemented on 2026-07-30; Codex import bridge amended 2026-08-02
+**Status:** Accepted and implemented on 2026-07-30; Codex import bridge amended 2026-08-02;
+generated-lane support level and its field-contradiction reopen trigger amended 2026-08-10
+(LANE-001)
 **Date:** 2026-07-30
 
 ## Context
@@ -112,6 +114,13 @@ uses `$CODEX_HOME/agents` when configured and otherwise defaults to `~/.codex/ag
   corpus.
 - Claude routing measurements remain measurements of the canonical descriptions. Generated-only
   wording does not trigger a second routing-eval gate.
+- Generated lanes are therefore **supported but limited** (amended 2026-08-10): they carry the same
+  content and host-appropriate authority, but not the same measurement, so a discovery or
+  delegation behavior specific to one host is found in the field rather than in CI. The sanctioned
+  repair is a cheap host-neutral change that the Claude harness can still measure — LANE-001's
+  `onboarding-map`, a model-visible, side-effect-free pointer, is the worked example. A per-host
+  routing harness stays out of scope; a lane limit that cannot be repaired that way is documented
+  where users of that lane see it, in the README's install section for the host.
 - Copilot/VS Code and Codex runtime smoke tests remain version-specific manual checks; offline CI
   proves structure, parity, generated currency, and the authority mapping.
 - A change to the Codex import bridge or adoption rule owes a disposable live `/import` run; a
@@ -121,5 +130,10 @@ uses `$CODEX_HOME/agents` when configured and otherwise defaults to `~/.codex/ag
 
 - A host gains a reliable active-agent identity in `PreToolUse`.
 - Codex plugins gain first-class custom-agent packaging.
+- A real workload on a generated lane contradicts a consequence of this record. The 2026-08-02
+  Codex onboarding-discoverability field report (issue #61) is the first: the routing sentence
+  shipped in the generated agent, yet plain-language intent had no model-reachable path to it, so
+  "Claude routing measurements remain measurements of the canonical descriptions" was hiding a real
+  behavioral gap rather than merely scoping a gate.
 - A host adds an enforceable skill-level tool deny that can replace a cooperative boundary.
 - A manifest or frontmatter version changes the discovery or invocation contract.

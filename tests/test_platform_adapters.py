@@ -649,6 +649,61 @@ class PlatformAdapterTests(unittest.TestCase):
                 self.assertIn("short_description:", policy)
                 self.assertIn("allow_implicit_invocation: false", policy)
 
+    def test_onboarding_map_stays_model_visible_and_keeps_pointing_at_both_workflows(
+        self,
+    ) -> None:
+        """The discovery half of the onboarding lane, whose loss is silent (LANE-001, issue #61).
+
+        `service-onboard` and `host-onboard` are deliberately explicit-only, which on Codex means
+        the model cannot enumerate or recommend them at all -- plain-language onboarding intent had
+        no model-reachable path to either. `onboarding-map` is the repair: it must stay
+        model-invocable on every host, and it must keep naming both workflows. Marking it
+        explicit-only, or letting its table stop naming a workflow, raises no error anywhere; the
+        discovery path simply disappears again and only a field report would find it.
+        """
+        canonical = REPO / "skills" / "onboarding-map" / "SKILL.md"
+        canonical_fields = validate_fleet.parse_frontmatter(canonical)
+        self.assertNotIn("disable-model-invocation", canonical_fields)
+
+        copilot_skill = (
+            REPO / "platforms" / "copilot" / "skills" / "onboarding-map" / "SKILL.md"
+        )
+        copilot_fields = validate_fleet.parse_frontmatter(copilot_skill)
+        self.assertNotIn("disable-model-invocation", copilot_fields)
+
+        codex_skill = (
+            REPO / "plugins" / "sde-agents" / "skills" / "onboarding-map" / "SKILL.md"
+        )
+        codex_fields = validate_fleet.parse_frontmatter(codex_skill)
+        self.assertNotIn("disable-model-invocation", codex_fields)
+        # `allow_implicit_invocation: false` in the generated Codex policy is the exact byte that
+        # hides a skill from the model, so asserting its absence anywhere under the skill IS this
+        # skill's model visibility on that host -- and it survives a generator that later emits a
+        # policy file for other reasons.
+        for generated in sorted(codex_skill.parent.rglob("*")):
+            if generated.is_file():
+                with self.subTest(file=str(generated.relative_to(REPO))):
+                    self.assertNotIn(
+                        "allow_implicit_invocation: false",
+                        generated.read_text(encoding="utf-8"),
+                    )
+
+        for skill_file, namespace, invocation in (
+            (canonical, "sde-agents:", "/sde-agents:"),
+            (copilot_skill, "", "/"),
+            (codex_skill, "", "$"),
+        ):
+            with self.subTest(skill=str(skill_file.relative_to(REPO))):
+                text = skill_file.read_text(encoding="utf-8")
+                for workflow in ("service-onboard", "host-onboard", "homelab-platform"):
+                    self.assertIn(f"`{namespace}{workflow}`", text)
+                # The map's whole added value on a host that hides these workflows is naming how
+                # to invoke them THERE. A regression in the generator's per-host sigil would leave
+                # a Codex user typing Claude syntax that does nothing, and the fleet-wide
+                # `sde-agents:`-absence check above cannot see a sigil that is merely wrong.
+                for workflow in ("service-onboard", "host-onboard"):
+                    self.assertIn(f"`{invocation}{workflow}`", text)
+
     def test_non_claude_plugins_do_not_load_the_claude_guard(self) -> None:
         copilot = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))
         codex = json.loads(

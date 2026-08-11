@@ -192,8 +192,11 @@ release stamp is REL-173's evidence, not a gate on this item.
 
 **Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
 re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
-suppression both hold); implementation remains gated on the Phase-0 host evidence the spec
-names (`codex --version` and the unmarked-TOML check on the SEC-01 host).
+suppression both hold). A host-neutral implementation candidate is open as PR #107 — a
+model-visible `onboarding-map` skill with its cluster cases, README lane section, and decision
+amendment — and its deterministic gates and adapter parity are green. That is packaging evidence,
+not lane evidence: nothing on that branch measures a Codex host, the spec's Phase-0 host evidence
+is still outstanding, and `superpowers/plans/` holds no LANE-001 plan, so no round is running.
 
 **Outcome:** On a Codex session with the fleet installed, plain-language new-service or new-host
 intent yields a model recommendation of the explicit onboarding workflow — never an implicit
@@ -204,15 +207,29 @@ issue #61 (failure layer identified 2026-08-02: skills hard-hidden from the mode
 delegation v2-suppressed); operator rulings 2026-08-02 (supported-but-limited lane, smallest
 mechanism); learning-ledger candidate `lc_c361b3d3`.
 
-**Prerequisites:** `codex --version` and the unmanaged-TOML check from the SEC-01 Linux host
-(the spec's Phase 0 — a v1 spawn schema returns the spec to review); a fresh `homelab-ops`
-routing baseline before any canonical edit.
+**Prerequisites:** the spec's Phase 0, unchanged and still blocking — `codex --version` and
+`grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml`, both from the SEC-01 Linux host. No
+codex-cli version has ever been measured on that host. The only Codex CLI version this repository
+records from a run is `codex-cli 0.145.0` (2026-07-31 SAFE-001 host conformance,
+`evals/baselines/2026-07-31-p0-p1/host-conformance/`). `rust-v0.147.0` is an upstream GitHub
+release tag quoted in a researcher packet — `learning/candidates/`, candidate
+`lc_9e5728c32b23494296f9bec3881c12d2` — not an observation of any host, and citing it as one is
+what let this item read as evidence-backed. Waiving Phase 0 takes an operator-approved spec
+amendment, not a roadmap sentence.
 
-**Acceptance:** The spec's acceptance list; headline gates are no regression in the before/after
-`homelab-ops` diff, adapter parity, and one recorded Codex smoke run.
+**Acceptance:** The spec's list. Three gates are open, all operator-owned:
 
-**Next action:** Operator runs the two Phase-0 one-liners on the Linux host; then author the
-paired plan and capture the Phase-1 baseline.
+1. Phase 0's two one-liners from SEC-01, or that spec amendment.
+2. The paired `homelab-ops` before/after captures. `eval_baseline.py` returns `STALE` for this
+   cluster, so the 'before' side is a fresh capture at merge base `4fef0ce`, not a stored reuse.
+3. The recorded Codex smoke run (spec line 92), which must exercise a **released** artifact. The
+   1.7.3 release records 19 skills (`evals/baselines/2026-08-10-rel-173/conditions.md`) and this
+   map would be the twentieth, so the run waits on a 1.7.4 release tail and is filed through the
+   ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source PASS is never
+   reportable as released-artifact PASS, is exactly this case.
+
+**Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then captures
+the paired routing run; the smoke run follows the 1.7.4 release.
 
 #### LADDER-001 — measure the ownership-vs-consult calibration
 

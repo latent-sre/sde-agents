@@ -75,6 +75,52 @@ class FleetValidatorTests(unittest.TestCase):
         self.assertEqual(1, len(token_issues), issues)
         self.assertIn("anthropics/claude-code#22345", token_issues[0])
 
+    def test_unquoted_prose_scalar_with_colon_space_is_reported(self) -> None:
+        """The fixture's skill writes both prose fields as plain scalars carrying ': '.
+
+        A conforming YAML parser refuses such a file outright ("mapping values are not allowed
+        here"), but nothing here could see it: `parse_frontmatter` reads to end of line and the
+        generated copies re-serialize through `json.dumps`, so the bad bytes live only in the
+        canonical file and every downstream check passes. The fixture's AGENT is the control --
+        the same colon-space inside a quoted value is legal and must not be reported, or the rule
+        would be a ban on colons rather than a YAML-validity check.
+        """
+        issues, _, _ = validate_fleet.validate_repo(
+            FIXTURES / "unquoted-yaml-scalar", check_inventory=False
+        )
+        quoting_issues = [issue for issue in issues if "conforming YAML parser" in issue]
+        self.assertEqual(2, len(quoting_issues), issues)
+        self.assertTrue(all("skills" in issue for issue in quoting_issues), quoting_issues)
+        self.assertEqual(
+            {"'description'", "'argument-hint'"},
+            {issue.split("unquoted ")[1].split(" frontmatter")[0] for issue in quoting_issues},
+        )
+
+    def test_flow_collection_argument_hint_is_not_reported(self) -> None:
+        """Every fleet skill writes `argument-hint: [a hint]`, which YAML reads as a flow sequence.
+
+        A colon-space inside one parses (as a one-pair mapping -- wrong, but not a parse error), so
+        flagging it would make this rule claim a rejection that never happens.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "agents").mkdir()
+            (root / "agents" / "builder.md").write_text(VALID_AGENT, encoding="utf-8")
+            skill = root / "skills" / "craft"
+            skill.mkdir(parents=True)
+            skill.joinpath("SKILL.md").write_text(
+                "---\nname: craft\ndescription: Use when applying conventions.\n"
+                "argument-hint: [the file to change: a path]\n---\n\n# Craft\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], validate_fleet.validate_yaml_scalar_quoting(root))
+
+    def test_this_repository_has_no_unquoted_prose_scalars(self) -> None:
+        """The rule's live tripwire: `onboarding-map` shipped as the one canonical file of 31 that
+        `yaml.safe_load` rejected, and it validated everywhere. This fails if that recurs.
+        """
+        self.assertEqual([], validate_fleet.validate_yaml_scalar_quoting(REPO))
+
     def test_missing_bundled_reference_fails(self) -> None:
         """The fixture links `./references/missing.md` on purpose. Before BUNDLE_REF_RE accepted the
         `./` prefix the link matched nothing at all, so a broken path raised no issue whatsoever --

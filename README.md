@@ -9,7 +9,7 @@ generated, host-specific adapters whose byte-for-byte currency is enforced by th
 
 <!-- fleet-inventory:start -->
 - **Agents (11):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `repository-investigator`, `researcher`, `sde-fullstack`, `verification-engineer`
-- **Skills (19):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
+- **Skills (20):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `onboarding-map`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
 After any canonical agent or skill change, regenerate the host adapters. If the change adds,
@@ -107,6 +107,37 @@ set and otherwise defaults to `~/.codex/agents`.
 If the official migration is not needed, skip the staging and `/import` steps and run the same
 installer directly for the initial user-scope installation. In either case, use the installer for
 future updates; `/import` remains a one-time migration and never overwrites an existing TOML.
+
+#### What this lane surfaces to the model
+
+The Codex lane is supported but limited, and its limits are about *discovery*, not content. Two
+host behaviors change how the fleet is reached here. Both were read from the upstream source at
+HEAD `a16863f8` (re-verified 2026-08-09), not measured against an installed CLI — the newest
+Codex CLI version this repository records from an actual run is `codex-cli 0.145.0`
+(`evals/baselines/2026-07-31-p0-p1/host-conformance/`), so treat the two as source-established
+and re-check them on a version bump:
+
+- **Explicit-only skills are invisible to the model.** `service-onboard` and `host-onboard` ship
+  with `policy.allow_implicit_invocation: false`, and Codex keeps such skills out of every
+  model-visible surface — including the model's own skill listing. The model cannot enumerate or
+  recommend them; a user who knows the name invokes `$service-onboard`. That is the intended
+  execution boundary, and it was also why plain-language intent alone never surfaced the workflow
+  (issue #61).
+- **Custom agents are reached by explicit request.** Their names and descriptions are visible in
+  the spawn schema, but its current text tells the orchestrator to omit an agent unless it was
+  asked for. Description-driven delegation — the routing model the canonical descriptions are
+  written for — therefore does not fire on its own here.
+
+`onboarding-map` is the deliberate repair: a model-visible skill that names the onboarding
+workflows, their order, and their invocation syntax while executing nothing. It keeps the four
+states distinct — **discovery** (the workflow exists), **recommendation** (it applies, and why),
+**activation** (its checklist opens under `homelab-platform`), and **execution** (a step reaches a
+live target under that agent's change tiers). It covers the first two and authorizes neither of
+the last two.
+
+One consequence for updates: a plugin version stamps the generated skills, but `.codex/agents/`
+carries no version field, so an up-to-date skill bundle says nothing about whether the agents
+beside it are current. Re-run the installer above rather than inferring it from a version.
 
 ### Working on the fleet itself
 
