@@ -32,9 +32,11 @@ round replaces the labeled-line dialect wholesale, this packet is one of the fil
    §9 → `Temporary authority:`; §10 → `Inventory invariants:`; §11 splits into `Blocking:`,
    `Open lanes:` (each with an owner), and `Out of scope:` — deferral and abandonment must not
    share a line; §12 is the secret-safe capture rule, held as a packet rule rather than a slot
-   because it governs every line. End-of-file placement is load-bearing: the validator inspects
-   the **first** `## …packet` heading for the Learning closeout slot, so an earlier position
-   silently disarms that rule.
+   because it governs every line. End-of-file placement is load-bearing: the validator's
+   Learning-closeout window opens at the **first** `## …packet` heading and closes at the next
+   `##` heading, so an earlier position pushes the Learning slot outside that window and fails
+   the fleet gate loudly (`agents/homelab-platform.md: end-of-task packet omits or drifted from
+   the canonical intake-only Learning closeout…`). End of file is the position that passes.
 2. **`agents/sde-fullstack.md` — the builder echo.** Before the first edit the builder restates
    `Deliverable`, `Fixed decisions`, `Forbidden regressions`, and `Blocking` in its own words.
    On hosts with no per-agent tool authority the echo is the only evidence the caller gets that
