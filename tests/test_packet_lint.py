@@ -1028,9 +1028,10 @@ class OtherShapes(unittest.TestCase):
 
     def test_handoff_packet_facts_without_a_probe_are_a_finding(self) -> None:
         # Verification-method validity is the point of the packet, so a `Verified facts` line with
-        # no command cited anywhere near it must not read as measurement. This is the shared
-        # verification-claim rule reaching the new shape, pinned here because the shape was chosen
-        # to sit under it deliberately.
+        # no command of its own must not read as measurement. This was the shared verification-
+        # claim rule reaching the new shape; it is now the slot's own rule, because the shared
+        # rule's three-line window accepted a command from the NEXT slot as this fact's evidence
+        # (review finding, PR #108). Same input, same red — the finding just names the real defect.
         unprobed = (
             "- **Deliverable**: a staged unit file.\n"
             "- **Fixed decisions**: Raft storage.\n"
@@ -1048,7 +1049,7 @@ class OtherShapes(unittest.TestCase):
         )
         findings = packet_lint.lint_packet(unprobed, "handoff-packet")
         self.assertTrue(
-            any("no command or output cited" in finding for finding in findings), findings
+            any("cites no probe of its own" in finding for finding in findings), findings
         )
 
     # The delegation packet an adversarial review drove through the shipped CLI: every slot
@@ -1252,6 +1253,145 @@ class OtherShapes(unittest.TestCase):
             "- **Out of scope**: none\n"
         )
         self.assertEqual([], packet_lint.lint_packet(wrapped, "handoff-packet"))
+
+    # A packet whose two contract slots are filled and whose facts carry their probe. Every test
+    # below mutates exactly one line of it, so a red is attributable to that line.
+    FILLED_HANDOFF = (
+        "- **Deliverable**: a staged `bao.hcl`, unapplied. Tier 1 only.\n"
+        "- **Fixed decisions**: Raft storage.\n"
+        "- **Sources**: the 2.6.1 release notes.\n"
+        "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.\n"
+        "- **Forbidden regressions**: `disable_mlock` was dropped in 2.6; deny swap instead.\n"
+        "- **Acceptance**: `$ bao operator validate-config` exits 0, Tier 0 read-only.\n"
+        "- **Authority**: nothing live; Tier 2 activation is out of this delegation.\n"
+        "- **Irreversible**: none\n"
+        "- **Temporary authority**: none\n"
+        "- **Inventory invariants**: the estate goes 11 \N{RIGHTWARDS ARROW} 12.\n"
+        "- **Blocking**: TLS custody inputs absent.\n"
+        "- **Open lanes**: snapshot credentials \N{EM DASH} operator.\n"
+        "- **Out of scope**: DNS and proxy promotion.\n"
+    )
+
+    def test_handoff_slots_must_be_labels_not_prose_that_opens_with_the_word(self) -> None:
+        # `_slot_present` matched a bare prefix, so a packet that never emitted the canonical
+        # labels a downstream builder is told to read still satisfied the shape: both
+        # `Deliverable unavailable: none` and the plain sentence `Deliverable work will be staged`
+        # counted as the `deliverable` slot, and `unavailable none` even counted as its value
+        # (review findings, PR #108). The label needs its boundary.
+        for bad_deliverable, bad_acceptance in (
+            ("- Deliverable unavailable: none", "- Acceptance unavailable: none"),
+            (
+                "Deliverable work will be staged for the builder in a fresh context.",
+                "Acceptance criteria follow from the release notes above.",
+            ),
+        ):
+            with self.subTest(deliverable=bad_deliverable):
+                packet = self.FILLED_HANDOFF.replace(
+                    "- **Deliverable**: a staged `bao.hcl`, unapplied. Tier 1 only.",
+                    bad_deliverable,
+                ).replace(
+                    "- **Acceptance**: `$ bao operator validate-config` exits 0, "
+                    "Tier 0 read-only.",
+                    bad_acceptance,
+                )
+                findings = packet_lint.lint_packet(packet, "handoff-packet")
+                self.assertTrue(
+                    any("missing required packet slot: 'deliverable'" in f for f in findings),
+                    findings,
+                )
+                self.assertTrue(
+                    any("missing required packet slot: 'acceptance'" in f for f in findings),
+                    findings,
+                )
+
+    def test_handoff_slot_label_may_use_a_plain_hyphen_separator(self) -> None:
+        # The boundary test runs on the normalized line, and normalization collapses an ASCII
+        # hyphen into a space -- so tightening the label rule without reading the raw line would
+        # have reddened `Deliverable - value`, a legal rendering. The false-red direction is a
+        # defect here exactly as the false green is.
+        packet = self.FILLED_HANDOFF.replace(
+            "- **Deliverable**: a staged", "- Deliverable - a staged"
+        )
+        self.assertEqual([], packet_lint.lint_packet(packet, "handoff-packet"))
+
+    def test_handoff_packet_accepts_an_ordered_list_rendering(self) -> None:
+        # An ordered list is display, not data: the numeric marker is not decoration, so it
+        # survived normalization and every slot read as missing -- a complete packet graded RED
+        # for its Markdown (review finding, PR #108).
+        numbered = "".join(
+            f"{index}. {line.lstrip('- ')}\n"
+            for index, line in enumerate(self.FILLED_HANDOFF.splitlines(), start=1)
+        )
+        self.assertEqual([], packet_lint.lint_packet(numbered, "handoff-packet"))
+
+    def test_handoff_duplicate_slot_with_an_empty_occurrence_is_a_finding(self) -> None:
+        # `any()` accepted the packet as soon as ONE occurrence was substantive, so
+        # `Acceptance: none` above a populated `Acceptance` passed with no finding and left a
+        # fresh builder two answers with no way to tell which is the contract.
+        packet = self.FILLED_HANDOFF.replace(
+            "- **Acceptance**: `$ bao operator validate-config` exits 0, Tier 0 read-only.",
+            "- **Acceptance**: none\n"
+            "- **Acceptance**: `$ bao operator validate-config` exits 0, Tier 0 read-only.",
+        )
+        findings = packet_lint.lint_packet(packet, "handoff-packet")
+        self.assertTrue(any("'acceptance' is present but empty" in f for f in findings), findings)
+
+    def test_handoff_verified_facts_must_cite_a_probe_inside_its_own_section(self) -> None:
+        # The shared verification-claim rule has a three-line window, so the command in the NEXT
+        # slot supplied the evidence for a fact nothing measured and the packet passed. The slot
+        # now carries its own bar: `Acceptance`'s command is not this fact's probe.
+        packet = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: OpenBao is v2.6.1 on this host.",
+        )
+        findings = packet_lint.lint_packet(packet, "handoff-packet")
+        self.assertTrue(any("cites no probe of its own" in f for f in findings), findings)
+
+    def test_handoff_canonical_none_verified_facts_is_not_a_claim(self) -> None:
+        # `Verified facts: none` is the agent's own spelling of an empty line, and with no command
+        # anywhere else in the packet the shared claim rule reported it as an unevidenced
+        # verification claim -- a false RED against the canonical empty value.
+        packet = (
+            self.FILLED_HANDOFF.replace(
+                "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+                "- **Verified facts**: none",
+            ).replace(
+                "- **Acceptance**: `$ bao operator validate-config` exits 0, Tier 0 read-only.",
+                "- **Acceptance**: the unit file parses and names the pinned image tag.",
+            )
+        )
+        self.assertEqual([], packet_lint.lint_packet(packet, "handoff-packet"))
+
+    def test_handoff_accepts_an_exact_command_without_a_shell_prompt(self) -> None:
+        # The canonical text asks for the probe "quoted as the exact command" and fixes no display
+        # form. Requiring `$ ` reddened a compliant backticked command whose result was right
+        # beside it.
+        packet = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: `bao version` printed `OpenBao v2.6.1`.",
+        )
+        self.assertEqual([], packet_lint.lint_packet(packet, "handoff-packet"))
+
+    def test_handoff_accepts_an_inline_result_after_an_unquoted_probe(self) -> None:
+        # Blanking the unquoted `$...` span to end of line consumed the inline result it was
+        # meant to leave behind, so the plainest compliant rendering reddened as "no observed
+        # result". The chained-command spelling must still fire, or the repair traded one false
+        # verdict for the other.
+        good = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: $ bao version -> OpenBao v2.6.1",
+        )
+        self.assertEqual([], packet_lint.lint_packet(good, "handoff-packet"))
+
+        disclaimed = self.FILLED_HANDOFF.replace(
+            "- **Verified facts**: `$ bao version` \N{RIGHTWARDS ARROW} `OpenBao v2.6.1`.",
+            "- **Verified facts**: $ bao version; output unavailable because it was not run",
+        )
+        self.assertTrue(
+            any("no observed result" in f
+                for f in packet_lint.lint_packet(disclaimed, "handoff-packet")),
+            packet_lint.lint_packet(disclaimed, "handoff-packet"),
+        )
 
     def test_every_shape_is_reachable_from_the_cli_listing(self) -> None:
         # A shape nobody can name is a shape nobody can assert against.

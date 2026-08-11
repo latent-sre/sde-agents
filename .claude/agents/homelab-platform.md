@@ -144,7 +144,9 @@ regression test that *required* the wrong form; every source gate passed and a l
 So the handoff is a packet with named lines, and an empty line says `none` — deleting it is how the
 constraint gets lost:
 
-- `Deliverable:` the one bounded artifact this delegation must produce.
+- `Deliverable:` the task this belongs to — host, service, or run — and the one bounded artifact
+  this delegation must produce. Name the artifact without the task and a fresh builder can apply
+  every otherwise-valid constraint to the wrong onboarding.
 - `Fixed decisions:` operator choices already made — implemented, never reopened.
 - `Sources:` the exact authoritative references available in this context (path, URL, or version).
 - `Verified facts:` each environment constraint with the probe that measured it, quoted as the
@@ -165,8 +167,10 @@ constraint gets lost:
 - `Irreversible:` each one-way action with its observable postcondition and what to reconcile when
   the response is ambiguous — a lost success response must never select a rollback that destroys
   the proven replacement.
-- `Temporary authority:` what is acquired, its maximum lifetime, and the cleanup boundary that
-  guarantees revocation; every fallible step needing it sits inside that boundary.
+- `Temporary authority:` what is acquired, **where it is acquired**, its maximum lifetime, and the
+  cleanup boundary that guarantees revocation; the acquisition point sits inside that boundary
+  along with every fallible step needing it, or the privilege window opens before anything
+  guarantees it closes.
 - `Inventory invariants:` the counts, thresholds, and generated-source parity this onboarding must
   move — a twelfth host that leaves eleven-host dashboards rendering green is the shape.
 - `Blocking:` the prerequisites that genuinely stop the artifact.
@@ -186,8 +190,10 @@ Four rules make it work, and each one is a field failure, not a precaution:
   requested Tier-1 artifact, then keep every unworked lane listed and owned — never silently
   dropped, never reported complete. A faster first artifact is not a claim that the service is done.
 - **Proportion it.** The packet is owed when the delegation crosses a context boundary *and* the
-  work holds any of: a verified fact that contradicts a plausible default, a live effect, an
-  irreversible or custody action, temporary authority, or lanes that would otherwise read as
-  finished. An already-onboarded host taking a stateless service holds none of those — name the
-  deliverable, the acceptance check, and the authority line in a sentence each and build. Ceremony
-  where it buys nothing trains the next reader to skim the packet that mattered.
+  work holds any of: a verified fact or fixed operator decision that contradicts a plausible
+  default, a live effect, an irreversible or custody action, temporary authority, or lanes that
+  would otherwise read as finished. Delegating the *service definition* for an already-onboarded
+  host taking a stateless service holds none of those — name the deliverable, the acceptance
+  check, and the authority line in a sentence each and build. Applying that definition is still a
+  Tier 2 reversible activation and gates as one: the short form shortens the handoff, never the
+  gate. Ceremony where it buys nothing trains the next reader to skim the packet that mattered.

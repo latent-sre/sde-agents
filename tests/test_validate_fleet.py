@@ -665,6 +665,23 @@ class PluginWiringTests(unittest.TestCase):
         issues = self._issues_after(swap_adjacent_slots)
         self.assertEqual([], issues)
 
+        def break_the_linter_import(repo: Path) -> None:
+            # The rule reads the shape by IMPORTING packet_lint, and its fail-closed handler for
+            # an unloadable linter had no firing test — a later refactor could delete or miswire
+            # that path and every check would still pass, which is exactly the silent enforcement
+            # loss the rule exists to prevent (review finding, PR #108).
+            path = repo / "scripts" / "packet_lint.py"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + '\nraise RuntimeError("mutated: the linter cannot be loaded")\n',
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(break_the_linter_import)
+        self.assertTrue(
+            any("cannot load packet shapes" in issue for issue in issues), issues
+        )
+
     def test_behavioral_tool_vocabulary_matches_the_full_runtime(self) -> None:
         from scripts import eval_behavioral as behavioral_bootstrap
 
