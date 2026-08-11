@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest import mock
 
 from scripts import eval_behavioral as _eval_behavioral_bootstrap
+from scripts import eval_codex_runtime
 
 eval_behavioral = _eval_behavioral_bootstrap.load_current_evaluator()
 eval_routing = eval_behavioral.eval_routing
@@ -1372,6 +1373,18 @@ class BenchmarkConditionsTest(unittest.TestCase):
         self.assertRegex(provenance["plugin"]["sha256"], r"^[0-9a-f]{64}$")
         self.assertIsInstance(provenance["plugin"]["git_dirty"], bool)
 
+    def test_default_claude_runtime_does_not_load_codex_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime"
+        ) as load_codex_runtime:
+            payload = self._run_main(Path(tmp), [self._stats()])
+
+        load_codex_runtime.assert_not_called()
+        evaluator_files = {
+            record["path"] for record in payload["provenance"]["evaluator"]["files"]
+        }
+        self.assertNotIn("scripts/eval_codex_runtime.py", evaluator_files)
+
     def test_behavioral_runner_and_imported_graders_use_registered_compiled_buffers(self) -> None:
         paths = eval_behavioral.behavioral_evaluator_paths()
         first = eval_routing.evaluator_identity(paths)
@@ -1537,6 +1550,395 @@ class BenchmarkConditionsTest(unittest.TestCase):
             self.assertEqual(1, code)
             self.assertEqual(0, payload["cases"][0]["passes"])
             self.assertTrue(payload["cases"][0]["failures"])
+
+
+class CodexRuntimeIntegrationTest(unittest.TestCase):
+    """Codex is a bounded subscription approximation that refuses unsupported cases."""
+
+    def setUp(self) -> None:
+        self._mcp_patch = mock.patch.object(
+            eval_codex_runtime, "assert_no_configured_mcp"
+        )
+        self.mcp_check = self._mcp_patch.start()
+        self.addCleanup(self._mcp_patch.stop)
+
+    def _valid_short_answer(self) -> str:
+        return (
+            "Deliverable: A staged, unapplied compose service definition.\n"
+            "Acceptance: Verify container health and internal reachability.\n"
+            "Authority: Tier 1 preparation only; Tier 2 live activation requires explicit "
+            "operator approval."
+        )
+
+    def _stats(self) -> dict:
+        return {
+            "input_tokens": 21,
+            "output_tokens": 8,
+            "duration_ms": 13,
+            "model": None,
+            "completed": True,
+            "result_error": False,
+        }
+
+    def test_codex_artifact_records_subscription_runtime_and_selected_profile(self) -> None:
+        answer = self._valid_short_answer()
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "auth_provider_mode",
+            return_value={"auth": "chatgpt", "provider": "openai"},
+        ) as auth, mock.patch.object(
+            eval_codex_runtime,
+            "cli_version",
+            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
+        ), mock.patch.object(
+            eval_codex_runtime, "assert_clean_subscription_context"
+        ) as clean, mock.patch.object(
+            eval_codex_runtime,
+            "run_session",
+            return_value=(answer, {"homelab-platform"}, None, self._stats()),
+        ) as run:
+            output = Path(tmp)
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--runs", "1",
+                "--concurrency", "1",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+                "--output-dir", str(output),
+            ])
+            self.assertEqual(0, code)
+            payload = json.loads((output / "benchmark.json").read_text(encoding="utf-8"))
+        conditions = payload["conditions"]
+        self.assertEqual("codex", conditions["runtime"])
+        self.assertEqual(eval_codex_runtime.SUPPORTED_CLI_VERSION, conditions["cli_version"])
+        self.assertEqual("gpt-5.6-terra", conditions["model_requested"])
+        self.assertEqual("medium", conditions["reasoning_effort_requested"])
+        self.assertEqual("read-only", conditions["sandbox"])
+        self.assertEqual("generated-role-projection", conditions["profile_projection"])
+        self.assertEqual(
+            "subscription-backed same-runtime approximation",
+            conditions["measurement_kind"],
+        )
+        self.assertIn("observable tool items reject", conditions["tool_boundary"])
+        self.assertIn("cannot prove no attempt", conditions["unobservable_tool_limit"])
+        self.assertIn("activation prerequisite", conditions["effective_config_limit"])
+        self.assertEqual(
+            {
+                "model_provider": "openai",
+                "base_url": eval_codex_runtime.SUBSCRIPTION_BASE_URL,
+                "login_method": "chatgpt",
+                "credentials_store": "file",
+            },
+            conditions["auth_routing_requested"],
+        )
+        self.assertIn(
+            "CODEX_API_KEY",
+            conditions["isolation"]["api_credential_environment"],
+        )
+        self.assertEqual(
+            "disabled by session override",
+            conditions["isolation"]["host_skill_instructions"],
+        )
+        self.assertEqual(
+            {"auth": "chatgpt", "provider": "openai"}, conditions["auth_provider"]
+        )
+        self.assertEqual(
+            [".codex/agents/homelab-platform.toml"],
+            payload["provenance"]["plugin"]["scope"]["included"],
+        )
+        evaluator_files = {
+            record["path"] for record in payload["provenance"]["evaluator"]["files"]
+        }
+        self.assertIn("scripts/eval_codex_runtime.py", evaluator_files)
+        self.assertNotIn("scripts/eval_clean_room.py", evaluator_files)
+        self.assertIn("developer_instructions", run.call_args.kwargs)
+        self.assertNotIn("profile_root", run.call_args.kwargs)
+        self.assertEqual(3, clean.call_count)
+        self.assertEqual(2, auth.call_count)
+        self.assertEqual(2, self.mcp_check.call_count)
+
+    def test_unsupported_codex_case_refuses_before_auth_or_session(self) -> None:
+        with mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "auth_provider_mode"
+        ) as auth, mock.patch.object(
+            eval_codex_runtime, "run_session"
+        ) as run:
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "packet-slots-builder",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+            ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_invalid_generated_profile_refuses_before_auth_or_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            profile = root / ".codex" / "agents" / "homelab-platform.toml"
+            profile.parent.mkdir(parents=True)
+            profile.write_text(
+                "\n".join((
+                    'name = "homelab-platform"',
+                    'description = "probe"',
+                    'sandbox_mode = "read-only"',
+                    'developer_instructions = "probe"',
+                    'model = "silently dropped"',
+                )),
+                encoding="utf-8",
+            )
+            with mock.patch.object(
+                eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+            ), mock.patch.object(
+                eval_codex_runtime, "CODEX", "codex"
+            ), mock.patch.object(
+                eval_codex_runtime, "auth_provider_mode"
+            ) as auth, mock.patch.object(
+                eval_codex_runtime, "run_session"
+            ) as run:
+                code = eval_behavioral.main([
+                    "--runtime", "codex",
+                    "--case", "handoff-simple-build-stays-short",
+                    "--model", "gpt-5.6-terra",
+                    "--reasoning-effort", "medium",
+                    "--plugin-dir", str(root),
+                    "--output-dir", str(root / "output"),
+                ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_missing_generated_profile_refuses_before_auth_or_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "auth_provider_mode"
+        ) as auth, mock.patch.object(
+            eval_codex_runtime, "run_session"
+        ) as run:
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+                "--plugin-dir", tmp,
+            ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_ambient_codex_home_instructions_refuse_before_auth_or_session(self) -> None:
+        with mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "assert_clean_subscription_context",
+            side_effect=eval_codex_runtime.CodexRuntimeError(
+                "instruction-clean CODEX_HOME required"
+            ),
+        ), mock.patch.object(
+            eval_codex_runtime, "auth_provider_mode"
+        ) as auth, mock.patch.object(
+            eval_codex_runtime, "run_session"
+        ) as run:
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+            ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_unsupported_cli_refuses_before_auth_or_session(self) -> None:
+        with mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "assert_clean_subscription_context"
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "require_supported_cli",
+            side_effect=eval_codex_runtime.CodexRuntimeError("unsupported Codex CLI"),
+        ), mock.patch.object(
+            eval_codex_runtime, "auth_provider_mode"
+        ) as auth, mock.patch.object(
+            eval_codex_runtime, "run_session"
+        ) as run:
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+            ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_blank_model_refuses_before_auth_or_session(self) -> None:
+        with mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "auth_provider_mode"
+        ) as auth, mock.patch.object(
+            eval_codex_runtime, "run_session"
+        ) as run:
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--model", " ",
+                "--reasoning-effort", "medium",
+            ])
+
+        self.assertEqual(2, code)
+        auth.assert_not_called()
+        run.assert_not_called()
+
+    def test_subscription_failure_does_not_start_second_serial_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "assert_clean_subscription_context"
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "require_supported_cli",
+            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "auth_provider_mode",
+            return_value={"auth": "chatgpt", "provider": "openai"},
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "run_session",
+            side_effect=eval_codex_runtime.SessionUnavailable("allowance unavailable"),
+        ) as run:
+            output = Path(tmp)
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--runs", "2",
+                "--concurrency", "1",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+                "--output-dir", str(output),
+            ])
+
+        self.assertEqual(2, code)
+        self.assertEqual(1, run.call_count)
+        self.assertFalse((output / "benchmark.json").exists())
+
+    def test_mid_batch_home_drift_refuses_second_serial_session(self) -> None:
+        clean = mock.Mock(side_effect=(
+            None,
+            None,
+            eval_codex_runtime.CodexRuntimeError("managed_config.toml appeared"),
+        ))
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "assert_clean_subscription_context", clean
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "require_supported_cli",
+            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "auth_provider_mode",
+            return_value={"auth": "chatgpt", "provider": "openai"},
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "run_session",
+            return_value=(
+                self._valid_short_answer(),
+                {"homelab-platform"},
+                None,
+                self._stats(),
+            ),
+        ) as run:
+            output = Path(tmp)
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--runs", "2",
+                "--concurrency", "1",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+                "--output-dir", str(output),
+            ])
+
+        self.assertEqual(2, code)
+        self.assertEqual(1, run.call_count)
+        self.assertFalse((output / "benchmark.json").exists())
+
+    def test_post_batch_mcp_drift_refuses_artifact(self) -> None:
+        self.mcp_check.side_effect = (
+            None,
+            eval_codex_runtime.CodexRuntimeError("configured MCP server appeared"),
+        )
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+        ), mock.patch.object(
+            eval_codex_runtime, "CODEX", "codex"
+        ), mock.patch.object(
+            eval_codex_runtime, "assert_clean_subscription_context"
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "require_supported_cli",
+            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "auth_provider_mode",
+            return_value={"auth": "chatgpt", "provider": "openai"},
+        ), mock.patch.object(
+            eval_codex_runtime,
+            "run_session",
+            return_value=(
+                self._valid_short_answer(),
+                {"homelab-platform"},
+                None,
+                self._stats(),
+            ),
+        ):
+            output = Path(tmp)
+            code = eval_behavioral.main([
+                "--runtime", "codex",
+                "--case", "handoff-simple-build-stays-short",
+                "--runs", "1",
+                "--concurrency", "1",
+                "--model", "gpt-5.6-terra",
+                "--reasoning-effort", "medium",
+                "--output-dir", str(output),
+            ])
+
+        self.assertEqual(2, code)
+        self.assertFalse((output / "benchmark.json").exists())
 
 
 if __name__ == "__main__":

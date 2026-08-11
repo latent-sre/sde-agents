@@ -162,7 +162,76 @@ claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
 ```bash
 python3 scripts/eval_behavioral.py --runs 1              # all cases
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
+
+# subscription-backed Codex lane: six HANDOFF cases, one run each
+python3 scripts/eval_behavioral.py --runtime codex --case 'handoff-*' \
+  --model gpt-5.6-terra --reasoning-effort medium --concurrency 1
 ```
+
+The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
+bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
+cases, tool-enabled cases, and cases requiring a Claude permission mode are refused before a model
+call. A writer-role profile is eligible only when the selected contract explicitly declares
+`allowed_tools: []`; the Codex session still runs read-only. This declaration selects the bounded
+lane, but does not mean Codex has reproduced Claude's empty allowlist. Codex CLI 0.147.0 has no
+main-session
+`--agent` selector, so the adapter captures the selected generated
+`.codex/agents/<name>.toml` once and projects its exact `developer_instructions` into one main
+session. The artifact calls this
+`generated-role-projection`: it measures generated role behavior, not custom-agent discovery,
+routing, or delegation.
+
+Codex execution requires an explicit, absolute, dedicated `CODEX_HOME` with a **ChatGPT
+subscription login**. Perform its one-time `codex login` using file credential storage and the
+same ChatGPT subscription that will run both sides. The adapter pins Codex CLI 0.147.0, requests
+the built-in OpenAI provider, its ChatGPT Codex endpoint, and the ChatGPT login method, and requires
+`codex login status` to report ChatGPT login before the batch starts. On PowerShell, initialize the
+dedicated home once with the same overrides the evaluator uses:
+
+```powershell
+$env:CODEX_HOME = 'C:\absolute\path\to\dedicated-codex-eval-home'
+codex -c 'model_provider="openai"' `
+  -c 'openai_base_url="https://chatgpt.com/backend-api/codex"' `
+  -c 'forced_login_method="chatgpt"' `
+  -c 'cli_auth_credentials_store="file"' login
+```
+
+The artifact stores only
+`{auth: chatgpt, provider: openai}`. No credential, account identifier, auth-file metadata, status
+text, or Codex-home path enters the benchmark.
+
+Because `--ignore-user-config` does not suppress every Codex-home surface, the preflight refuses
+`AGENTS.md`, `AGENTS.override.md`, `config.toml`, or the higher-precedence `managed_config.toml` in
+that home before checking auth or starting sessions. It also refuses non-empty `OPENAI_API_KEY`,
+`CODEX_API_KEY`, or `CODEX_ACCESS_TOKEN` variables so an intended subscription capture cannot
+silently become API-billed execution.
+
+The command ignores user config and rules, sets project-document bytes to zero, uses an empty
+disposable cwd, requests disabled configurable tool surfaces including the code-mode host,
+suppresses host skill-catalog instructions, disables plan updates, pins a read-only sandbox with
+approvals disabled, and sends the task on stdin. The runner also requires
+`codex mcp list --json` to report no configured server before and after the batch. Every observable
+non-message/reasoning item invalidates the run. In Codex 0.147.0,
+however, code-mode-only models still see inert `exec`/`wait` entries and their custom-call attempts
+are omitted from JSONL. The disabled host makes execution fail closed, but the artifact cannot
+prove no attempt occurred.
+
+Treat this as tool-reduced, observable-tool-invalidating same-runtime evidence, not Claude
+empty-allowlist parity or ordinary interactive Codex behavior. This is also not complete
+effective-configuration attestation: system and cloud-managed layers can still affect
+instructions, features, sandboxing, or MCP behavior, and Codex 0.147.0 exposes no atomic
+execution-equivalent preflight. Live capture therefore requires an independently controlled
+machine and ChatGPT workspace with no system, cloud, or managed MCP servers. The pre/post empty
+inventory checks are defense in depth, not a substitute for that activation prerequisite.
+
+Codex requires an exact model and reasoning effort. Its current JSONL exposes usage but not an
+independently observed model or server duration, so `model_requested` is not copied into
+`models_observed`, and duration is labeled runner wall-clock time. Subscription runs consume plan
+allowance rather than separately billed API-key usage; no dollar-cost claim is available. Never
+diff a Claude artifact against a Codex artifact. A paired comparison keeps runtime, CLI, exact
+model, effort, subscription auth, sandbox, timeout, concurrency, case bytes, and evaluator bytes
+identical across baseline and candidate. Each side records its own selected-profile identity; those
+profiles are expected to differ only through the intended HANDOFF-001 prompt edits.
 
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
 including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed

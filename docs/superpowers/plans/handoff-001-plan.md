@@ -95,14 +95,30 @@ the Tier-1 artifact as its first response deliverable, while the runner persists
 response duration. Report that value as end-to-end artifact-containing response cost, never as
 first-artifact or first-token latency; exact first-artifact timing remains unmeasured unless the
 operator separately chooses streaming instrumentation. After the six cases and candidate bytes
-freeze, run the same evaluator, case bytes, pinned model and CLI,
-timeout, clean-room/auth conditions, and `concurrency=1` against baseline `4777df9` and the
-candidate, three runs per case, recording per-run tokens and duration. The baseline worktree remains
-immutable until both captures finish. Report all three duration values; call the candidate's total
-response faster only when its median is lower and the baseline/candidate ranges do not overlap,
-otherwise report the duration result as inconclusive. No session spend starts without the
-operator's approval of the exact model and 36-session plan. Issue #60 is updated only with separate
-authorization to post externally.
+freeze, run the same evaluator, case bytes, exact runtime, model, CLI, timeout, auth/isolation
+conditions, and `concurrency=1` against baseline `4777df9` and the candidate, three runs per case,
+recording per-run tokens and duration. The 2026-08-11 operator ruling selects the Codex/ChatGPT-
+subscription transport for this capture: generated-role projection, read-only sandbox,
+tool-reduced policy, suppressed host skill instructions, explicit reasoning effort, and the same
+instruction-clean ChatGPT login mode on both sides. Codex 0.147.0 leaves code-mode `exec`/`wait`
+visible while their host is
+disabled and omits those custom-call attempts from JSONL, so this is a same-runtime paired
+approximation, not Claude empty-allowlist parity. Every observable tool item invalidates its run.
+Codex has no atomic execution-equivalent effective-config or runtime-MCP preflight, so both sides
+must use the same independently controlled machine and ChatGPT workspace with no system, cloud, or
+managed MCP servers; pre/post empty MCP inventories are defense in depth, not proof of that state.
+Each side records its own selected-profile identity; the only intended identity difference is the
+HANDOFF-001 prompt change. It remains **36 sessions total** (six cases × three runs × two
+revisions), not 36 Codex sessions plus a
+duplicate Claude batch. A later Claude capture would be separate host evidence and needs its own
+approval; the two runtimes are never compared to each other.
+
+The baseline worktree remains immutable until both captures finish. Report all three duration
+values; call the candidate's total response faster only when its median is lower and the
+baseline/candidate ranges do not overlap, otherwise report the duration result as inconclusive.
+No subscription session starts without the operator's approval of the exact Codex model, reasoning
+effort, and 36-session plan. Issue #60 is updated only with separate authorization to post
+externally.
 
 ## Rollback
 

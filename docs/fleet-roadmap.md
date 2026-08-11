@@ -188,12 +188,14 @@ release stamp is REL-173's evidence, not a gate on this item.
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
 **Current evidence:** The working candidate contains the lean producer, consumer, six focused
-contracts, and regenerated adapters. On 2026-08-11, T0 passed, all 618 tests across 29 modules
-passed, and `claude plugin validate . --strict` passed. No paid session has run; total result
-duration is available, but exact first-artifact latency remains unmeasured.
+contracts, regenerated adapters, and the bounded subscription-backed Codex transport. On
+2026-08-11, T0 passed, all 641 tests across 30 modules passed, and
+`claude plugin validate . --strict` passed. No paid session has run; total result duration is
+available, but exact first-artifact latency remains unmeasured.
 
 **Next action:** Operator ruling on whether first-artifact streaming instrumentation is worth its
-added evaluator complexity, then approval of the plan's exact model and 36-session paired capture.
+added evaluator complexity, then setup of the dedicated Codex home on an independently controlled
+no-MCP host and approval of the plan's exact model, reasoning effort, and 36-session paired capture.
 The recommended lean default is no new streaming instrument: report total artifact-containing
 response duration honestly and leave exact first-artifact latency open rather than manufacture it.
 

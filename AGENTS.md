@@ -33,7 +33,8 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
 | `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
 | `scripts/eval_baseline.py` | Offline resolver from current bytes to a still-valid stored routing benchmark; it answers whether a paired run's 'before' side is already on disk before any API money is spent. |
-| `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; it binds exact source, frozen plugin execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
+| `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; Claude is the default, while bounded empty-Claude-allowlist cases can use `--runtime codex` through a tool-execution-disabled generated-role projection. Both bind source, execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
+| `scripts/eval_codex_runtime.py` | Narrow Codex behavioral transport; it captures each selected generated agent once, requires a dedicated instruction-clean Codex home, rejects observable tool events, and reuses opaque ChatGPT login state without reading credentials. |
 | `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
 | `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. GitHub issues are evidence-bound intake, not a second tracker — an issue adds work only when the roadmap imports it, per `docs/README.md` rule 7. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file; a spec headed drafted merely awaits operator approval and starts nothing. |
@@ -104,7 +105,7 @@ same-name Codex TOML; it is not an update mechanism. The synchronizer may adopt 
 output only when its parsed contract exactly matches the current generated agent. Any extra or
 changed field remains an unmanaged conflict.
 
-Two checks are manual and on demand, deliberately not CI gates (both drive real API sessions):
+Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
   and the guard fires for the guarded agents and only them. Re-run after upgrading the Claude
@@ -119,6 +120,15 @@ Two checks are manual and on demand, deliberately not CI gates (both drive real 
   booleans; a negative (near-miss) case firing at all is a defect regardless of variance. Agent
   positives systematically under-fire in headless mode — trust negatives and regressions over
   absolute agent rates. See `evals/README.md`.
+- `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
+  default. The Codex subscription lane is explicit and narrower:
+  `--runtime codex --model <exact-slug> --reasoning-effort <effort>`. It projects the selected
+  generated agent into a read-only, tool-reduced main session because `codex exec` has no
+  `--agent` selector. Skill/tool-enabled cases and cases requiring a Claude permission mode are
+  refused; a writer-role profile is eligible only when its contract declares `allowed_tools: []`.
+  Codex 0.147.0 cannot expose every code-mode tool attempt or atomically attest managed MCP state,
+  so this is same-host paired evidence with a no-MCP activation prerequisite, not Claude
+  empty-allowlist parity. See `evals/README.md`.
 
 ## Change playbooks
 

@@ -567,6 +567,7 @@ def verify_frozen_plugin(plugin_dir: Path, expected_identity: dict) -> None:
 def benchmark_provenance(
     source_paths: list[Path], cases: list[dict], expression: str, plugin_dir: Path,
     limit: int | None = None, *, evaluator_paths: list[Path],
+    plugin_identity_value: dict | None = None,
 ) -> dict:
     return {
         "schema": PROVENANCE_SCHEMA,
@@ -576,7 +577,14 @@ def benchmark_provenance(
         # directory does not identify the local runner and deterministic graders that interpreted
         # its transcripts.
         "evaluator": evaluator_identity(evaluator_paths),
-        "plugin": plugin_identity(plugin_dir),
+        # Claude evaluates plugin runtime bytes; another runtime may execute a narrower captured
+        # projection. A precomputed identity binds provenance to those already-captured bytes while
+        # retaining one schema without conflating scopes.
+        "plugin": (
+            plugin_identity(plugin_dir)
+            if plugin_identity_value is None
+            else plugin_identity_value
+        ),
     }
 
 
