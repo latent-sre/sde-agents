@@ -8,14 +8,23 @@ that export isolated, so the second shape died at every invocation with "meta is
 
 `scripts/validate_fleet.validate_workflow_meta_contract` catches that class lexically and
 documents its own limit: "Nesting a template or extra braces inside an interpolation stays out of
-this flat scan's reach -- a missed exotic nesting is a silent non-fire." This module closes it by
-execution instead of pattern-matching: the body is isolated from `meta` exactly as the runtime
-isolates it, then run under Node against stubbed `agent`/`parallel`/`phase` primitives, so any
-surviving reference throws here instead of in production. That gap is real rather than
+this flat scan's reach -- a missed exotic nesting is a silent non-fire." This module narrows that
+limit by execution instead of pattern-matching: the body is isolated from `meta` exactly as the
+runtime isolates it, then run under Node against stubbed `agent`/`parallel`/`phase` primitives, so
+any surviving reference throws here instead of in production. The gap is real rather than
 theoretical — this body line passes the whole validator clean and dies here with the historical
 "ReferenceError: meta is not defined" (mutation-proven when this module landed):
 
     const label = `${ ({}).nope ?? meta }`
+
+Narrows, not closes: the two instruments are complementary rather than nested, and one compound
+shape defeats both. `_META_EXPORT` below ends the export at a column-0 `}`, so a `meta` reformatted
+without one (a single-line object) lets the lazy match run past it and silently delete a body
+prefix. On its own that still fails loudly, and the validator catches it — but a deleted prefix
+whose only `meta` reference is nested-brace-template-shaped is invisible to both at once
+(independently reproduced at verification, 2026-08-10). A brace-matching end anchor, the depth
+count the validator already carries, would retire the hole; it is unbuilt, so the boundary is
+stated here rather than implied away.
 
 Node is an external binary, not a repository dependency: a machine without it skips.
 """
