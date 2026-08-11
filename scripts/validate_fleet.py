@@ -32,6 +32,9 @@ TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
 # and never matches an indented `- item` line, so a key like `skills:` whose value is a block
 # sequence rather than an inline scalar needs its own reader or it silently parses to "".
 LIST_ITEM_RE = re.compile(r"^\s*-\s+(\S.*?)\s*$")
+# The two free-prose frontmatter fields — the only ones whose value is a sentence, so the only ones
+# that can carry a colon-space into a plain YAML scalar. See validate_yaml_scalar_quoting.
+PROSE_SCALAR_FIELDS = ("description", "argument-hint")
 INVENTORY_RE = re.compile(
     r"<!-- fleet-inventory:start -->.*?<!-- fleet-inventory:end -->",
     re.DOTALL,
@@ -693,6 +696,60 @@ def validate_skills(root: Path) -> tuple[list[str], list[str]]:
     if len(names) != len(set(names)):
         issues.append(f"{skills_dir}: duplicate skill names")
     return issues, sorted(names)
+
+
+def validate_yaml_scalar_quoting(root: Path) -> list[str]:
+    """Reject a plain frontmatter scalar that a conforming YAML parser refuses to read.
+
+    A plain (unquoted) YAML scalar may not contain `: ` — a real parser reads it as a nested
+    mapping key and raises "mapping values are not allowed here". Nothing else in this repository
+    can see that: `parse_frontmatter` above is a hand-rolled subset that reads to end of line, and
+    every generated host copy re-serializes the value through `json.dumps`, so the offending bytes
+    exist only in the canonical file and every check downstream of them passes. The failure lands
+    on whichever host loads frontmatter with a strict parser — the component does not error, it
+    does not load, and the fleet ships one skill silently absent. Quote the value.
+    """
+
+    issues: list[str] = []
+    paths = sorted((root / "agents").glob("*.md")) if (root / "agents").is_dir() else []
+    if (root / "skills").is_dir():
+        paths += sorted((root / "skills").glob("*/SKILL.md"))
+
+    for path in paths:
+        lines = read_text(path).splitlines()
+        if not lines or lines[0].strip() != "---":
+            continue  # Absent or unterminated frontmatter is the agent/skill rules' report to make.
+        try:
+            end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
+        except StopIteration:
+            continue
+
+        for line in lines[1:end]:
+            # TOP_LEVEL_KEY_RE is anchored at column zero, so the indented continuation lines of a
+            # `description: >` block scalar never reach this check — and a colon-space is legal
+            # inside one, which is why they must not.
+            match = TOP_LEVEL_KEY_RE.match(line)
+            if not match:
+                continue
+            key, value = match.groups()
+            value = value.strip()
+            if key not in PROSE_SCALAR_FIELDS or not value:
+                continue
+            # A quoted scalar may hold anything; a flow collection (`argument-hint: [a path: here]`)
+            # parses too — badly, as a list of one-pair mappings, but it PARSES, and this rule may
+            # only claim what it can prove: that a strict parser refuses the file outright.
+            if value[0] in "\"'[{":
+                continue
+            if ": " in value:
+                issues.append(
+                    f"{path}: unquoted {key!r} frontmatter value contains ': ', which a "
+                    f"conforming YAML parser rejects as a nested mapping key. This validator's "
+                    f"own parser and every generated copy quote or re-serialize the value, so "
+                    f"the whole fleet validates while a host that parses strict YAML drops the "
+                    f"component without an error anyone sees. Wrap the value in double quotes."
+                )
+
+    return issues
 
 
 def definition_markdown_files(root: Path) -> list[Path]:
@@ -2017,6 +2074,7 @@ def validate_repo(
     agent_issues, agent_names = validate_agents(root)
     skill_issues, skill_names = validate_skills(root)
     issues = agent_issues + skill_issues
+    issues.extend(validate_yaml_scalar_quoting(root))
     issues.extend(validate_plugin(root, agent_names, skill_names))
     # The adapter byte-compare is 59% of a validation run (profiled 2026-08-08) and independent
     # of every other rule, so a caller validating a deliberate non-adapter mutation may skip it.
