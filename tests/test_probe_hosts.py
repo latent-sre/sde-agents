@@ -56,6 +56,8 @@ class ProbeHostsTests(unittest.TestCase):
     def test_codex_json_parser_extracts_model_message_and_usage(self) -> None:
         transcript = "\n".join(
             (
+                "not json",
+                "42",
                 json.dumps({"type": "thread.started", "model": "gpt-5.6-sol"}),
                 json.dumps(
                     {
@@ -75,6 +77,7 @@ class ProbeHostsTests(unittest.TestCase):
             )
         )
         parsed = probe_hosts.parse_codex_jsonl(transcript)
+        self.assertEqual(3, parsed["events"])
         self.assertEqual(["gpt-5.6-sol"], parsed["observed_models"])
         self.assertEqual('{"marker":"SDE_FLEET_BASELINE_OK"}', parsed["last_message"])
         self.assertEqual(10, parsed["usage"]["input_tokens"])

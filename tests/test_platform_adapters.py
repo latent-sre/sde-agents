@@ -21,6 +21,23 @@ _remove_directory_link = remove_directory_link
 
 
 class PlatformAdapterTests(unittest.TestCase):
+    def test_definition_parts_uses_one_coherent_source_snapshot(self) -> None:
+        first = "---\nname: first\ndescription: First\n---\n\nfirst body\n"
+        second = "---\nname: second\ndescription: Second\n---\n\nsecond body"
+        path = Path("definition.md")
+
+        with mock.patch.object(
+            type(path),
+            "read_text",
+            side_effect=(first, second, second),
+        ) as reader:
+            fields, body, raw = generate_platform_adapters._definition_parts(path)
+
+        self.assertEqual(1, reader.call_count)
+        self.assertEqual("first", fields["name"])
+        self.assertEqual(["name: first", "description: First"], raw)
+        self.assertEqual("first body\n", body)
+
     def test_text_resources_are_lf_normalized_but_binary_resources_are_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repo"

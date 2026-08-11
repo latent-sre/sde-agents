@@ -6,7 +6,6 @@ import hmac
 import io
 import os
 import sqlite3
-import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -15,12 +14,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from scripts import effect_broker, evidence_envelope
+from tests.support import TempDirTestCase
 
 
-class EffectBrokerTests(unittest.TestCase):
+class EffectBrokerTests(TempDirTestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.base = Path(self.temporary.name)
+        super().setUp()
         self.workspace = self.base / "workspace"
         self.control = self.base / "control"
         self.workspace.mkdir()
@@ -29,9 +28,6 @@ class EffectBrokerTests(unittest.TestCase):
         self.executable.write_bytes(b"fixture executable bytes\n")
         self.key = b"k" * 32
         self.start = datetime(2026, 7, 31, 12, 0, tzinfo=timezone.utc)
-
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
 
     def _request(self) -> dict[str, object]:
         return effect_broker.create_request(

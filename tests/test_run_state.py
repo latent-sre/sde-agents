@@ -3,12 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from scripts import evidence_envelope, run_state
+from tests.support import TempDirTestCase
 
 
 class Clock:
@@ -22,10 +21,9 @@ class Clock:
         self.value += timedelta(seconds=seconds)
 
 
-class RunStateTests(unittest.TestCase):
+class RunStateTests(TempDirTestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.base = Path(self.temporary.name)
+        super().setUp()
         self.workspace = self.base / "workspace"
         self.workspace.mkdir()
         self.clock = Clock()
@@ -35,9 +33,6 @@ class RunStateTests(unittest.TestCase):
             now=self.clock.now,
         )
         self.store.initialize()
-
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
 
     def _start(self, run_id: str = "run-1", task_id: str = "task-1") -> None:
         self.store.start_run(

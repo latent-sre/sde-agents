@@ -242,6 +242,16 @@ def repo_copy() -> Iterator[Path]:
     yield _pool.work
 
 
+class TempDirTestCase(unittest.TestCase):
+    """Test case with a cleanup-safe temporary directory available as ``self.base``."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.base = Path(temporary.name)
+
+
 def run_main(main: Callable[[list[str]], int], *argv: str) -> tuple[int, str]:
     """Call a script's main(argv) in-process, returning (exit code, stdout).
 

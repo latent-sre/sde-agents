@@ -127,20 +127,15 @@ def _definition_parts(path: Path) -> tuple[dict[str, str], str, list[str]]:
     """Return parsed fields, body, and raw frontmatter lines for one definition."""
 
     validator = _validator_module()
-    fields = validator.parse_frontmatter(path)
-    if fields is None:
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    end = validator.frontmatter_span(lines)
+    fields = None if end is None else validator.parse_frontmatter_lines(lines, end)
+    if fields is None or end is None:
         raise ValueError(f"{path}: missing or malformed frontmatter")
 
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if not lines or lines[0].strip() != "---":
-        raise ValueError(f"{path}: missing opening frontmatter marker")
-    try:
-        end = next(index for index in range(1, len(lines)) if lines[index].strip() == "---")
-    except StopIteration as exc:
-        raise ValueError(f"{path}: missing closing frontmatter marker") from exc
-
     body = "\n".join(lines[end + 1 :]).lstrip("\n")
-    if path.read_text(encoding="utf-8").endswith("\n"):
+    if text.endswith("\n"):
         body += "\n"
     return fields, body, lines[1:end]
 
@@ -402,14 +397,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
     """Replace Claude-only authority claims in generated agent bodies."""
 
     host_label = "Codex" if host == "codex" else "Copilot/VS Code"
-    text = text.replace(
-        "Use the Agent tool to spawn",
-        "Use the host's subagent mechanism to spawn",
-    )
-    text = text.replace(
-        "If the Agent tool is unavailable in your context",
-        "If subagent spawning is unavailable in your context",
-    )
+    # Both callers supply adapt_text output, so Agent-tool terminology is already translated.
     text = text.replace(
         "You hold Write and Edit **to author tests**",
         "You hold edit authority **to author tests**",

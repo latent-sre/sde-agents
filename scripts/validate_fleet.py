@@ -331,17 +331,19 @@ def is_runtime_byproduct(path: Path) -> bool:
     return "__pycache__" in path.parts or path.suffix.lower() in {".pyc", ".pyo"}
 
 
-def parse_frontmatter(path: Path) -> dict[str, str] | None:
-    """Parse the small YAML subset used by the fleet frontmatter."""
+def frontmatter_span(lines: list[str]) -> int | None:
+    """Return the closing marker index for a complete frontmatter block."""
 
-    lines = read_text(path).splitlines()
     if not lines or lines[0].strip() != "---":
         return None
+    return next(
+        (index for index in range(1, len(lines)) if lines[index].strip() == "---"),
+        None,
+    )
 
-    try:
-        end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-    except StopIteration:
-        return None
+
+def parse_frontmatter_lines(lines: list[str], end: int) -> dict[str, str] | None:
+    """Parse the fleet's YAML subset from one already-decoded source snapshot."""
 
     fields: dict[str, str] = {}
     i = 1
@@ -400,6 +402,14 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
         i += 1
 
     return fields
+
+
+def parse_frontmatter(path: Path) -> dict[str, str] | None:
+    """Parse the small YAML subset used by the fleet frontmatter."""
+
+    lines = read_text(path).splitlines()
+    end = frontmatter_span(lines)
+    return None if end is None else parse_frontmatter_lines(lines, end)
 
 
 def validate_name(name: str, kind: str, source: Path) -> list[str]:
@@ -839,12 +849,9 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
 
     for path in paths:
         lines = read_text(path).splitlines()
-        if not lines or lines[0].strip() != "---":
+        end = frontmatter_span(lines)
+        if end is None:
             continue  # Absent or unterminated frontmatter is the agent/skill rules' report to make.
-        try:
-            end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-        except StopIteration:
-            continue
 
         for line in lines[1:end]:
             # TOP_LEVEL_KEY_RE is anchored at column zero, so the indented continuation lines of a

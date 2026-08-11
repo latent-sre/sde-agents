@@ -18,13 +18,14 @@ from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
 try:
-    from scripts import generate_platform_adapters
+    from scripts import generate_platform_adapters, stream_events
     from scripts.host_conformance_schema import (
         ConformanceError,
         validate_manifest,
     )
 except ModuleNotFoundError:
     import generate_platform_adapters  # type: ignore[no-redef]
+    import stream_events  # type: ignore[no-redef]
     from host_conformance_schema import (  # type: ignore[no-redef]
         ConformanceError,
         validate_manifest,
@@ -287,14 +288,7 @@ def _walk(value: object):
 
 
 def parse_codex_jsonl(text: str) -> dict[str, object]:
-    events: list[dict[str, object]] = []
-    for line in text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(event, dict):
-            events.append(event)
+    events = list(stream_events.iter_events(text))
     observed_models: set[str] = set()
     messages: list[str] = []
     usage: list[dict[str, object]] = []

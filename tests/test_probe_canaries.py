@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import unittest
 from unittest import mock
 
@@ -51,6 +52,70 @@ class ProbeCanaryTests(unittest.TestCase):
             text,
             "scripts/probe_plugin.py quotes this canary to prove frontend-craft was preloaded -- "
             "do not remove or reword it without updating the probe",
+        )
+
+
+class ProbeTranscriptParserTests(unittest.TestCase):
+    def test_consumers_skip_invalid_shapes_without_losing_correlations(self) -> None:
+        transcript = "\n".join(
+            (
+                "not json",
+                "42",
+                json.dumps({"message": "diagnostic"}),
+                json.dumps(
+                    {
+                        "message": {
+                            "content": [
+                                {
+                                    "type": "tool_use",
+                                    "id": "bash-1",
+                                    "name": "Bash",
+                                    "input": {"command": "echo PROBE"},
+                                },
+                                {
+                                    "type": "tool_use",
+                                    "id": "agent-1",
+                                    "name": "Agent",
+                                    "input": {
+                                        "subagent_type": "sde-agents:sde-fullstack"
+                                    },
+                                },
+                                "non-object block",
+                            ]
+                        }
+                    }
+                ),
+                json.dumps(
+                    {
+                        "message": {
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": "bash-1",
+                                    "content": "bash ok",
+                                },
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": "agent-1",
+                                    "content": [{"text": "agent ok"}],
+                                    "is_error": False,
+                                },
+                            ]
+                        }
+                    }
+                ),
+            )
+        )
+
+        self.assertEqual(
+            ["bash-1", "agent-1"],
+            [call["id"] for call in probe_plugin.tool_calls(transcript)],
+        )
+        self.assertEqual({"echo PROBE": "bash ok"}, probe_plugin.bash_results(transcript))
+        self.assertTrue(probe_plugin.spawn_succeeded(transcript, "sde-agents:sde-fullstack"))
+        self.assertEqual(
+            ["agent ok"],
+            probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
         )
 
 
