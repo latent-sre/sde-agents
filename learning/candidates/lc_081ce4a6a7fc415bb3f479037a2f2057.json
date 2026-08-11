@@ -1,7 +1,7 @@
 {
   "applicability": "dependencies sharing a bin directory with the harness interpreter; excludes dependencies with a dedicated directory",
-  "candidate_id": "lc_5ab6d2488dcb484f8a1f91fb06241ab7",
-  "created_at": "2026-08-11T04:27:47.296919Z",
+  "candidate_id": "lc_081ce4a6a7fc415bb3f479037a2f2057",
+  "created_at": "2026-08-11T04:44:46.225191Z",
   "destination": "agents/verification-engineer.md failure-path staging guidance",
   "disposition": "add",
   "evidence": {
@@ -14,8 +14,8 @@
   "expected_behavior": "Stage a missing-dependency condition by hiding only the single binary, so the absence under test is the only variable.",
   "fingerprint": "ed338fade363a0c648d091efe51366893034ac847c8f0081ae70887ef9595378",
   "freshness": {
-    "as_of": "2026-08-11T04:27:47.296919Z",
-    "review_at": "2026-09-10T04:27:47.296919Z"
+    "as_of": "2026-08-11T04:44:46.225191Z",
+    "review_at": "2026-09-10T04:44:46.225191Z"
   },
   "observation": "Staging a 'binary is absent' condition by removing its PATH directory also removed the co-located interpreter, producing two unrelated test failures that read as a real defect until the condition was re-staged with only the binary hidden.",
   "owner": "fleet-maintainer",
@@ -26,7 +26,7 @@
     "sources": [
       {
         "environment": "python-3.12/windows",
-        "observed_at": "2026-08-11T04:27:47.296919Z",
+        "observed_at": "2026-08-11T04:44:46.225191Z",
         "provenance": "verified",
         "revision": "be1bd0b",
         "source_kind": "review",
@@ -35,7 +35,7 @@
     ]
   },
   "retention": {
-    "expires_at": "2027-08-11T04:27:47.296919Z",
+    "expires_at": "2027-08-11T04:44:46.225191Z",
     "policy": "review-or-expire"
   },
   "review_history": [],
@@ -44,12 +44,12 @@
   "sensitivity_review": {
     "attestation_count": 1,
     "attested": true,
-    "last_attested_at": "2026-08-11T04:27:47.296919Z",
+    "last_attested_at": "2026-08-11T04:44:46.225191Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [
     {
-      "at": "2026-08-11T04:27:47.423296Z",
+      "at": "2026-08-11T04:44:46.354011Z",
       "destination": "agents/verification-engineer.md failure-path staging guidance",
       "disposition": "add",
       "from": "quarantined",
@@ -58,5 +58,5 @@
       "to": "proposed"
     }
   ],
-  "updated_at": "2026-08-11T04:27:47.423296Z"
+  "updated_at": "2026-08-11T04:44:46.354011Z"
 }

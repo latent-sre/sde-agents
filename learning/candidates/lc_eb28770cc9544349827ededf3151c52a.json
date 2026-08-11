@@ -1,7 +1,7 @@
 {
   "applicability": "exact_fields oracles in evals/behavioral/contracts.json; excludes proximity must_match patterns and Learning-block labels fixed by agent prose",
-  "candidate_id": "lc_ead7462e54894fb6a5ef2b6cd37db24e",
-  "created_at": "2026-08-11T04:27:46.599519Z",
+  "candidate_id": "lc_eb28770cc9544349827ededf3151c52a",
+  "created_at": "2026-08-11T04:44:45.537338Z",
   "destination": "evals/README.md grader-authoring guidance",
   "disposition": "add",
   "evidence": {
@@ -9,15 +9,15 @@
     "provenance": "verified",
     "revision": "3ee9c38",
     "source_kind": "review",
-    "source_reference": "PR #116 refs/pull/116/head 3ee9c38 evals/behavioral/contracts.json"
+    "source_reference": "PR #116 3ee9c38 evals/behavioral/contracts.json envelope cases"
   },
   "expected_behavior": "An exact-value oracle quotes a literal the prompt states or a fleet document defines, and the prompt's wording for a relation matches the oracle's word for word.",
-  "fingerprint": "ac613c7921a39ff5356e76622cbd765246aee1318d47ee0adfcffd593cae8a0c",
+  "fingerprint": "5dc733d831b147f85b610912f57e152b6372788ba2cbde0ecca4c795bf11703a",
   "freshness": {
-    "as_of": "2026-08-11T04:27:46.599519Z",
-    "review_at": "2026-09-10T04:27:46.599519Z"
+    "as_of": "2026-08-11T04:44:45.537338Z",
+    "review_at": "2026-09-10T04:44:45.537338Z"
   },
-  "observation": "Two behavioral cases pinned exact-value oracles to English sentences that appear in no agent or skill definition, and each case prompt worded the relation differently from its own oracle -- prompt 'does not equal the exact parent' against a required 'does not match the exact first parent' -- so a correct answer reds on spelling.",
+  "observation": "Three envelope-mismatch cases -- candidate, base, and tree -- were given exact-value oracles quoting English sentences that appear in no agent or skill definition, and each case prompt worded the relation differently from its own oracle: a prompt saying 'does not equal the exact parent' against an oracle requiring 'does not match the exact first parent'. A correct answer reds on spelling.",
   "owner": "fleet-maintainer",
   "promotion_state": "proposed",
   "reason": "Each such grader costs three clean-room sessions to discover and produces uninterpretable data until repaired; the rule is cheaper than the measurement.",
@@ -26,16 +26,16 @@
     "sources": [
       {
         "environment": "python-3.12/windows",
-        "observed_at": "2026-08-11T04:27:46.599519Z",
+        "observed_at": "2026-08-11T04:44:45.537338Z",
         "provenance": "verified",
         "revision": "3ee9c38",
         "source_kind": "review",
-        "source_reference": "PR #116 refs/pull/116/head 3ee9c38 evals/behavioral/contracts.json"
+        "source_reference": "PR #116 3ee9c38 evals/behavioral/contracts.json envelope cases"
       }
     ]
   },
   "retention": {
-    "expires_at": "2027-08-11T04:27:46.599519Z",
+    "expires_at": "2027-08-11T04:44:45.537338Z",
     "policy": "review-or-expire"
   },
   "review_history": [],
@@ -44,12 +44,12 @@
   "sensitivity_review": {
     "attestation_count": 1,
     "attested": true,
-    "last_attested_at": "2026-08-11T04:27:46.599519Z",
+    "last_attested_at": "2026-08-11T04:44:45.537338Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [
     {
-      "at": "2026-08-11T04:27:46.727853Z",
+      "at": "2026-08-11T04:44:45.666784Z",
       "destination": "evals/README.md grader-authoring guidance",
       "disposition": "add",
       "from": "quarantined",
@@ -58,5 +58,5 @@
       "to": "proposed"
     }
   ],
-  "updated_at": "2026-08-11T04:27:46.727853Z"
+  "updated_at": "2026-08-11T04:44:45.666784Z"
 }
