@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,6 +30,50 @@ VALID_AGENT = (
 
 
 class FleetValidatorTests(unittest.TestCase):
+    # Claude's per-session worktrees live INSIDE the repository root, so a `git add -A` sweeps
+    # one in as a 160000 gitlink. That happened on three commits (fbb142e, 31f6334, 62629b9)
+    # and stayed invisible until a release-tag dry-run surfaced it by hand: a gitlink with no
+    # .gitmodules entry is unusable, so clean clones and archives get an empty directory where
+    # a checkout should be, and nothing in the suite said a word.
+    # A literal line-presence check misses the case where a later rule negates the pattern; use
+    # `git check-ignore` to verify that the effective ignore decision is correct.
+    @unittest.skipUnless(
+        (REPO / ".git").exists() and shutil.which("git"),
+        "not a git checkout or git binary absent -- cannot check effective ignore",
+    )
+    def test_claude_worktrees_are_gitignored(self) -> None:
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", ".claude/worktrees/fake"],
+            cwd=REPO,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(
+            0,
+            result.returncode,
+            ".claude/worktrees/ is not effectively gitignored (check-ignore exit code != 0); "
+            "a later rule may be negating the pattern",
+        )
+
+    # Deliberately generalized past the incident: this repository has no submodules, so ANY
+    # tracked gitlink is the same defect. Scoped to `.claude/worktrees` it would go green the
+    # first time a host puts its transient checkouts somewhere else.
+    @unittest.skipUnless(
+        (REPO / ".git").exists() and shutil.which("git"),
+        "not a git checkout or git binary absent -- no index to inspect",
+    )
+    def test_no_gitlink_is_tracked_anywhere(self) -> None:
+        staged = subprocess.run(
+            ["git", "ls-files", "--stage"],
+            cwd=REPO,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(0, staged.returncode, staged.stderr)
+        gitlinks = [line for line in staged.stdout.splitlines() if line.startswith("160000 ")]
+        self.assertEqual([], gitlinks)
+
     def test_valid_fleet_and_generated_inventory(self) -> None:
         issues, _, _ = validate_fleet.validate_repo(FIXTURES / "valid")
         self.assertEqual([], issues)
