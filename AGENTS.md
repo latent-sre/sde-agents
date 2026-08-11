@@ -215,11 +215,14 @@ disposition.
   regenerated host adapters. Fill the rows you tripped.
 - **The automated review arrives after you open, not with it.** Copilot and Codex post two to five
   minutes behind `gh pr create`, so a PR reported finished at open is reported before its review
-  exists. Wait for both passes, then disposition every comment — applied, or declined with the
-  reason. Two rounds paid for this line: one PR merged four minutes after opening carried a P1 that
-  landed two minutes *after* the merge and cost a revert, and a later PR's unread comments included
-  a correct refutation of a claim that would otherwise have promoted an unsupported rule into this
-  file.
+  exists. Wait for both passes **on the current head**, then disposition every comment — applied,
+  or declined with the reason. Applying one writes new bytes, and the passes that cleared the
+  previous head never saw them: the last review-driven edit owes another wait, or the gate is
+  satisfiable by a review of code the fix already replaced. Three rounds paid for this line — a PR
+  merged four minutes after opening carried a P1 that landed two minutes *after* the merge and cost
+  a revert; a later PR's unread comments correctly refuted a claim that would otherwise have
+  promoted an unsupported rule into this file; and the head-binding clause exists because the first
+  draft of this very rule shipped with that loophole in it.
 
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.

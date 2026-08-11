@@ -11,8 +11,8 @@
     "source_kind": "review",
     "source_reference": "PR #116 3ee9c38 workflows/deep-review.js guard and scope dispatch"
   },
-  "expected_behavior": "A diagnostic states what was actually compared. Where it names an external authority as the source of truth, the check must have consulted that authority at the point of comparison rather than an earlier derived copy of it.",
-  "fingerprint": "27d1c60e325235024a4ade51c35f5de54b56d964dd718291d01d9b2f88111386",
+  "expected_behavior": "A diagnostic states what was actually compared. Where it names an external authority as the source of truth, the comparison is against a value independently obtained from that authority -- captured once and reused is fine -- never against a copy the compared party authored itself.",
+  "fingerprint": "658af4db4a571808f35f36f6e57ca5f9642447322e2727074ce2e26db29edf05",
   "freshness": {
     "as_of": "2026-08-11T04:44:45.241829Z",
     "review_at": "2026-09-10T04:44:45.241829Z"
