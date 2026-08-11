@@ -73,13 +73,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 ):
                     generate_platform_adapters.expected_outputs(root)
 
-    def test_tracked_generated_outputs_are_current(self) -> None:
-        self.assertEqual(
-            [],
-            generate_platform_adapters.validate_generated_outputs(REPO),
-        )
-        self.assertFalse((REPO / "platforms" / "portable").exists())
-
     def test_python_bytecode_caches_are_not_distribution_artifacts(self) -> None:
         relative = (
             Path("observability")

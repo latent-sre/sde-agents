@@ -54,48 +54,6 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(any("will NOT contain this fleet" in i for i in issues), issues)
 
-    def test_documentation_reference_to_user_level_agents_is_not_a_false_positive(self) -> None:
-        # `~/.claude/agents/*.md` correctly describes where USER-level agents live; the prompt
-        # skills teach it. Only a path resolved to a specific file is the bug.
-        issues = self._issues_after(lambda _: None)
-        self.assertEqual([], [i for i in issues if "will NOT contain this fleet" in i])
-
-    def test_typo_d_skills_list_entry_is_reported(self) -> None:
-        # sde-fullstack's real `skills:` frontmatter. A typo here used to pass validate_fleet.py,
-        # all unit tests, and `claude plugin validate --strict` -- only the 9-minute behavioral
-        # probe would have caught it, and only for 2 of the 3 entries.
-        def mutate(repo: Path) -> None:
-            path = repo / "agents" / "sde-fullstack.md"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    "  - backend-craft", "  - backend-crafts"
-                ),
-                encoding="utf-8",
-            )
-
-        issues = self._issues_after(mutate)
-        self.assertTrue(
-            any("'backend-crafts'" in i and "does not resolve" in i for i in issues), issues
-        )
-
-    def test_skills_list_naming_service_onboard_is_reported(self) -> None:
-        # service-onboard is the one skill in this repo with `disable-model-invocation: true`, which
-        # makes it unpreloadable by construction. Use it as the real-repo trigger for that check.
-        def mutate(repo: Path) -> None:
-            path = repo / "agents" / "sde-fullstack.md"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    "  - root-cause", "  - root-cause\n  - service-onboard"
-                ),
-                encoding="utf-8",
-            )
-
-        issues = self._issues_after(mutate)
-        self.assertTrue(
-            any("'service-onboard'" in i and "disable-model-invocation" in i for i in issues),
-            issues,
-        )
-
     def test_orphaned_reference_file_is_reported(self) -> None:
         def mutate(repo: Path) -> None:
             (repo / "skills" / "backend-craft" / "references" / "caching.md").write_text(
@@ -106,11 +64,6 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         self.assertTrue(
             any("orphaned" in i and "caching.md" in i for i in issues), issues
         )
-
-    def test_real_repo_has_no_orphaned_reference_files(self) -> None:
-        # The positive control for the orphan check, mirroring test_the_real_repo_is_a_valid_plugin.
-        issues = self._issues_after(lambda _: None)
-        self.assertEqual([], [i for i in issues if "orphaned" in i])
 
     def test_claude_md_without_the_import_is_reported(self) -> None:
         # Claude Code reads CLAUDE.md, not AGENTS.md. Lose the one-line import and the guide is

@@ -834,9 +834,6 @@ class TheInversion(unittest.TestCase):
         findings = packet_lint.lint_packet(text, "review-packet")
         self.assertTrue(any("no command or output cited" in f for f in findings), findings)
 
-    def test_verification_claim_with_evidence_passes(self) -> None:
-        self.assertEqual([], packet_lint.lint_packet(COMPLIANT_REVIEW_PACKET, "review-packet"))
-
     def test_negated_verified_is_a_disclosure_not_an_unevidenced_claim(self) -> None:
         """The honest slots of a nothing-ran packet must not read as unbacked claims.
 

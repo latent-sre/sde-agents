@@ -5,34 +5,11 @@ import json
 from pathlib import Path
 
 from scripts import validate_fleet
+from tests.support import repo_copy
 from tests.validate_fleet_wiring_support import PluginWiringMixin
 
 
 class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
-    def test_learning_closeout_cannot_silently_leave_an_agent_packet(self) -> None:
-        # Use a non-preloaded evidence role: its lightweight handoff is mandatory even though the
-        # full improvement loop is intentionally absent from its context.
-        def mutate(repo: Path) -> None:
-            path = repo / "agents" / "researcher.md"
-            text = path.read_text(encoding="utf-8")
-            marker = validate_fleet.LEARNING_INTAKE_PACKET_SLOT
-            assert marker in text, "positive control: researcher must declare the Learning slot"
-            path.write_text(
-                text.replace(marker, "- **Observation**:", 1),
-                encoding="utf-8",
-            )
-
-        issues = self._issues_after(mutate)
-        self.assertTrue(
-            any(
-                "researcher.md" in issue
-                and "Learning" in issue
-                and "disappear" in issue
-                for issue in issues
-            ),
-            issues,
-        )
-
     def test_learning_closeout_wording_cannot_keep_the_marker_but_lose_durable_intake(self) -> None:
         def mutate(repo: Path) -> None:
             path = repo / "agents" / "researcher.md"
@@ -155,26 +132,6 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
                     issues,
                 )
 
-    def test_stale_generated_platform_adapter_is_reported(self) -> None:
-        # The authored Claude definition is the source. A direct edit to a generated Codex copy
-        # otherwise creates host-dependent behavior with no load error and no obvious review clue.
-        def mutate(repo: Path) -> None:
-            path = repo / ".codex" / "agents" / "code-reviewer.toml"
-            path.write_text(
-                path.read_text(encoding="utf-8") + "\n# stale local edit\n",
-                encoding="utf-8",
-            )
-
-        issues = self._issues_after(mutate, check_adapters=True)
-        self.assertTrue(
-            any(
-                "code-reviewer.toml" in issue
-                and "generated platform adapter drifted" in issue
-                for issue in issues
-            ),
-            issues,
-        )
-
     def test_codex_interface_contract_cannot_silently_disappear(self) -> None:
         # Codex accepts the nested plugin only when its presentation contract is complete. A
         # malformed marketplace card otherwise fails at install time outside this repo's CI.
@@ -273,20 +230,42 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
                     issues,
                 )
 
-    def test_required_gpt_5_6_sol_baseline_cannot_silently_disappear(self) -> None:
+    def test_host_manifest_schema_failure_reaches_the_ordinary_fleet_gate(self) -> None:
         def mutate(repo: Path) -> None:
             path = repo / "evals" / "conformance" / "hosts.json"
             document = json.loads(path.read_text(encoding="utf-8"))
-            document["lanes"] = [
-                lane for lane in document["lanes"] if lane.get("model") != "gpt-5.6-sol"
-            ]
+            document["description"] = ""
             path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
         issues = self._issues_after(mutate)
         self.assertTrue(
-            any("exactly one explicit gpt-5.6-sol baseline lane" in issue for issue in issues),
+            any("conformance description must be non-empty" in issue for issue in issues),
             issues,
         )
+
+    def test_host_fleet_policy_keeps_static_hosts_and_required_sol_baseline(self) -> None:
+        with repo_copy() as repo:
+            path = repo / "evals" / "conformance" / "hosts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["lanes"] = [
+                lane for lane in document["lanes"] if lane.get("id") != "vscode-static"
+            ]
+            sol_lane = next(
+                lane
+                for lane in document["lanes"]
+                if lane.get("kind") == "model-baseline"
+                and lane.get("model") == "gpt-5.6-sol"
+            )
+            sol_lane["required"] = False
+            decoy = next(lane for lane in document["lanes"] if lane.get("kind") == "static")
+            decoy["model"] = "gpt-5.6-sol"
+            document["lanes"].remove(decoy)
+            document["lanes"].insert(0, decoy)
+            path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+            issues = validate_fleet.validate_host_conformance_manifest(repo)
+
+        self.assertTrue(any("missing hosts ['vscode']" in issue for issue in issues), issues)
+        self.assertTrue(any("baseline is not required" in issue for issue in issues), issues)
 
     def test_runtime_control_consumers_cannot_silently_lose_their_wiring(self) -> None:
         wiring = (

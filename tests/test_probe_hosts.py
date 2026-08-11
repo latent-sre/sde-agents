@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import unittest
+from unittest import mock
 
 from scripts import probe_hosts
 from tests.support import REPO
@@ -156,6 +157,36 @@ class ProbeHostsTests(unittest.TestCase):
             which=lambda command: None,
         )
         self.assertEqual("skip", discovery["results"][0]["verdict"])
+
+    def test_global_adapter_validation_runs_once_for_all_static_lanes(self) -> None:
+        with (
+            mock.patch.object(
+                probe_hosts.generate_platform_adapters,
+                "validate_platform_contracts",
+                return_value=["shared contract drift"],
+            ) as contracts,
+            mock.patch.object(
+                probe_hosts.generate_platform_adapters,
+                "validate_generated_outputs",
+                return_value=[],
+            ) as outputs,
+        ):
+            report = probe_hosts.run_manifest(
+                REPO,
+                self.manifest,
+                lane_pattern="*-static",
+            )
+
+        self.assertEqual(1, contracts.call_count)
+        self.assertEqual(1, outputs.call_count)
+        self.assertEqual(4, len(report["results"]))
+        self.assertTrue(all(result["verdict"] == "fail" for result in report["results"]))
+        self.assertTrue(
+            all(
+                "shared contract drift" in result["details"]["issues"]
+                for result in report["results"]
+            )
+        )
 
     def test_readable_plugin_inventory_without_fleet_is_inconclusive(self) -> None:
         def runner(argv, cwd, timeout):

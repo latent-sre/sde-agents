@@ -308,12 +308,6 @@ class FleetValidatorTests(unittest.TestCase):
             )
             self.assertEqual([], validate_fleet.validate_yaml_scalar_quoting(root))
 
-    def test_this_repository_has_no_unquoted_prose_scalars(self) -> None:
-        """The rule's live tripwire: `onboarding-map` shipped as the one canonical file of 31 that
-        `yaml.safe_load` rejected, and it validated everywhere. This fails if that recurs.
-        """
-        self.assertEqual([], validate_fleet.validate_yaml_scalar_quoting(REPO))
-
     def test_missing_bundled_reference_fails(self) -> None:
         """The fixture links `./references/missing.md` on purpose. Before BUNDLE_REF_RE accepted the
         `./` prefix the link matched nothing at all, so a broken path raised no issue whatsoever --

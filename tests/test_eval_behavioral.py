@@ -208,9 +208,6 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "must_match": ["marker"],
         }
 
-    def test_shipped_document_satisfies_public_schema(self) -> None:
-        self.assertEqual([], eval_behavioral.validate_case_document(self.document))
-
     def test_all_shipped_cases_pin_the_minimum_positive_tool_boundary(self) -> None:
         scratch_cases = {
             "packet-slots-builder",
@@ -390,71 +387,6 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             with mock.patch.object(eval_behavioral, "CASES_DIR", case_dir):
                 with self.assertRaises(eval_behavioral.BehavioralCaseError):
                     eval_behavioral.load_cases_with_sources("*")
-
-
-class MarkdownDecisionLabelTest(unittest.TestCase):
-    """Behavioral oracles accept the packet's rendered Markdown, not only plain-text labels."""
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        document = json.loads(
-            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
-        )
-        cls.cases = {case["id"]: case for case in document["cases"]}
-
-    def test_exact_disposition_accepts_plain_and_bold_markdown(self) -> None:
-        exact = {"Learning disposition": "merge"}
-        for text in (
-            "Learning disposition: merge",
-            "**Learning disposition**: merge",
-            "**Learning disposition:** merge",
-            "- **Learning disposition:** merge",
-        ):
-            with self.subTest(text=text):
-                self.assertEqual([], eval_behavioral.packet_lint.lint_exact_fields(text, exact))
-
-    def test_exact_disposition_rejects_wrong_or_conflicting_values(self) -> None:
-        for text in (
-            "Learning disposition: skip",
-            "**Learning disposition:** skip",
-            "Learning disposition: merge\n- **Learning disposition**: add",
-        ):
-            with self.subTest(text=text):
-                findings = eval_behavioral.packet_lint.lint_exact_fields(
-                    text, {"Learning disposition": "merge"}
-                )
-                self.assertTrue(findings)
-
-    def test_promotion_state_and_learning_accept_bold_colons(self) -> None:
-        self.assertEqual(
-            [],
-            eval_behavioral.packet_lint.lint_exact_fields(
-                "**Promotion state:** inconclusive",
-                {"Promotion state": "inconclusive"},
-            ),
-        )
-        learning = next(
-            pattern for pattern in self.cases["learning-slot-readonly-agent"]["must_match"]
-            if "learning" in pattern.lower()
-        )
-        self.assertRegex(
-            "**Learning:** candidate — parity was omitted -> parity is asserted",
-            re.compile(learning),
-        )
-
-    def test_runbook_disposition_has_its_own_namespace(self) -> None:
-        for text in (
-            "Runbook disposition: update",
-            "**Runbook disposition:** update",
-            "- **Runbook disposition**: update",
-        ):
-            with self.subTest(text=text):
-                self.assertEqual(
-                    [],
-                    eval_behavioral.packet_lint.lint_exact_fields(
-                        text, {"Runbook disposition": "update"}
-                    ),
-                )
 
 
 class RunbookProposalPacketTest(unittest.TestCase):

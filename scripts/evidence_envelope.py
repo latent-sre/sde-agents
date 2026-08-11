@@ -90,17 +90,6 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def artifact_record(path: Path, *, display_path: str | None = None) -> dict[str, object]:
-    stat = path.stat()
-    if not path.is_file():
-        raise ValueError(f"evidence artifact is not a regular file: {path}")
-    return {
-        "path": display_path or str(path),
-        "sha256": sha256_file(path),
-        "size": stat.st_size,
-    }
-
-
 def _default_environment() -> dict[str, str]:
     return {
         "platform": platform.platform(),

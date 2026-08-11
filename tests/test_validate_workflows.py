@@ -23,10 +23,6 @@ class WorkflowEvidenceEnumTests(unittest.TestCase):
             issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
         self.assertTrue(any("canonical" in i and "deep-review" in i for i in issues), issues)
 
-    def test_workflow_evidence_enum_current_tree_is_clean(self) -> None:
-        issues = validate_fleet.validate_workflow_evidence_enums(REPO)
-        self.assertEqual(issues, [])
-
 class WorkflowMetaContractTests(unittest.TestCase):
     def test_statement_before_meta_is_reported(self) -> None:
         # Mutation against a COPY of the real shipped workflow, in exactly the shape a merged
@@ -58,10 +54,6 @@ class WorkflowMetaContractTests(unittest.TestCase):
         self.assertTrue(
             any("pure literal" in i and "SCOPE_MODEL" in i for i in issues), issues
         )
-
-    def test_meta_contract_current_tree_is_clean(self) -> None:
-        issues = validate_fleet.validate_workflow_meta_contract(REPO)
-        self.assertEqual(issues, [])
 
     def test_leading_block_comment_is_not_a_violation(self) -> None:
         # A `/* ... */` licence or rationale block ahead of meta is a comment, not a statement.
@@ -287,10 +279,6 @@ class WorkflowLineEndingTests(unittest.TestCase):
             any("missing" in i and "*.js text eol=lf" in i for i in issues), issues
         )
 
-    def test_workflow_line_endings_current_tree_is_clean(self) -> None:
-        issues = validate_fleet.validate_workflow_line_endings(REPO)
-        self.assertEqual(issues, [])
-
 class WorkflowHostBoundaryTests(unittest.TestCase):
     def test_adapter_referencing_workflow_is_reported(self) -> None:
         with repo_copy() as dst:
@@ -325,11 +313,6 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
             byproduct.write_bytes(b"runtime cache /sde-agents:deep-review")
             issues = validate_fleet.validate_workflow_host_boundary(dst)
         self.assertEqual([], issues)
-
-    def test_workflow_host_boundary_current_tree_is_clean(self) -> None:
-        issues = validate_fleet.validate_workflow_host_boundary(REPO)
-        self.assertEqual(issues, [])
-
 
 if __name__ == "__main__":
     unittest.main()

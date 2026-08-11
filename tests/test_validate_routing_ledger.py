@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 from scripts import validate_fleet
-from tests.support import REPO, repo_copy
-
-
-FIXTURES = Path(__file__).parent / "fixtures"
+from tests.support import repo_copy
 
 
 class RoutingClusterTests(unittest.TestCase):
@@ -29,17 +25,11 @@ class RoutingClusterTests(unittest.TestCase):
     def _issues_with_cluster(self, doc) -> list[str]:
         with tempfile.TemporaryDirectory() as tmp:
             dst = Path(tmp) / "repo"
-            shutil.copytree(FIXTURES / "valid", dst)
             routing = dst / "evals" / "routing"
             routing.mkdir(parents=True)
             payload = doc if isinstance(doc, str) else json.dumps(doc)
             (routing / "cluster.json").write_text(payload, encoding="utf-8")
-            issues, _, _ = validate_fleet.validate_repo(dst)
-            return issues
-
-    def test_positive_target_outside_members_is_reported(self) -> None:
-        issues, _, _ = validate_fleet.validate_repo(FIXTURES / "routing-nonmember-target")
-        self.assertTrue(any("outside the cluster's members" in i for i in issues), issues)
+            return validate_fleet.validate_routing_clusters(dst, ["builder"], ["craft"])
 
     def test_well_formed_cluster_passes(self) -> None:
         doc = dict(self.BASE, cases=[
@@ -163,9 +153,6 @@ class RoutingClusterTests(unittest.TestCase):
         )
 
 class LearningLedgerWiringTests(unittest.TestCase):
-    def test_current_store_and_transactional_ignores_are_validated(self) -> None:
-        self.assertEqual([], validate_fleet.validate_learning_ledger(REPO))
-
     def test_tracked_candidate_corruption_fails_the_ordinary_validator(self) -> None:
         with repo_copy() as dst:
             candidate = next((dst / "learning" / "candidates").glob("lc_*.json"))

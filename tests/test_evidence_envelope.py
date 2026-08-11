@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import copy
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from scripts import evidence_envelope
 
@@ -80,15 +78,6 @@ class EvidenceEnvelopeTests(unittest.TestCase):
             "unknown evidence fields",
         ):
             evidence_envelope.validate_envelope(unknown)
-
-    def test_artifact_record_binds_bytes_and_size(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "result.txt"
-            path.write_bytes(b"evidence\n")
-            record = evidence_envelope.artifact_record(path, display_path="result.txt")
-        self.assertEqual("result.txt", record["path"])
-        self.assertEqual(9, record["size"])
-        self.assertRegex(record["sha256"], r"^[0-9a-f]{64}$")
 
     def test_context_identifiers_are_bounded(self) -> None:
         envelope = self._valid()

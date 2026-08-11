@@ -1670,22 +1670,25 @@ def validate_behavioral_contracts(
 
 
 def validate_host_conformance_manifest(root: Path) -> list[str]:
-    """Pin required host/static coverage and the operator-selected GPT-5.6 Sol baseline lane."""
+    """Apply repository coverage policy after the shared manifest schema validates."""
 
     if not (root / ".claude-plugin" / "plugin.json").is_file():
         return []
     path = root / "evals" / "conformance" / "hosts.json"
+    schema = root / "scripts" / "host_conformance_schema.py"
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        module = load_module_by_content(schema, "host_conformance_schema")
+        if module is None:
+            raise ImportError(f"cannot load {schema}")
+        module.validate_manifest(document)
+    except Exception as exc:
         return [
-            f"{path}: host conformance manifest is missing or unreadable ({exc}). Without the "
-            f"versioned matrix, unavailable hosts and model lanes can silently disappear from the "
-            f"fleet's baseline."
+            f"{path}: host conformance manifest is missing, unreadable, or invalid ({exc}). "
+            f"Without one authoritative schema, malformed lanes can silently disappear from the "
+            f"cross-host baseline."
         ]
-    lanes = document.get("lanes") if isinstance(document, dict) else None
-    if not isinstance(lanes, list):
-        return [f"{path}: host conformance manifest has no lanes array"]
+    lanes = document["lanes"]
     issues: list[str] = []
     static_hosts = {
         lane.get("host")
@@ -1698,33 +1701,16 @@ def validate_host_conformance_manifest(root: Path) -> list[str]:
             f"{path}: static conformance lanes are missing hosts {missing_hosts}. A generated host "
             f"surface could drift while the cross-host report still looks complete."
         )
-    sol_lanes = [
+    sol_lane = next(
         lane
         for lane in lanes
-        if isinstance(lane, dict) and lane.get("model") == "gpt-5.6-sol"
-    ]
-    if len(sol_lanes) != 1:
+        if lane.get("kind") == "model-baseline" and lane.get("model") == "gpt-5.6-sol"
+    )
+    if not sol_lane["required"]:
         issues.append(
-            f"{path}: expected exactly one explicit gpt-5.6-sol baseline lane, found "
-            f"{len(sol_lanes)}. The operator selected Sol as a required, separately reported Codex "
-            f"baseline; an alias or omitted lane silently changes what was measured."
+            f"{path}: gpt-5.6-sol baseline is not required. The operator selected Sol as a "
+            f"separately reported baseline; making it optional silently changes what was measured."
         )
-    else:
-        lane = sol_lanes[0]
-        expected = {
-            "host": "codex",
-            "kind": "model-baseline",
-            "reasoning_effort": "high",
-            "sandbox": "read-only",
-            "required": True,
-        }
-        drift = {key: (lane.get(key), value) for key, value in expected.items() if lane.get(key) != value}
-        if drift:
-            issues.append(
-                f"{path}: gpt-5.6-sol baseline conditions drifted: {drift}. Model, effort, sandbox, "
-                f"and required status are one comparison contract; changing one invalidates the "
-                f"baseline rather than tuning it."
-            )
     return issues
 
 

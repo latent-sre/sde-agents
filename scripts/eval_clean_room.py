@@ -77,10 +77,6 @@ class AuthUnavailable(RuntimeError):
     """The harness cannot authenticate and therefore cannot produce a measurement."""
 
 
-class RunnerFailed(RuntimeError):
-    """A model run did not reach a successful structured result event."""
-
-
 def user_config_dir() -> Path:
     return Path(os.environ.get("CLAUDE_CONFIG_DIR") or (Path.home() / ".claude"))
 
@@ -198,10 +194,10 @@ def result_event(transcript: str) -> dict | None:
 def raise_if_auth_failed(transcript: str, returncode: int, stderr: str = "") -> None:
     """Raise AuthUnavailable when this failed CLI run carries an authentication signature.
 
-    This is narrower than ``validate_completed_run`` so routing can reuse the classification
-    without discarding its intentional measurement case: a non-error result event paired with a
-    non-zero CLI exit. It keys off the run's own stream; a separate auth-status preflight can be
-    stale relative to the API request.
+    Authentication classification stays separate from runner completion policy so routing can
+    retain its intentional measurement case: a non-error result event paired with a non-zero CLI
+    exit. It keys off the run's own stream; a separate auth-status preflight can be stale relative
+    to the API request.
     """
     event = result_event(transcript)
     # Routing deliberately keeps a completed, non-error result as a measurement even when the CLI
@@ -212,23 +208,3 @@ def raise_if_auth_failed(transcript: str, returncode: int, stderr: str = "") -> 
     evidence = "\n".join((json.dumps(event or {}), stderr or "", transcript or "")).casefold()
     if any(marker in evidence for marker in AUTH_MARKERS):
         raise AuthUnavailable("Claude authentication failed during the eval; refresh /login and rerun")
-
-
-def validate_completed_run(transcript: str, returncode: int, stderr: str = "") -> dict:
-    """Return the successful result event or raise RunnerFailed/AuthUnavailable.
-
-    A tool invocation, partial transcript, timeout, non-zero exit, or `is_error` result is not a
-    measurement. In particular, it must never make a negative routing case pass vacuously.
-    """
-    event = result_event(transcript)
-    event_text = json.dumps(event or {})
-    # Keep auth classification reusable by runners with different completion semantics rather than
-    # duplicating marker scans at each call site.
-    raise_if_auth_failed(transcript, returncode, stderr)
-    if returncode != 0:
-        raise RunnerFailed(f"Claude exited {returncode}: {(stderr or '')[:180]}")
-    if event is None:
-        raise RunnerFailed("Claude exited without a structured result event")
-    if event.get("is_error"):
-        raise RunnerFailed(f"Claude result event reported an error: {event_text[:220]}")
-    return event
