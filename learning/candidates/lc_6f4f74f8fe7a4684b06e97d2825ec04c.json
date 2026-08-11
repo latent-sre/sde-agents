@@ -11,8 +11,8 @@
     "source_kind": "review",
     "source_reference": "PR #119 be1bd0b builder session reading a parked shared checkout"
   },
-  "expected_behavior": "Before reading a working tree as a named base, confirm git rev-parse HEAD is that base AND the tree is clean -- a matching HEAD over staged, unstaged, or untracked changes still yields bytes the revision does not contain. Where either is unavailable, read blobs from the revision itself with git show <rev>:<path>.",
-  "fingerprint": "911401957675da0ae20c59193f55259dcedbe25f3c8670c97652a88b4e2bb9ff",
+  "expected_behavior": "Before reading a working tree as a named base, confirm git rev-parse HEAD is that base AND the tree is clean for the paths being read -- a matching HEAD over staged, unstaged, or untracked changes still yields bytes the revision does not contain, and a default git status --porcelain omits ignored files, so a clean report does not cover an ignored path a reader may still consume. Where the target may be ignored, or either check is unavailable, read blobs from the revision itself with git show <rev>:<path>.",
+  "fingerprint": "d22433c1444d925fb93da4610fbef4cf393f5048df8c4725999dfdd8320cd64a",
   "freshness": {
     "as_of": "2026-08-11T04:44:45.944585Z",
     "review_at": "2026-09-10T04:44:45.834606Z"
