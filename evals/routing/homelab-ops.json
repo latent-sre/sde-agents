@@ -430,7 +430,7 @@
         "onboarding-map",
         "homelab-platform"
       ],
-      "expected_output": "A discovery question, not a change request \u2014 onboarding-map names the workflows and their order, or homelab-platform (which owns them) answers directly. LANE-001's headline case: reaching the workflow must not require already knowing its name. service-onboard firing instead shows in also_fired and is a near-miss, not a pass \u2014 activating a live-change checklist answers a question nobody asked.",
+      "expected_output": "A discovery question, not a change request \u2014 onboarding-map names the workflows and their order, or homelab-platform (which owns them) answers directly. LANE-001's headline case: reaching the workflow must not require already knowing its name. service-onboard firing here is a near-miss worth recording \u2014 activating a live-change checklist answers a question nobody asked \u2014 but no field of the verdict flags it: it is a cluster member, and also_fired lists only non-members, so fired_per_run is where it surfaces.",
       "tags": [
         "onboarding-map",
         "discovery"
@@ -445,7 +445,7 @@
         "homelab-platform",
         "host-onboard"
       ],
-      "expected_output": "Two lifecycles in one request (issue #61 case 3) \u2014 the machine first via host-onboard, the service separately via service-onboard. Graded on reaching the ordering answer at all; the transcript check is that the host comes first and the two stay sequenced rather than fanning out in parallel. service-onboard alone, with no host step, is the near-miss.",
+      "expected_output": "Two lifecycles in one request (issue #61 case 3) \u2014 the machine first via host-onboard, the service separately via service-onboard. The runner grades firing only, any-of: homelab-platform firing alone passes this case. That the host comes first and the two stay sequenced is the writer's intent behind the prompt, not a graded condition — nothing automated reads it, so service-onboard alone with no host step is a near-miss only to someone reading the transcript.",
       "tags": [
         "onboarding-map",
         "host-onboard",

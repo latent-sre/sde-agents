@@ -1,6 +1,6 @@
 ---
 name: onboarding-map
-description: "Maps the fleet's explicit-only onboarding workflows without running them: which exist (sde-agents:service-onboard for a new or ad-hoc service, sde-agents:host-onboard for a new or rebuilt machine), the order — host first, then the services on it — and how to reach each on the current host. Use when someone asks whether an onboarding checklist or workflow exists, how to start onboarding a service or a host, or states new-service or new-host intent on a host where no routing agent is reachable. Recommending is not executing: the checklists run under sde-agents:homelab-platform's change tiers, and this map changes nothing and grants nothing. Not for performing the onboarding or any lab change — use sde-agents:homelab-platform — and not for auditing an existing setup, which is sde-agents:lab-audit."
+description: "Maps the fleet's explicit-only onboarding workflows without running them: which exist (sde-agents:service-onboard for a new or ad-hoc service, sde-agents:host-onboard for a new or rebuilt machine), the order — host first, then the services on it — and how to reach each on the current host. Use when someone asks whether an onboarding checklist or workflow exists, how to start onboarding a service or a host, or states new-service or new-host intent on a host where no routing agent is reachable. Recommending is not executing: the checklists run under sde-agents:homelab-platform's change tiers, and this map changes nothing and grants nothing. Not for performing the onboarding or any lab change — use sde-agents:homelab-platform — and not for auditing an existing setup, which is sde-agents:lab-audit for hygiene or sde-agents:security-audit for the adversary's view."
 argument-hint: [what you are adding — a service, a host, or both]
 ---
 
@@ -41,6 +41,6 @@ Plain language to `sde-agents:homelab-platform` — "add this service to my lab"
 VM" — is the intended route: it owns change authority and works both checklists under its tiers.
 Naming the workflow directly, `/sde-agents:host-onboard` or `/sde-agents:service-onboard`, is the
 fallback, and it is the *only* route on a host that neither delegates to an agent by description
-nor lists explicit-only workflows to the model. The plugin README's per-host install sections
-carry the exact invocation syntax for each host; when the plain-language route does not surface
-these workflows, say the workflow's name.
+nor lists explicit-only workflows to the model. The sigil differs by host, and the copy of this
+map installed on a host is written in that host's own form — so when the plain-language route does
+not surface these workflows, say the workflow's name exactly as it appears above.
