@@ -198,7 +198,7 @@ small receipts. The paired evaluator change keeps six cases by replacing the rev
 with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
 byte-checked, grades captured regular-file bytes, and records artifact hashes/results.
 Red-before-green controls,
-T0, all 103 behavioral-evaluator tests, all 656 tests across 30 modules, and
+T0, all 104 behavioral-evaluator tests, all 659 tests across 30 modules, and
 `claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
 unaccepted.
 

@@ -167,17 +167,25 @@ def _check_existing_ancestors(path: Path) -> None:
         _checked_stat(current)
 
 
-def _read_regular_file(path: Path) -> bytes:
-    """Read bytes without accepting links, special files, or a file changed during the read."""
+def _read_regular_file(path: Path, *, max_bytes: int | None = None) -> bytes:
+    """Read bytes without links, special files, unbounded input, or mid-read changes."""
     path = _absolute_without_resolving(path)
     _check_existing_ancestors(path)
     before = _checked_stat(path)
     if not stat.S_ISREG(before.st_mode):
         raise ProvenanceError(f"provenance input is not a regular file: {path}")
+    if max_bytes is not None and before.st_size > max_bytes:
+        raise ProvenanceError(f"provenance input exceeds {max_bytes} bytes: {path}")
     try:
-        content = path.read_bytes()
+        if max_bytes is None:
+            content = path.read_bytes()
+        else:
+            with path.open("rb") as stream:
+                content = stream.read(max_bytes + 1)
     except OSError as exc:
         raise ProvenanceError(f"cannot read provenance input {path}: {exc}") from exc
+    if max_bytes is not None and len(content) > max_bytes:
+        raise ProvenanceError(f"provenance input exceeds {max_bytes} bytes: {path}")
     after = _checked_stat(path)
     before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
     after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
@@ -685,7 +693,8 @@ def _string_values(obj) -> list[str]:
 
 def transcript_stats(stdout: str) -> dict:
     """Measurement conditions read off one stream-json transcript:
-    {input_tokens, output_tokens, duration_ms, model, completed, result_error, fleet_registered}.
+    {input_tokens, output_tokens, duration_ms, model, completed, result_error, init_observed,
+    fleet_registered}.
 
     Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
     baseline, and two parsers would eventually disagree about one transcript — so this is the one
@@ -695,6 +704,7 @@ def transcript_stats(stdout: str) -> dict:
     input_tokens = output_tokens = duration = model = None
     completed = False
     result_error = False
+    init_observed = False
     fleet_registered = False
     for line in stdout.splitlines():
         try:
@@ -704,6 +714,7 @@ def transcript_stats(stdout: str) -> dict:
         if not isinstance(event, dict):
             continue
         if event.get("type") == "system" and event.get("subtype") == "init":
+            init_observed = True
             agents = event.get("agents")
             fleet_registered = fleet_registered or (
                 isinstance(agents, list)
@@ -737,7 +748,8 @@ def transcript_stats(stdout: str) -> dict:
                 model = candidate
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
             "duration_ms": duration, "model": model, "completed": completed,
-            "result_error": result_error, "fleet_registered": fleet_registered}
+            "result_error": result_error, "init_observed": init_observed,
+            "fleet_registered": fleet_registered}
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
@@ -799,6 +811,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
 
     fired = sorted(components_fired(stdout))
     registered = stats["fleet_registered"]
+    init_observed = stats["init_observed"]
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
     # reached its non-error `result` event routed somewhere — possibly off the fleet entirely, which
     # is a real negative sample and a real positive miss — even if the CLI then exited non-zero;
@@ -810,7 +823,7 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     # rule applies to an error result: a component call observed before the error is real, but the
     # error result's silence can never green a negative.
     usable = bool(fired) or session_completed
-    if usable and not registered:
+    if not registered and (init_observed or usable):
         raise EvalRegistrationUnavailable(
             "system/init did not register a known namespaced sde-agents agent; "
             "--plugin-dir did not load the fleet under test"

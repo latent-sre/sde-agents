@@ -289,6 +289,20 @@ class HandoffFunctionalWorkspaceTest(unittest.TestCase):
         self.assertTrue(any("trusted verifier changed" in failure for failure in failures))
         self.assertIsNone(evidence["verifier_exit"])
 
+    def test_oversized_artifact_is_rejected_before_open(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            artifact = cwd / "openbao.json"
+            with artifact.open("wb") as stream:
+                stream.truncate(eval_behavioral._SEMANTIC_FILE_LIMIT + 1)
+
+            with mock.patch.object(
+                Path,
+                "open",
+                side_effect=AssertionError("oversized artifact was opened"),
+            ), self.assertRaisesRegex(eval_routing.ProvenanceError, "exceeds"):
+                eval_behavioral._semantic_regular_file(cwd, "openbao.json")
+
     def test_text_only_semantic_oracle_does_not_create_or_grade_a_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

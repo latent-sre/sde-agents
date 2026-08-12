@@ -356,6 +356,37 @@ class CodexRuntimeContractTest(unittest.TestCase):
                         scratch_root=root / "scratch",
                     )
 
+    def test_timeout_capacity_failure_aborts_from_partial_streams(self) -> None:
+        variants = (
+            (
+                "structured stdout",
+                json.dumps({
+                    "type": "turn.failed",
+                    "error": {"type": "usage_limit_reached", "message": "unavailable"},
+                }),
+                "",
+            ),
+            ("stderr marker", "", "You have reached your usage limit"),
+        )
+        for label, stdout, stderr in variants:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                failure = eval_codex_runtime.subprocess.TimeoutExpired(
+                    cmd=["codex"], timeout=20, output=stdout, stderr=stderr
+                )
+                with mock.patch.object(
+                    eval_codex_runtime.subprocess, "run", side_effect=failure
+                ), self.assertRaises(eval_codex_runtime.SessionUnavailable):
+                    eval_codex_runtime.run_session(
+                        "task prompt",
+                        20,
+                        agent="sde-agents:homelab-platform",
+                        developer_instructions="Exact role instructions.",
+                        model="gpt-5.6-terra",
+                        reasoning_effort="medium",
+                        executable="codex",
+                        scratch_root=Path(tmp) / "scratch",
+                    )
+
     def test_cli_version_is_pinned_before_sessions(self) -> None:
         proc = mock.Mock(returncode=0, stdout="codex-cli 0.148.0\n", stderr="")
         with mock.patch.object(eval_codex_runtime.subprocess, "run", return_value=proc):

@@ -143,12 +143,7 @@ def prepare_semantic_workspace(cwd: Path, semantic_oracle: str | None) -> None:
 
 
 def _semantic_regular_file(cwd: Path, name: str) -> bytes:
-    content = eval_routing._read_regular_file(cwd / name)
-    if len(content) > _SEMANTIC_FILE_LIMIT:
-        raise eval_routing.ProvenanceError(
-            f"functional artifact exceeds {_SEMANTIC_FILE_LIMIT} bytes: {name}"
-        )
-    return content
+    return eval_routing._read_regular_file(cwd / name, max_bytes=_SEMANTIC_FILE_LIMIT)
 
 
 def evaluate_semantic_workspace(

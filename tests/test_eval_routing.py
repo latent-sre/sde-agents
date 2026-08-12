@@ -408,6 +408,12 @@ class RunUsabilityTest(unittest.TestCase):
         with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
             self._run_with_stdout(stdout, returncode=0, registered=False)
 
+    def test_unregistered_init_without_usable_transcript_aborts(self) -> None:
+        stdout = fleet_registration_transcript("personal-agent")
+
+        with self.assertRaises(eval_routing.EvalRegistrationUnavailable):
+            self._run_with_stdout(stdout, registered=False)
+
     def test_unknown_namespaced_agent_does_not_prove_fleet_registration(self) -> None:
         stdout = "\n".join(
             (

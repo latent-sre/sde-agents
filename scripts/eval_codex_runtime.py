@@ -418,7 +418,10 @@ def run_session(
             )
     except subprocess.TimeoutExpired as exc:
         duration = round((time.monotonic() - started) * 1000)
-        parsed = parse_jsonl(_partial_text(exc.stdout))
+        stdout = _partial_text(exc.stdout)
+        stderr = _partial_text(exc.stderr)
+        parsed = parse_jsonl(stdout)
+        _raise_if_unavailable(parsed, _diagnostic_lines(stdout), stderr)
         stats = _stats(parsed, duration)
         return "", {bare}, f"timed out after {timeout}s before the session concluded", stats
     except (OSError, subprocess.SubprocessError) as exc:
