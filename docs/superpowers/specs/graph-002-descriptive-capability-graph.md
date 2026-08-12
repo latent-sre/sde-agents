@@ -106,9 +106,30 @@ definition or generated adapter is touched, so no regeneration is owed on revert
 ## External check (2026-08-12)
 
 A fresh external sweep of the "graph engineering" discourse and the decision's reopen-trigger
-maturity conditions (Claude Code workflow cross-session resume, first-party workflow dogfooding,
-a stable workflow-agent hook contract, host-neutral workflow standards) was commissioned with
-this draft; its dated findings land in this section before the spec goes to the operator for
-approval. Standing rule either way: if the sweep finds cross-session durable resume or a
-host-neutral workflow standard, the correct response is a decision amendment, not a wider
-GRAPH-002 — this spec's boundary stays descriptive-only.
+maturity conditions ran with this draft (2026-08-12). Findings, labeled per the decision's
+convention:
+
+- **No reopen trigger fires.** [verified] Claude Code workflow resume remains session-scoped —
+  the official workflows doc still states "If you exit Claude Code while a workflow is running,
+  the next session starts the workflow fresh" (code.claude.com/docs/en/workflows, fetched
+  2026-08-12). [verified] The changelog through CLI 2.1.228 shows only workflow hardening since
+  the probe-verified 2.1.220: a 2.1.223 sandbox fix (dynamic `import()` escape closed) and a
+  restricted-subagent-model warning. No hook contract for workflow-spawned agents was documented.
+- **No host-neutral workflow standard emerged.** [sourced] The four supported hosts diverged
+  further in this window (Claude workflows, Copilot `/fleet` and saveable agent workflows, Codex
+  0.147.0 portable Agent Plugins, ADK Go 2.0's graph runtime); A2A v1.0 (April 2026) remains
+  server-side, absent from local CLI hosts.
+- **The term consolidated as a label, not a discipline.** [sourced] LangChain's "3 Years of
+  Graph Engineering with LangGraph" (~2026-07-22) adopted the phrase while framing it as a
+  rebrand of existing LangGraph practice; no Anthropic publication uses the term, so the
+  decision's misattribution finding stands. Secondary content-farm coverage continues through
+  mid-August.
+- **One watch-signal, below the trigger bar.** [unverified] arXiv 2608.02353 (early Aug 2026)
+  claims offline workflow-graph optimization beats prior optimizers with gains that transfer
+  across executors — a single unreplicated result read only via search summaries. The
+  offline-optimization trigger requires repeatable gains on this repository's own eval bank;
+  re-check if independent replication appears.
+
+Standing rule: had the sweep found cross-session durable resume or a host-neutral standard, the
+correct response would be a decision amendment, not a wider GRAPH-002 — this spec's boundary
+stays descriptive-only.
