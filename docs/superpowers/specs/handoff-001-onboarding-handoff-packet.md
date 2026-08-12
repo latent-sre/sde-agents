@@ -21,8 +21,9 @@ supply the complete field-derived section list below.
 One work-order template in canonical source, owned by `sde-agents:homelab-platform` (it owns scope
 and authority), emitted before implementation crosses contexts. The main Claude coordinator
 preserves the exact block, computes its digest, and supplies both to the builder. The builder
-returns the ID/digest receipt or a field-named input-required receipt; it does not spend a second
-copy of the context repeating the work order. Sections, all field-derived:
+recomputes that digest before returning the ID/digest receipt or a field-named input-required
+receipt; it does not spend a second copy of the context repeating the work order. Sections, all
+field-derived:
 
 1. Task identity and the bounded deliverable.
 2. Fixed operator decisions.
@@ -53,11 +54,12 @@ copy of the context repeating the work order. Sections, all field-derived:
 
 - [ ] Issue #60's paired evals under identical conditions: the known-failed-assumption fixture no
       longer regresses; staged-artifact-with-live-blockers stays safe; artifact-containing response
-      improves with no missed gates; proportionality holds on a simple service; the adverse
-      authority case names the approval gate.
+      improves with no missed gates; proportionality holds on a simple service; a mismatched digest
+      stops the builder before editing without rejecting an honest source-free `none`.
 - [ ] Added fixtures from the closeouts: check-mode-skipped-probe (dry run not treated as
-      evidence), independently verified builder end state, an authority-conflict receipt, and
-      vaulted-variables discovery (only non-secret fields enter the work order).
+      evidence), independently verified builder end state, a digest-mismatch receipt that accepts
+      source-free `none`, and vaulted-variables discovery (only non-secret fields enter the work
+      order).
 - [ ] Adapters regenerated with parity green; validator and tests green; documentation states
       when the packet is required and when it is ceremony.
 - [ ] Issue #60 updated with measured baseline/candidate evidence.

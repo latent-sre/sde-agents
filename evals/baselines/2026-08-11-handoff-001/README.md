@@ -94,6 +94,9 @@ identity differed: baseline `4777df9`, candidate `ff51f42`.
 | Baseline | `6308507C365253BA097CF25779BF1D6FF9EF7E825B0243AF80F971A8057E2B68` | `E84E18E61B995C2FFE200907A3CA3F79608DE9BAFB7C652EBC902FC31DE542CC` | 0/6 | 1/18 | 178,749 | 270,078 ms |
 | Candidate | `C93201146E725E07E4C85FBD4FBFACC8FD3EDD85AE76154A74F603BB029708B7` | `D1BE71B84E04803DDEFD69E86FB8DDD4F43EF7BCF4A5E82D3E094680073BD793` | 1/6 | 6/18 | 175,768 | 259,781 ms |
 
+The final tracked baseline applies the same external-plugin path redaction; its capture SHA above
+continues to identify the untouched private artifact.
+
 | Case | Baseline | Candidate | Retained-evidence disposition |
 |---|---:|---:|---|
 | `handoff-producer-preserves-discovered-constraints` | 0/3 | 3/3 | Accepted by the deterministic oracle; repeatable improvement. |

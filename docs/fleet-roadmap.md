@@ -195,14 +195,15 @@ producer at 3/3 but left five strict cases unresolved, which triggered this amen
 artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
 evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
 small receipts. The paired evaluator change keeps six cases by replacing the reviewer duplicate
-with a conflict receipt and a declarative builder fixture. Its trusted verifier is byte-checked,
-grades captured regular-file bytes, and records artifact hashes/results. Red-before-green controls,
-T0, all 101 behavioral-evaluator tests, all 651 tests across 30 modules, and
+with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
+byte-checked, grades captured regular-file bytes, and records artifact hashes/results.
+Red-before-green controls,
+T0, all 103 behavioral-evaluator tests, all 656 tests across 30 modules, and
 `claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
 unaccepted.
 
 **Next action:** Freeze the candidate and request separate operator approval for the exact Claude
-model and the smallest three-session diagnostic: producer, functional builder, and conflict
+model and the smallest three-session diagnostic: producer, functional builder, and digest-mismatch
 receipt, one run each. Do not run a full paired capture unless those responses and end-state
 artifacts are sound. Do not compare Claude results with the archived Terra approximation.
 

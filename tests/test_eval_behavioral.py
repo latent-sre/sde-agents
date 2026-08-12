@@ -330,11 +330,14 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "verifier-fails-honestly-no-product-edit",
             "handoff-builder-applies-work-order",
         }
+        hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
         self.assertEqual(64, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
                     self.assertEqual(["Bash", "Write"], case["allowed_tools"])
+                elif case["id"] in hash_only_cases:
+                    self.assertEqual(["Bash"], case["allowed_tools"])
                 elif "agent" in case:
                     self.assertEqual([], case["allowed_tools"])
                 else:
@@ -524,7 +527,7 @@ class HandoffBehavioralCasesTest(unittest.TestCase):
         "handoff-first-artifact-keeps-open-work",
         "handoff-simple-build-stays-short",
         "handoff-builder-applies-work-order",
-        "handoff-builder-returns-conflict-receipt",
+        "handoff-builder-rejects-digest-mismatch",
     }
 
     @classmethod
@@ -546,6 +549,19 @@ class HandoffBehavioralCasesTest(unittest.TestCase):
             for case in self.cases.values()
             if case["id"].startswith("handoff-")
         ))
+
+    def test_consumer_contract_verifies_digest_and_accepts_source_free_none(self) -> None:
+        text = (REPO / "agents" / "sde-fullstack.md").read_text(encoding="utf-8")
+        normalized = " ".join(text.split())
+        self.assertIn("recompute SHA-256", normalized)
+        self.assertIn("digest does not match", normalized)
+        self.assertIn("An explicit `none` is complete", normalized)
+
+    def test_sixth_case_is_the_digest_mismatch_negative(self) -> None:
+        case = self.cases["handoff-builder-rejects-digest-mismatch"]
+        self.assertNotIn("handoff-builder-returns-conflict-receipt", self.cases)
+        self.assertIn("Decisions and evidence: none", case["prompt"])
+        self.assertEqual(["Bash"], case["allowed_tools"])
 
     def _controls(self) -> dict[str, tuple[str, str, tuple[str, ...]]]:
         return {
@@ -630,18 +646,18 @@ Restore drill: open; owner: operator.
                     "Approval is not required.\n",
                 ),
             ),
-            "handoff-builder-returns-conflict-receipt": (
+            "handoff-builder-rejects-digest-mismatch": (
                 "sde-fullstack",
                 """Handoff receipt: input-required
-Work-order ID: openbao-staged-config-v1
+Work-order ID: source-free-staged-build-v1
 Work-order digest: sha256:REPLACE_FROM_CASE
-Conflicts: Authority and recovery
-Recommended resolution: keep the requested files at Tier 1 and route live activation to homelab-platform for Tier 2 approval.
+Conflicts: Work-order digest
+Recommended resolution: recompute the digest over the normalized block and resend a matching digest.
 """,
                 (
                     "Handoff receipt: accepted\n",
+                    "Conflicts: Decisions and evidence\n",
                     "Before editing, I echo the work order.\n",
-                    "I will deploy it now.\n",
                 ),
             ),
         }
@@ -659,7 +675,7 @@ Recommended resolution: keep the requested files at Tier 1 and route live activa
 
     def _resolved_controls(self) -> dict[str, tuple[str, str, tuple[str, ...]]]:
         controls = self._controls()
-        case_id = "handoff-builder-returns-conflict-receipt"
+        case_id = "handoff-builder-rejects-digest-mismatch"
         _work_order, digest = self._work_order_and_digest(self.cases[case_id])
         agent, valid, contradictions = controls[case_id]
         controls[case_id] = (
@@ -738,46 +754,17 @@ Recommended resolution: keep the requested files at Tier 1 and route live activa
                     ),
                 )
 
-    def test_conflict_receipt_case_keeps_source_free_none_complete(self) -> None:
-        prompt = self.cases["handoff-builder-returns-conflict-receipt"]["prompt"]
-        self.assertIn("Decisions and evidence: none.", prompt)
-
     def test_work_order_digests_bind_the_exact_supplied_bytes(self) -> None:
-        for case_id in (
-            "handoff-builder-applies-work-order",
-            "handoff-builder-returns-conflict-receipt",
-        ):
-            with self.subTest(case=case_id):
-                work_order, recorded = self._work_order_and_digest(self.cases[case_id])
-                actual = hashlib.sha256(work_order.encode("utf-8")).hexdigest()
-                self.assertEqual(recorded, actual)
+        functional = self.cases["handoff-builder-applies-work-order"]
+        work_order, recorded = self._work_order_and_digest(functional)
+        actual = hashlib.sha256(work_order.encode("utf-8")).hexdigest()
+        self.assertEqual(recorded, actual)
 
-    def test_digest_mismatch_receipt_is_a_valid_handoff_control(self) -> None:
-        case = {
-            "id": "handoff-builder-rejects-digest-mismatch-control",
-            "expect_fires": ["sde-fullstack"],
-            "must_match": [
-                r"(?im)\AHandoff receipt:\s*input-required\s*$",
-                r"(?im)^Work-order ID:\s*openbao-staged-config-v1\s*$",
-                r"(?im)^Work-order digest:\s*sha256:deadbeef(?:deadbeef){7}\s*$",
-                r"(?im)^Conflicts:\s*Work-order digest\s*$",
-                r"(?i)Recommended resolution:[^\n]{0,140}(?:recompute|re-send|resend|corrected)",
-            ],
-            "must_not_match": [
-                r"(?im)^Handoff receipt:\s*accepted\s*$",
-                r"(?i)before editing,?\s+I echo",
-            ],
-        }
-        response = (
-            "Handoff receipt: input-required\n"
-            "Work-order ID: openbao-staged-config-v1\n"
-            "Work-order digest: sha256:deadbeefdeadbeefdeadbeefdeadbeef"
-            "deadbeefdeadbeefdeadbeefdeadbeef\n"
-            "Conflicts: Work-order digest\n"
-            "Recommended resolution: recompute SHA-256 over the exact LF-normalized work order "
-            "and resend the corrected block/digest pair.\n"
-        )
-        self.assertEqual([], eval_behavioral.assert_case(response, case, {"sde-fullstack"}))
+        mismatch = self.cases["handoff-builder-rejects-digest-mismatch"]
+        work_order, recorded = self._work_order_and_digest(mismatch)
+        actual = hashlib.sha256(work_order.encode("utf-8")).hexdigest()
+        self.assertEqual("0" * 64, recorded)
+        self.assertNotEqual(recorded, actual)
 
     def test_functional_builder_requires_end_state_evidence_and_minimal_receipt(self) -> None:
         case = self.cases["handoff-builder-applies-work-order"]
@@ -1533,16 +1520,7 @@ class BenchmarkConditionsTest(unittest.TestCase):
         # Isolation is a measurement condition: without this key, a clean-room artifact and a
         # contaminated one look identical and would be diffed as if comparable.
         self.assertEqual(False, conditions["clean_room"])
-
-    def test_conditions_block_uses_the_shared_plugin_dir_label(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral.eval_routing,
-            "plugin_dir_label",
-            return_value="<external-plugin-dir>",
-        ) as label:
-            payload = self._run_main(Path(tmp), [self._stats()])
-        self.assertEqual("<external-plugin-dir>", payload["conditions"]["plugin_dir"])
-        label.assert_called_once()
+        self.assertEqual(".", conditions["plugin_dir"])
 
     def test_functional_evidence_is_serialized_without_raw_model_output(self) -> None:
         case = next(
@@ -1674,7 +1652,10 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 eval_behavioral.run_session = original_run
                 eval_behavioral.CLAUDE = original_claude
 
-            self.assertTrue((output / "benchmark.json").exists())
+            benchmark = json.loads(
+                (output / "benchmark.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual("<external-plugin-dir>", benchmark["conditions"]["plugin_dir"])
 
         self.assertEqual(0, code)
 

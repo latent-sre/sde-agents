@@ -96,8 +96,11 @@ so an A -> B -> A edit to the source checkout cannot make concurrent sessions lo
 while leaving equal endpoint hashes. Persistent mutation of the private snapshot aborts the artifact. A
 same-user session can transiently mutate and restore that snapshot unless the host sandbox denies
 writes; endpoint hashing does not claim to detect that, so host write isolation remains part of the
-trust boundary. A benchmark without these identities is not a baseline: it cannot state what it
-measured. If a single run mixes models, the runner also says so loudly.
+trust boundary. The conditions block records `.` for the current plugin and
+`<external-plugin-dir>` for any external baseline; the content identity carries the comparable
+provenance without publishing an operator account or workstation path. A benchmark without these
+identities is not a baseline: it cannot state what it measured. If a single run mixes models, the
+runner also says so loudly.
 
 ### `INCONCLUSIVE` is not a failure
 

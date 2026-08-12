@@ -556,8 +556,21 @@ class PlatformAdapterTests(unittest.TestCase):
                     "Your tool list is the platform-enforced boundary",
                     "reviewers can't edit, researchers can't write",
                     "you hold no `Agent` tool",
+                    "This role has no `Agent` tool",
                 ):
                     self.assertNotIn(false_control, normalized)
+
+    def test_handoff_owner_reference_is_translated_for_generated_hosts(self) -> None:
+        paths = (
+            REPO / ".github" / "agents" / "sde-fullstack.agent.md",
+            REPO / ".codex" / "agents" / "sde-fullstack.toml",
+            REPO / ".claude" / "agents" / "sde-fullstack.md",
+        )
+        for path in paths:
+            with self.subTest(path=path.relative_to(REPO)):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("agents/homelab-platform.md", text)
+                self.assertIn("the installed `homelab-platform` agent definition", text)
 
     def test_host_agent_adapters_have_no_claude_runtime_references(self) -> None:
         paths = [
