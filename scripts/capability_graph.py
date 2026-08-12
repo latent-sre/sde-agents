@@ -150,11 +150,14 @@ def _host_authority(records) -> dict:
         }
         # Derived through the generator's own mapping rather than by reparsing generated files, so
         # one alias table governs both the adapters and this report.
+        aliases = adapters._copilot_tools(agent.fields, guarded=bool(is_guarded))
+        # "Never held Bash" and "the guard removed execute" are different facts about a role. One
+        # flag for both would report `researcher` -- which has no shell tool at all -- as having had
+        # execute taken away, describing a control that was never applied to it.
         copilot[agent.name] = {
-            "execute_withheld": "execute" not in adapters._copilot_tools(
-                agent.fields, guarded=bool(is_guarded)
-            ),
-            "tool_aliases": adapters._copilot_tools(agent.fields, guarded=bool(is_guarded)),
+            "execute_available": "execute" in aliases,
+            "execute_withheld_by_guard": bool(is_guarded) and "Bash" in agent.tools,
+            "tool_aliases": aliases,
         }
         writes = set(agent.tools) & set(adapters._validator_module().WRITE_TOOLS)
         codex[agent.name] = {

@@ -89,6 +89,28 @@ class ReportSectionTests(unittest.TestCase):
         self.assertNotIn("preloaded-skill", report["unreferenced_components"])
         self.assertEqual(report["reached_only_by_preload"], ["preloaded-skill"])
 
+    def test_a_self_loop_is_not_adoption(self):
+        """A member that only names itself has been adopted by nobody, so it stays unreferenced."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "skills" / "solo-skill" / "SKILL.md").write_text(
+                f"---\nname: solo-skill\ndescription: Alone.\n---\n\nSee {PLUGIN}:solo-skill.\n",
+                encoding="utf-8",
+            )
+            report = _document(root)["report"]
+        self.assertIn("solo-skill", report["unreferenced_components"])
+        self.assertIn("solo-skill", [entry["source"] for entry in report["self_loops"]])
+
+    def test_neither_a_reference_nor_a_preload_transfers_the_target_tools(self):
+        """Influence is not authority. builder references linked-skill and preloads
+        preloaded-skill; neither may add anything to builder's declared grant."""
+        with _tree() as name:
+            document = _document(Path(name))
+        self.assertEqual(document["tool_grants"]["builder"], ["Bash", "Read", "Write"])
+        self.assertIn(
+            "not traversed as authority", document["report"]["host_authority_paths"]["note"]
+        )
+
     def test_self_loops_retain_every_occurrence_with_a_location(self):
         with _tree() as name:
             loops = _document(Path(name))["report"]["self_loops"]
@@ -149,9 +171,19 @@ class HostSeparationTests(unittest.TestCase):
     def test_guarded_agent_loses_execute_on_copilot(self):
         with _tree(guarded=["reviewer"]) as name:
             copilot = _document(Path(name))["host_authority"]["copilot"]["agents"]
-        self.assertTrue(copilot["reviewer"]["execute_withheld"])
+        self.assertTrue(copilot["reviewer"]["execute_withheld_by_guard"])
+        self.assertFalse(copilot["reviewer"]["execute_available"])
         self.assertNotIn("execute", copilot["reviewer"]["tool_aliases"])
         self.assertIn("execute", copilot["builder"]["tool_aliases"])
+
+    def test_never_holding_bash_is_not_the_same_as_the_guard_withholding_it(self):
+        """dispatcher declares no Bash, so nothing was taken from it. Reporting one flag for both
+        would describe a control that was never applied to that role."""
+        with _tree(guarded=["reviewer", "dispatcher"]) as name:
+            copilot = _document(Path(name))["host_authority"]["copilot"]["agents"]
+        self.assertFalse(copilot["dispatcher"]["execute_available"])
+        self.assertFalse(copilot["dispatcher"]["execute_withheld_by_guard"])
+        self.assertTrue(copilot["reviewer"]["execute_withheld_by_guard"])
 
     def test_codex_authority_stays_unknown_or_inherited(self):
         with _tree() as name:
@@ -216,6 +248,21 @@ class SafetyTests(unittest.TestCase):
             )
             claude = _document(root)["host_authority"]["claude"]
         self.assertTrue(claude["agents"]["reviewer"]["guarded"])
+
+    def test_the_inspected_root_never_supplies_the_extractor(self):
+        """A tree carrying its own fleet_records.py and validate_fleet.py must not have them
+        imported. If the root were on the import base, these would load and abort, so the report
+        completing at all is the evidence."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "scripts").mkdir(exist_ok=True)
+            for module in ("fleet_records.py", "validate_fleet.py", "capability_graph.py"):
+                (root / "scripts" / module).write_text(
+                    "raise SystemExit('the inspected tree supplied the extractor')\n",
+                    encoding="utf-8",
+                )
+            document = _document(root)
+        self.assertEqual(len(document["nodes"]["agents"]), 3)
 
     def test_unreadable_plugin_name_refuses_instead_of_emitting_a_blank_graph(self):
         """Without the namespace there is no reference grammar, so every edge would read as zero --

@@ -373,6 +373,27 @@ class SchemaStrictnessTests(unittest.TestCase):
         document["nodes"][1]["max_attempts"] = 0
         self.assertTrue(any("positive integer" in d for d in _check(document)))
 
+    def test_duplicate_node_ids_are_rejected(self):
+        document = _mutate()
+        document["nodes"].append({"id": "verify", "kind": "deterministic", "zone": "review"})
+        self.assertTrue(any("duplicate node id" in d for d in _check(document)))
+
+    def test_a_node_in_an_undeclared_zone_is_rejected(self):
+        document = _mutate()
+        document["nodes"][1]["zone"] = "shadow"
+        self.assertTrue(any("is not declared in zones" in d for d in _check(document)))
+
+    def test_a_condition_only_cycle_is_rejected(self):
+        """Condition edges are transitions; a loop built purely from them is still a cycle."""
+        document = _mutate()
+        document["edges"].append({
+            "from": "deploy", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["retry"],
+        })
+        self.assertTrue(
+            any("cycle rejected in schema v1" in d for d in _check(document))
+        )
+
     def test_zone_allows_must_be_sorted(self):
         document = _mutate()
         document["zones"][0]["allows"] = ["review", "apply"]
@@ -391,6 +412,25 @@ class CliBoundaryTests(unittest.TestCase):
             path = Path(out) / "bad.json"
             path.write_text("{not json", encoding="utf-8")
             self.assertEqual(wc.main([str(path), "--root", str(REPO)]), 2)
+
+    def test_malformed_utf8_exits_two(self):
+        """Undecodable bytes are an input problem, not a statement about the design."""
+        with TemporaryDirectory() as out:
+            path = Path(out) / "bad.json"
+            path.write_bytes(b'{"schema_version": 1, "name": "\xff\xfe"}')
+            self.assertEqual(wc.main([str(path), "--root", str(REPO)]), 2)
+
+    def test_diagnostics_are_deterministically_ordered(self):
+        """A defect list that reorders between runs cannot be diffed across a review."""
+        # Structurally sound on purpose: structural defects short-circuit the semantic pass, so a
+        # multi-diagnostic ordering check has to come from the semantic layer.
+        document = _mutate()
+        document["nodes"].append({"id": "orphan", "kind": "deterministic", "zone": "review"})
+        document["edges"].append({"from": "start", "to": "deploy", "kind": "failure"})
+        document["zones"][0]["allows"] = []
+        first, second = _check(copy.deepcopy(document)), _check(copy.deepcopy(document))
+        self.assertEqual(first, second)
+        self.assertGreater(len(first), 2)
 
     def test_an_inconsistent_design_exits_one(self):
         with TemporaryDirectory() as out:
