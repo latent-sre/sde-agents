@@ -183,19 +183,25 @@ state, or committed contract changes on either implementation or rollback.
   production prevalence. GRAPH-002 adopts the witness-path principle but not its framework, policy
   DSL, or prevalence claims.
 - **Execution semantics belong to the runtime.** [sourced] Current
-  [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/workflows/workflows)
+  [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/concepts/workflows/builder-and-execution)
   and
   [Google ADK](https://github.com/google/adk-go/blob/362e5297b55e006589904d9364f841a85d2325e8/workflow/validation.go#L361-L385)
   material tie validation to the graph and scheduler they execute;
   [Temporal](https://github.com/temporalio/documentation/blob/main/docs/encyclopedia/workflow/workflow-definition.mdx)
-  ties replay to deterministic workflow code and moves nondeterministic effects into idempotent
-  activities. A design-only JSON file cannot inherit those guarantees.
+  ties replay to deterministic workflow code and moves nondeterministic operations into
+  activities, which are retried automatically and
+  [recommended, not guaranteed](https://github.com/temporalio/documentation/blob/main/docs/encyclopedia/activities/activity-definition.mdx),
+  to be idempotent. A design-only JSON file cannot inherit those guarantees.
 - **No host-neutral workflow executor was found.** [verified within the reviewed source set]
   [A2A v1.0](https://github.com/a2aproject/A2A/releases/tag/v1.0.0) was released
   2026-03-12, not April; its
   [specification](https://a2a-protocol.org/latest/specification/) standardizes remote agent
-  communication and task lifecycle rather than a local fleet workflow executor. Claude, Copilot,
-  Codex, and VS Code retain distinct host contracts.
+  communication and task lifecycle rather than a local fleet workflow executor.
+  [Agent Plugins 1.0.0](https://agentplugins.codes/) (announced 2026-08-06 by a steering
+  committee of Amazon, Cursor, Microsoft, OpenAI, and Vercel, with Google joining the same day)
+  is the nearest cross-host standard and is packaging only — manifest, skills, and MCP
+  configuration, with no workflow or orchestration component — and Claude Code is not among its
+  launch clients. Claude, Copilot, Codex, and VS Code retain distinct host contracts.
 - **Optimization remains below the reopen bar.** [sourced]
   [GRAFT](https://arxiv.org/abs/2608.02353) (arXiv:2608.02353v1, 2026-08-03)
   reports a 3.85-point average improvement over MaAS under its experiment. It is a primary preprint
