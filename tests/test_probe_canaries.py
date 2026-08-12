@@ -143,6 +143,53 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
         )
 
+        malformed_ids = "\n".join((
+            json.dumps({
+                "message": {"content": [{
+                    "type": "tool_use",
+                    "id": ["bad-agent-id"],
+                    "name": "Agent",
+                    "input": {"subagent_type": "sde-agents:sde-fullstack"},
+                }]}
+            }),
+            json.dumps({
+                "message": {"content": [{
+                    "type": "tool_result",
+                    "tool_use_id": ["bad-result-id"],
+                    "content": "ignored",
+                    "is_error": False,
+                }]}
+            }),
+            json.dumps({
+                "message": {"content": [
+                    {
+                        "type": "tool_use",
+                        "id": "agent-good",
+                        "name": "Agent",
+                        "input": {"subagent_type": "sde-agents:sde-fullstack"},
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "agent-good",
+                        "content": "valid spawn",
+                        "is_error": False,
+                    },
+                ]}
+            }),
+        ))
+
+        self.assertTrue(
+            probe_plugin.spawn_succeeded(
+                malformed_ids, "sde-agents:sde-fullstack"
+            )
+        )
+        self.assertEqual(
+            ["valid spawn"],
+            probe_plugin.agent_spawn_results(
+                malformed_ids, "sde-agents:sde-fullstack"
+            ),
+        )
+
     def test_spawn_success_prefers_the_structured_agent_target(self) -> None:
         transcript = json.dumps({
             "message": {

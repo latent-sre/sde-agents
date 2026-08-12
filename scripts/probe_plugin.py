@@ -242,13 +242,19 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
             inp = block.get("input")
             if not isinstance(inp, dict):
                 continue
-            spawns[block.get("id", "")] = (
+            tool_id = block.get("id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            spawns[tool_id] = (
                 inp["subagent_type"] == agent_name
                 if "subagent_type" in inp
                 else agent_name in json.dumps(inp)
             )
         elif block.get("type") == "tool_result":
-            outcomes[block.get("tool_use_id", "")] = bool(block.get("is_error"))
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            outcomes[tool_id] = bool(block.get("is_error"))
     return any(
         named and tid in outcomes and not outcomes[tid] for tid, named in spawns.items()
     )
@@ -278,18 +284,24 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
             inp = block.get("input")
             if not isinstance(inp, dict):
                 continue
+            tool_id = block.get("id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
             named = (
                 inp["subagent_type"] == agent_name
                 if "subagent_type" in inp
                 else agent_name in json.dumps(inp)
             )
-            spawns[block.get("id", "")] = named
+            spawns[tool_id] = named
         elif block.get("type") == "tool_result":
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
             raw = block.get("content")
             body = raw if isinstance(raw, str) else " ".join(
                 part.get("text", "") for part in (raw or []) if isinstance(part, dict)
             )
-            results[block.get("tool_use_id", "")] = body or ""
+            results[tool_id] = body or ""
     return [results[tid] for tid, named in spawns.items() if named and tid in results]
 
 
