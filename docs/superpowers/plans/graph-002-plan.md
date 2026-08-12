@@ -31,8 +31,11 @@ returns the facts the validator already reads:
 - routing cluster members and per-case expectations.
 
 The current validator consumes the same records so behavior stays characterized by its existing
-tests. `scripts/capability_graph.py` imports that collector through the repository's existing
-by-content loading pattern. No second YAML/frontmatter/reference parser ships.
+tests. `scripts/capability_graph.py` imports that collector through the existing by-content
+loading pattern pinned to the tool's own scripts directory (`Path(__file__).parent`), never the
+operator-supplied repository root: the inspected tree — including a foreign or baseline
+checkout — is parsed as data, and its scripts are never imported or executed. No second
+YAML/frontmatter/reference parser ships.
 
 This slice has one purpose: make the existing parse result reusable. It does not expose a new
 configuration surface or make graph analysis mandatory.
@@ -127,7 +130,9 @@ Binding domains are explicit:
   zone, and edge relationships describe the design role.
 
 A repository-script verifier resolves to a normalized, existing repository-relative path and is
-only design identity; the validator does not execute it.
+only design identity; the validator does not execute it. The resolved real path must remain
+inside the repository root; a reference that escapes it, including through a symlink, is
+rejected with the offending path as its witness.
 
 Edge fields, unknown keys rejected:
 
@@ -169,7 +174,9 @@ Build named graphs rather than treating all edges as interchangeable:
   condition transition they gate; used to detect mixed dependency deadlocks.
 - **Approval coverage:** for each effect, identify human predecessors whose approval edge names that
   effect, remove those human gates from the transition graph, and prove the effect is no longer
-  reachable from entry. If it remains reachable, return the shortest bypass path.
+  reachable from entry. If it remains reachable, return the shortest bypass path. Coverage is
+  proven over this document's node set only: the proof stops at every `subgraph` boundary, and
+  the CLI summary lists each unresolved subgraph reference as an unverified interior.
 
 Every transition and readiness cycle is rejected in v1, including condition-only and mixed
 control/data cycles. Every node must be reachable from entry and reach some terminal in the
@@ -197,16 +204,20 @@ Expose SHA-256 over LF-normalized UTF-8 bytes, lowercase 64-hex. The CLI reports
 - dynamic delegation changes principal and preserves target authority separately;
 - Claude, Copilot/VS Code, and Codex projections retain their distinct controls and unknowns;
 - JSON and Mermaid derive from one model and are byte-stable;
+- the collector import base ignores the repository-root argument: a foreign root is parsed as
+  data without its scripts being imported or executed;
 - real-tree smoke emission.
 
 ### Workflow design
 
 - shape: unknown keys, duplicate node IDs, duplicate edges, and expression conditions;
-- bindings: valid and wrong-kind agent/tool/verifier/subgraph references;
+- bindings: valid and wrong-kind agent/tool/verifier/subgraph references, and a repo-script path
+  that escapes the repository root;
 - graph: unreachable, missing terminal, dead end, data mismatch, missing/unsupported join, control
   cycle, condition cycle, and mixed readiness cycle;
 - zones: unknown zone and illegal directed transition;
-- approvals: absent, non-human, wrong-effect scope, direct bypass, and valid all-path human gate;
+- approvals: absent, non-human, wrong-effect scope, direct bypass, valid all-path human gate, and
+  a subgraph-boundary case asserting the unverified-interior caveat appears;
 - witness assertions for every graph/path failure;
 - CLI exit codes, canonical digest, malformed UTF-8, and deterministic ordering.
 

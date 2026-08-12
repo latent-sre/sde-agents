@@ -36,7 +36,10 @@ metadata, but it cannot be reported as topology drift from the old 140-edge meas
 
 Derive deterministic JSON and optional Mermaid from canonical `agents/` and `skills/`. Generated
 output is never committed. The CLI is invoked on demand by the operator and accepts a repository
-root plus explicit output paths.
+root plus explicit output paths. The root is data only: the CLI parses canonical files under it
+and never imports or executes code from the inspected tree — the shared collector resolves from
+the tool's own scripts directory, so one extractor version reads every tree, including a frozen
+baseline checkout.
 
 The artifact separates three things that the first draft incorrectly collapsed:
 
@@ -98,6 +101,9 @@ semantics:
 - effect approval that originates at a human node **and covers every entry→effect transition
   path**. Merely finding an incoming approval edge is insufficient. A bypass failure includes a
   concrete witness path;
+- approval coverage proven over declared nodes only: the proof stops at every `subgraph`
+  boundary because v1 never resolves a contract digest, and the CLI summary names each
+  unresolved subgraph reference as an unverified interior rather than passing it silently;
 - every reachable node can reach a terminal, and every semantic failure includes the smallest
   deterministic witness available;
 - a digest helper over LF-normalized UTF-8 bytes, useful for design identity now and compatible
@@ -141,10 +147,13 @@ commands. It does not add a mandatory PR-template row. The outcome record captur
   labeled as a new series rather than drift.
 - Report tests assert expected records per section independently; sections need not be mutually
   exclusive.
+- The capability CLI's collector import base is unaffected by the repository-root argument; a
+  test parses a foreign root as data without executing its scripts.
 - Contract tests cover valid design, duplicate IDs and edges, unknown keys, wrong-kind bindings,
   unreachable nodes, missing terminals, data mismatch, unsupported joins, control/condition/mixed
   readiness cycles, illegal zone transitions, missing/non-human approval, an approval-bypass path,
-  and rejection of expression conditions.
+  a subgraph approval-boundary caveat, an escaping repo-script path, and rejection of expression
+  conditions.
 - Every path-oriented failure asserts its witness, so a check cannot pass while diagnosing nothing.
 - The operator validates one non-authoritative design contract through the public CLI. The result
   is labeled design consistency, not runtime enforcement.
