@@ -35,8 +35,73 @@ Record the baseline commit when the round activates. Before implementation:
      delegation boundaries?
   5. Which relationship claims carry behavioral evidence (a routing case asserting them) versus
      cluster co-membership only?
-- List item 2 (edge-identity reproduction) is the next action before Payload 1; item 3's timings
-  are captured once the CLIs exist, into the outcome record.
+- List item 2 (edge-identity reproduction) is recorded below; item 3's timings are captured once
+  the CLIs exist, into the outcome record.
+
+### Edge-identity reproduction (2026-08-12)
+
+The decision published its counts but never the identity rule that produced them, so the rule was
+recovered rather than assumed: the plausible variants were swept at the decision's own snapshot
+`c02d8e12` and only the one reproducing the published numbers exactly was kept. Measuring the
+candidate under a *guessed* identity would have made every delta unattributable between a changed
+tree and a changed measure — the precise failure this plan's stable-identity rule exists to prevent.
+
+**Stable cross-reference identity — reproduces 140, uniquely.** Distinct
+`(source_member, target_member)` pairs over core definition files only (`agents/*.md` plus
+`skills/*/SKILL.md`; `references/` and `assets/` excluded). Self-loops count. Description/body
+surface and slash/plain invocation form are metadata, never identity. No other swept variant
+(all-markdown scope, self-loop exclusion, slash-split identity, raw occurrences) returns 140.
+
+**The three companion series reproduce exactly too**, so the whole published snapshot is verified,
+not just its headline number: 85 tool-authority edges, 4 skill-preload edges on `sde-fullstack`,
+and the routing overlay at 8 clusters / 38 member-to-cluster edges / 117 cases (64 positive,
+53 negative) / 29 distinct members covered.
+
+**Reading `tools:` requires both YAML spellings.** Eight agents use an inline comma list and three
+use a block sequence (`application-security-auditor`, `repository-investigator`, `researcher`). An
+inline-only reader scores those three zero and totals 58 — a plausible-looking number that would
+have been reported as a 27-edge authority drop. This was hit and corrected while building the
+measure. Payload 1's shared collector owes a test that a block-sequence `tools:` list parses;
+`scripts/validate_fleet.py:377` already carries that branch with its rationale, and its
+`parse_frontmatter` independently returns the same 85 — a second parser agreeing is what makes the
+tool-authority figure trustworthy rather than self-confirming.
+
+**Candidate measure.** Baseline `8143f2ef` and round-start HEAD `6689b6f` are identical on every
+series, confirming the activation record's docs-only claim by measurement instead of assertion.
+
+| Series | Snapshot `c02d8e12` | Candidate `6689b6f` |
+|---|---|---|
+| Members (agents + skills) | 30 (11 + 19) | 31 (11 + 20) |
+| Stable cross-reference edges | 140 | 155 (18 added, 3 removed) |
+| Tool-authority edges | 85 | 85, with no per-agent change |
+| Skill-preload edges | 4, on 1 agent | 7, on 3 agents |
+| Routing clusters | 8 | 10 |
+| Member-to-cluster edges | 38 | 47 |
+| Routing cases (positive / negative) | 117 (64 / 53) | 142 (76 / 66) |
+| Members covered by routing | 29 of 30 | 31 of 31 |
+| `surface_occurrences` body / description | 185 / 84 | 214 / 94 |
+
+`surface_occurrences` is a separate series by construction and is never differenced against the
+140-edge measure.
+
+**The slash/plain divergence is now live, and it is metadata rather than drift.** At the snapshot,
+pair identity and slash-split identity both returned 140. On the candidate they diverge — 155
+against 157 — because `onboarding-map` references `host-onboard` and `service-onboard` in both
+forms. The approved identity collapses that dimension while Payload 1 retains each reference's
+exact form, so the report may show the divergence and may never call it a topology change.
+
+**Payload 2 must union the reference and preload series to answer question 1 honestly.** Eight
+agents gained a namespaced `/sde-agents:self-improve-loop` discovery-routing edge (none carried one
+at the snapshot), while `prompt-engineer`, `sde-fullstack`, and `verification-engineer` reach the
+same skill through a frontmatter `skills:` preload and therefore correctly use the bare form. A
+concentration measure built on namespaced references alone would report 8 inbound and miss that all
+11 agents reach that skill — and it would rank the weaker relationship above the stronger one,
+since a preload puts the skill in context while a reference only names it.
+
+**One question for the operator's topology review, not settled here.** `self-improve-loop` dropped
+its references to `eng-ladder`, `sde-fullstack`, and `sre-tool` and gained `runbook` — the only
+removals in the candidate. Whether that narrowing was intended is a review question the first real
+report should surface rather than a defect this record asserts.
 
 ## Payload 1 — shared typed records
 
