@@ -1,135 +1,205 @@
-# GRAPH-002 spec — descriptive capability graph and workflow-contract validator
+# GRAPH-002 spec — operator capability graph and workflow-design validator
 
-**Status: drafted** — 2026-08-12; awaiting operator approval. A drafted spec starts no round and
-carries no implementation authority (`docs/README.md`). Implements the accepted work headed
-"Accepted -- descriptive compiler and contract validator" in the
+**Status: drafted** — revised 2026-08-12 after the operator-consumer ruling and independent
+review; awaiting operator approval. A drafted spec starts no round and carries no implementation
+authority (`docs/README.md`). It implements the accepted work headed "Accepted -- descriptive
+compiler and contract validator" in the
 [AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md); that record
-governs on conflict. Exact payloads live in the paired [plan](../plans/graph-002-plan.md).
+governs on conflict. Exact payloads live in the paired
+[plan](../plans/graph-002-plan.md).
 
-## Problem
+## Operator ruling and problem
 
-Two gaps, both named by the accepted decision:
+The operator is the consumer. GRAPH-002 is not justified by an internal Python caller or by making
+another repository gate invoke it. It is justified by two current operator tasks:
 
-1. **The fleet's topology is implicit.** At the decision's evidence snapshot the canonical
-   definitions carried 140 distinct namespaced cross-reference edges and 85 tool-authority edges
-   over 30 members, graded by 8 routing clusters — and the validator checks references one at a
-   time, emitting no topology artifact. An edge change is reviewable only as a prose diff, and
-   routing evals grade edges only as rates over runs. This tree already differs from the snapshot
-   (11 agents, 20 skills, 10 routing clusters), which is the point: nothing measures the drift.
-2. **The retained graph-contract design has no parser or validator.** GRAPH-004 (trigger-bound)
-   would author the first real contract, and the decision requires canonical-member reference
-   validation to ship "in the first descriptive slice, not with the executor" — a contract that
-   silently survives a member rename is a second source in waiting.
+1. **Inspect the fleet as a graph.** Before approving topology changes, the operator needs an
+   on-demand, diffable view of canonical references, preloads, direct tool declarations, guarded
+   roles, host-specific authority projections, hubs, and routing-cluster overlap. The current
+   validator checks individual links but emits no topology artifact.
+2. **Design workflow contracts before execution exists.** The operator needs a strict linter for
+   prospective contracts so node identity, joins, data dependencies, trust transitions, and
+   mandatory human gates are reviewable before GRAPH-004 binds a contract to a runtime.
 
-No executor is in scope. The decision's reopen triggers for graph execution remain closed as of
-this draft (re-checked 2026-08-12; see the external-check note at the end).
+The first output is operator-facing review evidence. The second is a **design-consistency** result,
+not proof that a host executed the design. Neither tool earns its keep by being run on every edit,
+and neither becomes more useful if a PR checkbox is added solely to call it.
+
+The dated decision snapshot recorded 140 source→target cross-reference edges and 85 direct
+tool-authority edges over 30 members, graded by 8 routing clusters. The tree has changed since then.
+Metric definitions must remain stable when comparing snapshots: a new surface dimension is useful
+metadata, but it cannot be reported as topology drift from the old 140-edge measure.
 
 ## Scope
 
-**1. Derived capability graph** (`scripts/capability_graph.py`). Standard-library derivation from
-the canonical `agents/` and `skills/` sources: nodes are agents, skills, and the adopted tool
-surface; edges are namespaced cross-references (deduplicated per source, target, and surface),
-tool grants, skill preloads, and read-only-guard coverage. Emission is on demand (JSON, optional
-Mermaid) as review evidence with deterministic, byte-stable output. Generated output is never
-committed — the decision names no consumer for a committed artifact, and an uncommitted emission
-cannot become a second source.
+### 1. Operator capability graph (`scripts/capability_graph.py`)
 
-**2. The five decision-named graph checks, as a deterministic report.** Components no other
-member references, routing edges no eval cluster covers, self-loops, hub concentration, and a
-prompt-surface→tool reachability view. Ruling made by this spec: **all five are report sections,
-not validator failures.** Evidence for the ruling: the current tree legitimately trips the naive
-self-loop definition twice (`host-onboard` and `service-onboard` name their own slash command in
-their descriptions), and description-routed members legitimately have zero inbound reference
-edges. A hard rule on either would need prose-intent heuristics that misfire silently — the
-failure class the validator exists to catch, not to add. The report earns its keep through the
-description-edit playbook and the PR gates table: a topology-affecting edit diffs the report
-between baseline and candidate trees the same way routing rates are diffed.
+Derive deterministic JSON and optional Mermaid from canonical `agents/` and `skills/`. Generated
+output is never committed. The CLI is invoked on demand by the operator and accepts a repository
+root plus explicit output paths.
 
-**3. Workflow-contract parser and semantic validator** (`scripts/workflow_contract.py`). JSON
-contracts, schema v1 frozen to the decision's retained design: the seven node kinds
-(`deterministic`, `agent`, `tool`, `human`, `verifier`, `effect`, `subgraph`) and seven edge
-kinds (`control`, `data`, `condition`, `approval`, `evidence`, `failure`, `compensation`).
-Semantic checks, each mapped to the decision's invariants: unique node IDs; a declared entry and
-at least one terminal, every node reachable from entry and reaching a terminal; duplicate edges
-rejected; member references resolve against the current canonical fleet; data edges carry schema
-identifiers and producer/consumer identifiers must agree (v1 compares identifiers — JSON Schema
-evaluation is executor-adjacent machinery with no consumer yet); every cycle is declared with a
-machine-enforceable iteration ceiling and a terminal condition; every fan-in declares
-`all`/`any`/`quorum` plus timeout and failed-predecessor behavior; trust-zone transitions are
-legal per the contract's declared zones; every `effect` node has an incoming `approval` edge; and
-`condition` edges route on finite enums over typed state — expressions are rejected. The
-canonical contract digest is SHA-256 over LF-normalized UTF-8 bytes, matching SAFE-003's required
-lowercase 64-hex `contract_digest` shape, so GRAPH-004 can later bind a run to a contract
-document without rework. This round changes nothing in `run_state.py`.
+The artifact separates three things that the first draft incorrectly collapsed:
 
-**4. Fleet-validator wiring.** `validate_fleet.py` runs the graph derivation in every T0 pass (a
-derivation failure is loud, not latent) and validates every contract found under `contracts/`.
-That directory does not exist and is not created by this round — the code path is proven by
-fixtures, and the directory appears when GRAPH-004 authors the first real contract. An empty
-directory shipped now would be a mechanism without a demonstrated consumer.
+- **Authored topology:** agents, skills, namespaced references, skill preloads, and direct declared
+  tool grants.
+- **Host authority projection:** Claude declarations plus guard coverage; Copilot/VS Code rendered
+  tool aliases and execute omission; Codex requested sandbox mode plus an explicit
+  `effective_authority: unknown_or_inherited` limitation. No host's control is relabeled as another
+  host's guarantee.
+- **Measurement overlay:** routing-cluster co-membership and case assertions. Co-membership is not
+  behavioral coverage, and the report must not call it coverage unless a case specifically asserts
+  the relationship.
 
-**5. Docs.** AGENTS.md map rows for both new modules land with the implementation; the roadmap
-entry, this spec, and the plan retire to an outcome record when the round closes (rule 4).
+A prose reference does not transfer the target member's tools to the source. A source with the
+`Agent` tool receives a dynamic-delegation marker and a principal boundary; the report may show a
+conservative potential delegation path, but it must not merge the target principal's grants into
+the caller's authority.
+
+### 2. Five report sections, all advisory
+
+The decision-named checks remain report sections rather than validator failures:
+
+1. **Unreferenced components:** members with no inbound reference from a *different* member.
+   Self-references do not count as external adoption.
+2. **Routing-cluster relationship gaps:** reference endpoints that never appear together in a
+   routing cluster, labeled as co-membership evidence only. A future behavioral case may add a
+   separate measured-coverage label.
+3. **Self-loops:** source equals target, with file, line, and surface context.
+4. **Hub concentration:** stable source→target degree and share, with description/body surfaces
+   retained as metadata rather than a changed edge identity.
+5. **Host-specific potential authority paths:** direct declarations and host controls, with dynamic
+   delegation shown as a principal switch and every unknown effective-authority boundary retained.
+
+The operator consumes these sections during topology review. No threshold or merge rule is created
+in this round. A report can support a decision without every advisory becoming a gate.
+
+### 3. Workflow-design validator (`scripts/workflow_contract.py`)
+
+The CLI validates an explicit JSON path supplied by the operator. It does not scan a repository
+`contracts/` directory, run from T0, or claim that valid design bytes govern execution. GRAPH-004
+owns the future runtime binding, `contract_digest` resolution, and any committed authoritative
+contract.
+
+Schema v1 is intentionally narrower than the decision's full future envelope. Expressiveness that
+has no current design consumer waits for a schema-version change instead of shipping ambiguous
+semantics:
+
+- strict known fields, unique IDs, one entry, and at least one terminal;
+- the seven retained node roles, with kind-specific binding domains rather than one untyped
+  `member` string;
+- the seven retained edge roles, interpreted through separate transition and readiness graphs;
+- finite-enum condition routes only; expressions are rejected;
+- explicit fan-in configuration supporting only an `all` barrier in v1, with fail-closed timeout
+  and failed-predecessor behavior;
+- directed cycles rejected in v1. Bounded retries and loops require an executable consumer whose
+  reset, late-arrival, checkpoint, and termination semantics can be specified;
+- explicit zone declarations and allowed directed transitions. This is topology policy, not proof
+  of runtime authorization;
+- effect approval that originates at a human node **and covers every entry→effect transition
+  path**. Merely finding an incoming approval edge is insufficient. A bypass failure includes a
+  concrete witness path;
+- every reachable node can reach a terminal, and every semantic failure includes the smallest
+  deterministic witness available;
+- a digest helper over LF-normalized UTF-8 bytes, useful for design identity now and compatible
+  with SAFE-003's lowercase SHA-256 shape later.
+
+Validation can prove consistency of the declared model. It cannot prove that a human identity was
+authenticated, that a host enforced the design, that an LLM produced safe content, or that an
+external effect occurred exactly once. Those claims require the GRAPH-004 runtime binding,
+effect-broker state, and runtime provenance.
+
+### 4. Parser reuse without mandatory wiring
+
+The implementation may refactor `validate_fleet.py`'s existing canonical parsing into one typed
+record collector used by both the validator and the graph CLI. It must not introduce a second
+frontmatter/reference implementation. That parser refactor remains covered by the current
+validator tests.
+
+Neither graph derivation nor contract validation is added to `validate_fleet.py`'s T0 execution
+path. Their own tests and real-tree smoke checks prove the tools; operator invocation is their
+consumer. GRAPH-004 may add contract-directory wiring when a committed contract and runtime
+consumer exist.
+
+### 5. Documentation and evidence
+
+The implementation adds AGENTS.md map rows and a short operator-use paragraph with exact on-demand
+commands. It does not add a mandatory PR-template row. The outcome record captures:
+
+- the immutable baseline and candidate topology metrics under the same edge identity;
+- any separately named surface metric;
+- one operator review of the real-tree capability report;
+- one operator review of an explicitly supplied, non-authoritative workflow-design contract;
+- standalone CLI timings and exact validation results.
 
 ## Acceptance
 
-From the decision's acceptance-evidence list, verbatim where it is specific:
-
-- A fixture or mutation test for every new validator invariant.
-- Parser/validator tests for valid, unreachable, incompatible, cyclic, unbounded, deadlocked,
-  trust-violating, and unapproved-effect contracts.
-- Canonical-source and generated-adapter validation unchanged; **zero canonical definitions
-  edited**, so no adapter regeneration and no routing runs are owed.
-- Standard library only; no new runtime dependency.
-- Error messages in the validator's what-broke-and-why-it-would-have-been-silent register.
-- The five report sections exercised against fixture repositories that each trip exactly one
-  check (`tests/support.py` isolation idiom), plus one smoke test that the real tree derives and
-  emits without error.
-- T0 proportionality (TIER-001): derivation reuses the validator's existing parse of the
-  canonical sources — no second frontmatter parser ships — and before/after `validate_fleet.py`
-  wall time is measured on the same machine and recorded in the outcome record.
-- No model sessions run; no model baselines owed (per the decision).
+- A real-tree JSON report and Mermaid rendering are deterministic and operator-reviewed.
+- The report keeps authored topology, host projections, and measurement evidence separate.
+- Claude, Copilot/VS Code, and Codex authority examples demonstrate their distinct controls and
+  unknowns; cross-references never convey authority.
+- Stable edge identity reproduces the historical metric definition; any new surface metric is
+  labeled as a new series rather than drift.
+- Report tests assert expected records per section independently; sections need not be mutually
+  exclusive.
+- Contract tests cover valid design, duplicate IDs and edges, unknown keys, wrong-kind bindings,
+  unreachable nodes, missing terminals, data mismatch, unsupported joins, control/condition/mixed
+  readiness cycles, illegal zone transitions, missing/non-human approval, an approval-bypass path,
+  and rejection of expression conditions.
+- Every path-oriented failure asserts its witness, so a check cannot pass while diagnosing nothing.
+- The operator validates one non-authoritative design contract through the public CLI. The result
+  is labeled design consistency, not runtime enforcement.
+- Standard library only; no graph database or new runtime dependency.
+- Existing canonical-source and generated-adapter validation remains unchanged. Zero canonical
+  definitions are edited, so adapter regeneration and routing/model sessions are not owed.
+- T0 and T1 pass on exact candidate bytes. Before/after standalone tool timings are recorded; no
+  always-on validator-cost claim is made because no always-on graph work is added.
 
 ## Non-goals
 
-No executor, scheduler, or ready-state computation; no `run_state.py` schema change
-(`contract_digest` resolution stays with GRAPH-004); no committed generated graph; no authored
-real contract; no canonical agent or skill edits; no third-party dependency; no knowledge-graph
-or retrieval work; no host-adapter behavior change; no new hook, guard, or configuration surface.
+No executor, scheduler, dynamic graph mutation, ready-state engine, runtime contract resolver,
+`run_state.py` schema change, committed generated graph, committed authoritative workflow contract,
+graph database, GraphRAG control plane, host-adapter behavior change, new hook or guard, or model
+session. Schema v1 does not support `any`/quorum joins, cycles, late-arrival policies, cancellation,
+or compensation execution.
 
 ## Rollback
 
-Two new standard-library modules, their tests and fixtures, the validator wiring, and the doc
-rows — one bounded revert restores prior validator behavior byte-for-byte. No canonical
-definition or generated adapter is touched, so no regeneration is owed on revert.
+The graph CLI, design validator, typed-parser refactor, tests, and documentation form one bounded
+set. Reverting them restores prior behavior. No canonical definition, generated adapter, runtime
+state, or committed contract changes on either implementation or rollback.
 
-## External check (2026-08-12)
+## External check (refreshed 2026-08-12)
 
-A fresh external sweep of the "graph engineering" discourse and the decision's reopen-trigger
-maturity conditions ran with this draft (2026-08-12). Findings, labeled per the decision's
-convention:
+- **Graphs are useful where structure is intentional, not universal.** [sourced] LangChain's
+  [current account](https://www.langchain.com/blog/3-years-of-graph-engineering-with-langgraph)
+  describes graphs as a way to constrain predictable paths while warning that open-ended research
+  can fit an agent harness better. It also emphasizes cycles and dynamic transitions; GRAPH-002
+  therefore rejects unsupported execution semantics instead of pretending a broad static schema
+  has defined them.
+- **Static checking is promising when tied to the executable representation.** [sourced]
+  [Agentproof](https://arxiv.org/abs/2603.20356) (arXiv:2603.20356v1, 2026-03-20)
+  extracts graphs from framework objects, distinguishes structural checks from temporal policies,
+  and emits witness traces. Its 18 author-constructed workflows establish feasibility, not
+  production prevalence. GRAPH-002 adopts the witness-path principle but not its framework, policy
+  DSL, or prevalence claims.
+- **Execution semantics belong to the runtime.** [sourced] Current
+  [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/workflows/workflows)
+  and
+  [Google ADK](https://github.com/google/adk-go/blob/362e5297b55e006589904d9364f841a85d2325e8/workflow/validation.go#L361-L385)
+  material tie validation to the graph and scheduler they execute;
+  [Temporal](https://github.com/temporalio/documentation/blob/main/docs/encyclopedia/workflow/workflow-definition.mdx)
+  ties replay to deterministic workflow code and moves nondeterministic effects into idempotent
+  activities. A design-only JSON file cannot inherit those guarantees.
+- **No host-neutral workflow executor was found.** [verified within the reviewed source set]
+  [A2A v1.0](https://github.com/a2aproject/A2A/releases/tag/v1.0.0) was released
+  2026-03-12, not April; its
+  [specification](https://a2a-protocol.org/latest/specification/) standardizes remote agent
+  communication and task lifecycle rather than a local fleet workflow executor. Claude, Copilot,
+  Codex, and VS Code retain distinct host contracts.
+- **Optimization remains below the reopen bar.** [sourced]
+  [GRAFT](https://arxiv.org/abs/2608.02353) (arXiv:2608.02353v1, 2026-08-03)
+  reports a 3.85-point average improvement over MaAS under its experiment. It is a primary preprint
+  but remains unreplicated and has not demonstrated a gain on this repository's eval bank.
 
-- **No reopen trigger fires.** [verified] Claude Code workflow resume remains session-scoped —
-  the official workflows doc still states "If you exit Claude Code while a workflow is running,
-  the next session starts the workflow fresh" (code.claude.com/docs/en/workflows, fetched
-  2026-08-12). [verified] The changelog through CLI 2.1.228 shows only workflow hardening since
-  the probe-verified 2.1.220: a 2.1.223 sandbox fix (dynamic `import()` escape closed) and a
-  restricted-subagent-model warning. No hook contract for workflow-spawned agents was documented.
-- **No host-neutral workflow standard emerged.** [sourced] The four supported hosts diverged
-  further in this window (Claude workflows, Copilot `/fleet` and saveable agent workflows, Codex
-  0.147.0 portable Agent Plugins, ADK Go 2.0's graph runtime); A2A v1.0 (April 2026) remains
-  server-side, absent from local CLI hosts.
-- **The term consolidated as a label, not a discipline.** [sourced] LangChain's "3 Years of
-  Graph Engineering with LangGraph" (~2026-07-22) adopted the phrase while framing it as a
-  rebrand of existing LangGraph practice; no Anthropic publication uses the term, so the
-  decision's misattribution finding stands. Secondary content-farm coverage continues through
-  mid-August.
-- **One watch-signal, below the trigger bar.** [unverified] arXiv 2608.02353 (early Aug 2026)
-  claims offline workflow-graph optimization beats prior optimizers with gains that transfer
-  across executors — a single unreplicated result read only via search summaries. The
-  offline-optimization trigger requires repeatable gains on this repository's own eval bank;
-  re-check if independent replication appears.
-
-Standing rule: had the sweep found cross-session durable resume or a host-neutral standard, the
-correct response would be a decision amendment, not a wider GRAPH-002 — this spec's boundary
-stays descriptive-only.
+Standing rule: cross-session durable execution, a host-neutral executor, or repeatable local
+optimization gains require a decision amendment. They do not silently widen GRAPH-002.
