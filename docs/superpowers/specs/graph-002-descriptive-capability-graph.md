@@ -1,12 +1,12 @@
 # GRAPH-002 spec — operator capability graph and workflow-design validator
 
-**Status: drafted** — revised 2026-08-12 after the operator-consumer ruling and independent
-review; awaiting operator approval. A drafted spec starts no round and carries no implementation
-authority (`docs/README.md`). It implements the accepted work headed "Accepted -- descriptive
+**Status: approved** — approved 2026-08-12 by the operator after independent citation
+verification and a zero-critical branch deep-review; revised the same day after the
+operator-consumer ruling. It implements the accepted work headed "Accepted -- descriptive
 compiler and contract validator" in the
-[AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md); that record
-governs on conflict. Exact payloads live in the paired
-[plan](../plans/graph-002-plan.md).
+[AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md), as amended
+2026-08-12 with the operator-consumer ruling; that record governs on conflict. Exact payloads
+live in the paired [plan](../plans/graph-002-plan.md).
 
 ## Operator ruling and problem
 

@@ -1,9 +1,9 @@
 # GRAPH-002 plan — operator graph report and workflow-design checks
 
-Paired with the drafted
-[`GRAPH-002 spec`](../specs/graph-002-descriptive-capability-graph.md); operational only after
-operator approval and while the round is active. The spec owns scope and rulings; this plan owns
-the exact payloads and sequence.
+Paired with the approved
+[`GRAPH-002 spec`](../specs/graph-002-descriptive-capability-graph.md); operational while the
+round is active (approved 2026-08-12). The spec owns scope and rulings; this plan owns the exact
+payloads and sequence.
 
 ## Frozen baseline and operator questions first
 
@@ -18,6 +18,25 @@ Record the baseline commit when the round activates. Before implementation:
 3. Capture median-of-five standalone times for the future graph CLI and contract CLI on the same
    quiet machine. No `validate_fleet.py` before/after timing is claimed because the new analyses do
    not enter its T0 path.
+
+### Activation record (2026-08-12)
+
+- **Baseline commit:** `8143f2eff318a250833363e1cc7a0e30d475b67a` — the deep-reviewed head at
+  approval. The activation bookkeeping commits that follow it are docs-only, so canonical
+  `agents/` and `skills/` bytes are identical at the baseline and at round start.
+- **Frozen operator questions** the first real-tree report must answer:
+  1. Which members are isolated (no external inbound reference) and which concentrate references,
+     by stable source→target degree and share?
+  2. Which relationships changed against the decision's dated 140-edge/85-grant measure, under the
+     original edge identity?
+  3. What does each host request or withhold per role — Claude guard coverage, Copilot/VS Code
+     execute omission, Codex sandbox mode?
+  4. Where does effective authority remain unknown — Codex inherited state, dynamic `Agent`
+     delegation boundaries?
+  5. Which relationship claims carry behavioral evidence (a routing case asserting them) versus
+     cluster co-membership only?
+- List item 2 (edge-identity reproduction) is the next action before Payload 1; item 3's timings
+  are captured once the CLIs exist, into the outcome record.
 
 ## Payload 1 — shared typed records
 

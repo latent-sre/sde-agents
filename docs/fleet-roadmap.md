@@ -118,7 +118,8 @@ contracts holding.
 
 #### GRAPH-002 — land the operator capability graph and workflow-design validator
 
-**Status:** `ready`
+**Status:** `active` — spec and plan approved by the operator on 2026-08-12 after independent
+citation verification and a zero-critical branch deep-review.
 
 **Outcome:** The accepted GRAPH-001 descriptive layer exists as two operator-facing, on-demand
 tools: a derived machine-readable capability graph that separates authored topology,
@@ -137,10 +138,11 @@ design; stable metric identity, host-specific authority limitations, typed bindi
 semantics, mixed-dependency cycle rejection, all-path human approval, and witness diagnostics are
 covered by focused tests; no new runtime dependency or gate-for-gate T0/PR wiring lands.
 
-**Next action:** Operator approval of the drafted
+**Next action:** Execute the approved
 [spec](superpowers/specs/graph-002-descriptive-capability-graph.md) and paired
-[plan](superpowers/plans/graph-002-plan.md) (both revised 2026-08-12 after the operator established
-the current consumer). The capability graph is an on-demand operator report, not a new PR/T0 gate;
+[plan](superpowers/plans/graph-002-plan.md) from the plan's activation record: reproduce the
+decision's edge-identity measure, then land Payloads 1–4 in sequence. The capability graph is an
+on-demand operator report, not a new PR/T0 gate;
 the workflow tool is an explicit-path design-consistency validator with a deliberately narrow v1
 (`all` joins, acyclic graphs, all-path human approval, deterministic witnesses), not runtime
 enforcement. GRAPH-004 still owns committed contracts, digest resolution, and execution. The
