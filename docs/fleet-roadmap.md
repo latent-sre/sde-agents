@@ -190,14 +190,22 @@ release stamp is REL-173's evidence, not a gate on this item.
 **Current evidence:** The working candidate contains the lean producer, consumer, six focused
 contracts, regenerated adapters, and the bounded subscription-backed Codex transport. On
 2026-08-11, T0 passed, all 641 tests across 30 modules passed, and
-`claude plugin validate . --strict` passed. No paid session has run; total result duration is
-available, but exact first-artifact latency remains unmeasured.
+`claude plugin validate . --strict` passed. The approved Terra/medium paired capture then ran all
+36 sessions under the plan's pinned conditions. The baseline scored 0/18 runs and 0/6 strict
+cases; the candidate scored 4/18 runs and 1/6 strict cases, including a decisive producer change
+from 0/3 to 3/3. The [artifacts and decision record](../evals/baselines/2026-08-11-handoff-001/)
+retain the exact provenance, limitations, tokens, durations, and unresolved cases. Exact
+first-artifact latency remains unmeasured, and overlapping duration ranges do not support a
+general faster claim.
 
-**Next action:** Operator ruling on whether first-artifact streaming instrumentation is worth its
-added evaluator complexity, then setup of the dedicated Codex home on an independently controlled
-no-MCP host and approval of the plan's exact model, reasoning effort, and 36-session paired capture.
-The recommended lean default is no new streaming instrument: report total artifact-containing
-response duration honestly and leave exact first-artifact latency open rather than manufacture it.
+**Next action:** Repair the two demonstrated negation-blind pattern shapes used by three case
+assertions and add opt-in per-run response/assertion diagnostics to the existing evaluator. Use
+those diagnostics to separate grader defects from prompt defects in the five unresolved cases
+with one retained Terra/medium diagnostic each before changing more agent prose, after separate
+operator approval for those five paid sessions. They are diagnosis, not acceptance. Keep
+first-artifact streaming instrumentation out: total artifact-containing response duration is
+already reported honestly, while a new streaming path has no acceptance consumer. Any fresh paid
+pair waits for frozen evaluator, case, and prompt hashes plus separate operator approval.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
