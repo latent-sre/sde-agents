@@ -56,6 +56,45 @@ class ProbeCanaryTests(unittest.TestCase):
 
 
 class ProbeTranscriptParserTests(unittest.TestCase):
+    def test_bash_results_ignore_non_object_tool_input(self) -> None:
+        transcript = json.dumps(
+            {
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "bash-bad",
+                            "name": "Bash",
+                            "input": "legacy string input",
+                        }
+                    ]
+                }
+            }
+        )
+
+        self.assertEqual({}, probe_plugin.bash_results(transcript))
+
+    def test_agent_results_ignore_non_object_tool_input(self) -> None:
+        transcript = json.dumps(
+            {
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "agent-bad",
+                            "name": "Agent",
+                            "input": "subagent_type",
+                        }
+                    ]
+                }
+            }
+        )
+
+        self.assertEqual(
+            [],
+            probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
+        )
+
     def test_consumers_skip_invalid_shapes_without_losing_correlations(self) -> None:
         transcript = "\n".join(
             (

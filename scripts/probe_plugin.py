@@ -189,7 +189,10 @@ def bash_results(text: str) -> dict[str, str]:
     results: dict[str, str] = {}
     for block in stream_events.iter_content_blocks(text):
         if block.get("type") == "tool_use" and block.get("name") == "Bash":
-            commands[block.get("id", "")] = block.get("input", {}).get("command", "")
+            tool_input = block.get("input")
+            if not isinstance(tool_input, dict):
+                continue
+            commands[block.get("id", "")] = tool_input.get("command", "")
         elif block.get("type") == "tool_result":
             raw = block.get("content")
             body = raw if isinstance(raw, str) else " ".join(
@@ -249,7 +252,9 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
             # spawn's result body into the canary oracle. Prefer the actual field; fall back to
             # the substring match only if it's absent, so this stays safe even if the input shape
             # ever changes.
-            inp = block.get("input", {})
+            inp = block.get("input")
+            if not isinstance(inp, dict):
+                continue
             named = (
                 inp["subagent_type"] == agent_name
                 if "subagent_type" in inp
