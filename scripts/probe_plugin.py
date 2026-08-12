@@ -223,7 +223,10 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
     outcomes: dict[str, bool] = {}  # tool_use_id -> is_error
     for block in stream_events.iter_content_blocks(text):
         if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
-            spawns[block.get("id", "")] = agent_name in json.dumps(block.get("input", {}))
+            inp = block.get("input")
+            if not isinstance(inp, dict):
+                continue
+            spawns[block.get("id", "")] = agent_name in json.dumps(inp)
         elif block.get("type") == "tool_result":
             outcomes[block.get("tool_use_id", "")] = bool(block.get("is_error"))
     return any(

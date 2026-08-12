@@ -74,7 +74,7 @@ class ProbeTranscriptParserTests(unittest.TestCase):
 
         self.assertEqual({}, probe_plugin.bash_results(transcript))
 
-    def test_agent_results_ignore_non_object_tool_input(self) -> None:
+    def test_agent_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
             {
                 "message": {
@@ -83,13 +83,22 @@ class ProbeTranscriptParserTests(unittest.TestCase):
                             "type": "tool_use",
                             "id": "agent-bad",
                             "name": "Agent",
-                            "input": "subagent_type",
-                        }
+                            "input": "sde-agents:sde-fullstack",
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "agent-bad",
+                            "content": "not a valid spawn",
+                            "is_error": False,
+                        },
                     ]
                 }
             }
         )
 
+        self.assertFalse(
+            probe_plugin.spawn_succeeded(transcript, "sde-agents:sde-fullstack")
+        )
         self.assertEqual(
             [],
             probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
