@@ -191,9 +191,23 @@ class Member:
         return self.fields.get("description", "")
 
     @property
+    def declares_tools(self) -> bool:
+        """Whether `tools:` is present at all.
+
+        Absence is not least privilege: Claude Code grants an agent with no `tools:` EVERY tool.
+        Any consumer reasoning about authority must branch on this before reading `tools`, because
+        the two states produce the same empty list and mean opposite things. A docstring saying so
+        is not enough -- it was exactly this property's warning that a consumer then ignored.
+        """
+        return "tools" in self.fields
+
+    @property
     def tools(self) -> list[str]:
-        """Declared tool authority. Empty means INHERITS EVERY TOOL, which is not the same as
-        holding none -- callers reasoning about authority must not treat the two alike."""
+        """The DECLARED tool list, empty when `tools:` is absent.
+
+        Read `declares_tools` first: an empty list here means "declared nothing" only when
+        `declares_tools` is true, and means "inherits everything" when it is false.
+        """
         return split_tools(self.fields.get("tools", ""))
 
     @property

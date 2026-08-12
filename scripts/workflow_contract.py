@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from collections import deque
 from pathlib import Path
@@ -64,8 +65,13 @@ BINDING_DOMAINS = {
 BUDGET_FIELDS = ("max_attempts", "timeout_ms")
 MAX_BUDGET = 86_400_000  # one day in ms; a bound exists so "unbounded" cannot be spelled.
 
-# Any of these inside a string field means someone is smuggling logic into a design document.
-EXPRESSION_MARKERS = ("${", "{{", "$(", "`", "&&", "||", "=>", "lambda ")
+# Identifier fields accept a POSITIVE grammar, never a blacklist of suspicious substrings. A
+# blacklist answers "does this look like an expression I thought of?", which `status == 'ok'`,
+# `count > 3`, `x in (1,2)`, and `f(x)` all pass while being exactly the predicates schema v1 says
+# it cannot evaluate. A grammar answers "is this a plain name?", and everything else is refused
+# whether or not anyone anticipated its syntax.
+IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
+IDENTIFIER_FIELDS = ("schema", "state_field", "classification", "input_schema", "output_schema")
 
 
 class Defect(Exception):
@@ -90,15 +96,17 @@ def _unknown(keys, allowed, label: str) -> list[str]:
     ]
 
 
-def _expression_defects(value, label: str) -> list[str]:
-    if not isinstance(value, str):
+def _identifier_defects(value, label: str) -> list[str]:
+    """Accept a plain name; refuse everything else, including predicates nobody enumerated."""
+    if value is None:
         return []
-    return [
-        f"{label}: embedded expression or predicate {marker!r} is rejected; schema v1 describes "
-        f"a design, and an expression here has no defined evaluator"
-        for marker in EXPRESSION_MARKERS
-        if marker in value
-    ]
+    if not isinstance(value, str) or not IDENTIFIER_RE.fullmatch(value):
+        return [
+            f"{label}: {value!r} is not a plain identifier. Schema v1 describes a design and has "
+            f"no evaluator, so a predicate, expression, or template here would certify routing "
+            f"semantics that nothing can execute"
+        ]
+    return []
 
 
 def _shortest_path(adjacency: dict[str, list[str]], start: str, goals: set[str]) -> list[str]:
@@ -226,7 +234,7 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
                     f"{MAX_BUDGET}; an unbounded budget is not a budget"
                 )
         for field in ("input_schema", "output_schema"):
-            diagnostics += _expression_defects(node.get(field), f"{label} ({node_id}).{field}")
+            diagnostics += _identifier_defects(node.get(field), f"{label} ({node_id}).{field}")
         diagnostics += _binding_defects(node, label, agent_names, fleet_tools, root)
         diagnostics += _join_shape_defects(node, label)
         nodes[node_id] = node
@@ -379,7 +387,7 @@ def _edge_field_defects(edge, label, nodes) -> list[str]:
     defects: list[str] = []
     kind = edge.get("kind")
     for field in ("schema", "state_field", "classification"):
-        defects += _expression_defects(edge.get(field), f"{label}.{field}")
+        defects += _identifier_defects(edge.get(field), f"{label}.{field}")
 
     if kind == "condition":
         if not isinstance(edge.get("state_field"), str) or not edge.get("state_field"):
@@ -466,9 +474,28 @@ def _validate_semantics(document, nodes, context) -> list[str]:
         if edge.get("kind") == "data":
             produced = nodes[edge["from"]].get("output_schema")
             consumed = nodes[edge["to"]].get("input_schema")
-            if edge.get("schema") != produced or edge.get("schema") != consumed:
+            declared = edge.get("schema")
+            missing = [
+                name
+                for name, value in (
+                    ("edge schema", declared),
+                    ("producer output_schema", produced),
+                    ("consumer input_schema", consumed),
+                )
+                if not isinstance(value, str) or not value.strip()
+            ]
+            if missing:
+                # Comparing absent values matched None against None and passed, so an entirely
+                # untyped handoff earned `design-consistent`. A typed-data edge must name a type on
+                # all three sides before equality means anything.
                 diagnostics.append(
-                    f"edges[{index}]: data schema {edge.get('schema')!r} does not match producer "
+                    f"edges[{index}]: data edge is untyped; {', '.join(missing)} must be a "
+                    f"non-empty schema identifier. An absent type on every side compared equal and "
+                    f"passed, certifying a handoff with no contract at all."
+                )
+            elif declared != produced or declared != consumed:
+                diagnostics.append(
+                    f"edges[{index}]: data schema {declared!r} does not match producer "
                     f"output {produced!r} and consumer input {consumed!r}"
                 )
 

@@ -66,18 +66,34 @@ HOST_LIMITATIONS = {
 }
 
 
-def _sorted_occurrences(references) -> list[dict]:
+def _relative(path: Path, root: Path) -> str:
+    """Repository-relative POSIX path.
+
+    Absolute paths made every occurrence differ between two checkouts of identical bytes, which
+    defeats the baseline-vs-candidate comparison this artifact exists for and embeds the operator's
+    directory layout in a shareable report. Identity is the file's place in the tree, not the
+    machine it was read on.
+    """
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        # Outside the inspected root: keep it distinguishable rather than silently rewriting it
+        # into something that looks repository-relative.
+        return path.as_posix()
+
+
+def _sorted_occurrences(references, root: Path) -> list[dict]:
     """Occurrence metadata for one stable edge, ordered so two runs diff cleanly."""
     return [
         {
             "line": reference.line,
-            "path": reference.path.as_posix(),
+            "path": _relative(reference.path, root),
             "raw": reference.raw,
             "slash_command": reference.is_slash_command,
             "surface": reference.surface,
         }
         for reference in sorted(
-            references, key=lambda r: (r.path.as_posix(), r.line, r.raw)
+            references, key=lambda r: (_relative(r.path, root), r.line, r.raw)
         )
     ]
 
@@ -96,7 +112,7 @@ def build_document(records) -> dict:
 
     reference_edges = [
         {
-            "occurrences": _sorted_occurrences(group),
+            "occurrences": _sorted_occurrences(group, records.root),
             "source": source,
             "surface_occurrences": {
                 surface: sum(1 for r in group if r.surface == surface)
@@ -107,9 +123,13 @@ def build_document(records) -> dict:
         for (source, target), group in sorted(grouped.items())
     ]
 
-    tool_grants = {
-        agent.name: sorted(agent.tools) for agent in sorted(records.agents, key=lambda m: m.name)
-    }
+    # An agent with no `tools:` inherits EVERY tool. Listing it with an empty grant would render
+    # maximal authority as least privilege -- the exact trust-boundary error this report exists to
+    # surface. Declared grants and inherited-all authority are therefore separate keys, so a
+    # consumer cannot read one as the other by accident.
+    declared = [a for a in sorted(records.agents, key=lambda m: m.name) if a.declares_tools]
+    inherits_all = sorted(a.name for a in records.agents if not a.declares_tools)
+    tool_grants = {agent.name: sorted(agent.tools) for agent in declared}
     adopted_tools = sorted({tool for tools in tool_grants.values() for tool in tools})
 
     return {
@@ -126,9 +146,10 @@ def build_document(records) -> dict:
             for source, skill in sorted(fleet_records.preload_edges(records))
         ],
         "reference_edges": reference_edges,
-        "report": _report(records, reference_edges, tool_grants),
+        "report": _report(records, reference_edges, tool_grants, inherits_all),
         "schema_version": SCHEMA_VERSION,
         "tool_grants": tool_grants,
+        "tool_authority_undeclared": inherits_all,
     }
 
 
@@ -144,10 +165,27 @@ def _host_authority(records) -> dict:
     for agent in sorted(records.agents, key=lambda m: m.name):
         is_guarded = None if guarded is None else agent.name in guarded
         claude[agent.name] = {
-            "declared_tools": sorted(agent.tools),
+            "authority": "declared" if agent.declares_tools else "inherits_all",
+            "declared_tools": sorted(agent.tools) if agent.declares_tools else None,
             "guard_evidence": guard_evidence,
             "guarded": is_guarded,
         }
+        if not agent.declares_tools:
+            # Nothing downstream can be projected from an absent declaration: the alias mapping and
+            # the sandbox decision both read a tool list that does not exist. Emitting the
+            # least-privilege answer each would produce is worse than emitting none.
+            copilot[agent.name] = {
+                "execute_available": None,
+                "execute_withheld_by_guard": None,
+                "tool_aliases": None,
+                "projection": "unavailable_no_declared_tools",
+            }
+            codex[agent.name] = {
+                "effective_authority": "unknown_or_inherited",
+                "requested_sandbox_mode": None,
+                "projection": "unavailable_no_declared_tools",
+            }
+            continue
         # Derived through the generator's own mapping rather than by reparsing generated files, so
         # one alias table governs both the adapters and this report.
         aliases = adapters._copilot_tools(agent.fields, guarded=bool(is_guarded))
@@ -194,7 +232,9 @@ def _measurement_overlay(records) -> dict:
     }
 
 
-def _report(records, reference_edges: list[dict], tool_grants: dict) -> dict:
+def _report(
+    records, reference_edges: list[dict], tool_grants: dict, inherits_all: list[str]
+) -> dict:
     """The five advisory sections. Every one is an observation; none is a verdict."""
 
     member_names = sorted(m.name for m in records.members)
@@ -276,8 +316,18 @@ def _report(records, reference_edges: list[dict], tool_grants: dict) -> dict:
     return {
         "host_authority_paths": {
             "dynamic_delegation": delegation,
+            # Surfaced in the report, not only in the data: an agent inheriting every tool is the
+            # largest authority statement the artifact can make, and burying it in a key an
+            # operator has to go looking for would defeat reading the report at all.
+            "inherits_all_tools": inherits_all,
             "note": "Prose cross-references and skill preloads are influence edges and are not "
-            "traversed as authority.",
+            "traversed as authority."
+            + (
+                " INCOMPLETE: one or more agents declare no tools and therefore inherit every "
+                "tool; their host projections are unavailable, not least-privileged."
+                if inherits_all
+                else ""
+            ),
         },
         "hub_concentration": hub,
         "reached_only_by_preload": preload_only,

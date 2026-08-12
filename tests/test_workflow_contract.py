@@ -346,8 +346,70 @@ class SchemaStrictnessTests(unittest.TestCase):
             document = _mutate()
             document["nodes"][1]["output_schema"] = value
             self.assertTrue(
-                any("embedded expression or predicate" in d for d in _check(document)), value
+                any("is not a plain identifier" in d for d in _check(document)), value
             )
+
+    def test_ordinary_predicates_are_rejected_as_state_fields(self):
+        """A substring blacklist accepted every one of these: none contains a marker anyone had
+        thought to list, and all four are predicates schema v1 says it cannot evaluate."""
+        for value in ("status == 'ok'", "count > 3", "x in (1,2)", "f(x)", "a-b == c", "not ready"):
+            document = _mutate()
+            document["edges"][0] = {
+                "from": "start", "to": "reviewer", "kind": "condition",
+                "state_field": value, "values": ["ok"],
+            }
+            self.assertTrue(
+                any("is not a plain identifier" in d for d in _check(document)), value
+            )
+
+    def test_plain_identifiers_remain_acceptable(self):
+        for value in ("status", "review_state", "result.kind", "phase-1"):
+            document = _mutate()
+            document["edges"][0] = {
+                "from": "start", "to": "reviewer", "kind": "condition",
+                "state_field": value, "values": ["ok"],
+            }
+            self.assertEqual(
+                [d for d in _check(document) if "plain identifier" in d], [], value
+            )
+
+    def test_a_data_edge_with_no_schema_on_any_side_is_untyped_and_rejected(self):
+        """None == None == None passed, so a handoff with no contract earned design-consistent."""
+        document = _mutate()
+        for edge in document["edges"]:
+            if edge.get("kind") == "data":
+                edge.pop("schema", None)
+        for node in document["nodes"]:
+            node.pop("output_schema", None)
+            node.pop("input_schema", None)
+        self.assertTrue(any("data edge is untyped" in d for d in _check(document)))
+
+    def test_each_missing_schema_side_is_named(self):
+        for drop, expected in (
+            ("edge", "edge schema"),
+            ("producer", "producer output_schema"),
+            ("consumer", "consumer input_schema"),
+        ):
+            document = _mutate()
+            if drop == "edge":
+                for edge in document["edges"]:
+                    if edge.get("kind") == "data":
+                        edge.pop("schema")
+            elif drop == "producer":
+                document["nodes"][1].pop("output_schema")
+            else:
+                document["nodes"][2].pop("input_schema")
+            self.assertTrue(
+                any(expected in d for d in _check(document) if "untyped" in d), drop
+            )
+
+    def test_a_non_string_schema_is_rejected(self):
+        for value in (None, 1, True, [], {}):
+            document = _mutate()
+            for edge in document["edges"]:
+                if edge.get("kind") == "data":
+                    edge["schema"] = value
+            self.assertNotEqual(_check(document), [], repr(value))
 
     def test_condition_edges_require_a_finite_value_set(self):
         document = _mutate()

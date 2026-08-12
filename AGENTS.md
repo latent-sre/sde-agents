@@ -140,8 +140,12 @@ python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.m
 ```
 
 Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
-candidate — output is sorted, timestamp-free, and LF, so the two documents diff cleanly. Generated
-output is never committed. Read it with its three layers kept apart: authored edges are what the
+candidate — output is sorted, timestamp-free, LF, and repository-relative, so identical trees in
+different directories emit identical bytes and the two documents diff cleanly. Generated output is
+never committed. An agent declaring no `tools:` inherits every tool, so the report separates
+declared grants from `tool_authority_undeclared`, withholds the host projections it cannot derive,
+and marks itself INCOMPLETE rather than showing an empty grant. Read it with its three layers kept
+apart: authored edges are what the
 files declare, each host projection states only that host's control and its limitations, and the
 routing overlay is co-membership plus separately identified case assertions — co-membership is not
 behavioral coverage. Every section is advisory. Deliberately **not** a T0, CI, or PR gate: an

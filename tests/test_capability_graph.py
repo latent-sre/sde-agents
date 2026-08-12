@@ -201,6 +201,56 @@ class HostSeparationTests(unittest.TestCase):
             self.assertTrue(projection["limitations"], f"{host} projection states no limitation")
 
 
+class UndeclaredAuthorityTests(unittest.TestCase):
+    """An agent with no `tools:` inherits EVERY tool. Rendering that as an empty grant shows
+    maximal authority as least privilege -- and no validator has necessarily run on an inspected
+    foreign or baseline tree, so nothing upstream prevents the state."""
+
+    def _tree_with_undeclared_agent(self) -> TemporaryDirectory:
+        handle = _tree(guarded=["reviewer"])
+        root = Path(handle.name)
+        (root / "agents" / "inheritor.md").write_text(
+            "---\nname: inheritor\ndescription: Declares no tools.\n---\n\nBody.\n",
+            encoding="utf-8",
+        )
+        return handle
+
+    def test_undeclared_agent_is_not_listed_with_an_empty_grant(self):
+        with self._tree_with_undeclared_agent() as name:
+            document = _document(Path(name))
+        self.assertNotIn("inheritor", document["tool_grants"])
+        self.assertEqual(document["tool_authority_undeclared"], ["inheritor"])
+
+    def test_claude_projection_says_inherits_all_rather_than_an_empty_list(self):
+        with self._tree_with_undeclared_agent() as name:
+            claude = _document(Path(name))["host_authority"]["claude"]["agents"]
+        self.assertEqual(claude["inheritor"]["authority"], "inherits_all")
+        self.assertIsNone(claude["inheritor"]["declared_tools"])
+        self.assertEqual(claude["builder"]["authority"], "declared")
+
+    def test_other_host_projections_refuse_rather_than_guess_least_privilege(self):
+        with self._tree_with_undeclared_agent() as name:
+            hosts = _document(Path(name))["host_authority"]
+        copilot = hosts["copilot"]["agents"]["inheritor"]
+        codex = hosts["codex"]["agents"]["inheritor"]
+        self.assertIsNone(copilot["tool_aliases"])
+        self.assertIsNone(copilot["execute_available"])
+        self.assertIsNone(codex["requested_sandbox_mode"])
+        self.assertEqual(copilot["projection"], "unavailable_no_declared_tools")
+
+    def test_report_marks_the_artifact_incomplete(self):
+        with self._tree_with_undeclared_agent() as name:
+            paths = _document(Path(name))["report"]["host_authority_paths"]
+        self.assertEqual(paths["inherits_all_tools"], ["inheritor"])
+        self.assertIn("INCOMPLETE", paths["note"])
+
+    def test_a_fully_declared_fleet_is_not_marked_incomplete(self):
+        with _tree() as name:
+            paths = _document(Path(name))["report"]["host_authority_paths"]
+        self.assertEqual(paths["inherits_all_tools"], [])
+        self.assertNotIn("INCOMPLETE", paths["note"])
+
+
 class MeasurementOverlayTests(unittest.TestCase):
     def test_co_membership_and_case_assertions_stay_separable(self):
         with _tree() as name:
@@ -216,6 +266,24 @@ class DeterminismTests(unittest.TestCase):
             first = json.dumps(_document(Path(name)), indent=2, sort_keys=True)
             second = json.dumps(_document(Path(name)), indent=2, sort_keys=True)
         self.assertEqual(first, second)
+
+    def test_identical_trees_in_different_directories_produce_identical_bytes(self):
+        """The property the artifact actually claims. The same-root repeat test below is a weaker
+        proxy that passed while every occurrence path still carried the checkout directory,
+        defeating baseline-vs-candidate comparison and embedding the operator's layout."""
+        with _tree() as first, _tree() as second:
+            self.assertNotEqual(first, second)
+            left = json.dumps(_document(Path(first)), indent=2, sort_keys=True)
+            right = json.dumps(_document(Path(second)), indent=2, sort_keys=True)
+        self.assertEqual(left, right)
+
+    def test_no_absolute_path_reaches_the_artifact(self):
+        with _tree() as name:
+            payload = json.dumps(_document(Path(name)))
+        self.assertNotIn(Path(name).as_posix(), payload)
+        for edge in json.loads(payload)["reference_edges"]:
+            for occurrence in edge["occurrences"]:
+                self.assertFalse(Path(occurrence["path"]).is_absolute(), occurrence["path"])
 
     def test_emitted_files_use_lf_and_carry_no_timestamp(self):
         with _tree() as name, TemporaryDirectory() as out:
