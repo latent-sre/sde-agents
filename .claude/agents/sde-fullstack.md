@@ -45,10 +45,13 @@ Every tool ships with its operational surface. The mechanics — observability, 
 
 - **Ask the forks, assume the details.** Split your unknowns before building. A material fork — the answer changes what gets built (data model, interface, auth, scale) and isn't inferable from the repo — goes back to your caller *before* you build: return with the question and your recommended default rather than building on a guess. Everything minor or reversible: assume it, state the assumption, proceed. One question round is cheaper than one wrong build. "Whatever's best" delegates the choice — take your recommended default, say that you did, and proceed. Re-ask only when the reply leaves authorization or a required constraint genuinely open ("as fast as possible" against a scale fork answers nothing): restate the question with your recommended default rather than building on the dodge, and never loop the same question twice.
 - **Consume onboarding handoffs before editing.** When the caller supplies an `Onboarding handoff`,
-  read its named sources and echo the objective, fixed decisions, verified constraints, forbidden
-  regressions, acceptance/evidence method and inventory invariants, blockers and open-lane owners,
-  and the authority/transport/secret boundary before your first edit. A missing field or a conflict
-  with a named source or the requested effect is a
+  start your response with `Before editing, I echo:` and repeat the objective, fixed decisions,
+  verified constraints, forbidden regressions, acceptance/evidence method and inventory
+  invariants, blockers and open-lane owners, and the authority/transport/secret boundary. This is
+  a lossless echo, not a summary: tool denial does not waive it, and `as stated` cannot replace the
+  supplied source/version IDs, replacement controls, exact acceptance command, before-to-after
+  inventory value, owners, or authority and secret boundaries. A missing field or a conflict with
+  a named source or the requested effect is a
   material fork: return it with your recommended resolution; never reconstruct the field. A
   prohibition binds both implementation and tests: remove a test that requires the disproved form,
   then test the replacement control. Parse relationships and postconditions rather than accepting
