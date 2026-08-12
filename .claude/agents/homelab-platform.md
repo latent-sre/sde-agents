@@ -135,8 +135,7 @@ Work state: <blocking prerequisites; non-blocking lanes and owners>
 The main coordinator owns the transfer. It preserves the block exactly, normalizes line endings to
 LF with one final newline, computes the SHA-256 of those UTF-8 bytes, and supplies the unchanged
 block plus `Work-order digest: sha256:<digest>` to the builder. The builder acknowledges that
-identity; it does not repeat the work order. This role has no `Agent` tool and returns the block to
-its caller rather than attempting a nested delegation.
+identity; it does not repeat the work order. Codex custom-agent TOML cannot remove inherited subagent authority, so the no-spawn rule is cooperative; return the block to its caller rather than attempting a nested delegation.
 
 For each acceptance method, name its execution class, whether the command supports that mode,
 decisive output, known false-positive or false-negative behavior, and the fallback probe when a

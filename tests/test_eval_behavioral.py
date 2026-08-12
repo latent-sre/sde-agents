@@ -738,6 +738,10 @@ Recommended resolution: keep the requested files at Tier 1 and route live activa
                     ),
                 )
 
+    def test_conflict_receipt_case_keeps_source_free_none_complete(self) -> None:
+        prompt = self.cases["handoff-builder-returns-conflict-receipt"]["prompt"]
+        self.assertIn("Decisions and evidence: none.", prompt)
+
     def test_work_order_digests_bind_the_exact_supplied_bytes(self) -> None:
         for case_id in (
             "handoff-builder-applies-work-order",
@@ -747,6 +751,33 @@ Recommended resolution: keep the requested files at Tier 1 and route live activa
                 work_order, recorded = self._work_order_and_digest(self.cases[case_id])
                 actual = hashlib.sha256(work_order.encode("utf-8")).hexdigest()
                 self.assertEqual(recorded, actual)
+
+    def test_digest_mismatch_receipt_is_a_valid_handoff_control(self) -> None:
+        case = {
+            "id": "handoff-builder-rejects-digest-mismatch-control",
+            "expect_fires": ["sde-fullstack"],
+            "must_match": [
+                r"(?im)\AHandoff receipt:\s*input-required\s*$",
+                r"(?im)^Work-order ID:\s*openbao-staged-config-v1\s*$",
+                r"(?im)^Work-order digest:\s*sha256:deadbeef(?:deadbeef){7}\s*$",
+                r"(?im)^Conflicts:\s*Work-order digest\s*$",
+                r"(?i)Recommended resolution:[^\n]{0,140}(?:recompute|re-send|resend|corrected)",
+            ],
+            "must_not_match": [
+                r"(?im)^Handoff receipt:\s*accepted\s*$",
+                r"(?i)before editing,?\s+I echo",
+            ],
+        }
+        response = (
+            "Handoff receipt: input-required\n"
+            "Work-order ID: openbao-staged-config-v1\n"
+            "Work-order digest: sha256:deadbeefdeadbeefdeadbeefdeadbeef"
+            "deadbeefdeadbeefdeadbeefdeadbeef\n"
+            "Conflicts: Work-order digest\n"
+            "Recommended resolution: recompute SHA-256 over the exact LF-normalized work order "
+            "and resend the corrected block/digest pair.\n"
+        )
+        self.assertEqual([], eval_behavioral.assert_case(response, case, {"sde-fullstack"}))
 
     def test_functional_builder_requires_end_state_evidence_and_minimal_receipt(self) -> None:
         case = self.cases["handoff-builder-applies-work-order"]
@@ -1502,6 +1533,16 @@ class BenchmarkConditionsTest(unittest.TestCase):
         # Isolation is a measurement condition: without this key, a clean-room artifact and a
         # contaminated one look identical and would be diffed as if comparable.
         self.assertEqual(False, conditions["clean_room"])
+
+    def test_conditions_block_uses_the_shared_plugin_dir_label(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            eval_behavioral.eval_routing,
+            "plugin_dir_label",
+            return_value="<external-plugin-dir>",
+        ) as label:
+            payload = self._run_main(Path(tmp), [self._stats()])
+        self.assertEqual("<external-plugin-dir>", payload["conditions"]["plugin_dir"])
+        label.assert_called_once()
 
     def test_functional_evidence_is_serialized_without_raw_model_output(self) -> None:
         case = next(

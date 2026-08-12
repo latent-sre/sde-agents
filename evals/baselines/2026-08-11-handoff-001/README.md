@@ -30,13 +30,15 @@ authentication, sandbox, feature, and isolation settings.
 
 | Side | Tracked SHA-256 | Strict cases | Passing runs | Tokens | Duration sum |
 |---|---|---:|---:|---:|---:|
-| Baseline | `A42C9072F6A110687A95892476885303192D8DECA506FC2BE2E16FB109FF16DF` | 0/6 | 0/18 | 178,727 | 233,813 ms |
+| Baseline | `7EC0E6DE9C584792684799BF8A290E44F7D2BD6609E094011120ED6816DE61A6` | 0/6 | 0/18 | 178,727 | 233,813 ms |
 | Candidate | `8FB69B3908BED543173943D698EC3A27D6ADD465CC7BB8FF701B1D0E623AF593` | 1/6 | 4/18 | 185,175 | 216,687 ms |
 
-Git normalizes tracked JSON to LF. The untouched Windows capture files used CRLF and had SHA-256
+Git normalizes tracked JSON to LF. The candidate artifacts differ from the original Windows capture
+only by line endings. The baseline artifacts were later redacted to replace an operator-local
+`plugin_dir` path with `<external-plugin-dir>`, so their tracked hash now reflects both LF
+normalization and that path redaction. The original Windows capture SHA-256 values were
 `1DBD3846BB44EF4FAA1D046F00FC1E96A56F219A2327302F703B551C7BA92D85` (baseline) and
-`D35D3262DFF3F6C78749FBDB29EE94836F39109E24B75898CE73CEC4CA15F639` (candidate); only line
-endings differ from the tracked artifacts.
+`D35D3262DFF3F6C78749FBDB29EE94836F39109E24B75898CE73CEC4CA15F639` (candidate).
 
 | Case | Baseline | Candidate | Disposition |
 |---|---:|---:|---|
@@ -89,7 +91,7 @@ identity differed: baseline `4777df9`, candidate `ff51f42`.
 
 | Side | Capture SHA-256 | Tracked LF SHA-256 | Strict cases | Passing runs | Tokens | Duration sum |
 |---|---|---|---:|---:|---:|---:|
-| Baseline | `6308507C365253BA097CF25779BF1D6FF9EF7E825B0243AF80F971A8057E2B68` | `7BC613DE9CDD5C051D11C9AF84387349CF0CF97BAFBE4A4F425A3578B18F8C08` | 0/6 | 1/18 | 178,749 | 270,078 ms |
+| Baseline | `6308507C365253BA097CF25779BF1D6FF9EF7E825B0243AF80F971A8057E2B68` | `E84E18E61B995C2FFE200907A3CA3F79608DE9BAFB7C652EBC902FC31DE542CC` | 0/6 | 1/18 | 178,749 | 270,078 ms |
 | Candidate | `C93201146E725E07E4C85FBD4FBFACC8FD3EDD85AE76154A74F603BB029708B7` | `D1BE71B84E04803DDEFD69E86FB8DDD4F43EF7BCF4A5E82D3E094680073BD793` | 1/6 | 6/18 | 175,768 | 259,781 ms |
 
 | Case | Baseline | Candidate | Retained-evidence disposition |

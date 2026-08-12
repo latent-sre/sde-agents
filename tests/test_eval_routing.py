@@ -562,11 +562,11 @@ class ConditionsTest(unittest.TestCase):
         self.assertEqual(".", eval_routing.plugin_dir_label(REPO))
         self.assertEqual("agents", eval_routing.plugin_dir_label(REPO / "agents"))
 
-    def test_external_plugin_dir_is_recorded_verbatim(self) -> None:
-        # A plugin_dir OUTSIDE the repo is a real measurement condition (a different plugin was
-        # loaded), so it must survive into the artifact unchanged.
+    def test_external_plugin_dir_is_redacted_to_a_stable_label(self) -> None:
+        # The measured plugin identity is already hashed separately, so keeping a workstation path
+        # here only leaks local layout into committed artifacts without adding provenance.
         outside = Path(REPO.anchor) / "somewhere-else"
-        self.assertEqual(str(outside), eval_routing.plugin_dir_label(outside))
+        self.assertEqual("<external-plugin-dir>", eval_routing.plugin_dir_label(outside))
 
 
 class ProvenanceTest(unittest.TestCase):

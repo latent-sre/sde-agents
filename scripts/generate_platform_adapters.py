@@ -414,6 +414,23 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         spawn_boundary,
         text,
     )
+    if host == "copilot":
+        handoff_boundary = (
+            "This profile receives no `agent` tool and returns the block to its caller rather than "
+            "attempting a nested delegation."
+        )
+    else:
+        handoff_boundary = (
+            "Codex custom-agent TOML cannot remove inherited subagent authority, so the no-spawn "
+            "rule is cooperative; return the block to its caller rather than attempting a nested "
+            "delegation."
+        )
+    text = re.sub(
+        r"This role has no `Agent`\s+tool and returns the block to\s+its caller rather than "
+        r"attempting a nested delegation\.",
+        handoff_boundary,
+        text,
+    )
 
     if name == "code-reviewer":
         text = text.replace(

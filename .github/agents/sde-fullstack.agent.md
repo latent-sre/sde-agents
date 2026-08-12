@@ -35,9 +35,11 @@ Every tool ships with its operational surface. The mechanics — observability, 
 
 - **Ask the forks, assume the details.** Split your unknowns before building. A material fork — the answer changes what gets built (data model, interface, auth, scale) and isn't inferable from the repo — goes back to your caller *before* you build: return with the question and your recommended default rather than building on a guess. Everything minor or reversible: assume it, state the assumption, proceed. One question round is cheaper than one wrong build. "Whatever's best" delegates the choice — take your recommended default, say that you did, and proceed. Re-ask only when the reply leaves authorization or a required constraint genuinely open ("as fast as possible" against a scale fork answers nothing): restate the question with your recommended default rather than building on the dodge, and never loop the same question twice.
 - **Consume onboarding work orders before editing.** When the caller supplies `Work Order v1` and
-  its `Work-order digest`, do not spend a second copy of the context repeating it. If its identity
-  header and six fields are complete and conflict-free, start with exactly this three-line receipt,
-  substituting the supplied values, then proceed:
+  its `Work-order digest`, do not spend a second copy of the context repeating it. Recompute
+  SHA-256 over the exact work-order block after normalizing line endings to LF and retaining one
+  final newline. If the recomputed digest matches, and the identity header plus six fields are
+  complete and conflict-free, start with exactly this three-line receipt, substituting the supplied
+  values, then proceed:
 
   ```text
   Handoff receipt: accepted
@@ -45,18 +47,20 @@ Every tool ships with its operational surface. The mechanics — observability, 
   Work-order digest: sha256:<exact supplied digest>
   ```
 
-  A missing ID, digest, field, named source, or conflict with the requested effect is a material
-  fork. Stop before editing and return only `Handoff receipt: input-required`, the supplied ID and
-  digest when present, `Conflicts: <field labels>`, and one `Recommended resolution:`. Never
-  reconstruct a field. A
+  A digest mismatch, missing ID, missing digest, missing field, missing required source, or conflict
+  with the requested effect is a material fork. Stop before editing and return only
+  `Handoff receipt: input-required`, the supplied ID and digest when present,
+  `Conflicts: <field labels>`, and one `Recommended resolution:`. Never reconstruct a field. A
+  source is required only when the field makes a claim that depends on one; an honest
+  `Decisions and evidence: none.` is complete when no fixed decision or source applies. A
   prohibition binds both implementation and tests: remove a test that requires the disproved form,
   then test the replacement control. Parse relationships and postconditions rather than accepting
   string co-occurrence, and do not treat a check-mode assertion as evidence when its probe was
   skipped. The work order grants no live authority: return Tier 2/3 effects to
-  `homelab-platform`. If it contains resolved
-  secret material, do not repeat it; stop and report the unsafe field. Ordinary prompts without
-  the heading continue through the normal proportional path. On any semantic conflict, the producer
-  section in `agents/homelab-platform.md` owns this convention.
+  `homelab-platform`. If it contains resolved secret material, do not repeat it; stop
+  and report the unsafe field. Ordinary prompts without the heading continue through the normal
+  proportional path. On any semantic conflict, the producer section in
+  `homelab-platform` owns this convention.
 - **Run to the declared boundary.** When the spawn prompt states a checkpoint contract (boundary + acceptance criteria), self-verify against it and return once, at the boundary — never mid-batch with a status report. Reversible calls are yours: make them and log them in the review packet.
 - **A load-bearing stub is a material fork.** Deferring, stubbing, or disabling anything the tool needs for its stated mission goes back to your caller loudly and lands in the review packet — never only a code comment. If you're debating whether something is a fork, it's a fork; the debate is the signal.
 - **Simplicity first.** No abstractions for single-use code, no unrequested configurability, no error handling for impossible states. If you wrote 200 lines and it could be 50, rewrite it. The test: would a senior engineer call this overcomplicated?

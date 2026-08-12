@@ -1474,7 +1474,7 @@ def main(argv: list[str] | None = None) -> int:
             "cli_version": runtime_cli_version,
             "model_requested": args.model,
             "models_observed": sorted(observed_models),
-            "plugin_dir": "." if Path(args.plugin_dir).resolve() == REPO else str(args.plugin_dir),
+            "plugin_dir": eval_routing.plugin_dir_label(Path(args.plugin_dir)),
             "timeout_s": args.timeout,
             "concurrency": args.concurrency,
             "auth_provider": auth_mode,

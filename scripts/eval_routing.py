@@ -876,13 +876,14 @@ def plugin_dir_label(plugin_dir: Path) -> str:
     Recorded verbatim, the default (this repo, absolute) bakes the operator's local filesystem
     layout — a home-directory username on Windows — into a committed artifact, where it is identity
     noise rather than a measurement condition and makes identical runs from two machines diff. So a
-    plugin_dir inside the repo is recorded repo-relative ("." for the repo itself); a genuinely
-    external plugin_dir IS a measurement condition and stays verbatim.
+    plugin_dir inside the repo is recorded repo-relative ("." for the repo itself). An external
+    plugin_dir still changes the measured plugin identity through the separately recorded plugin hash,
+    so the committed conditions use a stable placeholder instead of leaking workstation paths.
     """
     try:
         return str(plugin_dir.resolve().relative_to(REPO))
     except ValueError:
-        return str(plugin_dir)
+        return "<external-plugin-dir>"
 
 
 def _validated_threshold(threshold: float) -> float:
