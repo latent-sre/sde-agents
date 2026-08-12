@@ -97,10 +97,11 @@ reasoning bypass this stop.
 - **Docs are part of the change.** An operating doc you relied on and found wrong or missing — a runbook step that failed, a stale path, a dead recovery note — gets fixed in the same change when small and in scope (doc edits are Tier 1; a runbook's "Last verified" moves only on run evidence), else the gap is named in your review packet. Never silently work around a wrong doc.
 - **Expose the minimum.** Through the reverse proxy with TLS, auth in front by default; direct port exposure is an exception you justify in writing.
 
-## Onboarding handoff to a builder
+## Onboarding work order for a builder
 
-When activated host or service onboarding reaches application-code implementation, return the
-block below to your caller for `sde-fullstack` before implementation crosses contexts if
+When activated host or service onboarding reaches application-code implementation, return one
+`Work Order v1` block to your caller for `sde-fullstack` before implementation crosses
+contexts if
 there is a fixed operator decision, verified POC/discovery constraint, failed assumption,
 verification limitation, inventory invariant, open lane, or live effect/authority state inside the
 delegated task to preserve. Return the block to your caller; do not delegate from this role. The
@@ -111,7 +112,8 @@ deliverable, acceptance, and authority and has none of those cross-context const
 naming the later Tier 2 activation gate does not force the full form.
 
 ```text
-Onboarding handoff:
+Work Order v1:
+Work-order ID: <stable task identity>
 Objective: <task identity; bounded deliverable; explicit out of scope>
 Decisions and evidence: <fixed decisions; exact sources; [verified] facts and their probes>
 Forbidden regressions: <failed assumption -> replacement control; rejection in code and tests>
@@ -119,6 +121,12 @@ Acceptance and invariants: <success and failure; valid evidence method; parsed p
 Authority and recovery: <tier/effect; transport states; irreversible and temporary-authority recovery>
 Work state: <blocking prerequisites; non-blocking lanes and owners>
 ```
+
+The main coordinator owns the transfer. It preserves the block exactly, normalizes line endings to
+LF with one final newline, computes the SHA-256 of those UTF-8 bytes, and supplies the unchanged
+block plus `Work-order digest: sha256:<digest>` to the builder. The builder acknowledges that
+identity; it does not repeat the work order. This role has no `Agent` tool and returns the block to
+its caller rather than attempting a nested delegation.
 
 For each acceptance method, name its execution class, whether the command supports that mode,
 decisive output, known false-positive or false-negative behavior, and the fallback probe when a
@@ -129,11 +137,11 @@ distinct. Add observable postconditions and ambiguous-response reconciliation on
 irreversible work; add acquisition, maximum lifetime, and guaranteed cleanup only for temporary
 authority. The whole block is capture-safe: carry only field-scoped non-secret projections or
 source references, never resolved secret material. For immutable Git evidence, reuse `base_sha`,
-`candidate_sha`, and `tree_oid`. Keep all six labels; write `none` for conditional content that
-does not apply instead of inventing detail or dropping the field.
+`candidate_sha`, and `tree_oid`. Keep the identity header and all six field labels; write `none`
+for conditional content that does not apply instead of inventing detail or dropping a field.
 
 For the simple-build exception, keep the ordinary prompt to three compact lines — `Deliverable`,
-`Acceptance`, and `Authority` — and omit the `Onboarding handoff` heading. The short path removes
+`Acceptance`, and `Authority` — and omit the `Work Order v1` heading. The short path removes
 ceremony, not the real health/reachability check or the Tier 2/3 approval boundary.
 
 ## Review packet (end every change with this)
