@@ -83,16 +83,18 @@ the affected module, T1, and strict plugin validation. No model session is part 
 
 The previous `--runtime codex --case 'handoff-*'` command no longer describes this suite: the
 functional builder case intentionally grants `Bash` and `Write` in a disposable Claude session.
-The digest-mismatch case grants only `Bash` for the required hash calculation and denies every
-write tool. The bounded Codex projection refuses both before spend. Existing Terra artifacts
-remain archived; do not rerun or reinterpret them as Claude evidence.
+The digest-mismatch case grants only `Bash`, requires one prescribed read-only command over the
+exact block, correlates its computed result, and rejects any other Bash command or change to a
+seeded workspace; every write tool is also denied. The bounded Codex projection refuses both
+functional cases before spend. Existing Terra artifacts remain archived; do not rerun or
+reinterpret them as Claude evidence.
 
 Any live Claude measurement needs separate operator approval after the candidate freezes. The
 smallest diagnostic is three candidate-only sessions: producer, functional builder, and
-digest-mismatch receipt, one run each. Only if those responses and end-state evidence are sound
-should a paired baseline/candidate capture be proposed. Runtime, CLI, exact model, timeout, case
-bytes, evaluator bytes, plugin identities, isolation, and concurrency must be identical within
-that pair.
+digest-mismatch receipt, one run each. Only if those responses, exact hash-command evidence, and
+end-state evidence are sound should a paired baseline/candidate capture be proposed. Runtime,
+CLI, exact model, timeout, case bytes, evaluator bytes, plugin identities, isolation, and
+concurrency must be identical within that pair.
 
 ## Rollback
 

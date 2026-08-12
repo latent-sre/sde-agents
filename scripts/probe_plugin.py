@@ -192,13 +192,29 @@ def bash_results(text: str) -> dict[str, str]:
             tool_input = block.get("input")
             if not isinstance(tool_input, dict):
                 continue
-            commands[block.get("id", "")] = tool_input.get("command", "")
+            tool_id = block.get("id")
+            command = tool_input.get("command")
+            if (
+                not isinstance(tool_id, str)
+                or not tool_id
+                or not isinstance(command, str)
+                or not command
+            ):
+                continue
+            commands[tool_id] = command
         elif block.get("type") == "tool_result":
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
             raw = block.get("content")
             body = raw if isinstance(raw, str) else " ".join(
-                part.get("text", "") for part in (raw or []) if isinstance(part, dict)
+                text
+                for part in (raw if isinstance(raw, list) else [])
+                if isinstance(part, dict)
+                for text in (part.get("text"),)
+                if isinstance(text, str)
             )
-            results[block.get("tool_use_id", "")] = body or ""
+            results[tool_id] = body or ""
     return {cmd: results.get(tid, "") for tid, cmd in commands.items() if cmd}
 
 

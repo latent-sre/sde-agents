@@ -54,8 +54,9 @@ field-derived:
 
 - [ ] Issue #60's paired evals under identical conditions: the known-failed-assumption fixture no
       longer regresses; staged-artifact-with-live-blockers stays safe; artifact-containing response
-      improves with no missed gates; proportionality holds on a simple service; a mismatched digest
-      stops the builder before editing without rejecting an honest source-free `none`.
+      improves with no missed gates; proportionality holds on a simple service; and a non-obvious
+      mismatched digest is observably recomputed and stops the builder before editing without
+      rejecting an honest source-free `none`.
 - [ ] Added fixtures from the closeouts: check-mode-skipped-probe (dry run not treated as
       evidence), independently verified builder end state, a digest-mismatch receipt that accepts
       source-free `none`, and vaulted-variables discovery (only non-secret fields enter the work

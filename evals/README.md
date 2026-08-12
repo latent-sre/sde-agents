@@ -248,12 +248,15 @@ learning/runbook lifecycle composition, current-evidence precedence, architectur
 verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
 validation, plus proportional onboarding handoffs that preserve discovered constraints without
 turning a simple build into packet ceremony. Each case artifact records input/output usage and
-duration. The HANDOFF builder additionally uses the existing `semantic_oracle` seam: it seeds three
-declarative JSON artifacts and a trusted acceptance program, refuses a changed verifier or linked
-artifact, runs only that unchanged verifier, and records its exit/output plus artifact SHA-256
-values. Model-authored Python is never executed as grader code; receipt patterns prove only the
-transfer identity while the trusted verifier proves the end state. An unavailable duration is
-`null`, never a fabricated zero. The runner prints the
+duration. The HANDOFF functional builder additionally uses the existing `semantic_oracle` seam: it
+seeds three declarative JSON artifacts and a trusted acceptance program, refuses a changed verifier
+or linked artifact, runs only that unchanged verifier, and records its exit/output plus artifact
+SHA-256 values. The digest-negative case uses the same seam to require exactly one prescribed
+read-only hash command over the exact work-order bytes, correlate its computed result, and prove a
+seeded workspace stayed unchanged. Model-authored Python is never executed as grader code; receipt
+patterns prove only transfer identity while the two trusted oracles prove end state and
+stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero. The runner
+prints the
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 

@@ -75,6 +75,44 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         self.assertEqual([], probe_plugin.tool_calls(transcript))
         self.assertEqual({}, probe_plugin.bash_results(transcript))
 
+    def test_bash_results_ignore_non_string_commands_and_correlation_ids(self) -> None:
+        transcript = "\n".join(
+            (
+                json.dumps({
+                    "message": {"content": [{
+                        "type": "tool_use", "id": "bad-command", "name": "Bash",
+                        "input": {"command": ["not", "a", "string"]},
+                    }]}
+                }),
+                json.dumps({
+                    "message": {"content": [{
+                        "type": "tool_use", "id": ["bad-id"], "name": "Bash",
+                        "input": {"command": "echo BAD"},
+                    }]}
+                }),
+                json.dumps({
+                    "message": {"content": [{
+                        "type": "tool_result", "tool_use_id": ["bad-result-id"],
+                        "content": "ignored",
+                    }]}
+                }),
+                json.dumps({
+                    "message": {"content": [
+                        {
+                            "type": "tool_use", "id": "bash-good", "name": "Bash",
+                            "input": {"command": "echo GOOD"},
+                        },
+                        {
+                            "type": "tool_result", "tool_use_id": "bash-good",
+                            "content": "good result",
+                        },
+                    ]}
+                }),
+            )
+        )
+
+        self.assertEqual({"echo GOOD": "good result"}, probe_plugin.bash_results(transcript))
+
     def test_agent_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
             {

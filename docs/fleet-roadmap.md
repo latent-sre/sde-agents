@@ -196,9 +196,10 @@ artifacts are historical for their exact no-tool cases and are not regraded as C
 evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
 small receipts. The paired evaluator change keeps six cases by replacing the reviewer duplicate
 with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
-byte-checked, grades captured regular-file bytes, and records artifact hashes/results.
-Red-before-green controls,
-T0, all 104 behavioral-evaluator tests, all 661 tests across 30 modules, and
+byte-checked, grades captured regular-file bytes, and records artifact hashes/results. The
+digest-negative oracle now requires one exact hash command and correlated result plus an unchanged
+seeded workspace, closing the prior receipt-only false green. Red-before-green controls,
+T0, all 107 behavioral-evaluator tests, all 665 tests across 30 modules, and
 `claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
 unaccepted.
 

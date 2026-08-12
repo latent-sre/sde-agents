@@ -185,7 +185,9 @@ class RunSessionValidationTest(unittest.TestCase):
             observed["cwd"] = cwd
             (cwd / "seeded").write_text("yes", encoding="utf-8")
 
-        def evaluate(cwd: Path, oracle: str | None) -> tuple[list[str], dict]:
+        def evaluate(
+            cwd: Path, oracle: str | None, **_kwargs,
+        ) -> tuple[list[str], dict]:
             self.assertEqual(observed["cwd"], cwd)
             self.assertEqual("yes", (cwd / "seeded").read_text(encoding="utf-8"))
             return [], {"oracle": oracle, "verifier_exit": 0}
@@ -313,6 +315,94 @@ class HandoffFunctionalWorkspaceTest(unittest.TestCase):
 
         self.assertEqual([], failures)
         self.assertIsNone(evidence)
+
+    def test_digest_rejection_requires_exact_hash_command_and_unchanged_workspace(self) -> None:
+        case = next(
+            case
+            for case in eval_behavioral.load_cases("handoff-builder-rejects-digest-mismatch")
+        )
+        work_order = (
+            case["prompt"]
+            .split("---BEGIN WORK ORDER---\n", 1)[1]
+            .split("---END WORK ORDER---", 1)[0]
+            .encode("utf-8")
+        )
+        command = eval_behavioral._handoff_digest_command(work_order)
+        actual_digest = hashlib.sha256(work_order).hexdigest()
+        transcript = "\n".join((
+            json.dumps({
+                "message": {"content": [{
+                    "type": "tool_use", "id": "hash-1", "name": "Bash",
+                    "input": {"command": command},
+                }]}
+            }),
+            json.dumps({
+                "message": {"content": [{
+                    "type": "tool_result", "tool_use_id": "hash-1",
+                    "content": actual_digest, "is_error": False,
+                }]}
+            }),
+        ))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            eval_behavioral.prepare_semantic_workspace(
+                cwd, "handoff-digest-rejection"
+            )
+            failures, evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=case["prompt"],
+                transcript=transcript,
+            )
+            self.assertEqual([], failures)
+            self.assertEqual(actual_digest, evidence["computed_digest"])
+            self.assertTrue(evidence["workspace_unchanged"])
+
+            missing_command, _evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=case["prompt"],
+                transcript="",
+            )
+            self.assertTrue(
+                any("exact digest command" in finding for finding in missing_command)
+            )
+
+            missing_result, _evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=case["prompt"],
+                transcript=transcript.splitlines()[0],
+            )
+            self.assertTrue(
+                any("no correlated result" in finding for finding in missing_result)
+            )
+
+            extra_command = transcript + "\n" + json.dumps({
+                "message": {"content": [{
+                    "type": "tool_use", "id": "extra-1", "name": "Bash",
+                    "input": {"command": "echo extra"},
+                }]}
+            })
+            extra, _evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=case["prompt"],
+                transcript=extra_command,
+            )
+            self.assertTrue(
+                any("only Bash command" in finding for finding in extra)
+            )
+
+            (cwd / "unexpected.txt").write_text("edited\n", encoding="utf-8")
+            changed, _evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=case["prompt"],
+                transcript=transcript,
+            )
+            self.assertTrue(any("workspace changed" in finding for finding in changed))
 
 
 class BehavioralCaseSchemaTest(unittest.TestCase):
@@ -576,6 +666,8 @@ class HandoffBehavioralCasesTest(unittest.TestCase):
         self.assertNotIn("handoff-builder-returns-conflict-receipt", self.cases)
         self.assertIn("Decisions and evidence: none", case["prompt"])
         self.assertEqual(["Bash"], case["allowed_tools"])
+        self.assertEqual("handoff-digest-rejection", case["semantic_oracle"])
+        self.assertIn("python -I -c", case["prompt"])
 
     def _controls(self) -> dict[str, tuple[str, str, tuple[str, ...]]]:
         return {
@@ -699,12 +791,17 @@ Recommended resolution: recompute the digest over the normalized block and resen
         )
         return controls
 
+    def _assert_control(self, case_id: str, text: str, agent: str) -> list[str]:
+        case = self.cases[case_id]
+        semantic_findings = [] if case.get("semantic_oracle") else None
+        return eval_behavioral.assert_case(
+            text, case, {agent}, semantic_findings=semantic_findings
+        )
+
     def test_each_case_accepts_one_correct_control(self) -> None:
         for case_id, (agent, valid, _contradictions) in self._resolved_controls().items():
             with self.subTest(case=case_id, control="valid"):
-                self.assertEqual(
-                    [], eval_behavioral.assert_case(valid, self.cases[case_id], {agent})
-                )
+                self.assertEqual([], self._assert_control(case_id, valid, agent))
 
     def test_every_required_pattern_fails_when_its_match_is_removed(self) -> None:
         for case_id, (agent, valid, _contradictions) in self._resolved_controls().items():
@@ -714,9 +811,7 @@ Recommended resolution: recompute the digest over the normalized block and resen
                 )
                 with self.subTest(case=case_id, pattern=pattern):
                     self.assertGreater(replacements, 0)
-                    failures = eval_behavioral.assert_case(
-                        mutated, self.cases[case_id], {agent}
-                    )
+                    failures = self._assert_control(case_id, mutated, agent)
                     self.assertIn(f"missing required pattern: {pattern!r}", failures)
 
     def test_every_forbidden_pattern_rejects_an_isolated_contradiction(self) -> None:
@@ -727,8 +822,8 @@ Recommended resolution: recompute the digest over the normalized block and resen
             for pattern, contradiction in zip(patterns, contradictions, strict=True):
                 with self.subTest(case=case_id, pattern=pattern):
                     self.assertRegex(contradiction, re.compile(pattern))
-                    failures = eval_behavioral.assert_case(
-                        valid + contradiction, self.cases[case_id], {agent}
+                    failures = self._assert_control(
+                        case_id, valid + contradiction, agent
                     )
                     self.assertEqual(
                         [f"forbidden pattern present: {pattern!r}"],
@@ -777,8 +872,17 @@ Recommended resolution: recompute the digest over the normalized block and resen
         mismatch = self.cases["handoff-builder-rejects-digest-mismatch"]
         work_order, recorded = self._work_order_and_digest(mismatch)
         actual = hashlib.sha256(work_order.encode("utf-8")).hexdigest()
-        self.assertEqual("0" * 64, recorded)
+        self.assertNotEqual("0" * 64, recorded)
         self.assertNotEqual(recorded, actual)
+        self.assertEqual(1, sum(left != right for left, right in zip(recorded, actual)))
+
+    def test_digest_mismatch_receipt_cannot_pass_without_semantic_evidence(self) -> None:
+        case = self.cases["handoff-builder-rejects-digest-mismatch"]
+        agent, valid, _contradictions = self._resolved_controls()[case["id"]]
+
+        failures = eval_behavioral.assert_case(valid, case, {agent})
+
+        self.assertTrue(any("workspace evidence unavailable" in failure for failure in failures))
 
     def test_functional_builder_requires_end_state_evidence_and_minimal_receipt(self) -> None:
         case = self.cases["handoff-builder-applies-work-order"]
@@ -1567,6 +1671,45 @@ class BenchmarkConditionsTest(unittest.TestCase):
         case_payload = payload["cases"][0]
         self.assertEqual([evidence], case_payload["semantic_evidence_per_run"])
         self.assertNotIn("run_evidence_per_run", case_payload)
+
+    def test_digest_rejection_evidence_is_serialized(self) -> None:
+        case = next(
+            case
+            for case in eval_behavioral.load_cases(
+                "handoff-builder-rejects-digest-mismatch"
+            )
+        )
+        match = re.search(r"Work-order digest: sha256:([0-9a-f]{64})", case["prompt"])
+        self.assertIsNotNone(match)
+        response = (
+            "Handoff receipt: input-required\n"
+            "Work-order ID: source-free-staged-build-v1\n"
+            f"Work-order digest: sha256:{match.group(1)}\n"
+            "Conflicts: Work-order digest\n"
+            "Recommended resolution: recompute the digest and resend.\n"
+        )
+        evidence = {
+            "oracle": "handoff-digest-rejection",
+            "computed_digest": "a" * 64,
+            "hash_command_observed": True,
+            "workspace_unchanged": True,
+        }
+        stats = {
+            **self._stats(),
+            "semantic_findings": [],
+            "semantic_evidence": evidence,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self._run_main(
+                Path(tmp),
+                [stats],
+                responses=[response],
+                case_id="handoff-builder-rejects-digest-mismatch",
+            )
+
+        self.assertEqual(
+            [evidence], payload["cases"][0]["semantic_evidence_per_run"]
+        )
 
     def test_benchmark_records_source_selection_and_content_plugin_identity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
