@@ -1,0 +1,309 @@
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+from scripts import validate_fleet
+from tests.support import repo_copy
+
+
+class RoutingClusterTests(unittest.TestCase):
+    """Schema integrity for evals/routing/*.json (EVAL-001).
+
+    The scorer grades a positive on its own expect_fires but reports the CLUSTER's fire rate — so
+    a positive naming a component outside the declared members can pass while the reported rate
+    reads zero (observed live: pos-ci-actions-harden accepting code-reviewer). And both target
+    lists match components BY NAME, so a typo'd member or target forbids or expects nothing and
+    passes vacuously. The runner has no error to raise at grade time; only a validator sees it.
+    """
+
+    BASE = {"cluster": "demo", "members": ["craft", "builder"], "cases": []}
+
+    def _issues_with_cluster(self, doc) -> list[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "repo"
+            routing = dst / "evals" / "routing"
+            routing.mkdir(parents=True)
+            payload = doc if isinstance(doc, str) else json.dumps(doc)
+            (routing / "cluster.json").write_text(payload, encoding="utf-8")
+            return validate_fleet.validate_routing_clusters(dst, ["builder"], ["craft"])
+
+    def test_well_formed_cluster_passes(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+            {"id": "neg-a", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": ["craft", "builder"]},
+            {"id": "neg-default", "prompt": "p", "polarity": "negative"},
+        ])
+        self.assertEqual([], self._issues_with_cluster(doc))
+
+    def test_typoed_polarity_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "positve", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("polarity" in i and "positive or negative" in i for i in issues), issues)
+
+    def test_empty_positive_expectation_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "positive", "expect_fires": []},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("expect_fires" in i and "non-empty list" in i for i in issues), issues)
+
+    def test_empty_explicit_negative_forbidden_set_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "bad", "prompt": "p", "polarity": "negative", "expect_not_fires": []},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("expect_not_fires" in i and "non-empty list" in i for i in issues), issues)
+
+    def test_expectation_fields_reject_wrong_types(self) -> None:
+        cases = [
+            {"id": "bad-pos", "prompt": "p", "polarity": "positive", "expect_fires": "craft"},
+            {"id": "bad-neg", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": "craft"},
+        ]
+        issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+        self.assertTrue(any("bad-pos" in i and "expect_fires" in i for i in issues), issues)
+        self.assertTrue(any("bad-neg" in i and "expect_not_fires" in i for i in issues), issues)
+
+    def test_required_case_fields_are_reported(self) -> None:
+        cases = [
+            {"prompt": "p", "polarity": "negative"},
+            {"id": "missing-prompt", "polarity": "negative"},
+            {"id": "missing-polarity", "prompt": "p"},
+            {"id": "missing-positive-targets", "prompt": "p", "polarity": "positive"},
+        ]
+        issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+        self.assertTrue(any("non-empty 'id'" in i for i in issues), issues)
+        self.assertTrue(any("missing-prompt" in i and "non-empty 'prompt'" in i for i in issues), issues)
+        self.assertTrue(any("missing-polarity" in i and "polarity" in i for i in issues), issues)
+        self.assertTrue(
+            any("missing-positive-targets" in i and "expect_fires" in i for i in issues),
+            issues,
+        )
+
+    def test_cases_must_be_a_non_empty_list(self) -> None:
+        for cases in (None, {}, []):
+            with self.subTest(cases=cases):
+                issues = self._issues_with_cluster(dict(self.BASE, cases=cases))
+                self.assertTrue(any("non-empty 'cases' list" in i for i in issues), issues)
+
+    def test_cluster_name_is_required(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "neg-a", "prompt": "p", "polarity": "negative"},
+        ])
+        del doc["cluster"]
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("non-empty 'cluster' string" in i for i in issues), issues)
+
+    def test_member_names_reject_wrong_types(self) -> None:
+        doc = dict(self.BASE, members=["craft", {"not": "a name"}], cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("member #2" in i and "component name" in i for i in issues), issues)
+
+    def test_each_case_must_be_an_object(self) -> None:
+        issues = self._issues_with_cluster(dict(self.BASE, cases=["not-an-object"]))
+        self.assertTrue(any("case #1 is not an object" in i for i in issues), issues)
+
+    def test_unresolvable_member_is_reported(self) -> None:
+        issues = self._issues_with_cluster(dict(self.BASE, members=["craft", "no-such-component"]))
+        self.assertTrue(any("not a fleet component" in i for i in issues), issues)
+
+    def test_duplicate_case_ids_are_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "pos-a", "prompt": "p", "polarity": "positive", "expect_fires": ["craft"]},
+            {"id": "pos-a", "prompt": "q", "polarity": "positive", "expect_fires": ["craft"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("duplicate case id" in i for i in issues), issues)
+
+    def test_nonmember_forbidden_target_is_reported(self) -> None:
+        doc = dict(self.BASE, cases=[
+            {"id": "neg-a", "prompt": "p", "polarity": "negative",
+             "expect_not_fires": ["no-such-component"]},
+        ])
+        issues = self._issues_with_cluster(doc)
+        self.assertTrue(any("forbids" in i for i in issues), issues)
+
+    def test_unparseable_cluster_file_is_reported(self) -> None:
+        issues = self._issues_with_cluster("not json {")
+        self.assertTrue(any("unreadable cluster file" in i for i in issues), issues)
+
+    def test_reintroducing_the_observed_inconsistency_is_reported(self) -> None:
+        # The exact defect EVAL-001 was opened on, proven against a COPY of the real repository
+        # rather than a synthetic shape that could drift away from the actual cluster file.
+        with repo_copy() as dst:
+            path = dst / "evals" / "routing" / "craft-vs-fullstack.json"
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            case = next(c for c in doc["cases"] if c["id"] == "pos-ci-actions-harden")
+            case["expect_fires"].append("code-reviewer")
+            path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+            issues, _, _ = validate_fleet.validate_repo(dst, check_inventory=False)
+        self.assertTrue(
+            any("pos-ci-actions-harden" in i and "outside the cluster's members" in i
+                for i in issues),
+            issues,
+        )
+
+class LearningLedgerWiringTests(unittest.TestCase):
+    def test_tracked_candidate_corruption_fails_the_ordinary_validator(self) -> None:
+        with repo_copy() as dst:
+            candidate = next((dst / "learning" / "candidates").glob("lc_*.json"))
+            candidate.write_text("{}\n", encoding="utf-8")
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
+
+    def test_mutated_ledger_source_is_not_served_from_the_module_cache(self) -> None:
+        # The validator imports the tree-under-validation's own scripts through a cache keyed on
+        # source bytes. If that key ever regressed to the script's path — the obvious "faster"
+        # key — a copy that mutates the script would be validated by the pristine module and the
+        # mutation would pass silently. Warm the cache, then mutate, then demand the failure.
+        with repo_copy() as dst:
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            (dst / "scripts" / "learning_ledger.py").write_text(
+                "raise RuntimeError('mutated ledger source must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any("ledger validation failed" in issue for issue in issues), issues)
+
+    def test_mutated_dependency_of_a_cached_module_is_not_masked(self) -> None:
+        # eval_behavioral imports eval_routing and packet_lint by __file__-derived paths at
+        # import time, so a cache keyed on eval_behavioral's own bytes alone would serve a
+        # module bound to the PRISTINE tree's dependencies after a copy mutates one of them —
+        # the false pass Copilot review caught on #91. The key must cover the sibling set.
+        with repo_copy() as dst:
+            self.assertEqual(
+                [], validate_fleet.validate_repo(dst, check_inventory=False,
+                                                 check_adapters=False)[0]
+            )
+            (dst / "scripts" / "eval_routing.py").write_text(
+                "raise RuntimeError('mutated dependency must be re-imported')\n",
+                encoding="utf-8",
+            )
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=False
+            )
+        self.assertTrue(
+            any("could not load" in issue for issue in issues), issues
+        )
+
+    def test_same_size_same_mtime_script_rewrite_is_not_served_stale_bytecode(self) -> None:
+        # A loader-based import trusts a __pycache__ entry validated only by (mtime, size), so
+        # a rewrite that preserves both would execute the PREVIOUS script while the content key
+        # describes the new one (Codex review on #91). The validator compiles the read bytes
+        # directly; this pins that a deliberately timestamp-preserving mutation still fails.
+        with repo_copy() as dst:
+            script = dst / "scripts" / "learning_ledger.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            original = script.read_bytes()
+            stamp = script.stat()
+            payload = b"raise RuntimeError('stale bytecode must not validate')\n"
+            self.assertGreater(len(original), len(payload), "fixture assumption: script bigger")
+            script.write_bytes(payload + b"#" * (len(original) - len(payload)))
+            os.utime(script, (stamp.st_atime, stamp.st_mtime))
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
+        )
+
+    def test_moving_bytes_across_a_file_boundary_is_a_cache_miss(self) -> None:
+        # The digest frames each file with its name and length. Without the frame, appending a
+        # deleted sibling's name and contents to the file sorted immediately before it yields
+        # the SAME unframed stream — here learning_ledger.py absorbing ledger_drift.py — and a
+        # pristine cached module would falsely validate the now-broken ledger source (caught in
+        # review on #91).
+        with repo_copy() as dst:
+            ledger = dst / "scripts" / "learning_ledger.py"
+            drift = dst / "scripts" / "ledger_drift.py"
+            self.assertEqual([], validate_fleet.validate_learning_ledger(dst))
+            merged = ledger.read_bytes() + drift.name.encode("utf-8") + drift.read_bytes()
+            ledger.write_bytes(merged)
+            drift.unlink()
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(
+            any("ledger validation failed" in issue for issue in issues), issues
+        )
+
+    def test_behavioral_validator_never_reuses_another_trees_fleet_roster(self) -> None:
+        # Importing eval_behavioral captures FLEET_AGENTS by globbing the tree's agents/ at
+        # import time — repository CONTENT, not script bytes, so the sibling-bytes module cache
+        # must not serve it (caught in review on #91). Warm an import on a tree that ships a
+        # phantom agent, then validate a tree without it whose contracts name that agent: a
+        # reused roster would accept the case silently.
+        with repo_copy() as dst:
+            (dst / "agents" / "phantom.md").write_text("---\nname: phantom\n---\n",
+                                                       encoding="utf-8")
+            validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        with repo_copy() as dst:
+            path = dst / "evals" / "behavioral" / "contracts.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            case = json.loads(json.dumps(document["cases"][0]))
+            case["id"] = "phantom-roster-tripwire"
+            case["agent"] = "sde-agents:phantom"
+            document["cases"].append(case)
+            path.write_text(json.dumps(document), encoding="utf-8")
+            issues = validate_fleet.validate_behavioral_contracts(dst, ["phantom"], [])
+        self.assertTrue(
+            any("does not name a shipped agent" in issue for issue in issues), issues
+        )
+
+    def test_transactional_ignore_drift_is_reported(self) -> None:
+        with repo_copy() as dst:
+            ignore = dst / ".gitignore"
+            ignore.write_text(
+                ignore.read_text(encoding="utf-8").replace(
+                    "learning/candidates/.learning-ledger.lock\n", ""
+                ),
+                encoding="utf-8",
+            )
+            issues = validate_fleet.validate_learning_ledger(dst)
+        self.assertTrue(any(".learning-ledger.lock" in issue for issue in issues), issues)
+
+class AdapterCheckTierTests(unittest.TestCase):
+    """The T0/T1 tier boundary for adapter byte-drift.
+
+    check_adapters=False exists so the wiring mutation tests stop re-generating and
+    byte-comparing every host adapter to check one unrelated breakage. These two tests pin the
+    flag's semantics: True still reports drift (so retiring the recipe's separate
+    `generate --check` step loses nothing), and False genuinely skips it (so the speedup is
+    real, and a future adapter test that forgets to pass True fails loudly — its expected issue
+    never appears — instead of passing vacuously)."""
+
+    def _drift_adapter(self, dst: Path) -> None:
+        adapter = sorted((dst / ".github" / "agents").glob("*.md"))[0]
+        adapter.write_text(
+            adapter.read_text(encoding="utf-8") + "\nhand edit\n", encoding="utf-8"
+        )
+
+    def test_flag_on_reports_hand_edited_adapter(self) -> None:
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=True
+            )
+        self.assertTrue(issues, "hand-edited adapter must be reported when the check runs")
+
+    def test_flag_off_skips_only_the_adapter_check(self) -> None:
+        with repo_copy() as dst:
+            self._drift_adapter(dst)
+            issues, _, _ = validate_fleet.validate_repo(
+                dst, check_inventory=False, check_adapters=False
+            )
+        self.assertEqual(
+            [],
+            issues,
+            "the only defect is adapter drift; skipping the adapter check must leave a clean "
+            "report",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

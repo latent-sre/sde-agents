@@ -168,33 +168,45 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `active` — spec approved by the operator 2026-08-09. The REV-001 sequencing
-condition is met: that round closed 2026-08-10
+**Status:** `active` — Claude manager-owned amendment authorized by the operator 2026-08-11;
+original spec approved 2026-08-09. The REV-001 sequencing condition is met: that round closed
+2026-08-10
 ([outcome record](archive/2026-08/rev-001-outcome-2026-08-10.md)) with the envelope idiom
 settled — `candidate_sha`/`base_sha`/`tree_oid` and the six-field approval envelope.
 
-**Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
-carry failed assumptions, verification-method validity, the executable-transport contract,
+**Outcome:** Onboarding work delegates through one manager-owned, digest-bound work order whose
+sections carry failed assumptions, verification-method validity, the executable-transport contract,
 irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
-— and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
+— the builder returns only an accepted/input-required receipt, and the known-failed-assumption
+fixture is graded from resulting state rather than a second prose copy.
 
 **Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) and
-its [paired plan](superpowers/plans/handoff-001-plan.md);
+its [paired lean plan](superpowers/plans/handoff-001-plan.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
 **Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
 release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
-Landed so far: the packet in `agents/homelab-platform.md`, the builder echo in
-`agents/sde-fullstack.md`, the lane-as-gate wording in `sde-agents:service-onboard` and
-`sde-agents:host-onboard`, the `handoff-packet` lint shape, adapter parity, and nine
-`handoff-001`-tagged contracts in `evals/behavioral/contracts.json`.
 
-**Next action:** Run the nine `handoff-001` contracts on a credentialed session, paired
-against the pre-change bytes under identical conditions, and record the rates. Evals 3 and 4
-additionally owe their turns-and-tokens measurement, which no offline grader substitutes for.
-Then the released-artifact retest the issue's close condition names.
+**Current evidence:** The first Terra/medium round remains preserved under
+[`evals/baselines/2026-08-11-handoff-001`](../evals/baselines/2026-08-11-handoff-001/): it proved the
+producer at 3/3 but left five strict cases unresolved, which triggered this amendment. Those
+artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
+evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
+small receipts. The paired evaluator change keeps six cases by replacing the reviewer duplicate
+with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
+byte-checked, grades captured regular-file bytes, and records artifact hashes/results. The
+digest-negative oracle now requires one exact hash command and correlated result plus an unchanged
+seeded workspace, closing the prior receipt-only false green. Red-before-green controls,
+T0, all 107 behavioral-evaluator tests, all 666 tests across 30 modules, and
+`claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
+unaccepted.
+
+**Next action:** Freeze the candidate and request separate operator approval for the exact Claude
+model and the smallest three-session diagnostic: producer, functional builder, and digest-mismatch
+receipt, one run each. Do not run a full paired capture unless those responses and end-state
+artifacts are sound. Do not compare Claude results with the archived Terra approximation.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
@@ -415,7 +427,8 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    the case design — or grade agent members differently — before spending a full-suite capture.
 
 3. **Configuration contamination is measured — and refuted as the agent-positive suppressor**
-   (2026-07-29, phase 1 of this item). `scripts/probe_isolation.py` showed every eval session had
+   (2026-07-29, phase 1 of this item). The
+   [archived isolation outcome](archive/2026-07/verification-round-outcomes-2026-07-29.md) showed every eval session had
    been inheriting 134 operator-side entries, with the fleet registered twice (9 bare via the
    junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
    (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent

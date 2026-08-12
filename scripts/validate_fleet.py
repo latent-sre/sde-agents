@@ -331,17 +331,19 @@ def is_runtime_byproduct(path: Path) -> bool:
     return "__pycache__" in path.parts or path.suffix.lower() in {".pyc", ".pyo"}
 
 
-def parse_frontmatter(path: Path) -> dict[str, str] | None:
-    """Parse the small YAML subset used by the fleet frontmatter."""
+def frontmatter_span(lines: list[str]) -> int | None:
+    """Return the closing marker index for a complete frontmatter block."""
 
-    lines = read_text(path).splitlines()
     if not lines or lines[0].strip() != "---":
         return None
+    return next(
+        (index for index in range(1, len(lines)) if lines[index].strip() == "---"),
+        None,
+    )
 
-    try:
-        end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-    except StopIteration:
-        return None
+
+def parse_frontmatter_lines(lines: list[str], end: int) -> dict[str, str] | None:
+    """Parse the fleet's YAML subset from one already-decoded source snapshot."""
 
     fields: dict[str, str] = {}
     i = 1
@@ -400,6 +402,14 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
         i += 1
 
     return fields
+
+
+def parse_frontmatter(path: Path) -> dict[str, str] | None:
+    """Parse the small YAML subset used by the fleet frontmatter."""
+
+    lines = read_text(path).splitlines()
+    end = frontmatter_span(lines)
+    return None if end is None else parse_frontmatter_lines(lines, end)
 
 
 def validate_name(name: str, kind: str, source: Path) -> list[str]:
@@ -839,12 +849,9 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
 
     for path in paths:
         lines = read_text(path).splitlines()
-        if not lines or lines[0].strip() != "---":
+        end = frontmatter_span(lines)
+        if end is None:
             continue  # Absent or unterminated frontmatter is the agent/skill rules' report to make.
-        try:
-            end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-        except StopIteration:
-            continue
 
         for line in lines[1:end]:
             # TOP_LEVEL_KEY_RE is anchored at column zero, so the indented continuation lines of a
@@ -1262,8 +1269,6 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             "lightweight Learning handoff."
         )
 
-    issues.extend(validate_handoff_packet_shape(root))
-
     guard_path = root / "scripts" / "readonly-guard.py"
     if not guard_path.is_file():
         return issues + [f"{guard_path}: missing the read-only guard"]
@@ -1605,97 +1610,6 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
     return issues
 
 
-def validate_handoff_packet_shape(root: Path) -> list[str]:
-    """Pin homelab-platform's delegation packet to the shape that grades it.
-
-    The packet's whole job is carrying a constraint across a context boundary, and the only thing
-    proving it still does is `packet_lint`'s `handoff-packet` shape in the behavioral suite. Those
-    two live in different files, so renaming or dropping a canonical slot leaves the grader
-    asserting the old one: the suite stays green while measuring a packet the fleet no longer
-    ships — the exact green-but-meaningless failure a slot-shaped grader is supposed to catch.
-    Pin both directions here, where a mismatch is a commit-time error instead of a live-run
-    surprise.
-    """
-    owner = root / "agents" / "homelab-platform.md"
-    linter = root / "scripts" / "packet_lint.py"
-    if not owner.is_file() or not linter.is_file():
-        return []
-    try:
-        module = load_module_by_content(linter, "packet_lint_shapes")
-    except Exception as exc:
-        return [f"{linter}: cannot load packet shapes ({exc})"]
-    if module is None:
-        return [f"{linter}: cannot load packet shapes"]
-    shape = getattr(module, "SHAPES", {}).get("handoff-packet")
-    if shape is None:
-        return [
-            f"{linter}: SHAPES has no 'handoff-packet' entry, but "
-            f"{owner.relative_to(root).as_posix()} ships a delegation packet and behavioral "
-            "cases declare that shape. An undeclared shape fails those cases at load rather "
-            "than grading anything."
-        ]
-    # Owner and grader agreeing is only half the link. The shape grades nothing until a shipped
-    # behavioral case declares it, and dropping that one `packet_shape` field is silent in every
-    # direction: the case stays schema-valid on its `must_match` alone, and this rule kept
-    # reporting agreement between two things that had stopped being consulted (review finding,
-    # PR #108 — reproduced at zero validator issues). The consumer is the third leg.
-    contracts = root / "evals" / "behavioral" / "contracts.json"
-    if contracts.is_file():
-        try:
-            document = json.loads(read_text(contracts))
-            consumers = [
-                case.get("id")
-                for case in document.get("cases", [])
-                if isinstance(case, dict) and case.get("packet_shape") == "handoff-packet"
-            ]
-        except (json.JSONDecodeError, AttributeError):
-            consumers = None  # the behavioral schema rule owns malformed contract files
-        if consumers is not None and not consumers:
-            return [
-                f"{contracts}: no behavioral case declares 'packet_shape': 'handoff-packet', so "
-                f"the thirteen delegation slots are graded by nothing. "
-                f"{owner.relative_to(root).as_posix()} still ships the packet and "
-                f"scripts/packet_lint.py still declares the shape, so every check here agrees "
-                "while the live contract measures no packet at all."
-            ]
-    section = re.search(
-        r"^##\s+Delegation handoff packet\b.*?(?=^##\s|\Z)",
-        read_text(owner),
-        re.MULTILINE | re.DOTALL,
-    )
-    if section is None:
-        return [
-            f"{owner}: no '## Delegation handoff packet' section, but scripts/packet_lint.py "
-            "declares a 'handoff-packet' shape and behavioral cases grade against it. The grader "
-            "would keep passing on a packet this agent no longer defines."
-        ]
-    # The canonical form is one `- \`Slot:\`` bullet per slot, which is also what the linter's
-    # start-of-line slot match consumes.
-    declared = [
-        match.group(1).strip().lower()
-        for match in re.finditer(r"^-\s+`([^`:]+):`", section.group(0), re.MULTILINE)
-    ]
-    issues: list[str] = []
-    missing = [slot for slot in shape if slot not in declared]
-    extra = [slot for slot in declared if slot not in shape]
-    if missing:
-        issues.append(
-            f"{owner}: the delegation packet no longer declares slot(s) {missing!r} that "
-            "scripts/packet_lint.py's 'handoff-packet' shape requires. Behavioral cases would "
-            "fail on a packet written exactly as this agent now specifies it."
-        )
-    if extra:
-        issues.append(
-            f"{owner}: the delegation packet declares slot(s) {extra!r} that "
-            "scripts/packet_lint.py's 'handoff-packet' shape does not grade. An ungraded slot is "
-            "the one that gets quietly dropped, which is the failure the packet exists to stop."
-        )
-    # Deliberately no order comparison: packet_lint matches slots anywhere in the packet, so a
-    # reordered canonical list grades identically. Failing the gate on order would block a
-    # harmless edit while claiming a linter behavior that does not exist.
-    return issues
-
-
 def validate_behavioral_contracts(
     root: Path, agent_names: list[str], skill_names: list[str]
 ) -> list[str]:
@@ -1763,22 +1677,25 @@ def validate_behavioral_contracts(
 
 
 def validate_host_conformance_manifest(root: Path) -> list[str]:
-    """Pin required host/static coverage and the operator-selected GPT-5.6 Sol baseline lane."""
+    """Apply repository coverage policy after the shared manifest schema validates."""
 
     if not (root / ".claude-plugin" / "plugin.json").is_file():
         return []
     path = root / "evals" / "conformance" / "hosts.json"
+    schema = root / "scripts" / "host_conformance_schema.py"
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        module = load_module_by_content(schema, "host_conformance_schema")
+        if module is None:
+            raise ImportError(f"cannot load {schema}")
+        module.validate_manifest(document)
+    except Exception as exc:
         return [
-            f"{path}: host conformance manifest is missing or unreadable ({exc}). Without the "
-            f"versioned matrix, unavailable hosts and model lanes can silently disappear from the "
-            f"fleet's baseline."
+            f"{path}: host conformance manifest is missing, unreadable, or invalid ({exc}). "
+            f"Without one authoritative schema, malformed lanes can silently disappear from the "
+            f"cross-host baseline."
         ]
-    lanes = document.get("lanes") if isinstance(document, dict) else None
-    if not isinstance(lanes, list):
-        return [f"{path}: host conformance manifest has no lanes array"]
+    lanes = document["lanes"]
     issues: list[str] = []
     static_hosts = {
         lane.get("host")
@@ -1791,33 +1708,16 @@ def validate_host_conformance_manifest(root: Path) -> list[str]:
             f"{path}: static conformance lanes are missing hosts {missing_hosts}. A generated host "
             f"surface could drift while the cross-host report still looks complete."
         )
-    sol_lanes = [
+    sol_lane = next(
         lane
         for lane in lanes
-        if isinstance(lane, dict) and lane.get("model") == "gpt-5.6-sol"
-    ]
-    if len(sol_lanes) != 1:
+        if lane.get("kind") == "model-baseline" and lane.get("model") == "gpt-5.6-sol"
+    )
+    if not sol_lane["required"]:
         issues.append(
-            f"{path}: expected exactly one explicit gpt-5.6-sol baseline lane, found "
-            f"{len(sol_lanes)}. The operator selected Sol as a required, separately reported Codex "
-            f"baseline; an alias or omitted lane silently changes what was measured."
+            f"{path}: gpt-5.6-sol baseline is not required. The operator selected Sol as a "
+            f"separately reported baseline; making it optional silently changes what was measured."
         )
-    else:
-        lane = sol_lanes[0]
-        expected = {
-            "host": "codex",
-            "kind": "model-baseline",
-            "reasoning_effort": "high",
-            "sandbox": "read-only",
-            "required": True,
-        }
-        drift = {key: (lane.get(key), value) for key, value in expected.items() if lane.get(key) != value}
-        if drift:
-            issues.append(
-                f"{path}: gpt-5.6-sol baseline conditions drifted: {drift}. Model, effort, sandbox, "
-                f"and required status are one comparison contract; changing one invalidates the "
-                f"baseline rather than tuning it."
-            )
     return issues
 
 

@@ -62,6 +62,7 @@ CLAUDE = shutil.which("claude")
 FLEET_AGENTS = frozenset(p.stem for p in (REPO / "agents").glob("*.md"))
 FLEET_SKILLS = frozenset(p.name for p in (REPO / "skills").iterdir() if p.is_dir()) if (REPO / "skills").is_dir() else frozenset()
 FLEET = FLEET_AGENTS | FLEET_SKILLS
+NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENTS)
 
 PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v3"
 
@@ -110,6 +111,10 @@ class ProvenanceError(RuntimeError):
 
 class EvalAuthUnavailable(RuntimeError):
     """A model session could not authenticate, so the batch produced no valid benchmark."""
+
+
+class EvalRegistrationUnavailable(RuntimeError):
+    """The session did not prove that the namespaced fleet under test was registered."""
 
 
 _CLEAN_ROOM_MODULE = None
@@ -162,17 +167,25 @@ def _check_existing_ancestors(path: Path) -> None:
         _checked_stat(current)
 
 
-def _read_regular_file(path: Path) -> bytes:
-    """Read bytes without accepting links, special files, or a file changed during the read."""
+def _read_regular_file(path: Path, *, max_bytes: int | None = None) -> bytes:
+    """Read bytes without links, special files, unbounded input, or mid-read changes."""
     path = _absolute_without_resolving(path)
     _check_existing_ancestors(path)
     before = _checked_stat(path)
     if not stat.S_ISREG(before.st_mode):
         raise ProvenanceError(f"provenance input is not a regular file: {path}")
+    if max_bytes is not None and before.st_size > max_bytes:
+        raise ProvenanceError(f"provenance input exceeds {max_bytes} bytes: {path}")
     try:
-        content = path.read_bytes()
+        if max_bytes is None:
+            content = path.read_bytes()
+        else:
+            with path.open("rb") as stream:
+                content = stream.read(max_bytes + 1)
     except OSError as exc:
         raise ProvenanceError(f"cannot read provenance input {path}: {exc}") from exc
+    if max_bytes is not None and len(content) > max_bytes:
+        raise ProvenanceError(f"provenance input exceeds {max_bytes} bytes: {path}")
     after = _checked_stat(path)
     before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
     after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
@@ -562,6 +575,7 @@ def verify_frozen_plugin(plugin_dir: Path, expected_identity: dict) -> None:
 def benchmark_provenance(
     source_paths: list[Path], cases: list[dict], expression: str, plugin_dir: Path,
     limit: int | None = None, *, evaluator_paths: list[Path],
+    plugin_identity_value: dict | None = None,
 ) -> dict:
     return {
         "schema": PROVENANCE_SCHEMA,
@@ -571,7 +585,14 @@ def benchmark_provenance(
         # directory does not identify the local runner and deterministic graders that interpreted
         # its transcripts.
         "evaluator": evaluator_identity(evaluator_paths),
-        "plugin": plugin_identity(plugin_dir),
+        # Claude evaluates plugin runtime bytes; another runtime may execute a narrower captured
+        # projection. A precomputed identity binds provenance to those already-captured bytes while
+        # retaining one schema without conflating scopes.
+        "plugin": (
+            plugin_identity(plugin_dir)
+            if plugin_identity_value is None
+            else plugin_identity_value
+        ),
     }
 
 
@@ -672,7 +693,8 @@ def _string_values(obj) -> list[str]:
 
 def transcript_stats(stdout: str) -> dict:
     """Measurement conditions read off one stream-json transcript:
-    {input_tokens, output_tokens, duration_ms, model, completed, result_error}.
+    {input_tokens, output_tokens, duration_ms, model, completed, result_error, init_observed,
+    fleet_registered, registered_agents}.
 
     Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
     baseline, and two parsers would eventually disagree about one transcript — so this is the one
@@ -682,6 +704,8 @@ def transcript_stats(stdout: str) -> dict:
     input_tokens = output_tokens = duration = model = None
     completed = False
     result_error = False
+    init_observed = False
+    registered_agents: set[str] = set()
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -689,6 +713,15 @@ def transcript_stats(stdout: str) -> dict:
             continue
         if not isinstance(event, dict):
             continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            init_observed = True
+            agents = event.get("agents")
+            if isinstance(agents, list):
+                registered_agents.update(
+                    strip_ns(name)
+                    for name in agents
+                    if isinstance(name, str) and name in NAMESPACED_FLEET_AGENTS
+                )
         if event.get("type") == "result":
             usage = event.get("usage") or {}
             input_tokens = usage.get("input_tokens", input_tokens)
@@ -713,16 +746,20 @@ def transcript_stats(stdout: str) -> dict:
                 model = candidate
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
             "duration_ms": duration, "model": model, "completed": completed,
-            "result_error": result_error}
+            "result_error": result_error, "init_observed": init_observed,
+            "fleet_registered": bool(registered_agents),
+            "registered_agents": sorted(registered_agents)}
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
-             env: dict | None = None) -> dict:
+             env: dict | None = None,
+             required_agents: set[str] | frozenset[str] | None = None) -> dict:
     """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
     Ordinary runner trouble never raises: this drives a flaky, sometimes long-running subprocess,
     and a routing eval only needs the FIRST routing decision, not a completed session. Authentication
-    failure is the exception because it invalidates the whole batch and raises EvalAuthUnavailable.
+    failure and missing namespaced fleet registration are exceptions because either invalidates the
+    whole batch rather than describing routing variance.
     A timeout is expected rather than exceptional — the transcript captured up to that point almost
     always already contains the Skill or Agent call we grade on. So: parse whatever stdout exists
     whether the run exits, times out, or errors, and set `error` only when the transcript cannot
@@ -773,6 +810,10 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
         note = f"{note}; {result_note}" if note else result_note
 
     fired = sorted(components_fired(stdout))
+    registered_agents = set(stats["registered_agents"])
+    registered = bool(registered_agents)
+    missing_agents = set(required_agents or ()) - registered_agents
+    init_observed = stats["init_observed"]
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
     # reached its non-error `result` event routed somewhere — possibly off the fleet entirely, which
     # is a real negative sample and a real positive miss — even if the CLI then exited non-zero;
@@ -784,7 +825,22 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     # rule applies to an error result: a component call observed before the error is real, but the
     # error result's silence can never green a negative.
     usable = bool(fired) or session_completed
-    error = note if (note and not usable) else None
+    if (not registered or missing_agents) and (init_observed or usable):
+        if missing_agents:
+            detail = (
+                "system/init omitted selected namespaced agent(s) "
+                f"{sorted(missing_agents)}; --plugin-dir did not register every agent "
+                "measured by this cluster"
+            )
+        else:
+            detail = (
+                "system/init did not register a known namespaced sde-agents agent; "
+                "--plugin-dir did not load the fleet under test"
+            )
+        raise EvalRegistrationUnavailable(detail)
+    # Exit status cannot turn silence into evidence: a clean process with no firing or completed
+    # result is still an unusable sample and must not green a negative case.
+    error = None if usable else (note or "no usable transcript")
     return {"fired": fired, "tokens": tokens, "duration_ms": duration, "model": observed_model,
             "error": error, "note": note}
 
@@ -843,13 +899,14 @@ def plugin_dir_label(plugin_dir: Path) -> str:
     Recorded verbatim, the default (this repo, absolute) bakes the operator's local filesystem
     layout — a home-directory username on Windows — into a committed artifact, where it is identity
     noise rather than a measurement condition and makes identical runs from two machines diff. So a
-    plugin_dir inside the repo is recorded repo-relative ("." for the repo itself); a genuinely
-    external plugin_dir IS a measurement condition and stays verbatim.
+    plugin_dir inside the repo is recorded repo-relative ("." for the repo itself). An external
+    plugin_dir still changes the measured plugin identity through the separately recorded plugin hash,
+    so the committed conditions use a stable placeholder instead of leaking workstation paths.
     """
     try:
         return str(plugin_dir.resolve().relative_to(REPO))
     except ValueError:
-        return str(plugin_dir)
+        return "<external-plugin-dir>"
 
 
 def _validated_threshold(threshold: float) -> float:
@@ -1078,6 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
     if not cases:
         print("no cases matched", file=sys.stderr)
         return 2
+    required_agents = members & FLEET_AGENTS
 
     provenance = None
     if args.output_dir:
@@ -1133,18 +1191,18 @@ def main(argv: list[str] | None = None) -> int:
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
         futures = {
             pool.submit(run_once, c["prompt"], execution_plugin_dir, args.timeout, args.model,
-                        session_env): (c["id"], i)
+                        session_env, required_agents): (c["id"], i)
             for c, i in work
         }
         done = 0
-        auth_failure: EvalAuthUnavailable | None = None
+        fatal_measurement_failure: EvalAuthUnavailable | EvalRegistrationUnavailable | None = None
         try:
             for future in concurrent.futures.as_completed(futures):
                 case_id, run_index = futures[future]
                 try:
                     result = future.result()
-                except EvalAuthUnavailable as exc:
-                    auth_failure = exc
+                except (EvalAuthUnavailable, EvalRegistrationUnavailable) as exc:
+                    fatal_measurement_failure = exc
                     for pending in futures:
                         pending.cancel()
                     break
@@ -1154,15 +1212,15 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             # subprocess.run cannot interrupt work already started; pending sessions can still be
             # cancelled, limiting the outage to at most the configured concurrency.
-            pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
+            pool.shutdown(wait=True, cancel_futures=fatal_measurement_failure is not None)
         try:
             verify_frozen_plugin(execution_plugin_dir, execution_plugin_identity)
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)
             return 2
-        if auth_failure is not None:
+        if fatal_measurement_failure is not None:
             print(
-                f"\neval aborted: {auth_failure}; benchmark.json was not written",
+                f"\neval aborted: {fatal_measurement_failure}; benchmark.json was not written",
                 file=sys.stderr,
             )
             return 2

@@ -45,6 +45,11 @@ Before reporting any finding, read enough surrounding code to confirm it — the
 
 **Every finding clears the false-positive gate before it's written**: not pre-existing (present before this diff — tag it `pre-existing` and keep it out of the merge verdict unless the diff makes it worse; the mission-block rule above outranks this), not an intentional change tied to the stated purpose, not something a linter/typechecker/CI already catches, not a nitpick a senior engineer wouldn't raise. Findings that fail the gate are dropped, not hedged.
 
+Supplied design evidence binds tests as well as implementation. When it names a structural
+relationship or postcondition, review the test for that relationship: same-file string presence is
+not parsed relationship evidence, and a green test that encodes disproved behavior is part of the
+finding rather than a useful regression check.
+
 ## Review dimensions, in priority order
 
 1. **Correctness** — logic errors, unhandled edge cases, race conditions, off-by-ones, broken invariants, error paths that swallow or corrupt.

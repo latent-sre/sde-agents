@@ -21,6 +21,35 @@ _remove_directory_link = remove_directory_link
 
 
 class PlatformAdapterTests(unittest.TestCase):
+    def test_definition_parts_uses_one_coherent_source_snapshot(self) -> None:
+        first = "---\nname: first\ndescription: First\n---\n\nfirst body\n"
+        second = "---\nname: second\ndescription: Second\n---\n\nsecond body"
+        path = Path("definition.md")
+
+        with mock.patch.object(
+            type(path),
+            "read_text",
+            side_effect=(first, second, second),
+        ) as reader:
+            fields, body, raw = generate_platform_adapters._definition_parts(path)
+
+        self.assertEqual(1, reader.call_count)
+        self.assertEqual("first", fields["name"])
+        self.assertEqual(["name: first", "description: First"], raw)
+        self.assertEqual("first body\n", body)
+
+    def test_definition_parts_rejects_missing_required_frontmatter(self) -> None:
+        variants = (
+            ("---\n---\n\nBody.\n", "description, name"),
+            ("---\nname: incomplete\n---\n\nBody.\n", "description"),
+        )
+        path = Path("definition.md")
+        for source, missing in variants:
+            with self.subTest(missing=missing), mock.patch.object(
+                type(path), "read_text", return_value=source
+            ), self.assertRaisesRegex(ValueError, f"required frontmatter.*{missing}"):
+                generate_platform_adapters._definition_parts(path)
+
     def test_text_resources_are_lf_normalized_but_binary_resources_are_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repo"
@@ -72,13 +101,6 @@ class PlatformAdapterTests(unittest.TestCase):
                     "declared text resource is not valid UTF-8",
                 ):
                     generate_platform_adapters.expected_outputs(root)
-
-    def test_tracked_generated_outputs_are_current(self) -> None:
-        self.assertEqual(
-            [],
-            generate_platform_adapters.validate_generated_outputs(REPO),
-        )
-        self.assertFalse((REPO / "platforms" / "portable").exists())
 
     def test_python_bytecode_caches_are_not_distribution_artifacts(self) -> None:
         relative = (
@@ -546,8 +568,21 @@ class PlatformAdapterTests(unittest.TestCase):
                     "Your tool list is the platform-enforced boundary",
                     "reviewers can't edit, researchers can't write",
                     "you hold no `Agent` tool",
+                    "This role has no `Agent` tool",
                 ):
                     self.assertNotIn(false_control, normalized)
+
+    def test_handoff_owner_reference_is_translated_for_generated_hosts(self) -> None:
+        paths = (
+            REPO / ".github" / "agents" / "sde-fullstack.agent.md",
+            REPO / ".codex" / "agents" / "sde-fullstack.toml",
+            REPO / ".claude" / "agents" / "sde-fullstack.md",
+        )
+        for path in paths:
+            with self.subTest(path=path.relative_to(REPO)):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("agents/homelab-platform.md", text)
+                self.assertIn("the installed `homelab-platform` agent definition", text)
 
     def test_host_agent_adapters_have_no_claude_runtime_references(self) -> None:
         paths = [

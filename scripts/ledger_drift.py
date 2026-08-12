@@ -69,7 +69,11 @@ class GitError(RuntimeError):
 
 def git(root: Path, *args: str) -> str:
     result = subprocess.run(
-        ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
     )
     if result.returncode != 0:
         raise GitError(f"git {' '.join(args)} failed in {root}: {result.stderr.strip()}")
@@ -111,15 +115,26 @@ def candidate_revision(root: Path, path: Path) -> str:
     return git(root, "log", "--first-parent", "-1", "--format=%H", "--", relative)
 
 
-def inspect(root: Path) -> list[dict]:
-    findings = []
+def audit(root: Path, *, include_drift: bool = True) -> tuple[list[dict], list[dict]]:
+    """Return destination drift and pending intake after one candidate scan."""
+    drift_findings = []
+    unwatched_findings = []
     for path in sorted((root / "learning" / "candidates").glob("*.json")):
-        record = json.loads(path.read_text())
+        record = json.loads(path.read_text(encoding="utf-8"))
         if record.get("promotion_state") not in PENDING_STATES:
             continue
         since = last_activity(record)
-        paths = candidate_paths(record.get("destination") or "", root)
-        if not paths or not since:
+        destination = record.get("destination") or ""
+        paths = candidate_paths(destination, root)
+        if not paths:
+            unwatched_findings.append({
+                "candidate_id": record["candidate_id"],
+                "promotion_state": record["promotion_state"],
+                "since": since,
+                "destination": destination or None,
+            })
+            continue
+        if not include_drift or not since:
             continue
         baseline = candidate_revision(root, path)
         if not baseline:
@@ -140,7 +155,7 @@ def inspect(root: Path) -> list[dict]:
                 commits.append({"path": target, "commit": line})
                 shas.add(line.split(" ", 1)[0])
         if commits:
-            findings.append({
+            drift_findings.append({
                 "candidate_id": record["candidate_id"],
                 "promotion_state": record["promotion_state"],
                 "since": since,
@@ -148,31 +163,17 @@ def inspect(root: Path) -> list[dict]:
                 "commits": commits[:5],
                 "commit_count": len(shas),
             })
-    return findings
+    return drift_findings, unwatched_findings
+
+
+def inspect(root: Path) -> list[dict]:
+    """Destination-drift findings retained for callers of the original report API."""
+    return audit(root)[0]
 
 
 def unwatched(root: Path) -> list[dict]:
-    """Pending candidates the destination watch cannot see.
-
-    `inspect` keys on paths extracted from `destination`; a record yielding none is silently
-    outside its reach, and quarantined intake always yields none. Reported separately rather
-    than folded into drift so `--fail-on-drift` keeps its meaning: untriaged intake is normal
-    for fresh records, and a gate here would punish filing instead of prompting triage."""
-    findings = []
-    for path in sorted((root / "learning" / "candidates").glob("*.json")):
-        record = json.loads(path.read_text())
-        if record.get("promotion_state") not in PENDING_STATES:
-            continue
-        destination = record.get("destination") or ""
-        if candidate_paths(destination, root):
-            continue
-        findings.append({
-            "candidate_id": record["candidate_id"],
-            "promotion_state": record["promotion_state"],
-            "since": last_activity(record),
-            "destination": destination or None,
-        })
-    return findings
+    """Pending candidates the destination watch cannot see."""
+    return audit(root, include_drift=False)[1]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -191,8 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        findings = inspect(args.root)
-        intake = unwatched(args.root)
+        findings, intake = audit(args.root)
     except GitError as exc:
         # A git failure is not "no drift" -- reporting OK here would hand a caller asking
         # for a hard gate a green run over a repository nobody could read.

@@ -153,9 +153,13 @@ _SEPARATORS = {"|", "||", "&&", ";", "\n"}
 _SIMPLE_READERS = frozenset({
     "cat", "head", "tail", "nl", "wc", "uniq", "cut", "tr", "column",
     "grep", "egrep", "fgrep",
-    "ls", "file", "stat", "du", "basename", "dirname", "realpath", "pwd",
-    "echo", "diff", "cmp", "jq", "true", "false",
+    "ls", "stat", "du", "basename", "dirname", "realpath", "pwd",
+    "echo", "cmp", "jq", "true", "false",
 })
+# `file` and the standalone `diff` are deliberately absent. Both look like readers but expose
+# execution-capable options (`file -C` invokes a compiler; GNU diff's pagination path invokes a
+# pager). `git diff`, `cmp`, and the metadata readers above cover the actual review need without
+# carrying two more flag surfaces whose safe subsets would need permanent maintenance.
 # `ag` (the silver searcher) was here and is deliberately GONE: it documents `--pager COMMAND`,
 # the same execute-a-program lever gated on `rg` and `less`, and it is not installed on the
 # machines this fleet was probed on — so its exec-flag surface cannot be enumerated the way `rg`'s

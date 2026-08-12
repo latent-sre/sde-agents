@@ -9,6 +9,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import ledger_drift
 from tests.support import git as _git
@@ -208,7 +209,9 @@ class LedgerDriftTests(unittest.TestCase):
             root = Path(tmp)
             _repo_with_candidate(root, state="proposed", destination="scripts/thing.py",
                                  since="2026-08-01T00:00:00Z")
-            self.assertEqual(ledger_drift.unwatched(root), [])
+            with mock.patch.object(ledger_drift, "candidate_revision") as candidate_revision:
+                self.assertEqual(ledger_drift.unwatched(root), [])
+            candidate_revision.assert_not_called()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _repo_with_candidate(root, state="promoted", destination=None,
@@ -298,6 +301,23 @@ class LedgerDriftTests(unittest.TestCase):
                                  since="2026-08-01T00:00:00Z")
             self.assertEqual(ledger_drift.main(["--root", str(root)]), 0)
             self.assertEqual(ledger_drift.main(["--root", str(root), "--fail-on-drift"]), 1)
+
+    def test_main_resolves_each_pending_destination_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo_with_candidate(
+                root,
+                state="proposed",
+                destination="scripts/thing.py",
+                since="2026-08-01T00:00:00Z",
+            )
+            with mock.patch.object(
+                ledger_drift,
+                "candidate_paths",
+                wraps=ledger_drift.candidate_paths,
+            ) as candidate_paths:
+                self.assertEqual(ledger_drift.main(["--root", str(root), "--json"]), 0)
+        self.assertEqual(1, candidate_paths.call_count)
 
     def test_deleted_destination_is_still_inspected(self) -> None:
         """Deleting a destination is itself a destination change, not a clean ledger."""

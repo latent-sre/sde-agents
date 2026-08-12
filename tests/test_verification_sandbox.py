@@ -1,28 +1,23 @@
 from __future__ import annotations
 
 import os
-import tempfile
 import unittest
 from datetime import datetime, timezone
-from pathlib import Path
 from unittest import mock
 
 from scripts import evidence_envelope, verification_sandbox
+from tests.support import TempDirTestCase
 
 
 IMAGE = "example.test/verifier@sha256:" + "a" * 64
 
 
-class VerificationSandboxTests(unittest.TestCase):
+class VerificationSandboxTests(TempDirTestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.base = Path(self.temporary.name)
+        super().setUp()
         self.source = self.base / "source"
         self.scratch = self.base / "scratch"
         self.source.mkdir()
-
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
 
     def _config(self, command: tuple[str, ...] = ("python", "-m", "unittest")) -> verification_sandbox.SandboxConfig:
         return verification_sandbox.SandboxConfig(

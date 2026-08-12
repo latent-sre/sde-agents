@@ -294,6 +294,25 @@ class RepoPoolRestoreTests(unittest.TestCase):
                 "live sibling checkout\n", (dst / planted).read_text(encoding="utf-8")
             )
 
+    def test_temp_dir_test_case_cleans_up_when_setup_fails(self) -> None:
+        created: list[Path] = []
+
+        class Failing(support.TempDirTestCase):
+            def setUp(self) -> None:
+                super().setUp()
+                created.append(self.base)
+                raise RuntimeError("setUp fails after the directory exists")
+
+            def test_never_runs(self) -> None:
+                pass  # pragma: no cover - setUp always raises first
+
+        result = unittest.TestResult()
+        Failing("test_never_runs").run(result)
+
+        self.assertEqual(1, len(result.errors))
+        self.assertEqual(1, len(created))
+        self.assertFalse(created[0].exists())
+
 
 if __name__ == "__main__":
     unittest.main()

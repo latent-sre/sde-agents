@@ -26,14 +26,6 @@ variable map into output — field-proven during a real onboarding, not hypothet
 
 **Read the lab's own profile before step 1.** The lab repo's project context should state the stack, hosts, conventions, and quirks; those facts outrank any default in this checklist, and proposing something the lab's profile rules out wastes a round. If the lab has no such file, [`assets/lab-profile.template.md`](assets/lab-profile.template.md) is the shape to create in *the lab's* repository (not in this plugin — the plugin ships method, the lab owns its facts).
 
-**These steps are acceptance criteria, not a queue to drain before the first artifact.** When the
-request is a bounded artifact, work the blocking discovery this checklist demands, produce that
-artifact under the tier it lands in, and carry every step you have not worked into the delegation
-handoff packet `sde-agents:homelab-platform` owns — as `Blocking:` when it stops the artifact and
-`Open lanes:` with an owner when it does not. An unworked step stays an explicit gate either way:
-never silently dropped, never reported complete, and a first artifact delivered early is not a
-claim that the service is onboarded.
-
 1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names). A host that is itself new to the lab first works `sde-agents:host-onboard`; this checklist assumes the machine under it is already a lab citizen.
 2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`); restart policy; health check; resource limits.
 3. **Storage** — named volumes or explicit paths for state; added to the backup set; confirm the restore path actually exists, don't assume it.

@@ -1,7 +1,9 @@
-# HANDOFF-001 spec — evidence-bound onboarding handoff packet
+# HANDOFF-001 spec — evidence-bound onboarding work order
 
 **Status: approved** — drafted 2026-08-03; approved by the operator 2026-08-09 ("we need it —
-it has been burning us"), sequencing unchanged. Implements issue #60.
+it has been burning us"). On 2026-08-11 the operator approved the Claude-specific amendment:
+the main coordinator owns exact work-order bytes and digest, the builder returns a small receipt
+instead of re-echoing the payload, and acceptance grades resulting state. Implements issue #60.
 **Sequenced after REV-001**: the packet reuses whatever envelope/matrix idiom that round settles
 plus the existing Learning-packet pattern — the fleet does not grow a third packet dialect.
 
@@ -16,9 +18,12 @@ supply the complete field-derived section list below.
 
 ## Scope
 
-One packet template in canonical source, owned by `sde-agents:homelab-platform` (it owns scope
-and authority), emitted before delegating implementation, echoed back by the builder before work
-starts. Sections, all field-derived:
+One work-order template in canonical source, owned by `sde-agents:homelab-platform` (it owns scope
+and authority), emitted before implementation crosses contexts. The main Claude coordinator
+preserves the exact block, computes its digest, and supplies both to the builder. The builder
+recomputes that digest before returning the ID/digest receipt or a field-named input-required
+receipt; it does not spend a second copy of the context repeating the work order. Sections, all
+field-derived:
 
 1. Task identity and the bounded deliverable.
 2. Fixed operator decisions.
@@ -48,12 +53,14 @@ starts. Sections, all field-derived:
 ## Acceptance
 
 - [ ] Issue #60's paired evals under identical conditions: the known-failed-assumption fixture no
-      longer regresses; staged-artifact-with-live-blockers stays safe; first-artifact latency
-      improves with no missed gates; proportionality holds on a simple service; the adverse
-      authority case names the approval gate.
+      longer regresses; staged-artifact-with-live-blockers stays safe; artifact-containing response
+      improves with no missed gates; proportionality holds on a simple service; and a non-obvious
+      mismatched digest is observably recomputed and stops the builder before editing without
+      rejecting an honest source-free `none`.
 - [ ] Added fixtures from the closeouts: check-mode-skipped-probe (dry run not treated as
-      evidence), constraint-reintroduction rejection by builder *and* reviewer, vaulted-variables
-      discovery (only non-secret fields enter the packet).
+      evidence), independently verified builder end state, a digest-mismatch receipt that accepts
+      source-free `none`, and vaulted-variables discovery (only non-secret fields enter the work
+      order).
 - [ ] Adapters regenerated with parity green; validator and tests green; documentation states
       when the packet is required and when it is ceremony.
 - [ ] Issue #60 updated with measured baseline/candidate evidence.
@@ -65,4 +72,4 @@ OpenBao-specific behavior in a general skill; treating a faster first artifact a
 
 ## Rollback
 
-Template plus prompt-level wiring in canonical files, regenerated adapters — one revert commit.
+Template, receipt wiring, functional case, and regenerated adapters — one bounded revert.

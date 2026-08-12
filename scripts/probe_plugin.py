@@ -33,6 +33,7 @@ as one: those are reported INCONCLUSIVE (exit 2), never PASS.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
@@ -40,6 +41,11 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+
+try:
+    from scripts import stream_events
+except ModuleNotFoundError:
+    import stream_events  # type: ignore[no-redef]
 
 REPO = Path(__file__).resolve().parents[1]
 CLAUDE = shutil.which("claude")
@@ -165,16 +171,11 @@ class Probe:
 
 
 def tool_calls(text: str) -> list[dict]:
-    calls = []
-    for line in text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        content = (event.get("message") or {}).get("content")
-        if isinstance(content, list):
-            calls += [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
-    return calls
+    return [
+        block
+        for block in stream_events.iter_content_blocks(text)
+        if block.get("type") == "tool_use" and isinstance(block.get("input"), dict)
+    ]
 
 
 def bash_results(text: str) -> dict[str, str]:
@@ -186,25 +187,34 @@ def bash_results(text: str) -> dict[str, str]:
     """
     commands: dict[str, str] = {}
     results: dict[str, str] = {}
-    for line in text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        content = (event.get("message") or {}).get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict):
+    for block in stream_events.iter_content_blocks(text):
+        if block.get("type") == "tool_use" and block.get("name") == "Bash":
+            tool_input = block.get("input")
+            if not isinstance(tool_input, dict):
                 continue
-            if block.get("type") == "tool_use" and block.get("name") == "Bash":
-                commands[block.get("id", "")] = block.get("input", {}).get("command", "")
-            elif block.get("type") == "tool_result":
-                raw = block.get("content")
-                body = raw if isinstance(raw, str) else " ".join(
-                    part.get("text", "") for part in (raw or []) if isinstance(part, dict)
-                )
-                results[block.get("tool_use_id", "")] = body or ""
+            tool_id = block.get("id")
+            command = tool_input.get("command")
+            if (
+                not isinstance(tool_id, str)
+                or not tool_id
+                or not isinstance(command, str)
+                or not command
+            ):
+                continue
+            commands[tool_id] = command
+        elif block.get("type") == "tool_result":
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            raw = block.get("content")
+            body = raw if isinstance(raw, str) else " ".join(
+                text
+                for part in (raw if isinstance(raw, list) else [])
+                if isinstance(part, dict)
+                for text in (part.get("text"),)
+                if isinstance(text, str)
+            )
+            results[tool_id] = body or ""
     return {cmd: results.get(tid, "") for tid, cmd in commands.items() if cmd}
 
 
@@ -227,21 +237,24 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
     """
     spawns: dict[str, bool] = {}  # tool_use_id -> names this agent
     outcomes: dict[str, bool] = {}  # tool_use_id -> is_error
-    for line in text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        content = (event.get("message") or {}).get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict):
+    for block in stream_events.iter_content_blocks(text):
+        if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
+            inp = block.get("input")
+            if not isinstance(inp, dict):
                 continue
-            if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
-                spawns[block.get("id", "")] = agent_name in json.dumps(block.get("input", {}))
-            elif block.get("type") == "tool_result":
-                outcomes[block.get("tool_use_id", "")] = bool(block.get("is_error"))
+            tool_id = block.get("id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            spawns[tool_id] = (
+                inp["subagent_type"] == agent_name
+                if "subagent_type" in inp
+                else agent_name in json.dumps(inp)
+            )
+        elif block.get("type") == "tool_result":
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            outcomes[tool_id] = bool(block.get("is_error"))
     return any(
         named and tid in outcomes and not outcomes[tid] for tid, named in spawns.items()
     )
@@ -260,37 +273,35 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
     """
     spawns: dict[str, bool] = {}
     results: dict[str, str] = {}
-    for line in text.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        content = (event.get("message") or {}).get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict):
+    for block in stream_events.iter_content_blocks(text):
+        if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
+            # Not a transcript-wide `agent_name in json.dumps(input)`: that also matches when the
+            # name merely appears inside ANOTHER agent's prompt TEXT (e.g. a code-reviewer task
+            # that mentions "sde-agents:sde-fullstack" in passing), which would feed the wrong
+            # spawn's result body into the canary oracle. Prefer the actual field; fall back to
+            # the substring match only if it's absent, so this stays safe even if the input shape
+            # ever changes.
+            inp = block.get("input")
+            if not isinstance(inp, dict):
                 continue
-            if block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
-                # Not a transcript-wide `agent_name in json.dumps(input)`: that also matches when the
-                # name merely appears inside ANOTHER agent's prompt TEXT (e.g. a code-reviewer task
-                # that mentions "sde-agents:sde-fullstack" in passing), which would feed the wrong
-                # spawn's result body into the canary oracle. Prefer the actual field; fall back to
-                # the substring match only if it's absent, so this stays safe even if the input shape
-                # ever changes.
-                inp = block.get("input", {})
-                named = (
-                    inp["subagent_type"] == agent_name
-                    if "subagent_type" in inp
-                    else agent_name in json.dumps(inp)
-                )
-                spawns[block.get("id", "")] = named
-            elif block.get("type") == "tool_result":
-                raw = block.get("content")
-                body = raw if isinstance(raw, str) else " ".join(
-                    part.get("text", "") for part in (raw or []) if isinstance(part, dict)
-                )
-                results[block.get("tool_use_id", "")] = body or ""
+            tool_id = block.get("id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            named = (
+                inp["subagent_type"] == agent_name
+                if "subagent_type" in inp
+                else agent_name in json.dumps(inp)
+            )
+            spawns[tool_id] = named
+        elif block.get("type") == "tool_result":
+            tool_id = block.get("tool_use_id")
+            if not isinstance(tool_id, str) or not tool_id:
+                continue
+            raw = block.get("content")
+            body = raw if isinstance(raw, str) else " ".join(
+                part.get("text", "") for part in (raw or []) if isinstance(part, dict)
+            )
+            results[tool_id] = body or ""
     return [results[tid] for tid, named in spawns.items() if named and tid in results]
 
 
@@ -402,13 +413,11 @@ def probe_workflow_contract(probe: "Probe") -> None:
         "so the agent_type checks below are meaningless this run: "
         + (session.stderr or "")[:200],
     )
-    events = []
-    if hook_log.exists():
-        for line in hook_log.read_text(encoding="utf-8").splitlines():
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
+    events = (
+        list(stream_events.iter_events(hook_log.read_text(encoding="utf-8")))
+        if hook_log.exists()
+        else []
+    )
     guarded_hits = [e for e in events if e.get("agent_type") == "sde-agents:code-reviewer"]
     default_hits = [e for e in events if e.get("agent_type") == "workflow-subagent"]
     probe.check(
@@ -448,7 +457,12 @@ def probe_workflow_contract(probe: "Probe") -> None:
     )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    # Parse before checking the CLI or touching the probe workspace. A plain `--help` is an
+    # inspection command; it must never start paid API sessions or remove prior probe evidence.
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.parse_args(argv)
+
     probe = Probe()
     if CLAUDE is None:
         print("claude CLI not found on PATH; cannot run the behavioral probe", file=sys.stderr)

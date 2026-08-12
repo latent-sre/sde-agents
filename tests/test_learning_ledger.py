@@ -4,22 +4,19 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from unittest import mock
 
 from scripts import learning_ledger
-from tests.support import REPO as REPO_ROOT
+from tests.support import REPO as REPO_ROOT, TempDirTestCase
 SCRIPT = REPO_ROOT / "scripts" / "learning_ledger.py"
 FIXED_NOW = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
 
 
-class LearningLedgerTests(unittest.TestCase):
+class LearningLedgerTests(TempDirTestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.base = Path(self.temporary.name)
+        super().setUp()
         self.root = self.base / "repo"
         self.root.mkdir()
         self.current_now = FIXED_NOW
@@ -27,9 +24,6 @@ class LearningLedgerTests(unittest.TestCase):
             self.root,
             now=lambda: self.current_now,
         )
-
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
 
     def _add(self, **overrides: object) -> dict[str, object]:
         values: dict[str, object] = {

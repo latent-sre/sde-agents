@@ -1,0 +1,436 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "codex",
+    "cli_version": "codex-cli 0.147.0",
+    "model_requested": "gpt-5.6-terra",
+    "models_observed": [],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 1,
+    "auth_provider": {
+      "auth": "chatgpt",
+      "provider": "openai"
+    },
+    "run_evidence_retained": true,
+    "clean_room": false,
+    "reasoning_effort_requested": "medium",
+    "sandbox": "read-only",
+    "profile_projection": "generated-role-projection",
+    "measurement_kind": "subscription-backed same-runtime approximation",
+    "duration_source": "runner-wall-clock",
+    "disabled_features": [
+      "apps",
+      "auth_elicitation",
+      "browser_use",
+      "browser_use_external",
+      "browser_use_full_cdp_access",
+      "code_mode_host",
+      "computer_use",
+      "default_mode_request_user_input",
+      "goals",
+      "hooks",
+      "image_generation",
+      "in_app_browser",
+      "memories",
+      "multi_agent",
+      "plugins",
+      "remote_plugin",
+      "request_permissions_tool",
+      "shell_tool",
+      "skill_search",
+      "tool_suggest",
+      "tool_call_mcp_elicitation",
+      "view_image"
+    ],
+    "tool_boundary": "session flags reduce built-in tool execution; configured MCP inventory must be empty before and after; observable tool items reject the run",
+    "unobservable_tool_limit": "Codex 0.147.0 JSONL omits code-mode exec/wait custom-tool attempts; the disabled host makes calls fail closed but cannot prove no attempt",
+    "effective_config_limit": "Codex 0.147.0 exposes no execution-equivalent effective-config preflight or atomic runtime MCP registry; independently controlled system and cloud-managed no-MCP state is an activation prerequisite",
+    "auth_routing_requested": {
+      "model_provider": "openai",
+      "base_url": "https://chatgpt.com/backend-api/codex",
+      "login_method": "chatgpt",
+      "credentials_store": "file"
+    },
+    "isolation": {
+      "cwd": "empty disposable directory",
+      "user_config": "ignored",
+      "codex_home": "explicit dedicated home retained for file-backed ChatGPT auth; AGENTS.md, AGENTS.override.md, config.toml, and managed_config.toml absent",
+      "api_credential_environment": "OPENAI_API_KEY, CODEX_API_KEY, and CODEX_ACCESS_TOKEN absent",
+      "rules": "ignored",
+      "project_doc_max_bytes": 0,
+      "host_skill_instructions": "disabled by session override"
+    }
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "829228b56200fc161ec8ddfaea6e5fd85e3f88d4dc36e1867855e2d405a7b2df"
+      }
+    ],
+    "selection": {
+      "expression": "handoff-*",
+      "limit": null,
+      "case_ids": [
+        "handoff-producer-preserves-discovered-constraints",
+        "handoff-discovery-is-evidence-and-capture-safe",
+        "handoff-first-artifact-keeps-open-work",
+        "handoff-simple-build-stays-short",
+        "handoff-builder-echo-rejects-regression",
+        "handoff-reviewer-rejects-regression-test"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "50df9e67131dba6a781bf71cce055f939830a0ffba41b5f928f06cba1519788a"
+    },
+    "evaluator": {
+      "sha256": "b655646c098c019ea63bad56b007dc4123819679b062ecc2f4c0c7b28f518d00",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "b6a0ad74586fbcd40bba73d70e26dc2ea480f4c6cddafb28eec2e3c82592f909"
+        },
+        {
+          "path": "scripts/eval_codex_runtime.py",
+          "sha256": "a5e61ac13270368b0723a804aa6a0bd60908898d94bf833294d7fe93ca745b1d"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "519f161b622c8b2556c1769e3913e06e80ccd69e5df0587d1a8f2d100a26c19c"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "be4ebcc8c3fca22cdb23865f74410a454308e2515eb623bba3eba42feb5d5669"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "f906c9fc1ac6839afc908b2dd84a2960edbfeaef73c7f26205fa4292e6915f02",
+      "files_hashed": 3,
+      "scope": {
+        "strategy": "selected generated Codex agent profiles",
+        "included": [
+          ".codex/agents/code-reviewer.toml",
+          ".codex/agents/homelab-platform.toml",
+          ".codex/agents/sde-fullstack.toml"
+        ],
+        "excluded": [
+          "all unselected repository paths"
+        ]
+      },
+      "git_head": "ff51f42967887bdea0a8fcf4fd9542af3b0c5321",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "handoff-producer-preserves-discovered-constraints",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 9828,
+          "output_tokens": 758
+        },
+        {
+          "input_tokens": 9832,
+          "output_tokens": 634
+        },
+        {
+          "input_tokens": 9826,
+          "output_tokens": 650
+        }
+      ],
+      "duration_ms_per_run": [
+        24375,
+        13609,
+        20484
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Onboarding handoff:\nObjective: Stage OpenBao 2.6.1 configuration for `hera-eval-fixture`; deliver builder-ready config, validation, identity parsing, and inventory updates. Out of scope: live deployment, TLS custody, and monitoring ownership.\nDecisions and evidence: Raft is fixed. [sourced] POC-42 supplied OpenBao 2.6.1 transcript: use `bao operator validate-config -config=<file>`; `bao server -verify-only` and `disable_mlock` are removed. Replace mlock disabling with swap denial. [sourced] `svc-bao` must be parsed as a member of `bao-readers`. Inventory `service_count` changes 7 \u2192 8 with generated-source parity.\nForbidden regressions: Removed validator invocation -> use `bao operator validate-config`; removed `disable_mlock` -> enforce swap denial; string co-occurrence of `svc-bao` and `bao-readers` -> parse group membership and reject absent membership; inventory-only count update -> update generator/source and generated artifact together.\nAcceptance and invariants: Config validation: execution class Tier 0/read-only; command supports this mode: yes; decisive output: validator exits zero for the staged config; false-negative: it does not prove live TLS, Raft availability, or permissions; fallback: explicit structural checks of rendered config. Membership validation: Tier 0/read-only; parse the authoritative identity/group data and assert `svc-bao \u2208 bao-readers`, not textual presence; fallback: reject ambiguous/unparseable source. Inventory parity: Tier 0/read-only; generated `service_count` equals 8 and matches its source; fallback: compare parsed source and generated fields. Live health validation: unavailable until activation; fallback: none\u2014requires TLS custody and live probes.\nAuthority and recovery: Artifact preparation, Tier 1: builder may prepare default-off artifacts only. Live activation is blocked: irreversible/custody boundary, Tier 3, due to TLS custody; approval plus operator-owned effect broker are required. Broker transport is unavailable in this evaluation; prepare the bounded request only. Monitoring remains an open lane owned by the platform owner. Recovery for a later activation must include the prior config/image and a TLS-material custody recovery plan.\nWork state: Blocking prerequisite: TLS custody resolution before activation. Non-blocking lanes: monitoring target/alert design, platform owner; config and inventory implementation, builder. [unverified] No commands, files, or runtime state were inspected because all tools are denied; supplied POC evidence is carried unchanged.\n\n- **Changed**: Prepared this builder handoff only; no repository or host changes.\n- **Authorization**: Tier 1 artifact preparation; no apply requested or performed. Live activation is Tier 3 and blocked by TLS custody.\n- **Rollback**: n/a \u2014 no change applied.\n- **Verified**: [sourced] POC-42 supplied transcript establishes the required validator and removed settings.\n- **Not verified**: [unverified] Repository layout, generated-source mechanism, identity source format, TLS readiness, monitoring, and live health; tools are denied.\n- **Watch for**: stale `verify-only` or `disable_mlock`, non-parsed identity checks, inventory/source drift, and activation attempted before TLS custody is resolved.\n- **Learning**: none \u2014 no reusable signal",
+          "failures": []
+        },
+        {
+          "response": "Onboarding handoff:\nObjective: Stage OpenBao configuration for `hera-eval-fixture` using Raft; update inventory `service_count` 7 \u2192 8 with generated-source parity. Out of scope: live activation, TLS custody, and monitoring ownership.\nDecisions and evidence: Raft is fixed by operator. [sourced] POC-42, supplied OpenBao 2.6.1 help/schema transcript: use `bao operator validate-config -config=<file>`; `bao server -verify-only` is removed. [sourced] POC-42: `disable_mlock` is removed; swap denial is the replacement control. [sourced] POC-42: parse identity membership and require `svc-bao \u2208 bao-readers`, not same-file text occurrence.\nForbidden regressions: Removed validation command \u2192 invoke supported `bao operator validate-config -config=<file>`. Removed `disable_mlock` \u2192 reject it and document/enforce swap denial. Text co-occurrence membership check \u2192 parse the configured membership structure and fail unless `svc-bao` is an actual `bao-readers` member. Inventory drift \u2192 fail if source and generated inventory disagree or count is not 8.\nAcceptance and invariants: Config validation is Tier 0/read-only and supported by `bao operator validate-config -config=<file>`; decisive output is successful validation with no schema errors; false negative: it cannot prove TLS material, runtime reachability, or Raft health; fallback is a field-scoped static schema and membership parse. Generated inventory parity is Tier 0/read-only; decisive output is parsed `service_count == 8` in both source and generated artifacts with matching service identity sets; false positive: matching artifacts may both be stale; fallback is compare against the staged service manifest. Membership check is Tier 0/read-only; decisive output is parsed group membership containing `svc-bao`; false positive: syntax-valid configuration is not live authorization; fallback is deferred live authorization probe after custody approval.\nAuthority and recovery: Artifact preparation, Tier 1; no live effect. TLS custody blocks live activation: any TLS creation/import, secret handling, or activation is Tier 3 and needs recovery proof, explicit approval, and operator-owned effect-broker transport. [unverified] Broker availability cannot be checked because tools are denied. Monitoring is an open lane owned by the platform owner.\nWork state: All evidence is supplied; do not investigate or apply in this eval. Blocking prerequisite: TLS custody decision/material and Tier 3 activation approval. Non-blocking lane: monitoring target/health alert design by platform owner.",
+          "failures": []
+        },
+        {
+          "response": "Onboarding handoff:\nObjective: Implement staged OpenBao configuration for `hera-eval-fixture`; Raft is fixed. Out of scope: live activation, TLS custody, and monitoring ownership.\nDecisions and evidence: [sourced] POC-42 supplied OpenBao 2.6.1 help/schema transcript: use `bao operator validate-config -config=<file>`; `bao server -verify-only` is removed. `disable_mlock` is removed; swap denial is required. `svc-bao` must parse as a member of `bao-readers`. Inventory `service_count` changes 7\u21928 with generated-source parity. [unverified] No tools may run in this evaluation.\nForbidden regressions: Removed validator command \u2192 use `bao operator validate-config`; removed `disable_mlock` \u2192 enforce swap denial; same-file identity text \u2192 parse membership and reject absent/non-member `svc-bao`; inventory-only edit \u2192 update its generated source and confirm parity.\nAcceptance and invariants: Config validation: Tier 0 command, supported by `bao operator validate-config -config=<file>`; decisive result is zero exit with no validation errors; false negative: schema validation cannot prove TLS material, Raft runtime, or OS swap state; fallback is explicit read-only runtime/host probes after activation approval. Membership validation: Tier 0 parser/test; decisive result is parsed `bao-readers` containing exact `svc-bao`; false positive avoided by structured parsing, not text search. Inventory validation: Tier 0 generated-source parity test; decisive result is both authoritative and generated inventory report `service_count: 8`.\nAuthority and recovery: Artifact preparation is Tier 1; no live effect. TLS custody blocks activation as irreversible/custody-boundary Tier 3 work; broker transport is unavailable in this eval, so any future exact activation request must be presented for independent operator execution. Rollback for artifacts: revert the staged config and paired inventory/generated-source changes. Live rollback must separately address any initialized Raft/TLS state; reverting config alone does not reverse it.\nWork state: Blocking prerequisite: platform owner supplies TLS custody/recovery evidence and owns monitoring completion. Open lane: builder may implement staged config, parser-backed membership validation, inventory/generator parity, and docs without activation.\n\nLearning: none \u2014 no reusable signal",
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "handoff-discovery-is-evidence-and-capture-safe",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(?i)(?:(?:never|do not|must not|exclude\\\\w*)[^.\\\\n]{0,50}(?:resolved|decrypted|plain-?text|unredacted)[^.\\\\n]{0,60}(?:password|credential|secret|token|value|material)|(?:resolved|decrypted|plain-?text|unredacted)[^.\\\\n]{0,30}(?:password|credential|secret|token|value|material)[^.\\\\n]{0,35}(?:stay|remain|kept)[^.\\\\n]{0,20}(?:out|redacted|excluded))'",
+        "missing required pattern: '(?i)(?:direct|explicit)[^.\\\\n]{0,35}probe'",
+        "missing required pattern: '(?i)(?:rc|result)[^.\\\\n]{0,80}(?:not evidence|not measured|invalid|unreliable|not decisive)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 9728,
+          "output_tokens": 559
+        },
+        {
+          "input_tokens": 9730,
+          "output_tokens": 598
+        },
+        {
+          "input_tokens": 9732,
+          "output_tokens": 558
+        }
+      ],
+      "duration_ms_per_run": [
+        12422,
+        14141,
+        13171
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Onboarding handoff:\nObjective: Repair Ansible validation so the assertion consumes a real command result; do not render or expose vaulted inventory.\nDecisions and evidence: [verified] Ansible `--check` skipped the `command` task while the next assertion consumed its registered `rc`. [unverified] No live fallback probe was run because every tool is denied. Safe inventory input is a field-scoped, non-secret projection only: host/group membership, exporter/backup/directory feature flags, service names, port identifiers if non-sensitive, and vault variable names or source references\u2014not resolved values.\nForbidden regressions: Check-mode skipped probe \u2192 assertion must not treat skipped/undefined `rc` as live evidence; either run an explicit read-only probe outside check mode or gate the assertion on a defined, executed result. Never use broad inventory rendering or debug output that resolves vaulted credentials.\nAcceptance and invariants: `ansible-playbook --check` is simulation-class and does not execute the `command` probe; decisive output is that the assertion is skipped/gated with an explicit reason, not falsely passed or failed from absent `rc`; known false-negative: check mode cannot establish the live command result; fallback is a targeted read-only probe against the named host, then assert its parsed exit status. Inventory invariant: no resolved exporter, backup, directory, or break-glass credentials enter logs, artifacts, prompts, or tests.\nAuthority and recovery: Tier 1 / artifact preparation; no live effect. Tool execution is currently denied, so verification remains unavailable; no broker request applies. Recovery: revert the Ansible/task-test diff.\nWork state: Builder may implement the bounded playbook/test change using only the safe projection above. Blocking prerequisite: an authorized operator must run the targeted read-only fallback probe before any claim of live validation. Non-blocking: redact/document the check-mode limitation.\n\n**Evidence that may cross:** the skipped-task/consumed-`rc` observation, playbook/task names and line references, sanitized check output, and non-secret inventory schema/projection.\n\n**Evidence that must not cross:** broad `ansible-inventory` output, decrypted `group_vars`, resolved vault values, credential-bearing logs, or any exporter, backup, directory, or break-glass secret.\n\nLearning: none \u2014 no reusable signal",
+          "failures": [
+            "missing required pattern: '(?i)(?:rc|result)[^.\\\\n]{0,80}(?:not evidence|not measured|invalid|unreliable|not decisive)'"
+          ]
+        },
+        {
+          "response": "```text\nOnboarding handoff:\nObjective: Repair the onboarding validation so an assertion never consumes `rc` from an Ansible `command` task skipped by `--check`; no live deployment or inventory-secret changes.\nDecisions and evidence: [sourced] `ansible-playbook --check` skipped the command task while the following assertion consumed its registered `rc`; therefore that check-mode assertion is non-decisive. [unverified] No replacement probe was executed because every tool is denied. Safe evidence may include the play/task names, task ordering, `when` conditions, check-mode behavior, Ansible version, and redacted check output showing \u201cskipped\u201d; exclude registered stdout/stderr if it can contain secrets.\nForbidden regressions: A check-mode run must not claim a command-derived postcondition when that command did not execute. Replace the assertion with check-mode-aware logic or an explicit read-only probe; never render broad vaulted inventory or log resolved variables.\nAcceptance and invariants: Execution class: check-mode simulation; command support: no\u2014the `command` task was skipped; decisive output: none for the dependent assertion; false positive: skipped task leaves absent/stale `rc`; fallback: an explicit, narrowly scoped read-only probe against the target after approval/access is available. Inventory projection may contain only non-secret hostnames/aliases, group membership, target role, required variable keys or boolean \u201cdefined\u201d status, vault-file path/reference, and per-host applicability. It must exclude all resolved exporter, backup, directory, break-glass, connection, token, password, and key material.\nAuthority and recovery: Tier 1 / artifact preparation for the playbook change; no live effect. Rollback: revert the affected task/assertion diff. Broker transport: none required unless a later live validation is proposed.\nWork state: Blocking prerequisite: tool access or operator-supplied, capture-safe evidence for validation. Non-blocking lane: builder may implement the check-mode guard and narrow inventory projection without decrypting or rendering vault content.\n```\n\nLearning: candidate \u2014 check-mode skipped a command whose registered return code was treated as assertion evidence  \nEvidence: reported Ansible run; no command output available  \nScope: applies to Ansible check-mode validations with dependent registered results; excludes tasks proven to execute in check mode  \nProvenance: unverified \u2014 tool access denied  \nLearning disposition: add (proposed recommendation)  \nPromotion state: quarantined  \nDestination: onboarding validation/runbook  \nOwner: authorized owner",
+          "failures": [
+            "missing required pattern: '(?i)(?:rc|result)[^.\\\\n]{0,80}(?:not evidence|not measured|invalid|unreliable|not decisive)'"
+          ]
+        },
+        {
+          "response": "Onboarding handoff:\nObjective: Repair the Ansible validation so assertions do not consume a `command` task result skipped by `--check`; out of scope: rendering or exporting vaulted inventory.\nDecisions and evidence: [sourced] `--check` skipped the `command` task, while the following assertion consumed its registered `rc`. [sourced] `group_vars` are vaulted and include exporter, backup, directory, and break-glass credentials. Safe evidence: task names/paths, play and role names, affected host/group identifiers if non-sensitive, the assertion expression, check-mode skip status, and a redacted result schema such as `{skipped: true, rc: absent}`. Safe inventory projection: only explicitly allowlisted non-secret structural fields needed by the fix\u2014e.g. group membership and boolean feature flags\u2014never decrypted variables, vault output, hostvars dumps, or rendered inventory.\nForbidden regressions: A check-mode assertion must not treat absent `rc` as a successful or failed live probe; gate the assertion on a defined registered result or supply an explicit check-mode-safe assertion. Tests must reject absent/undefined `rc` without leaking variable values.\nAcceptance and invariants: Static/config validation \u2014 supports check mode: [unverified] unavailable because every tool is denied; decisive output is parser/linter success; false negative: does not execute the command; fallback: reviewed task control flow proving the assertion is conditional on a defined, non-skipped result. Live/check probe \u2014 `--check` does not execute this `command`; decisive output would be an explicit skipped-result shape with no `rc`; false positive: a simulated pass can hide runtime command failure; fallback: operator runs a scoped read-only live probe after approval/scheduling. Inventory invariant: no task, debug output, artifact, or handoff contains resolved vaulted values.\nAuthority and recovery: Artifact preparation, Tier 1 only; no live effect or broker request. Rollback is reverting the changed playbook/task file. Tool denial prevents validation in this session.\nWork state: Builder may implement the bounded control-flow/test change using only the safe projection above. Blocking prerequisite: authorized operator must perform any Ansible validation; no broad inventory render is permitted.",
+          "failures": [
+            "missing required pattern: '(?i)(?:rc|result)[^.\\\\n]{0,80}(?:not evidence|not measured|invalid|unreliable|not decisive)'",
+            "missing required pattern: '(?i)(?:direct|explicit)[^.\\\\n]{0,35}probe'",
+            "missing required pattern: '(?i)(?:(?:never|do not|must not|exclude\\\\w*)[^.\\\\n]{0,50}(?:resolved|decrypted|plain-?text|unredacted)[^.\\\\n]{0,60}(?:password|credential|secret|token|value|material)|(?:resolved|decrypted|plain-?text|unredacted)[^.\\\\n]{0,30}(?:password|credential|secret|token|value|material)[^.\\\\n]{0,35}(?:stay|remain|kept)[^.\\\\n]{0,20}(?:out|redacted|excluded))'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-first-artifact-keeps-open-work",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 3,
+      "rate": 0.3333333333333333,
+      "failures": [
+        "missing required pattern: '(?i)Backups?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+        "missing required pattern: '(?i)Monitoring[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+        "missing required pattern: '(?i)Restore(?: drill)?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+        "missing required pattern: '(?i)Runbook[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 9774,
+          "output_tokens": 843
+        },
+        {
+          "input_tokens": 9774,
+          "output_tokens": 854
+        },
+        {
+          "input_tokens": 9780,
+          "output_tokens": 861
+        }
+      ],
+      "duration_ms_per_run": [
+        18391,
+        21047,
+        21406
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "```ini\n[Unit]\nDescription=OpenBao server\nWants=network-online.target\nAfter=network-online.target\nConditionPathIsExecutable=/usr/bin/bao\n\n[Service]\nType=simple\nUser=openbao\nGroup=openbao\nWorkingDirectory=/etc/openbao.d\nExecStart=/usr/bin/bao server -config=/etc/openbao.d\nRestart=on-failure\nRestartSec=5s\nLimitNOFILE=65536\nCapabilityBoundingSet=CAP_IPC_LOCK\nAmbientCapabilities=CAP_IPC_LOCK\nNoNewPrivileges=true\nPrivateTmp=true\nPrivateDevices=true\nProtectHome=true\nProtectKernelTunables=true\nProtectControlGroups=true\nRestrictSUIDSGID=true\nLockPersonality=true\nRestrictRealtime=true\nSystemCallArchitectures=native\n\n[Install]\nWantedBy=multi-user.target\n```\n\nThis is an unapplied Tier 1 artifact; no deployment is claimed.\n\nBlockers and remaining lanes:\n\n- TLS certificate/key custody and secure configuration are missing. Owner: home-lab operator.\n- OpenBao initialization recipient identities and recovery/unseal custody plan are missing. Owner: home-lab operator.\n- Backup design and tested backup target remain required before activation. Owner: home-lab operator.\n- Monitoring target, health probe, and alerting remain required. Owner: home-lab operator.\n- Service runbook remains required. Owner: home-lab operator.\n- Restore drill remains required after backups exist. Owner: home-lab operator.\n\nRollback: remove or revert this unapplied unit file; no live state exists.",
+          "failures": []
+        },
+        {
+          "response": "```ini\n[Unit]\nDescription=OpenBao server\nDocumentation=https://openbao.org/docs/\nWants=network-online.target\nAfter=network-online.target\nConditionPathIsDirectory=/etc/openbao.d\n\n[Service]\nType=simple\nUser=openbao\nGroup=openbao\nExecStart=/usr/bin/bao server -config=/etc/openbao.d\nRestart=on-failure\nRestartSec=5s\nLimitNOFILE=65536\nLimitMEMLOCK=infinity\nCapabilityBoundingSet=CAP_IPC_LOCK\nAmbientCapabilities=CAP_IPC_LOCK\nNoNewPrivileges=true\nPrivateTmp=true\nProtectHome=true\nProtectSystem=full\nReadWritePaths=/var/lib/openbao /var/log/openbao\nUMask=0077\n\n[Install]\nWantedBy=multi-user.target\n```\n\nNo deployment was performed; this is an unapplied artifact.\n\nBlockers and remaining lanes:\n\n- TLS certificate/key custody and config paths are undefined. Owner: operator.\n- Initialization and unseal/recovery recipient/custody plan is undefined. Owner: operator.\n- Backup destination, retention, encryption, and recovery proof are required. Owner: operator.\n- Monitoring target, health check, and alert policy are required. Owner: operator.\n- Service runbook is required. Owner: operator.\n- Restore drill is required after backups are established. Owner: operator.\n- New-host and new-service onboarding checklists could not be read because all tools are denied. Owner: operator.\n\nRollback: remove the unapplied unit artifact; no live state exists.  \nVerified: [unverified] no local validation was possible because tools are denied.",
+          "failures": [
+            "missing required pattern: '(?i)Backups?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Monitoring[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Runbook[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Restore(?: drill)?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'"
+          ]
+        },
+        {
+          "response": "```ini\n[Unit]\nDescription=OpenBao server\nDocumentation=https://openbao.org/docs/\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nUser=openbao\nGroup=openbao\nExecStartPre=/usr/bin/bao server -config=/etc/openbao.d -verify-only\nExecStart=/usr/bin/bao server -config=/etc/openbao.d\nRestart=on-failure\nRestartSec=5s\nLimitMEMLOCK=infinity\nCapabilityBoundingSet=CAP_IPC_LOCK\nAmbientCapabilities=CAP_IPC_LOCK\nNoNewPrivileges=true\nPrivateTmp=true\nProtectHome=true\nProtectSystem=full\nReadWritePaths=/var/lib/openbao /run/openbao\n\n[Install]\nWantedBy=multi-user.target\n```\n\nBlockers and remaining lanes \u2014 no deployment has been performed:\n\n- TLS private-key/certificate custody and the final TLS configuration are missing. Owner: operator.\n- Initialization recipient identities and their secure delivery method are missing; initialization is a custody-boundary action. Owner: operator.\n- Host onboarding, including proven recovery access, is still required before activation. Owner: home-lab operator.\n- Backup configuration and a recovery path are required. Owner: home-lab operator.\n- Monitoring target and alerting are required. Owner: home-lab operator.\n- Service runbook is required. Owner: home-lab operator.\n- Restore drill is required after backups exist. Owner: home-lab operator.\n\nThe unit assumes `/var/lib/openbao` and `/run/openbao` are deliberately created and owned by `openbao`; the OpenBao configuration must define its storage and listener settings.",
+          "failures": [
+            "missing required pattern: '(?i)Backups?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Monitoring[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Runbook[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'",
+            "missing required pattern: '(?i)Restore(?: drill)?[^.\\\\n]{0,80}(?:open|pending|remain\\\\w*)[^.\\\\n]{0,50}(?:\\\\.\\\\s*)?(?:owner\\\\b|owned by\\\\b)'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-simple-build-stays-short",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(?i)(?:Tier\\\\s*2|live activation)[^.\\\\n]{0,80}(?:requires|needs|pending|explicit)[^.\\\\n]{0,30}approval'",
+        "missing required pattern: '(?i)reachab\\\\w*'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 9725,
+          "output_tokens": 215
+        },
+        {
+          "input_tokens": 9721,
+          "output_tokens": 532
+        },
+        {
+          "input_tokens": 9721,
+          "output_tokens": 307
+        }
+      ],
+      "duration_ms_per_run": [
+        9781,
+        15547,
+        11547
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Deliverable: Add one stateless, internal-only link-shortener service definition to the existing Compose stack; no volumes, secrets, host ports, or proxy exposure; use a pinned image and include restart policy and health check.\n\nAcceptance: `docker compose config` succeeds; `docker compose up -d <service>` is deferred until activation approval, then `docker compose ps <service>` reports healthy and an in-network HTTP request returns a valid short-link response.\n\nAuthority: Artifact preparation is Tier 1 and may be committed; live activation is Tier 2 reversible activation, requiring a specific approved broker-bound request, verification, and rollback via `docker compose stop <service>`.",
+          "failures": [
+            "missing required pattern: '(?i)reachab\\\\w*'",
+            "missing required pattern: '(?i)(?:Tier\\\\s*2|live activation)[^.\\\\n]{0,80}(?:requires|needs|pending|explicit)[^.\\\\n]{0,30}approval'"
+          ]
+        },
+        {
+          "response": "Deliverable: Add one pinned-image, stateless `link-shortener` Compose service to the existing stack; internal network only, no published ports, volumes, secrets, or database; include restart policy, health check, monitoring target, and runbook entry.\n\nAcceptance: `docker compose config` validates the artifact; after separately approved activation, an existing internal consumer resolves the service and receives a successful short-link response; rollback is removal of the service definition and reapplying the prior Compose config.\n\nAuthority: Artifact preparation is Tier 1; live activation is Tier 2 reversible live activation and requires a specific user-approved, one-shot broker request. Tools/broker transport are unavailable here, so do not activate.",
+          "failures": [
+            "missing required pattern: '(?i)reachab\\\\w*'",
+            "missing required pattern: '(?i)(?:Tier\\\\s*2|live activation)[^.\\\\n]{0,80}(?:requires|needs|pending|explicit)[^.\\\\n]{0,30}approval'"
+          ]
+        },
+        {
+          "response": "Deliverable: Add one pinned-image, stateless link-shortener service to the existing Compose stack: internal-only networking, no volumes/secrets/host ports, restart policy, health check, monitoring target, and runbook entry.\n\nAcceptance: `docker compose config` validates; service health endpoint succeeds from an in-stack client after activation.\n\nAuthority: Artifact preparation only (Tier 1); do not deploy. Live activation is Tier 2 and requires a separately approved, effect-bound request with rollback.",
+          "failures": [
+            "missing required pattern: '(?i)reachab\\\\w*'",
+            "missing required pattern: '(?i)(?:Tier\\\\s*2|live activation)[^.\\\\n]{0,80}(?:requires|needs|pending|explicit)[^.\\\\n]{0,30}approval'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-builder-echo-rejects-regression",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 3,
+      "rate": 0.3333333333333333,
+      "failures": [
+        "missing required pattern: '(?i)(?:(?:Tier[-\\\\s\\\\u2011]*2|live (?:activation|deployment))[^.\\\\n]{0,60}(?:approval|homelab-platform)|homelab-platform[^.\\\\n]{0,60}(?:Tier[-\\\\s\\\\u2011]*2|live (?:activation|deployment)))'",
+        "session produced nothing: Codex exited 1 before terminal success"
+      ],
+      "notes": [
+        "Codex exited 1 before terminal success"
+      ],
+      "usage_per_run": [
+        {
+          "input_tokens": 10029,
+          "output_tokens": 338
+        },
+        null,
+        {
+          "input_tokens": 10029,
+          "output_tokens": 426
+        }
+      ],
+      "duration_ms_per_run": [
+        10406,
+        2125,
+        13500
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Before editing, I echo:\n\n- Objective: staged OpenBao config and its tests only.\n- Fixed decisions/evidence: Raft is fixed; POC-42\u2019s supplied OpenBao 2.6 help/schema transcript establishes that `disable_mlock` was removed and swap is denied.\n- Forbidden regressions: `disable_mlock` must be absent from code and tests; service membership must be parsed rather than inferred from string co-occurrence.\n- Acceptance/invariants: run `operator validate-config`; parse `svc-bao` membership in `bao-readers`; change `service_count` from 7 to 8; preserve generated-source parity.\n- Authority/recovery: Tier 1 only\u2014no live authority and no resolved-secret transfers.\n- Work state: the staged file has no blocker; monitoring remains open with the platform owner.\n- Conflict: live deployment is outside the Tier-1 boundary. I will not deploy; that requires `homelab-platform` to authorize and perform the Tier 2/3 live effect.\n\nBefore editing, I would remove the obsolete setting and its test, replace the co-occurrence test with structural membership parsing, update the count/parity assertion, then run the stated validation. However, every tool is denied and the workspace is read-only, so I cannot inspect, edit, or run the acceptance command in this turn.",
+          "failures": []
+        },
+        {
+          "response": "",
+          "failures": [
+            "session produced nothing: Codex exited 1 before terminal success"
+          ]
+        },
+        {
+          "response": "Before editing, I echo:\n\nObjective: staged OpenBao config and its tests only.\n\nFixed decisions: Raft is fixed. Authoritative source POC-42 is the supplied OpenBao 2.6 help/schema transcript: `disable_mlock` was removed and swap is denied.\n\nVerified constraints: `disable_mlock` must be absent from code and tests; role membership must be parsed, not asserted by string co-occurrence.\n\nAcceptance/evidence: run `operator validate-config`; parse `svc-bao` membership in `bao-readers`; change `service_count` from 7 to 8; preserve generated-source parity.\n\nAuthority/transport/secret boundary: Tier 1 only; no live authority and no resolved-secret transfers.\n\nBlockers/open lane: no blocker for the staged file; monitoring remains open with the platform owner.\n\nI will not deploy live in this turn: that is a Tier 2/3 effect and conflicts with the stated Tier-1 boundary. I would return the live-deployment request to `homelab-platform` for authorization. I would then remove the obsolete setting and its test, replace the co-occurrence test with structural membership parsing, update the count and generated parity, and run the specified validation\u2014but no tools are available, so I cannot edit or verify here.",
+          "failures": [
+            "missing required pattern: '(?i)(?:(?:Tier[-\\\\s\\\\u2011]*2|live (?:activation|deployment))[^.\\\\n]{0,60}(?:approval|homelab-platform)|homelab-platform[^.\\\\n]{0,60}(?:Tier[-\\\\s\\\\u2011]*2|live (?:activation|deployment)))'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "handoff-reviewer-rejects-regression-test",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 3,
+      "rate": 0.3333333333333333,
+      "failures": [
+        "missing required pattern: \"(?i)(?:(?:co-?occurrence|same file|both strings|substrings?)[^.\\\\n]{0,60}(?:does not|cannot|isn't|not)[^.\\\\n]{0,30}(?:prove|establish|validate|sufficient)|(?:must|need(?:s)? to)[^.\\\\n]{0,25}pars\\\\w*[^.\\\\n]{0,30}(?:membership|relationship))\""
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 9701,
+          "output_tokens": 407
+        },
+        {
+          "input_tokens": 9697,
+          "output_tokens": 429
+        },
+        {
+          "input_tokens": 9699,
+          "output_tokens": 473
+        }
+      ],
+      "duration_ms_per_run": [
+        11954,
+        12640,
+        13235
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "**Target:** supplied patch only; immutable identity base `1111111111111111111111111111111111111111`, candidate `2222222222222222222222222222222222222222`, tree `3333333333333333333333333333333333333333`.\n\n[P1] (confidence: high) [caller-flagged] supplied config addition `disable_mlock = true` \u2014 OpenBao 2.6 removed this setting, per supplied design evidence. The rendered configuration will contain an unsupported directive, so the service may fail to start. Remove it; retain the swap-denial mechanism as the replacement.\n\n[P1] (confidence: high) [caller-flagged] supplied assertion `assert \"svc-bao\" in rendered and \"bao-readers\" in rendered` \u2014 this proves only independent string presence, not that `svc-bao` is a parsed member of `bao-readers`. A malformed or unrelated occurrence passes. Parse the rendered membership structure and assert `svc-bao` belongs to `bao-readers`.\n\n**Verdict: REQUEST CHANGES.** Both supplied requirements are contradicted or insufficiently verified. Independently-found P0/P1s: 0. No executable or repository inspection was possible because all tools were denied.\n\nLearning: none \u2014 no reusable signal",
+          "failures": [
+            "missing required pattern: \"(?i)(?:(?:co-?occurrence|same file|both strings|substrings?)[^.\\\\n]{0,60}(?:does not|cannot|isn't|not)[^.\\\\n]{0,30}(?:prove|establish|validate|sufficient)|(?:must|need(?:s)? to)[^.\\\\n]{0,25}pars\\\\w*[^.\\\\n]{0,30}(?:membership|relationship))\""
+          ]
+        },
+        {
+          "response": "Target: supplied immutable patch only \u2014 base `1111111111111111111111111111111111111111`, candidate `2222222222222222222222222222222222222222`, tree `3333333333333333333333333333333333333333`.\n\n[P1] (confidence: high) [caller-flagged] supplied patch \u2014 Adds `disable_mlock = true`, despite OpenBao 2.6 having removed that setting. The rendered configuration will be rejected or the setting ignored depending on parser behavior, and the new test locks in the obsolete contract. Remove the setting and assert the swap-denial mechanism instead.\n\n[P1] (confidence: high) [independent] supplied patch \u2014 `assert \"svc-bao\" in rendered and \"bao-readers\" in rendered` only proves both strings occur somewhere; it does not prove `svc-bao` is a parsed member of `bao-readers`, as required by the design evidence. Parse the rendered configuration and assert the actual group-membership relationship.\n\n**Verdict: REQUEST CHANGES.** The obsolete OpenBao setting conflicts directly with the supplied version contract, and the membership test does not test the required structural relationship. Independently-found P0/P1s: 1.\n\nLearning: none \u2014 no reusable signal",
+          "failures": []
+        },
+        {
+          "response": "Target: supplied patch only; immutable identity base `1111111111111111111111111111111111111111`, candidate `2222222222222222222222222222222222222222`, tree `3333333333333333333333333333333333333333`.\n\n[P1] (confidence: high) [independent] supplied config addition \u2014 `disable_mlock = true` was removed in OpenBao 2.6. The rendered configuration will be rejected or fail service startup after upgrade. Remove it and implement the specified swap-denial control instead.\n\n[P1] (confidence: high) [independent] supplied test assertion \u2014 `assert \"svc-bao\" in rendered and \"bao-readers\" in rendered` proves only independent string presence, not that `svc-bao` is a parsed member of `bao-readers`. Parse the rendered policy/config and assert the membership relationship.\n\nVerdict: REQUEST CHANGES. The patch conflicts with the supplied OpenBao 2.6 compatibility requirement, and its membership test cannot verify the required authorization relationship. Independently-found P0/P1s: 2. The assertions do at least target the rendered output, which is the right integration boundary; they need stronger semantic checks.\n\nTest evidence: none supplied; no tools were available or used.\n\nLearning: none \u2014 no reusable signal",
+          "failures": [
+            "missing required pattern: \"(?i)(?:(?:co-?occurrence|same file|both strings|substrings?)[^.\\\\n]{0,60}(?:does not|cannot|isn't|not)[^.\\\\n]{0,30}(?:prove|establish|validate|sufficient)|(?:must|need(?:s)? to)[^.\\\\n]{0,25}pars\\\\w*[^.\\\\n]{0,30}(?:membership|relationship))\""
+          ]
+        }
+      ]
+    }
+  ]
+}

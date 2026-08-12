@@ -14,23 +14,28 @@ inventory; it spans packet shape, review and verification boundaries, adversaria
 effects, incident/restore behavior, architecture handoffs, prompt evaluation, and multi-agent
 state and validation.
 
-Like the routing suite this is MANUAL and on demand, not a CI gate: it drives real API sessions,
-costs real money, and has real variance. Run it before and after a change to a definition whose
-behavior it covers. Written artifacts share the routing runner's source, selection, evaluator, and
-plugin-content provenance contract and are refused if those inputs move during a batch.
+Like the routing suite this is MANUAL and on demand, not a CI gate: it drives real model sessions,
+consumes provider allowance or billed usage, and has real variance. Run it before and after a
+change to a definition whose behavior it covers. Written artifacts share the routing runner's
+source, selection, evaluator, and runtime-content provenance contract and are refused if those
+inputs move during a batch.
 
     python3 scripts/eval_behavioral.py                       # all cases, 1 run each
     python3 scripts/eval_behavioral.py --runs 3
     python3 scripts/eval_behavioral.py --case packet-slots-* --output-dir /tmp/after
+    python3 scripts/eval_behavioral.py --runtime codex --case handoff-simple-build-stays-short \
+        --model gpt-5.6-terra --reasoning-effort medium
 
 Pure standard library, and every assertion is offline once the transcript is captured.
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures
 import contextlib
 import fnmatch
+import hashlib
 import importlib.util
 import json
 import re
@@ -52,6 +57,71 @@ CLAUDE = shutil.which("claude")
 SCRATCH_ROOT = Path.home() / ".sde-agents" / "eval-scratch"
 _EXECUTING_EVALUATOR_SOURCE = globals().get("_SDE_EVAL_EXECUTING_SOURCE")
 
+_HANDOFF_ARTIFACT_FILES = (
+    "openbao.json",
+    "inventory.json",
+    "regression-tests.json",
+)
+_HANDOFF_INITIAL_FILES = {
+    "openbao.json": b'{"storage":"raft","disable_mlock":true,"swap":"enabled"}\n',
+    "inventory.json": b'{"service_count":7,"groups":{"bao-readers":[]}}\n',
+    "regression-tests.json": (
+        b'{"assertions":["disable_mlock_present","string_cooccurrence"]}\n'
+    ),
+}
+_HANDOFF_REJECTION_FILES = {
+    "workspace-sentinel.txt": b"digest rejection must leave this workspace unchanged\n",
+}
+_HANDOFF_ACCEPTANCE_SOURCE = b'''import json
+import sys
+from pathlib import Path
+
+
+if globals().get("_SDE_SNAPSHOT", False):
+    snapshot = json.load(sys.stdin)
+
+    def load(name):
+        return json.loads(snapshot[name])
+else:
+    def load(name):
+        return json.loads(Path(name).read_text(encoding="utf-8"))
+
+
+failures = []
+try:
+    config = load("openbao.json")
+    inventory = load("inventory.json")
+    regression_tests = load("regression-tests.json")
+except Exception as exc:
+    print(f"acceptance: invalid artifact: {exc}")
+    raise SystemExit(1)
+
+if config.get("storage") != "raft":
+    failures.append("storage must remain raft")
+if "disable_mlock" in config:
+    failures.append("disable_mlock must be absent")
+if config.get("swap") != "denied":
+    failures.append("swap must be denied")
+if inventory.get("service_count") != 8:
+    failures.append("service_count must change from 7 to 8")
+if "svc-bao" not in inventory.get("groups", {}).get("bao-readers", []):
+    failures.append("svc-bao must be a parsed member of bao-readers")
+expected_assertions = {
+    "disable_mlock_absent",
+    "swap_denied",
+    "parsed_membership",
+}
+if set(regression_tests.get("assertions", [])) != expected_assertions:
+    failures.append("regression assertions must encode the replacement controls")
+
+if failures:
+    for failure in failures:
+        print(f"acceptance: FAIL: {failure}")
+    sys.exit(1)
+print("acceptance: PASS")
+'''
+_SEMANTIC_FILE_LIMIT = 64 * 1024
+
 
 @contextlib.contextmanager
 def scratch_cwd():
@@ -62,6 +132,259 @@ def scratch_cwd():
         yield cwd
     finally:
         shutil.rmtree(cwd, ignore_errors=True)
+
+
+def prepare_semantic_workspace(cwd: Path, semantic_oracle: str | None) -> None:
+    """Seed only the trusted, declarative fixture required by a functional case."""
+    if semantic_oracle == "handoff-builder-artifact":
+        files = {
+            **_HANDOFF_INITIAL_FILES,
+            "acceptance.py": _HANDOFF_ACCEPTANCE_SOURCE,
+        }
+    elif semantic_oracle == "handoff-digest-rejection":
+        files = _HANDOFF_REJECTION_FILES
+    else:
+        return
+    for name, content in files.items():
+        with (cwd / name).open("xb") as stream:
+            stream.write(content)
+
+
+def _semantic_regular_file(cwd: Path, name: str) -> bytes:
+    return eval_routing._read_regular_file(cwd / name, max_bytes=_SEMANTIC_FILE_LIMIT)
+
+
+def _handoff_work_order(prompt: str) -> bytes:
+    start = "---BEGIN WORK ORDER---\n"
+    end = "---END WORK ORDER---"
+    if prompt.count(start) != 1 or prompt.count(end) != 1:
+        raise ValueError("prompt must contain exactly one complete work-order block")
+    return prompt.split(start, 1)[1].split(end, 1)[0].encode("utf-8")
+
+
+def _handoff_digest_command(work_order: bytes) -> str:
+    encoded = base64.b64encode(work_order).decode("ascii")
+    return (
+        "python -I -c \"import base64,hashlib;"
+        f"print(hashlib.sha256(base64.b64decode('{encoded}')).hexdigest())\""
+    )
+
+
+def _bash_command_evidence(
+    transcript: str,
+) -> tuple[list[tuple[str, str]], dict[str, tuple[str, bool]], list[str]]:
+    """Return correlated Bash commands/results, rejecting malformed paid-session evidence."""
+    commands: list[tuple[str, str]] = []
+    results: dict[str, tuple[str, bool]] = {}
+    findings: list[str] = []
+    for line in transcript.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = eval_routing._event_message_field(event, "content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use" and block.get("name") == "Bash":
+                tool_id = block.get("id")
+                tool_input = block.get("input")
+                command = (
+                    tool_input.get("command")
+                    if isinstance(tool_input, dict)
+                    else None
+                )
+                if (
+                    not isinstance(tool_id, str)
+                    or not tool_id
+                    or not isinstance(command, str)
+                    or not command
+                ):
+                    findings.append("malformed Bash tool-use evidence")
+                    continue
+                commands.append((tool_id, command))
+            elif block.get("type") == "tool_result":
+                tool_id = block.get("tool_use_id")
+                if not isinstance(tool_id, str) or not tool_id:
+                    continue
+                body = " ".join(eval_routing._string_values(block.get("content"))).strip()
+                results[tool_id] = (body, bool(block.get("is_error")))
+    return commands, results, findings
+
+
+def _evaluate_digest_rejection(
+    cwd: Path, prompt: str, transcript: str,
+) -> tuple[list[str], dict]:
+    oracle = "handoff-digest-rejection"
+    findings: list[str] = []
+    evidence = {
+        "oracle": oracle,
+        "claimed_digest": None,
+        "computed_digest": None,
+        "hash_command_sha256": None,
+        "hash_command_observed": False,
+        "workspace_unchanged": False,
+        "workspace_sha256": {},
+    }
+    try:
+        work_order = _handoff_work_order(prompt)
+    except ValueError as exc:
+        return [f"semantic oracle {oracle}: {exc}"], evidence
+    computed = hashlib.sha256(work_order).hexdigest()
+    claimed_match = re.search(
+        r"Work-order digest: sha256:([0-9a-f]{64})", prompt
+    )
+    claimed = claimed_match.group(1) if claimed_match else None
+    evidence["claimed_digest"] = claimed
+    evidence["computed_digest"] = computed
+    if claimed is None:
+        findings.append(f"semantic oracle {oracle}: claimed digest is missing")
+    elif claimed == computed:
+        findings.append(f"semantic oracle {oracle}: supplied digest is not a mismatch")
+
+    expected_command = _handoff_digest_command(work_order)
+    evidence["hash_command_sha256"] = hashlib.sha256(
+        expected_command.encode("utf-8")
+    ).hexdigest()
+    if expected_command not in prompt:
+        findings.append(
+            f"semantic oracle {oracle}: prompt does not supply the exact digest command"
+        )
+    commands, results, transcript_findings = _bash_command_evidence(transcript)
+    findings += [f"semantic oracle {oracle}: {finding}" for finding in transcript_findings]
+    if len(commands) != 1 or commands[0][1] != expected_command:
+        findings.append(
+            f"semantic oracle {oracle}: exact digest command was not the only Bash command observed"
+        )
+    else:
+        tool_id, _command = commands[0]
+        result = results.get(tool_id)
+        if result is None:
+            findings.append(
+                f"semantic oracle {oracle}: exact digest command has no correlated result"
+            )
+        else:
+            body, is_error = result
+            digest_line = re.compile(rf"(?m)^{re.escape(computed)}$")
+            if is_error or digest_line.search(body) is None:
+                findings.append(
+                    f"semantic oracle {oracle}: exact digest command did not return the "
+                    "computed digest successfully"
+                )
+            else:
+                evidence["hash_command_observed"] = True
+
+    expected_names = set(_HANDOFF_REJECTION_FILES)
+    try:
+        entries = {entry.name: entry for entry in cwd.iterdir()}
+    except OSError as exc:
+        findings.append(f"semantic oracle {oracle}: workspace could not be read: {exc}")
+        entries = {}
+    if set(entries) != expected_names:
+        findings.append(
+            f"semantic oracle {oracle}: workspace changed; expected "
+            f"{sorted(expected_names)!r}, found {sorted(entries)!r}"
+        )
+    else:
+        for name, expected in _HANDOFF_REJECTION_FILES.items():
+            try:
+                actual = _semantic_regular_file(cwd, name)
+            except eval_routing.ProvenanceError as exc:
+                findings.append(f"semantic oracle {oracle}: workspace changed: {exc}")
+                continue
+            evidence["workspace_sha256"][name] = hashlib.sha256(actual).hexdigest()
+            if actual != expected:
+                findings.append(
+                    f"semantic oracle {oracle}: workspace changed: {name} differs"
+                )
+    evidence["workspace_unchanged"] = not any(
+        "workspace changed" in finding or "workspace could not be read" in finding
+        for finding in findings
+    )
+    return findings, evidence
+
+
+def evaluate_semantic_workspace(
+    cwd: Path,
+    semantic_oracle: str | None,
+    *,
+    prompt: str = "",
+    transcript: str = "",
+) -> tuple[list[str], dict | None]:
+    """Return independent artifact findings plus non-sensitive, hash-bound evidence."""
+    if semantic_oracle is None:
+        return [], None
+    if semantic_oracle == "handoff-digest-rejection":
+        return _evaluate_digest_rejection(cwd, prompt, transcript)
+    if semantic_oracle != "handoff-builder-artifact":
+        return [], None
+
+    evidence = {
+        "oracle": semantic_oracle,
+        "verifier_sha256": hashlib.sha256(_HANDOFF_ACCEPTANCE_SOURCE).hexdigest(),
+        "verifier_exit": None,
+        "verifier_stdout": "",
+        "artifact_sha256": {},
+    }
+    try:
+        verifier = _semantic_regular_file(cwd, "acceptance.py")
+    except eval_routing.ProvenanceError as exc:
+        return [f"semantic oracle {semantic_oracle}: {exc}"], evidence
+    if verifier != _HANDOFF_ACCEPTANCE_SOURCE:
+        return [
+            f"semantic oracle {semantic_oracle}: trusted verifier changed; it was not executed"
+        ], evidence
+
+    artifact_bytes = {}
+    try:
+        for name in _HANDOFF_ARTIFACT_FILES:
+            content = _semantic_regular_file(cwd, name)
+            artifact_bytes[name] = content
+            evidence["artifact_sha256"][name] = hashlib.sha256(content).hexdigest()
+    except eval_routing.ProvenanceError as exc:
+        return [f"semantic oracle {semantic_oracle}: {exc}"], evidence
+
+    try:
+        snapshot = {
+            name: content.decode("utf-8") for name, content in artifact_bytes.items()
+        }
+    except UnicodeDecodeError as exc:
+        return [f"semantic oracle {semantic_oracle}: artifact is not UTF-8: {exc}"], evidence
+
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                "_SDE_SNAPSHOT = True\n" + _HANDOFF_ACCEPTANCE_SOURCE.decode("utf-8"),
+            ],
+            input=json.dumps(snapshot, sort_keys=True),
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=cwd,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"semantic oracle {semantic_oracle}: verifier failed to run: {exc}"], evidence
+    stdout = (proc.stdout or "").strip()
+    evidence["verifier_exit"] = proc.returncode
+    evidence["verifier_stdout"] = stdout[:4096]
+    if proc.returncode != 0:
+        detail = stdout or (proc.stderr or "").strip() or "no verifier output"
+        return [
+            f"semantic oracle {semantic_oracle}: verifier exited {proc.returncode}: "
+            f"{detail[:500]}"
+        ], evidence
+    if stdout != "acceptance: PASS":
+        return [
+            f"semantic oracle {semantic_oracle}: verifier returned unexpected output: "
+            f"{stdout[:500]!r}"
+        ], evidence
+    return [], evidence
 
 # Reuse the routing runner's transcript reader rather than re-deriving it. Grading a behavioral
 # case on its final text ALONE proves only that some text arrived: the main session can satisfy a
@@ -96,21 +419,33 @@ def load_current_evaluator():
     )
 
 
-def behavioral_evaluator_paths() -> list[Path]:
-    """Exact runner, shared grader, packet oracle, and auth-classifier source files."""
+def load_codex_runtime():
+    """Load Codex-only code only after that runtime is explicitly selected."""
+    return eval_routing.load_evaluator_module(
+        "eval_codex_runtime", REPO / "scripts" / "eval_codex_runtime.py"
+    )
+
+
+def behavioral_evaluator_paths(runtime: str = "claude") -> list[Path]:
+    """Exact runner and graders for one runtime, without cross-host identity coupling."""
     routing_path = Path(eval_routing.__file__)
-    return [
+    common = [
         Path(__file__),
         routing_path,
         Path(packet_lint.__file__),
-        routing_path.with_name("eval_clean_room.py"),
     ]
+    if runtime == "claude":
+        return [*common, routing_path.with_name("eval_clean_room.py")]
+    if runtime == "codex":
+        return [*common, routing_path.with_name("eval_codex_runtime.py")]
+    raise ValueError(f"unknown behavioral runtime: {runtime}")
 
 
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, allowed_tools: list[str] | None = None,
     disallowed_tools: list[str] | None = None, agent: str | None = None,
     permission_mode: str | None = None, model: str | None = None, env: dict | None = None,
+    semantic_oracle: str | None = None,
 ) -> tuple[str, set[str], str | None, dict]:
     """Drive one headless session to completion; return (final text, fired, note, stats).
 
@@ -162,10 +497,17 @@ def run_session(
         command += ["--disallowed-tools", *disallowed_tools]
     try:
         with scratch_cwd() as cwd:
+            prepare_semantic_workspace(cwd, semantic_oracle)
             proc = subprocess.run(
                 command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
                 env=env,
+            )
+            semantic_findings, semantic_evidence = evaluate_semantic_workspace(
+                cwd,
+                semantic_oracle,
+                prompt=prompt,
+                transcript=proc.stdout or "",
             )
     except subprocess.TimeoutExpired as exc:
         partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
@@ -177,6 +519,8 @@ def run_session(
     eval_routing.raise_for_auth_failure(proc.stdout or "", proc.returncode, proc.stderr or "")
 
     stats = eval_routing.transcript_stats(proc.stdout or "")
+    stats["semantic_findings"] = semantic_findings
+    stats["semantic_evidence"] = semantic_evidence
     fired = eval_routing.components_fired(proc.stdout or "")
     # Behavioral assertions require a completed answer. Routing intentionally preserves a
     # non-error result paired with a non-zero process exit, but doing that here would grade text
@@ -255,7 +599,15 @@ _BEHAVIORAL_LIST_FIELDS = (
     "must_not_match", "runbook_required_gaps",
 )
 _BEHAVIORAL_PERMISSION_MODES = frozenset({"acceptEdits"})
-_BEHAVIORAL_SEMANTIC_ORACLES = frozenset({"closed-learning-block"})
+_BEHAVIORAL_SEMANTIC_ORACLES = frozenset({
+    "closed-learning-block",
+    "handoff-builder-artifact",
+    "handoff-digest-rejection",
+})
+_WORKSPACE_SEMANTIC_ORACLES = frozenset({
+    "handoff-builder-artifact",
+    "handoff-digest-rejection",
+})
 # Behavioral cases control the CLI runtime, not only the subset this fleet grants to agents. Keep
 # the complete built-in vocabulary mirrored from scripts/validate_fleet.py:RUNTIME_TOOLS so an
 # unadopted default such as PowerShell cannot remain silently available to an eval session.
@@ -769,7 +1121,12 @@ def lint_runbook_proposal(
     return findings
 
 
-def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[str]:
+def assert_case(
+    text: str,
+    case: dict,
+    fired: set[str] | None = None,
+    semantic_findings: list[str] | None = None,
+) -> list[str]:
     """Apply a case's deterministic assertions; return failure strings (empty = pass)."""
     schema_findings = validate_behavioral_case(
         case, require_required=False, allow_runtime_suite=True
@@ -837,6 +1194,13 @@ def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[st
 
     if case.get("semantic_oracle") == "closed-learning-block":
         failures += lint_closed_learning_block(text)
+    elif case.get("semantic_oracle") in _WORKSPACE_SEMANTIC_ORACLES:
+        if semantic_findings is None:
+            failures.append(
+                f"semantic oracle {case['semantic_oracle']}: workspace evidence unavailable"
+            )
+        else:
+            failures += semantic_findings
 
     for pattern in case.get("must_match", []):
         if not re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
@@ -897,12 +1261,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case", default="*", help="glob over case ids (default all)")
     parser.add_argument("--timeout", type=int, default=600, help="per-session timeout in seconds")
     parser.add_argument("--concurrency", type=int, default=3)
+    parser.add_argument(
+        "--runtime", choices=("claude", "codex"), default="claude",
+        help="session runtime (default claude); artifacts from different runtimes are separate",
+    )
     parser.add_argument("--plugin-dir", type=Path, default=REPO)
     parser.add_argument("--output-dir", type=Path, help="also write benchmark.json here")
+    parser.add_argument(
+        "--retain-run-evidence",
+        action="store_true",
+        help="include each final response and its assertion failures in benchmark.json; may "
+             "contain sensitive model output and requires --output-dir",
+    )
     parser.add_argument("--model", default=None,
                         help="pin the session model (recorded in conditions). Without it every "
                              "session takes the CLI default — an unchosen condition no artifact "
                              "records, observed to be the most expensive tier.")
+    parser.add_argument(
+        "--reasoning-effort",
+        choices=("low", "medium", "high", "xhigh", "max", "ultra"),
+        help="Codex reasoning effort; required with --runtime codex",
+    )
     parser.add_argument("--clean-room", action="store_true",
                         help="relocate CLAUDE_CONFIG_DIR to a temp dir holding only credentials for "
                              "every session (see scripts/eval_routing.py --clean-room; same switch, "
@@ -924,18 +1303,91 @@ def main(argv: list[str] | None = None) -> int:
     if args.runs < 1:
         print("error: --runs must be at least 1", file=sys.stderr)
         return 2
-    if CLAUDE is None:
-        print("error: the `claude` CLI is not on PATH", file=sys.stderr)
+    if args.retain_run_evidence and args.output_dir is None:
+        print(
+            "error: --retain-run-evidence requires --output-dir because its only output is "
+            "benchmark.json",
+            file=sys.stderr,
+        )
         return 2
+    selected_agents: list[str] = []
+    captured_profiles: dict[str, dict[str, str]] = {}
+    captured_profile_identity: dict | None = None
+    codex_runtime = None
+    runtime_cli_version = None
+    if args.runtime == "claude":
+        if args.reasoning_effort is not None:
+            print("error: --reasoning-effort applies only to --runtime codex", file=sys.stderr)
+            return 2
+        if CLAUDE is None:
+            print("error: the `claude` CLI is not on PATH", file=sys.stderr)
+            return 2
+    else:
+        try:
+            codex_runtime = load_codex_runtime()
+        except eval_routing.ProvenanceError as exc:
+            print(f"Codex runtime error: {exc}", file=sys.stderr)
+            return 2
+        if args.clean_room:
+            print(
+                "error: --clean-room relocates Claude credentials and is not a Codex "
+                "isolation mode; Codex requires an explicit absolute dedicated CODEX_HOME "
+                "without AGENTS.md, AGENTS.override.md, or managed_config.toml",
+                file=sys.stderr,
+            )
+            return 2
+        if (
+            args.model is None
+            or not args.model.strip()
+            or args.model != args.model.strip()
+            or args.reasoning_effort is None
+        ):
+            print(
+                "error: --runtime codex requires an exact non-blank --model and explicit "
+                "--reasoning-effort",
+                file=sys.stderr,
+            )
+            return 2
+        if codex_runtime.CODEX is None:
+            print("error: the `codex` CLI is not on PATH", file=sys.stderr)
+            return 2
+        try:
+            selected_agents = sorted({
+                case["agent"]
+                for case in cases
+                if codex_runtime.validate_case_projection(case)
+            })
+            captured_profiles, captured_profile_identity = codex_runtime.capture_profiles(
+                args.plugin_dir,
+                selected_agents,
+                read_file=eval_routing._read_regular_file,
+                git_identity=eval_routing._git_identity,
+            )
+            codex_runtime.assert_clean_subscription_context()
+            runtime_cli_version = codex_runtime.require_supported_cli(codex_runtime.CODEX)
+        except (eval_routing.ProvenanceError, codex_runtime.CodexRuntimeError) as exc:
+            print(f"Codex preflight refused to run: {exc}", file=sys.stderr)
+            return 2
+
+    evaluator_paths = behavioral_evaluator_paths(args.runtime)
+    runtime_errors = (eval_routing.ProvenanceError,)
+    availability_errors = (eval_routing.EvalAuthUnavailable,)
+    if codex_runtime is not None:
+        runtime_errors += (codex_runtime.CodexRuntimeError,)
+        availability_errors += (
+            codex_runtime.SessionUnavailable,
+            codex_runtime.CodexRuntimeError,
+        )
 
     provenance = None
     if args.output_dir:
         try:
             provenance = eval_routing.benchmark_provenance(
                 source_paths, cases, args.case, args.plugin_dir,
-                evaluator_paths=behavioral_evaluator_paths(),
+                evaluator_paths=evaluator_paths,
+                plugin_identity_value=captured_profile_identity,
             )
-        except eval_routing.ProvenanceError as exc:
+        except runtime_errors as exc:
             print(f"provenance error: {exc}", file=sys.stderr)
             return 2
 
@@ -947,95 +1399,186 @@ def main(argv: list[str] | None = None) -> int:
     results: dict[str, list[list[str]]] = {case["id"]: [] for case in cases}
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
+    durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
+    run_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
+    semantic_evidence: dict[str, list[dict | None]] = {
+        case["id"]: [] for case in cases
+    }
     observed_models: set[str] = set()
 
-    def execute(job: tuple[dict, int]) -> tuple[int, str, list[str], str | None, dict]:
+    def execute(
+        job: tuple[dict, int],
+    ) -> tuple[int, str, list[str], str | None, dict, str | None]:
         case, run_index = job
-        text, fired, note, stats = run_session(
-            case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
-            case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
-            args.model, session_env,
-        )
+        if args.runtime == "claude":
+            text, fired, note, stats = run_session(
+                case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
+                case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
+                args.model, session_env, case.get("semantic_oracle"),
+            )
+        else:
+            codex_runtime.assert_clean_subscription_context()
+            text, fired, note, stats = codex_runtime.run_session(
+                case["prompt"],
+                args.timeout,
+                agent=case["agent"],
+                developer_instructions=(
+                    captured_profiles[case["agent"]]["developer_instructions"]
+                ),
+                model=args.model,
+                reasoning_effort=args.reasoning_effort,
+                executable=codex_runtime.CODEX,
+            )
         # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
         # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
         if case.get("agent"):
             fired = fired | {case["agent"].split(":")[-1]}
         if note and not text:
-            return run_index, case["id"], [f"session produced nothing: {note}"], note, stats
-        return run_index, case["id"], assert_case(text, case, fired), note, stats
+            failures = [f"session produced nothing: {note}"]
+        else:
+            failures = assert_case(
+                text, case, fired, stats.get("semantic_findings")
+            )
+        retained_response = text if args.retain_run_evidence else None
+        return run_index, case["id"], failures, note, stats, retained_response
 
     done = 0
     auth_mode = None
     with contextlib.ExitStack() as stack:
-        try:
-            execution_plugin_dir, execution_plugin_identity = stack.enter_context(
-                eval_routing.frozen_plugin(args.plugin_dir)
-            )
-        except eval_routing.ProvenanceError as exc:
-            print(f"provenance error: {exc}", file=sys.stderr)
+        if args.runtime == "claude":
+            try:
+                execution_plugin_dir, execution_plugin_identity = stack.enter_context(
+                    eval_routing.frozen_plugin(args.plugin_dir)
+                )
+            except eval_routing.ProvenanceError as exc:
+                print(f"provenance error: {exc}", file=sys.stderr)
+                return 2
+        else:
+            execution_plugin_dir = args.plugin_dir
+            execution_plugin_identity = captured_profile_identity
+        if execution_plugin_identity is None:
+            print("provenance error: runtime identity was not captured", file=sys.stderr)
             return 2
         if provenance is not None and (
             provenance["plugin"]["sha256"] != execution_plugin_identity["sha256"]
         ):
             print(
-                "provenance error: plugin content changed before its execution snapshot was "
+                "provenance error: runtime content changed before its execution snapshot was "
                 "created; benchmark.json was not written",
                 file=sys.stderr,
             )
             return 2
-        # One room for the whole batch, same as the routing runner: sessions only read the
-        # relocated config, and the room must outlive the pool.
+        # Claude's one relocated room must outlive the pool. Codex instead uses an
+        # instruction-clean CODEX_HOME checked above and one empty cwd per session.
         session_env = None
-        if args.clean_room:
+        if args.runtime == "claude" and args.clean_room:
             clean_room = eval_routing._load_clean_room()
             try:
                 session_env = stack.enter_context(clean_room.clean_env())
             except clean_room.AuthUnavailable as exc:
                 print(f"clean room refused to run: {exc}", file=sys.stderr)
                 return 2
-        auth_mode = eval_routing.auth_provider_mode(
-            session_env, clean_room_enabled=bool(args.clean_room)
-        )
+        if args.runtime == "claude":
+            auth_mode = eval_routing.auth_provider_mode(
+                session_env, clean_room_enabled=bool(args.clean_room)
+            )
+            runtime_cli_version = eval_routing.cli_version()
+        else:
+            try:
+                auth_mode = codex_runtime.auth_provider_mode(codex_runtime.CODEX)
+                codex_runtime.assert_no_configured_mcp(codex_runtime.CODEX)
+            except codex_runtime.SessionUnavailable as exc:
+                print(f"Codex subscription unavailable: {exc}", file=sys.stderr)
+                return 2
+            except codex_runtime.CodexRuntimeError as exc:
+                print(f"Codex runtime preflight failed: {exc}", file=sys.stderr)
+                return 2
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
-        futures = {pool.submit(execute, job): job for job in jobs}
-        completed: dict[str, dict[int, tuple[list[str], str | None, dict]]] = {
+        job_iter = iter(jobs)
+        futures: dict[concurrent.futures.Future, tuple[dict, int]] = {}
+
+        def submit_next() -> bool:
+            try:
+                job = next(job_iter)
+            except StopIteration:
+                return False
+            futures[pool.submit(execute, job)] = job
+            return True
+
+        for _ in range(min(args.concurrency, len(jobs))):
+            submit_next()
+        completed: dict[
+            str, dict[int, tuple[list[str], str | None, dict, str | None]]
+        ] = {
             case["id"]: {} for case in cases
         }
-        auth_failure: eval_routing.EvalAuthUnavailable | None = None
+        auth_failure: Exception | None = None
         try:
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    run_index, case_id, failures, note, stats = future.result()
-                except eval_routing.EvalAuthUnavailable as exc:
-                    auth_failure = exc
-                    for pending in futures:
-                        pending.cancel()
+            while futures:
+                finished, _pending = concurrent.futures.wait(
+                    futures, return_when=concurrent.futures.FIRST_COMPLETED
+                )
+                succeeded = 0
+                for future in finished:
+                    futures.pop(future)
+                    try:
+                        run_index, case_id, failures, note, stats, response = future.result()
+                    except availability_errors as exc:
+                        auth_failure = exc
+                        for pending in futures:
+                            pending.cancel()
+                        break
+                    completed[case_id][run_index] = (failures, note, stats, response)
+                    succeeded += 1
+                    done += 1
+                    print(f"  [{done}/{total}] complete", end="\r", flush=True)
+                if auth_failure is not None:
                     break
-                completed[case_id][run_index] = (failures, note, stats)
-                done += 1
-                print(f"  [{done}/{total}] complete", end="\r", flush=True)
+                for _ in range(succeeded):
+                    submit_next()
         finally:
             # subprocess.run cannot interrupt work already started; pending sessions can still be
             # cancelled, limiting the outage to at most the configured concurrency.
             pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
-        try:
-            eval_routing.verify_frozen_plugin(
-                execution_plugin_dir, execution_plugin_identity
-            )
-        except (eval_routing.ProvenanceError, BehavioralCaseError) as exc:
-            print(f"case error after sessions: {exc}", file=sys.stderr)
-            return 2
+        if args.runtime == "claude":
+            try:
+                eval_routing.verify_frozen_plugin(
+                    execution_plugin_dir, execution_plugin_identity
+                )
+            except eval_routing.ProvenanceError as exc:
+                print(f"case error after sessions: {exc}", file=sys.stderr)
+                return 2
         if auth_failure is not None:
             print(
                 f"\neval aborted: {auth_failure}; benchmark.json was not written",
                 file=sys.stderr,
             )
             return 2
+        if args.runtime == "codex":
+            try:
+                codex_runtime.assert_clean_subscription_context()
+                latest_cli_version = codex_runtime.require_supported_cli(codex_runtime.CODEX)
+                latest_auth_mode = codex_runtime.auth_provider_mode(codex_runtime.CODEX)
+                codex_runtime.assert_no_configured_mcp(codex_runtime.CODEX)
+            except runtime_errors + (codex_runtime.SessionUnavailable,) as exc:
+                print(
+                    f"Codex runtime changed during the batch: {exc}; benchmark.json was not "
+                    "written",
+                    file=sys.stderr,
+                )
+                return 2
+            if latest_cli_version != runtime_cli_version or latest_auth_mode != auth_mode:
+                print(
+                    "Codex runtime identity changed during the batch; benchmark.json was not "
+                    "written",
+                    file=sys.stderr,
+                )
+                return 2
 
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
             for run_index in range(args.runs):
-                failures, note, stats = completed[case["id"]][run_index]
+                failures, note, stats, response = completed[case["id"]][run_index]
                 results[case["id"]].append(failures)
                 if note:
                     notes[case["id"]].append(note)
@@ -1046,6 +1589,14 @@ def main(argv: list[str] | None = None) -> int:
                     {"input_tokens": stats["input_tokens"], "output_tokens": stats["output_tokens"]}
                     if has_usage else None
                 )
+                durations[case["id"]].append(stats["duration_ms"])
+                if case.get("semantic_oracle") in _WORKSPACE_SEMANTIC_ORACLES:
+                    semantic_evidence[case["id"]].append(stats.get("semantic_evidence"))
+                if args.retain_run_evidence:
+                    run_evidence[case["id"]].append({
+                        "response": response,
+                        "failures": failures,
+                    })
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")
@@ -1067,13 +1618,19 @@ def main(argv: list[str] | None = None) -> int:
         detail = "all assertions held" if ok else first_failure[:60]
         print(f"{case['id'][:32]:32s} {'PASS' if ok else 'FAIL':8s} "
               f"{passes}/{len(runs):<4} {detail}")
-        payload.append({
+        case_payload = {
             "id": case["id"], "suite": case["suite"], "passes": passes,
             "runs": len(runs), "rate": rate,
             "failures": sorted({f for failures in runs for f in failures}),
             "notes": notes[case["id"]],
             "usage_per_run": usage[case["id"]],
-        })
+            "duration_ms_per_run": durations[case["id"]],
+        }
+        if args.retain_run_evidence:
+            case_payload["run_evidence_per_run"] = run_evidence[case["id"]]
+        if case.get("semantic_oracle") in _WORKSPACE_SEMANTIC_ORACLES:
+            case_payload["semantic_evidence_per_run"] = semantic_evidence[case["id"]]
+        payload.append(case_payload)
 
     print("-" * 100)
     print(f"{passed_cases}/{len(cases)} cases passed every run")
@@ -1082,24 +1639,77 @@ def main(argv: list[str] | None = None) -> int:
         # The same contract the routing artifacts carry: a benchmark without its conditions cannot
         # state what it measured, so two of them cannot be validly compared (EVAL-002).
         conditions = {
-            "cli_version": eval_routing.cli_version(),
+            "runtime": args.runtime,
+            "cli_version": runtime_cli_version,
             "model_requested": args.model,
             "models_observed": sorted(observed_models),
-            "plugin_dir": "." if Path(args.plugin_dir).resolve() == REPO else str(args.plugin_dir),
+            "plugin_dir": eval_routing.plugin_dir_label(Path(args.plugin_dir)),
             "timeout_s": args.timeout,
             "concurrency": args.concurrency,
             "auth_provider": auth_mode,
+            "run_evidence_retained": bool(args.retain_run_evidence),
             # Same rule as the routing runner: isolation is a measurement condition, and two
             # artifacts differing on it are not comparable.
             "clean_room": bool(args.clean_room),
         }
+        if args.runtime == "codex":
+            conditions.update({
+                "reasoning_effort_requested": args.reasoning_effort,
+                "sandbox": "read-only",
+                "profile_projection": "generated-role-projection",
+                "measurement_kind": "subscription-backed same-runtime approximation",
+                "duration_source": "runner-wall-clock",
+                "disabled_features": list(codex_runtime.DISABLED_FEATURES),
+                "tool_boundary": (
+                    "session flags reduce built-in tool execution; configured MCP inventory "
+                    "must be empty before and after; observable tool items reject the run"
+                ),
+                "unobservable_tool_limit": (
+                    "Codex 0.147.0 JSONL omits code-mode exec/wait custom-tool attempts; "
+                    "the disabled host makes calls fail closed but cannot prove no attempt"
+                ),
+                "effective_config_limit": (
+                    "Codex 0.147.0 exposes no execution-equivalent effective-config "
+                    "preflight or atomic runtime MCP registry; independently controlled "
+                    "system and cloud-managed no-MCP state is an activation prerequisite"
+                ),
+                "auth_routing_requested": {
+                    "model_provider": "openai",
+                    "base_url": codex_runtime.SUBSCRIPTION_BASE_URL,
+                    "login_method": "chatgpt",
+                    "credentials_store": "file",
+                },
+                "isolation": {
+                    "cwd": "empty disposable directory",
+                    "user_config": "ignored",
+                    "codex_home": (
+                        "explicit dedicated home retained for file-backed ChatGPT auth; "
+                        "AGENTS.md, AGENTS.override.md, config.toml, and managed_config.toml absent"
+                    ),
+                    "api_credential_environment": (
+                        "OPENAI_API_KEY, CODEX_API_KEY, and CODEX_ACCESS_TOKEN absent"
+                    ),
+                    "rules": "ignored",
+                    "project_doc_max_bytes": 0,
+                    "host_skill_instructions": "disabled by session override",
+                },
+            })
         try:
             latest_cases, latest_sources = load_cases_with_sources(args.case)
+            latest_profile_identity = None
+            if args.runtime == "codex":
+                latest_profile_identity = codex_runtime.profile_identity(
+                    args.plugin_dir,
+                    selected_agents,
+                    read_file=eval_routing._read_regular_file,
+                    git_identity=eval_routing._git_identity,
+                )
             latest_provenance = eval_routing.benchmark_provenance(
                 latest_sources, latest_cases, args.case, args.plugin_dir,
-                evaluator_paths=behavioral_evaluator_paths(),
+                evaluator_paths=evaluator_paths,
+                plugin_identity_value=latest_profile_identity,
             )
-        except eval_routing.ProvenanceError as exc:
+        except runtime_errors as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)
             return 2
         if not eval_routing._content_provenance_matches(provenance, latest_provenance):

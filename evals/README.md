@@ -96,8 +96,11 @@ so an A -> B -> A edit to the source checkout cannot make concurrent sessions lo
 while leaving equal endpoint hashes. Persistent mutation of the private snapshot aborts the artifact. A
 same-user session can transiently mutate and restore that snapshot unless the host sandbox denies
 writes; endpoint hashing does not claim to detect that, so host write isolation remains part of the
-trust boundary. A benchmark without these identities is not a baseline: it cannot state what it
-measured. If a single run mixes models, the runner also says so loudly.
+trust boundary. The conditions block records `.` for the current plugin and
+`<external-plugin-dir>` for any external baseline; the content identity carries the comparable
+provenance without publishing an operator account or workstation path. A benchmark without these
+identities is not a baseline: it cannot state what it measured. If a single run mixes models, the
+runner also says so loudly.
 
 ### `INCONCLUSIVE` is not a failure
 
@@ -112,8 +115,10 @@ for routing even if the CLI then exited non-zero — it routed somewhere, possib
 entirely, and that is a real negative sample and a real positive miss. A structured error result is
 never a no-route sample; a component firing observed before that error may remain explicitly
 labeled partial evidence. Behavioral assertions are stricter: they require exit zero and a final
-non-error result. Authentication failure aborts the whole batch with exit 2 and writes no benchmark.
-These rules prevent quota, API, runner, or expired-session text from becoming a false green.
+non-error result. Authentication failure, missing namespaced fleet registration, or absence of any
+agent member in the selected routing cluster aborts the whole batch with exit 2 and writes no
+benchmark. These rules prevent quota, API, runner, expired-session, partial-plugin, or absent-plugin
+state from becoming a false green.
 
 The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
 longer than that before its first tool call, so **the timeout and the model are one decision** —
@@ -123,16 +128,17 @@ a shorter timeout excludes more runs and therefore moves every rate in the artif
 Each run is a fresh headless `claude -p … --plugin-dir .` session — a fresh *conversation*, which
 is **not** configuration isolation: the session still inherits everything under the user's
 `CLAUDE_CONFIG_DIR` (personal agents, skills, plugins, global CLAUDE.md), and a junction
-deployment makes the fleet register twice, bare and namespaced, in every run (measured 2026-07-29
-by `scripts/probe_isolation.py`). `--clean-room` relocates the configuration to a temporary
+deployment makes the fleet register twice, bare and namespaced, in every run (measured in the
+[archived 2026-07-29 isolation outcome](../docs/archive/2026-07/verification-round-outcomes-2026-07-29.md)).
+`--clean-room` relocates the configuration to a temporary
 directory holding only credentials (`scripts/eval_clean_room.py`) and is recorded in `conditions`
 — artifacts that differ on it measured different routing competitions and must not be diffed
 against each other. The runner prints per-case pass/fail and rates; pass `--output-dir <path>`
 to also write a `benchmark.json` there for before/after diffing. Exit codes separate the two things
 you would do about them — `0` all passed, `1` a case failed (a routing verdict to investigate), `3`
-nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage or
-authentication error for which no benchmark was written. You *can* gate on non-zero — but see the
-caveat.
+nothing failed but something was `INCONCLUSIVE` (re-run it; nothing was measured), `2` a usage,
+authentication, or registration error for which no benchmark was written. You *can* gate on
+non-zero — but see the caveat.
 
 ## How to read the results, and the caveat
 
@@ -162,18 +168,105 @@ python3 scripts/eval_behavioral.py --runs 1              # all cases
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
+The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
+bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
+cases, tool-enabled cases, and cases requiring a Claude permission mode are refused before a model
+call. A writer-role profile is eligible only when the selected contract explicitly declares
+`allowed_tools: []`; the Codex session still runs read-only. This declaration selects the bounded
+lane, but does not mean Codex has reproduced Claude's empty allowlist. Codex CLI 0.147.0 has no
+main-session
+`--agent` selector, so the adapter captures the selected generated
+`.codex/agents/<name>.toml` once and projects its exact `developer_instructions` into one main
+session. The artifact calls this
+`generated-role-projection`: it measures generated role behavior, not custom-agent discovery,
+routing, or delegation.
+
+The full current `handoff-*` selection is Claude-only. Its builder case grants `Bash` and `Write`
+inside the disposable scratch directory and requires `permission_mode: acceptEdits`, so the Codex
+projection refuses that selector before spend. The stored 2026-08-11 Terra captures remain valid
+for their exact prior no-tool cases; they are historical artifacts, not evidence for the amended
+functional suite.
+
+Codex execution requires an explicit, absolute, dedicated `CODEX_HOME` with a **ChatGPT
+subscription login**. Perform its one-time `codex login` using file credential storage and the
+same ChatGPT subscription that will run both sides. The adapter pins Codex CLI 0.147.0, requests
+the built-in OpenAI provider, its ChatGPT Codex endpoint, and the ChatGPT login method, and requires
+`codex login status` to report ChatGPT login before the batch starts. On PowerShell, initialize the
+dedicated home once with the same overrides the evaluator uses:
+
+```powershell
+$env:CODEX_HOME = 'C:\absolute\path\to\dedicated-codex-eval-home'
+codex -c 'model_provider="openai"' `
+  -c 'openai_base_url="https://chatgpt.com/backend-api/codex"' `
+  -c 'forced_login_method="chatgpt"' `
+  -c 'cli_auth_credentials_store="file"' login
+```
+
+The artifact stores only
+`{auth: chatgpt, provider: openai}`. No credential, account identifier, auth-file metadata, status
+text, or Codex-home path enters the benchmark.
+
+Because `--ignore-user-config` does not suppress every Codex-home surface, the preflight refuses
+`AGENTS.md`, `AGENTS.override.md`, `config.toml`, or the higher-precedence `managed_config.toml` in
+that home before checking auth or starting sessions. It also refuses non-empty `OPENAI_API_KEY`,
+`CODEX_API_KEY`, or `CODEX_ACCESS_TOKEN` variables so an intended subscription capture cannot
+silently become API-billed execution.
+
+The command ignores user config and rules, sets project-document bytes to zero, uses an empty
+disposable cwd, requests disabled configurable tool surfaces including the code-mode host,
+suppresses host skill-catalog instructions, disables plan updates, pins a read-only sandbox with
+approvals disabled, and sends the task on stdin. The runner also requires
+`codex mcp list --json` to report no configured server before and after the batch. Every observable
+non-message/reasoning item invalidates the run. In Codex 0.147.0,
+however, code-mode-only models still see inert `exec`/`wait` entries and their custom-call attempts
+are omitted from JSONL. The disabled host makes execution fail closed, but the artifact cannot
+prove no attempt occurred.
+
+Treat this as tool-reduced, observable-tool-invalidating same-runtime evidence, not Claude
+empty-allowlist parity or ordinary interactive Codex behavior. This is also not complete
+effective-configuration attestation: system and cloud-managed layers can still affect
+instructions, features, sandboxing, or MCP behavior, and Codex 0.147.0 exposes no atomic
+execution-equivalent preflight. Live capture therefore requires an independently controlled
+machine and ChatGPT workspace with no system, cloud, or managed MCP servers. The pre/post empty
+inventory checks are defense in depth, not a substitute for that activation prerequisite.
+
+Codex requires an exact model and reasoning effort. Its current JSONL exposes usage but not an
+independently observed model or server duration, so `model_requested` is not copied into
+`models_observed`, and duration is labeled runner wall-clock time. Subscription runs consume plan
+allowance rather than separately billed API-key usage; no dollar-cost claim is available. Never
+diff a Claude artifact against a Codex artifact. A paired comparison keeps runtime, CLI, exact
+model, effort, subscription auth, sandbox, timeout, concurrency, case bytes, and evaluator bytes
+identical across baseline and candidate. Each side records its own selected-profile identity; those
+profiles are expected to differ only through the intended HANDOFF-001 prompt edits.
+
 Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
 including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
 five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
-patterns per case. Sixty-seven contracts are seeded. They cover packet completeness, semantic
+patterns per case. The seeded inventory covers packet completeness, semantic
 Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
 instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
 learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
-verification isolation and honest inconclusive verdicts, prompt-eval separation, multi-agent
-validation, and the delegation handoff — whether a disproved constraint, a verification method's
-validity, and an unworked lane survive a design-to-builder boundary (the `handoff-001` tag).
-The count is descriptive, not a quota; `evals/behavioral/contracts.json` is the authoritative
-inventory.
+verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
+validation, plus proportional onboarding handoffs that preserve discovered constraints without
+turning a simple build into packet ceremony. Each case artifact records input/output usage and
+duration. The HANDOFF functional builder additionally uses the existing `semantic_oracle` seam: it
+seeds three declarative JSON artifacts and a trusted acceptance program, refuses a changed verifier
+or linked artifact, runs only that unchanged verifier, and records its exit/output plus artifact
+SHA-256 values. The digest-negative case uses the same seam to require exactly one prescribed
+read-only hash command over the exact work-order bytes, correlate its computed result, and prove a
+seeded workspace stayed unchanged. Model-authored Python is never executed as grader code; receipt
+patterns prove only transfer identity while the two trusted oracles prove end state and
+stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero. The runner
+prints the
+selected case and session count before starting;
+`evals/behavioral/contracts.json` is the authoritative inventory.
+
+By default, a behavioral artifact does not retain raw model text. For diagnosis only,
+`--retain-run-evidence` adds an ordered `run_evidence_per_run` list containing each final response
+and that run's assertion failures; it requires `--output-dir`, and the conditions block records
+that retention was enabled. Treat the resulting `benchmark.json` as potentially sensitive model
+output: inspect it before committing or sharing it. The flag is evidence for separating a grader
+defect from a prompt defect, not a different scoring path.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
@@ -213,7 +306,7 @@ without measuring what it claimed. Every full case declares exactly one of the f
   contracts where an any-of assertion could pass after invoking only one half of the workflow.
 - **`allowed_tools`** — always passed through `--tools`, including an explicit empty value that
   disables all tools. Planning-only skill cases allow only `Skill`; reasoning-only pinned agents
-  allow none; the three scratch build/verification cases allow only `Bash` and `Write`. Names are
+  allow none; the four scratch build/verification cases allow only `Bash` and `Write`. Names are
   validated against the CLI's full adopted runtime vocabulary, not merely the smaller fleet grant
   set, so alternate built-ins such as `PowerShell` cannot arrive by default.
 - **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a

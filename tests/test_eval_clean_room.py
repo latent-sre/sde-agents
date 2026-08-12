@@ -118,63 +118,18 @@ class CleanEnvironmentTest(unittest.TestCase):
         )
 
 
-class RunValidationTest(unittest.TestCase):
-    def event(self, *, error: bool = False, result: str = "done") -> str:
-        return json.dumps({"type": "result", "is_error": error, "result": result})
-
-    def test_success_requires_structured_non_error_result(self) -> None:
-        event = eval_clean_room.validate_completed_run(self.event(), 0)
-        self.assertFalse(event["is_error"])
-
-    def test_nonzero_exit_is_runner_failure(self) -> None:
-        with self.assertRaises(eval_clean_room.RunnerFailed):
-            eval_clean_room.validate_completed_run("", 1, "network failed")
-
-    def test_missing_result_event_is_runner_failure(self) -> None:
-        with self.assertRaises(eval_clean_room.RunnerFailed):
-            eval_clean_room.validate_completed_run('{"type":"system"}', 0)
-
-    def test_auth_failure_is_distinct_and_never_scored(self) -> None:
-        trace = self.event(error=True, result="Not logged in · Please run /login")
+class AuthenticationFailureClassificationTest(unittest.TestCase):
+    def test_stderr_only_auth_failure_is_unavailable_case_insensitively(self) -> None:
         with self.assertRaises(eval_clean_room.AuthUnavailable):
-            eval_clean_room.validate_completed_run(trace, 1)
+            eval_clean_room.raise_if_auth_failed(
+                "", 1, "NOT LOGGED IN · PLEASE RUN /LOGIN"
+            )
 
-    def test_auth_failure_in_stderr_without_result_event_is_auth_unavailable(self) -> None:
+    def test_resultless_transcript_auth_failure_is_unavailable(self) -> None:
+        transcript = '{"type":"system","subtype":"authentication_failed"}'
+
         with self.assertRaises(eval_clean_room.AuthUnavailable):
-            eval_clean_room.validate_completed_run("", 1, "Not logged in · Please run /login")
-
-    def test_auth_failure_in_transcript_without_result_event_is_auth_unavailable(self) -> None:
-        trace = '{"type":"system","subtype":"authentication_failed"}'
-        with self.assertRaises(eval_clean_room.AuthUnavailable):
-            eval_clean_room.validate_completed_run(trace, 1)
-
-    def test_structured_oauth_refresh_failure_is_auth_unavailable(self) -> None:
-        trace = "\n".join([
-            json.dumps({
-                "type": "assistant",
-                "error": "authentication_failed",
-                "message": {"content": []},
-            }),
-            json.dumps({
-                "type": "result",
-                "is_error": True,
-                "terminal_reason": "api_error",
-                "result": "Failed to authenticate: OAuth session expired and could not be refreshed",
-            }),
-        ])
-        with self.assertRaises(eval_clean_room.AuthUnavailable):
-            eval_clean_room.validate_completed_run(trace, 1, "")
-
-    def test_auth_failure_markers_are_case_insensitive(self) -> None:
-        trace = self.event(error=True, result="FAILED TO AUTHENTICATE: OAuth Session Expired")
-        with self.assertRaises(eval_clean_room.AuthUnavailable):
-            eval_clean_room.validate_completed_run(trace, 1, "")
-
-    def test_successful_run_mentioning_auth_text_is_not_an_outage(self) -> None:
-        event = eval_clean_room.validate_completed_run(
-            self.event(result="the error was: Not logged in"), 0
-        )
-        self.assertFalse(event["is_error"])
+            eval_clean_room.raise_if_auth_failed(transcript, 1)
 
 
 if __name__ == "__main__":

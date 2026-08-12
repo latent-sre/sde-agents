@@ -66,7 +66,21 @@ def run_module(start_dir: Path, module: Path, passthrough: list[str]) -> tuple[P
         sys.executable, "-m", "unittest", "discover",
         "-s", str(start_dir), "-p", module.name, *passthrough,
     ]
-    proc = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    # Windows inherits the parent's legacy console encoding unless told otherwise. Force normal
+    # Python text through UTF-8, but keep decoding total: os.write() and native grandchildren can
+    # still emit arbitrary bytes. ASCII-safe escapes preserve that evidence without letting one
+    # undecodable byte hide every module verdict and the aggregate summary.
+    child_env = os.environ.copy()
+    child_env["PYTHONIOENCODING"] = "utf-8"
+    child_env["PYTHONUTF8"] = "1"
+    proc = subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="backslashreplace",
+        env=child_env,
+    )
     return module, proc.returncode, proc.stdout + proc.stderr, argv
 
 
