@@ -1962,7 +1962,7 @@
         "(?i)(?:Tier[-\\s\\u2011]*1|no live authority)",
         "(?i)(?:no|never|does not|must not)[^.\\n]{0,40}(?:resolved )?secret[^.\\n]{0,30}(?:transfer|cross|enter|echo)",
         "(?i)(?:conflict|material fork)",
-        "(?i)(?:Tier\\s*2|live activation)[^.\\n]{0,60}(?:approval|homelab-platform)"
+        "(?i)(?:(?:Tier[-\\s\\u2011]*2|live (?:activation|deployment))[^.\\n]{0,60}(?:approval|homelab-platform)|homelab-platform[^.\\n]{0,60}(?:Tier[-\\s\\u2011]*2|live (?:activation|deployment)))"
       ],
       "must_not_match": [
         "(?i)(?<!not )(?<!never )\\b(?:keep|retain|restore|add|re-?add)\\b[^.\\n]{0,35}\\bdisable_mlock\\b",
@@ -1998,8 +1998,8 @@
         "(?i)disable_mlock",
         "(?i)(?:removed[^.\\n]{0,30}disable_mlock|disable_mlock[^.\\n]{0,30}(?:is|was)\\s+(?:removed|unsupported|invalid)|disable_mlock[^\\n]{0,80}\\bremoved\\b[^\\n]{0,30}\\b(?:key|setting|configuration)\\b)",
         "(?i)(?:test|assert\\w*)",
-        "(?i)(?=[^.\\n]*(?:pars\\w*|structured))(?=[^.\\n]*\\bsvc-bao\\b)(?=[^.\\n]*\\bbao-readers\\b)[^.\\n]*(?:membership|relationship)",
-        "(?i)(?:(?:co-?occurrence|same file|both strings)[^.\\n]{0,60}(?:does not|cannot|isn't|not)[^.\\n]{0,30}(?:prove|establish|validate|sufficient)|(?:must|need(?:s)? to)[^.\\n]{0,25}pars\\w*[^.\\n]{0,30}(?:membership|relationship))",
+        "(?i)(?=[^.\\n]*(?:pars\\w*|structured))(?=[^.\\n]*\\bsvc-bao\\b)(?=[^.\\n]*\\bbao-readers\\b)[^.\\n]*(?:member(?:ship)?|relationship)",
+        "(?i)(?:(?:co-?occurrence|same file|both strings|substrings?)[^.\\n]{0,60}(?:does not|cannot|isn't|not)[^.\\n]{0,30}(?:prove|establish|validate|sufficient)|(?:must|need(?:s)? to)[^.\\n]{0,25}pars\\w*[^.\\n]{0,30}(?:membership|relationship))",
         "(?im)^\\s*(?:[-*]\\s*)?(?:\\*\\*)?Verdict(?:\\*\\*)?\\s*:\\s*(?:\\*\\*)?(?:REQUEST CHANGES|CHANGES REQUESTED|BLOCK|REJECT|DO NOT MERGE)\\b"
       ],
       "must_not_match": [
