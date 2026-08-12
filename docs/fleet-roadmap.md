@@ -187,25 +187,25 @@ release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Current evidence:** The working candidate contains the lean producer, consumer, six focused
-contracts, regenerated adapters, and the bounded subscription-backed Codex transport. On
-2026-08-11, T0 passed, all 641 tests across 30 modules passed, and
-`claude plugin validate . --strict` passed. The approved Terra/medium paired capture then ran all
-36 sessions under the plan's pinned conditions. The baseline scored 0/18 runs and 0/6 strict
-cases; the candidate scored 4/18 runs and 1/6 strict cases, including a decisive producer change
-from 0/3 to 3/3. The [artifacts and decision record](../evals/baselines/2026-08-11-handoff-001/)
-retain the exact provenance, limitations, tokens, durations, and unresolved cases. Exact
-first-artifact latency remains unmeasured, and overlapping duration ranges do not support a
-general faster claim.
+**Current evidence:** Final candidate `ff51f42` contains the lean producer/consumer change, retained
+per-run diagnostics, observed-form oracle repairs, regenerated adapters, and the bounded
+subscription-backed Codex transport. T0, all 646 tests across 30 modules, and
+`claude plugin validate . --strict` passed on its immutable bytes. The operator-approved five-run
+diagnostic, two-run prompt smoke, and final 36-session Terra/medium pair all completed. In the final
+pair, baseline `4777df9` scored 1/18 runs and 0/6 strict cases; the candidate scored 6/18 runs and
+1/6 strict cases. The producer is a repeatable 3/3 improvement. Retained candidate responses show
+correct discovery, proportional short-path, builder echo, and reviewer behavior that remaining
+lexical assertions reject; one builder run also ended without a terminal response, and one
+first-artifact response invented removed `-verify-only` behavior. The
+[artifacts and decision record](../evals/baselines/2026-08-11-handoff-001/) preserve every response,
+assertion, condition, hash, token count, duration, and limitation. HANDOFF-001 is not accepted.
 
-**Next action:** Repair the two demonstrated negation-blind pattern shapes used by three case
-assertions and add opt-in per-run response/assertion diagnostics to the existing evaluator. Use
-those diagnostics to separate grader defects from prompt defects in the five unresolved cases
-with one retained Terra/medium diagnostic each before changing more agent prose, after separate
-operator approval for those five paid sessions. They are diagnosis, not acceptance. Keep
-first-artifact streaming instrumentation out: total artifact-containing response duration is
-already reported honestly, while a new streaming path has no acceptance consumer. Any fresh paid
-pair waits for frozen evaluator, case, and prompt hashes plus separate operator approval.
+**Next action:** Spend no more model sessions yet. Add an offline replay/regrade path for retained
+responses, then simplify the five brittle relationship assertions around their existing
+wrong-direction controls and make the first-artifact case reject the removed `-verify-only`
+behavior it exposed. Keep first-artifact streaming instrumentation out: it still has no acceptance
+consumer. Any later paid pair waits for frozen evaluator/case/prompt hashes and separate operator
+approval.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
