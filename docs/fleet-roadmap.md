@@ -199,7 +199,7 @@ with a digest-mismatch receipt and a declarative builder fixture. Its trusted ve
 byte-checked, grades captured regular-file bytes, and records artifact hashes/results. The
 digest-negative oracle now requires one exact hash command and correlated result plus an unchanged
 seeded workspace, closing the prior receipt-only false green. Red-before-green controls,
-T0, all 107 behavioral-evaluator tests, all 665 tests across 30 modules, and
+T0, all 107 behavioral-evaluator tests, all 666 tests across 30 modules, and
 `claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
 unaccepted.
 

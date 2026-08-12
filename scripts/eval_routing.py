@@ -694,7 +694,7 @@ def _string_values(obj) -> list[str]:
 def transcript_stats(stdout: str) -> dict:
     """Measurement conditions read off one stream-json transcript:
     {input_tokens, output_tokens, duration_ms, model, completed, result_error, init_observed,
-    fleet_registered}.
+    fleet_registered, registered_agents}.
 
     Shared by BOTH runners (EVAL-002): an artifact that cannot state what it measured is not a
     baseline, and two parsers would eventually disagree about one transcript — so this is the one
@@ -705,7 +705,7 @@ def transcript_stats(stdout: str) -> dict:
     completed = False
     result_error = False
     init_observed = False
-    fleet_registered = False
+    registered_agents: set[str] = set()
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
@@ -716,14 +716,12 @@ def transcript_stats(stdout: str) -> dict:
         if event.get("type") == "system" and event.get("subtype") == "init":
             init_observed = True
             agents = event.get("agents")
-            fleet_registered = fleet_registered or (
-                isinstance(agents, list)
-                and any(
-                    isinstance(name, str)
-                    and name in NAMESPACED_FLEET_AGENTS
+            if isinstance(agents, list):
+                registered_agents.update(
+                    strip_ns(name)
                     for name in agents
+                    if isinstance(name, str) and name in NAMESPACED_FLEET_AGENTS
                 )
-            )
         if event.get("type") == "result":
             usage = event.get("usage") or {}
             input_tokens = usage.get("input_tokens", input_tokens)
@@ -749,11 +747,13 @@ def transcript_stats(stdout: str) -> dict:
     return {"input_tokens": input_tokens, "output_tokens": output_tokens,
             "duration_ms": duration, "model": model, "completed": completed,
             "result_error": result_error, "init_observed": init_observed,
-            "fleet_registered": fleet_registered}
+            "fleet_registered": bool(registered_agents),
+            "registered_agents": sorted(registered_agents)}
 
 
 def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | None = None,
-             env: dict | None = None) -> dict:
+             env: dict | None = None,
+             required_agents: set[str] | frozenset[str] | None = None) -> dict:
     """One headless run in a fresh temp cwd. Returns {fired, tokens, duration_ms, model, error, note}.
 
     Ordinary runner trouble never raises: this drives a flaky, sometimes long-running subprocess,
@@ -810,7 +810,9 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
         note = f"{note}; {result_note}" if note else result_note
 
     fired = sorted(components_fired(stdout))
-    registered = stats["fleet_registered"]
+    registered_agents = set(stats["registered_agents"])
+    registered = bool(registered_agents)
+    missing_agents = set(required_agents or ()) - registered_agents
     init_observed = stats["init_observed"]
     # Usability, not emptiness, decides whether a troubled run is a measurement. A session that
     # reached its non-error `result` event routed somewhere — possibly off the fleet entirely, which
@@ -823,11 +825,19 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
     # rule applies to an error result: a component call observed before the error is real, but the
     # error result's silence can never green a negative.
     usable = bool(fired) or session_completed
-    if not registered and (init_observed or usable):
-        raise EvalRegistrationUnavailable(
-            "system/init did not register a known namespaced sde-agents agent; "
-            "--plugin-dir did not load the fleet under test"
-        )
+    if (not registered or missing_agents) and (init_observed or usable):
+        if missing_agents:
+            detail = (
+                "system/init omitted selected namespaced agent(s) "
+                f"{sorted(missing_agents)}; --plugin-dir did not register every agent "
+                "measured by this cluster"
+            )
+        else:
+            detail = (
+                "system/init did not register a known namespaced sde-agents agent; "
+                "--plugin-dir did not load the fleet under test"
+            )
+        raise EvalRegistrationUnavailable(detail)
     # Exit status cannot turn silence into evidence: a clean process with no firing or completed
     # result is still an unusable sample and must not green a negative case.
     error = None if usable else (note or "no usable transcript")
@@ -1125,6 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
     if not cases:
         print("no cases matched", file=sys.stderr)
         return 2
+    required_agents = members & FLEET_AGENTS
 
     provenance = None
     if args.output_dir:
@@ -1180,7 +1191,7 @@ def main(argv: list[str] | None = None) -> int:
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
         futures = {
             pool.submit(run_once, c["prompt"], execution_plugin_dir, args.timeout, args.model,
-                        session_env): (c["id"], i)
+                        session_env, required_agents): (c["id"], i)
             for c, i in work
         }
         done = 0

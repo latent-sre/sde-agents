@@ -115,9 +115,10 @@ for routing even if the CLI then exited non-zero — it routed somewhere, possib
 entirely, and that is a real negative sample and a real positive miss. A structured error result is
 never a no-route sample; a component firing observed before that error may remain explicitly
 labeled partial evidence. Behavioral assertions are stricter: they require exit zero and a final
-non-error result. Authentication failure or missing namespaced fleet registration aborts the whole
-batch with exit 2 and writes no benchmark. These rules prevent quota, API, runner, expired-session,
-or absent-plugin state from becoming a false green.
+non-error result. Authentication failure, missing namespaced fleet registration, or absence of any
+agent member in the selected routing cluster aborts the whole batch with exit 2 and writes no
+benchmark. These rules prevent quota, API, runner, expired-session, partial-plugin, or absent-plugin
+state from becoming a false green.
 
 The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
 longer than that before its first tool call, so **the timeout and the model are one decision** —

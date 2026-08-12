@@ -1178,6 +1178,56 @@ class ProvenanceTest(unittest.TestCase):
             self.assertEqual(2, code)
             self.assertFalse((output / "benchmark.json").exists())
 
+    def test_routing_batch_requires_every_selected_agent_to_be_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve()
+            plugin = base / "plugin"
+            plugin.mkdir()
+            self._plugin(plugin)
+            cluster = base / "cluster.json"
+            cluster.write_text(json.dumps({
+                "cluster": "probe",
+                "members": ["code-reviewer", "sde-fullstack"],
+                "cases": [{
+                    "id": "neg-probe",
+                    "polarity": "negative",
+                    "prompt": "probe",
+                    "expect_not_fires": ["sde-fullstack"],
+                }],
+            }), encoding="utf-8")
+            output = base / "output"
+
+            class PartialFleetProc:
+                returncode = 0
+                stdout = "\n".join((
+                    fleet_registration_transcript("sde-agents:code-reviewer"),
+                    json.dumps({"type": "result", "duration_ms": 10}),
+                ))
+                stderr = ""
+
+            original_run = subprocess.run
+
+            def fake_run(command, *args, **kwargs):
+                if "--output-format" in command:
+                    return PartialFleetProc()
+                return original_run(command, *args, **kwargs)
+
+            original_claude = eval_routing.CLAUDE
+            eval_routing.CLAUDE = "claude"
+            try:
+                with mock.patch.object(
+                    eval_routing.subprocess, "run", side_effect=fake_run
+                ):
+                    code = eval_routing.main([
+                        str(cluster), "--runs", "1", "--concurrency", "1",
+                        "--plugin-dir", str(plugin), "--output-dir", str(output),
+                    ])
+            finally:
+                eval_routing.CLAUDE = original_claude
+
+            self.assertEqual(2, code)
+            self.assertFalse((output / "benchmark.json").exists())
+
     def test_routing_batch_cancels_queued_runs_after_registration_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp).resolve()
