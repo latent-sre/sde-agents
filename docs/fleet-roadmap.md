@@ -136,9 +136,12 @@ eval-uncovered routing edges, self-loops, hub concentration, prompt-surface→to
 test per invariant; parser/validator tests for the negative contracts; no new runtime
 dependency), delivered under its own bounded spec and paired plan.
 
-**Next action:** Author the bounded spec and plan — WF-001 retired to its
-[outcome record](archive/2026-08/wf-001-outcome-2026-08-01.md) on 2026-08-01, so the
-validator-churn sequencing gate is satisfied.
+**Next action:** Operator approval of the drafted
+[spec](superpowers/specs/graph-002-descriptive-capability-graph.md) and paired
+[plan](superpowers/plans/graph-002-plan.md) (both drafted 2026-08-12; the spec rules the five
+graph checks report-only and freezes contract schema v1 to the decision's retained design). The
+WF-001 validator-churn sequencing gate was satisfied when that round retired to its
+[outcome record](archive/2026-08/wf-001-outcome-2026-08-01.md) on 2026-08-01.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
