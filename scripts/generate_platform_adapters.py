@@ -133,6 +133,11 @@ def _definition_parts(path: Path) -> tuple[dict[str, str], str, list[str]]:
     fields = None if end is None else validator.parse_frontmatter_lines(lines, end)
     if fields is None or end is None:
         raise ValueError(f"{path}: missing or malformed frontmatter")
+    missing = sorted({"name", "description"} - fields.keys())
+    if missing:
+        raise ValueError(
+            f"{path}: missing required frontmatter field(s): {', '.join(missing)}"
+        )
 
     body = "\n".join(lines[end + 1 :]).lstrip("\n")
     if text.endswith("\n"):

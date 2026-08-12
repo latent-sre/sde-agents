@@ -174,7 +174,7 @@ def tool_calls(text: str) -> list[dict]:
     return [
         block
         for block in stream_events.iter_content_blocks(text)
-        if block.get("type") == "tool_use"
+        if block.get("type") == "tool_use" and isinstance(block.get("input"), dict)
     ]
 
 
@@ -226,7 +226,11 @@ def spawn_succeeded(text: str, agent_name: str) -> bool:
             inp = block.get("input")
             if not isinstance(inp, dict):
                 continue
-            spawns[block.get("id", "")] = agent_name in json.dumps(inp)
+            spawns[block.get("id", "")] = (
+                inp["subagent_type"] == agent_name
+                if "subagent_type" in inp
+                else agent_name in json.dumps(inp)
+            )
         elif block.get("type") == "tool_result":
             outcomes[block.get("tool_use_id", "")] = bool(block.get("is_error"))
     return any(

@@ -56,7 +56,7 @@ class ProbeCanaryTests(unittest.TestCase):
 
 
 class ProbeTranscriptParserTests(unittest.TestCase):
-    def test_bash_results_ignore_non_object_tool_input(self) -> None:
+    def test_tool_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
             {
                 "message": {
@@ -72,6 +72,7 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             }
         )
 
+        self.assertEqual([], probe_plugin.tool_calls(transcript))
         self.assertEqual({}, probe_plugin.bash_results(transcript))
 
     def test_agent_consumers_ignore_non_object_tool_input(self) -> None:
@@ -102,6 +103,33 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         self.assertEqual(
             [],
             probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
+        )
+
+    def test_spawn_success_prefers_the_structured_agent_target(self) -> None:
+        transcript = json.dumps({
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "agent-wrong",
+                        "name": "Agent",
+                        "input": {
+                            "subagent_type": "sde-agents:code-reviewer",
+                            "prompt": "Discuss sde-agents:sde-fullstack.",
+                        },
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "agent-wrong",
+                        "content": "review complete",
+                        "is_error": False,
+                    },
+                ]
+            }
+        })
+
+        self.assertFalse(
+            probe_plugin.spawn_succeeded(transcript, "sde-agents:sde-fullstack")
         )
 
     def test_consumers_skip_invalid_shapes_without_losing_correlations(self) -> None:

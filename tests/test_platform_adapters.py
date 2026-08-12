@@ -38,6 +38,18 @@ class PlatformAdapterTests(unittest.TestCase):
         self.assertEqual(["name: first", "description: First"], raw)
         self.assertEqual("first body\n", body)
 
+    def test_definition_parts_rejects_missing_required_frontmatter(self) -> None:
+        variants = (
+            ("---\n---\n\nBody.\n", "description, name"),
+            ("---\nname: incomplete\n---\n\nBody.\n", "description"),
+        )
+        path = Path("definition.md")
+        for source, missing in variants:
+            with self.subTest(missing=missing), mock.patch.object(
+                type(path), "read_text", return_value=source
+            ), self.assertRaisesRegex(ValueError, f"required frontmatter.*{missing}"):
+                generate_platform_adapters._definition_parts(path)
+
     def test_text_resources_are_lf_normalized_but_binary_resources_are_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "repo"
