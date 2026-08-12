@@ -917,6 +917,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--plugin-dir", type=Path, default=REPO)
     parser.add_argument("--output-dir", type=Path, help="also write benchmark.json here")
+    parser.add_argument(
+        "--retain-run-evidence",
+        action="store_true",
+        help="include each final response and its assertion failures in benchmark.json; may "
+             "contain sensitive model output and requires --output-dir",
+    )
     parser.add_argument("--model", default=None,
                         help="pin the session model (recorded in conditions). Without it every "
                              "session takes the CLI default — an unchosen condition no artifact "
@@ -946,6 +952,13 @@ def main(argv: list[str] | None = None) -> int:
     # the worst output this tool can produce, so the count is bounded before any work is planned.
     if args.runs < 1:
         print("error: --runs must be at least 1", file=sys.stderr)
+        return 2
+    if args.retain_run_evidence and args.output_dir is None:
+        print(
+            "error: --retain-run-evidence requires --output-dir because its only output is "
+            "benchmark.json",
+            file=sys.stderr,
+        )
         return 2
     selected_agents: list[str] = []
     captured_profiles: dict[str, dict[str, str]] = {}
@@ -1037,9 +1050,12 @@ def main(argv: list[str] | None = None) -> int:
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
+    run_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
     observed_models: set[str] = set()
 
-    def execute(job: tuple[dict, int]) -> tuple[int, str, list[str], str | None, dict]:
+    def execute(
+        job: tuple[dict, int],
+    ) -> tuple[int, str, list[str], str | None, dict, str | None]:
         case, run_index = job
         if args.runtime == "claude":
             text, fired, note, stats = run_session(
@@ -1065,8 +1081,11 @@ def main(argv: list[str] | None = None) -> int:
         if case.get("agent"):
             fired = fired | {case["agent"].split(":")[-1]}
         if note and not text:
-            return run_index, case["id"], [f"session produced nothing: {note}"], note, stats
-        return run_index, case["id"], assert_case(text, case, fired), note, stats
+            failures = [f"session produced nothing: {note}"]
+        else:
+            failures = assert_case(text, case, fired)
+        retained_response = text if args.retain_run_evidence else None
+        return run_index, case["id"], failures, note, stats, retained_response
 
     done = 0
     auth_mode = None
@@ -1133,7 +1152,9 @@ def main(argv: list[str] | None = None) -> int:
 
         for _ in range(min(args.concurrency, len(jobs))):
             submit_next()
-        completed: dict[str, dict[int, tuple[list[str], str | None, dict]]] = {
+        completed: dict[
+            str, dict[int, tuple[list[str], str | None, dict, str | None]]
+        ] = {
             case["id"]: {} for case in cases
         }
         auth_failure: Exception | None = None
@@ -1146,13 +1167,13 @@ def main(argv: list[str] | None = None) -> int:
                 for future in finished:
                     futures.pop(future)
                     try:
-                        run_index, case_id, failures, note, stats = future.result()
+                        run_index, case_id, failures, note, stats, response = future.result()
                     except availability_errors as exc:
                         auth_failure = exc
                         for pending in futures:
                             pending.cancel()
                         break
-                    completed[case_id][run_index] = (failures, note, stats)
+                    completed[case_id][run_index] = (failures, note, stats, response)
                     succeeded += 1
                     done += 1
                     print(f"  [{done}/{total}] complete", end="\r", flush=True)
@@ -1202,7 +1223,7 @@ def main(argv: list[str] | None = None) -> int:
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
             for run_index in range(args.runs):
-                failures, note, stats = completed[case["id"]][run_index]
+                failures, note, stats, response = completed[case["id"]][run_index]
                 results[case["id"]].append(failures)
                 if note:
                     notes[case["id"]].append(note)
@@ -1214,6 +1235,11 @@ def main(argv: list[str] | None = None) -> int:
                     if has_usage else None
                 )
                 durations[case["id"]].append(stats["duration_ms"])
+                if args.retain_run_evidence:
+                    run_evidence[case["id"]].append({
+                        "response": response,
+                        "failures": failures,
+                    })
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")
@@ -1235,14 +1261,17 @@ def main(argv: list[str] | None = None) -> int:
         detail = "all assertions held" if ok else first_failure[:60]
         print(f"{case['id'][:32]:32s} {'PASS' if ok else 'FAIL':8s} "
               f"{passes}/{len(runs):<4} {detail}")
-        payload.append({
+        case_payload = {
             "id": case["id"], "suite": case["suite"], "passes": passes,
             "runs": len(runs), "rate": rate,
             "failures": sorted({f for failures in runs for f in failures}),
             "notes": notes[case["id"]],
             "usage_per_run": usage[case["id"]],
             "duration_ms_per_run": durations[case["id"]],
-        })
+        }
+        if args.retain_run_evidence:
+            case_payload["run_evidence_per_run"] = run_evidence[case["id"]]
+        payload.append(case_payload)
 
     print("-" * 100)
     print(f"{passed_cases}/{len(cases)} cases passed every run")
@@ -1259,6 +1288,7 @@ def main(argv: list[str] | None = None) -> int:
             "timeout_s": args.timeout,
             "concurrency": args.concurrency,
             "auth_provider": auth_mode,
+            "run_evidence_retained": bool(args.retain_run_evidence),
             # Same rule as the routing runner: isolation is a measurement condition, and two
             # artifacts differing on it are not comparable.
             "clean_room": bool(args.clean_room),

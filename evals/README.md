@@ -247,6 +247,13 @@ duration per run; an unavailable value is `null`, never a fabricated zero. The r
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 
+By default, a behavioral artifact does not retain raw model text. For diagnosis only,
+`--retain-run-evidence` adds an ordered `run_evidence_per_run` list containing each final response
+and that run's assertion failures; it requires `--output-dir`, and the conditions block records
+that retention was enabled. Treat the resulting `benchmark.json` as potentially sensitive model
+output: inspect it before committing or sharing it. The flag is evidence for separating a grader
+defect from a prompt defect, not a different scoring path.
+
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
 wrongly typed lists, unknown components or denied-tool names, unqualified agent names, invalid
