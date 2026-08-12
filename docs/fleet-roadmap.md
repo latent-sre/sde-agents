@@ -347,25 +347,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **SMALL-001** — `agents/prompt-engineer.md:43`: scope the promote-repeated-helpers-into-
-  `scripts/` advice to skills; agents and tool descriptions have no bundle directories, so as
-  written it recommends the impossible. Source: 2026-07-19 multi-lens self-review; re-verified
-  2026-08-04.
-- **SMALL-002** — the AGENTS.md style rule claims prose wraps at ~100 columns "matching the
-  existing files"; measured 2026-08-04, 218/1152 agent lines and 232/1623 SKILL.md lines exceed
-  100. Fix the rule's claim or the files — not neither. Source: same review; re-measured
-  2026-08-04.
-- **SMALL-003** — the `prompt-engineer` held-out rule's second-edit-same-eval-set branch has
-  never fired; probe it with a staged scenario. Source: 2026-07-19 wrap-up, unprobed since.
-- **SMALL-004** — `frontend-craft` screenshot-as-you-build needs a probe with a real browser
-  loop; headless fixtures could not exercise it. Source: 2026-07-19 wrap-up, unprobed since.
-- **SMALL-005** — `sre-tool`'s contested-finding cap and `sde-fullstack`'s Findings-response
-  packet slot are validator-green but behaviorally unprobed. Source: 2026-07-19 self-review
-  fixes, unprobed since.
-- **SMALL-006** — the AGENTS.md Map has no row for `scripts/ledger_drift.py`, the only
-  CI-wired script missing from it. Source: PR #89 review note, imported at TIER-001 closeout
-  ([outcome record](archive/2026-08/tier-001-outcome-2026-08-08.md)).
-
 ## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot

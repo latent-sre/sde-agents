@@ -36,6 +36,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; Claude is the default, while bounded empty-Claude-allowlist cases can use `--runtime codex` through a tool-execution-disabled generated-role projection. Both bind source, execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
 | `scripts/eval_codex_runtime.py` | Narrow Codex behavioral transport; it captures each selected generated agent once, requires a dedicated instruction-clean Codex home, rejects observable tool events, and reuses opaque ChatGPT login state without reading credentials. |
 | `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
+| `scripts/ledger_drift.py` | Advisory CI watch for pending learning candidates whose named destinations changed later, plus intake with no watchable destination. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
 | `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. GitHub issues are evidence-bound intake, not a second tracker — an issue adds work only when the roadmap imports it, per `docs/README.md` rule 7. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file; a spec headed drafted merely awaits operator approval and starts nothing. |
 | `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
@@ -276,7 +277,8 @@ enough to skim past stops working, and each section in it was added for an obser
 
 ## Style
 
-- Markdown prose wraps at roughly 100 columns, matching the existing files.
+- Wrap new or edited Markdown prose at roughly 100 columns where practical. Existing files contain
+  legacy longer lines, so this is a forward-looking target rather than a current-tree invariant.
 - Agent and skill names are kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`).
 - Comments in the scripts explain *why* an invariant exists, not what the next line does — match
   that register when editing them. Descriptions lead with capability, then triggers, then negative
