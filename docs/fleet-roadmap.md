@@ -168,15 +168,17 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 #### HANDOFF-001 — evidence-bound onboarding handoff packet
 
-**Status:** `active` — lean re-plan authorized by the operator 2026-08-11; spec approved
-2026-08-09. The REV-001 sequencing condition is met: that round closed 2026-08-10
+**Status:** `active` — Claude manager-owned amendment authorized by the operator 2026-08-11;
+original spec approved 2026-08-09. The REV-001 sequencing condition is met: that round closed
+2026-08-10
 ([outcome record](archive/2026-08/rev-001-outcome-2026-08-10.md)) with the envelope idiom
 settled — `candidate_sha`/`base_sha`/`tree_oid` and the six-field approval envelope.
 
-**Outcome:** Onboarding work delegates through one echoed, evidence-bound packet whose sections
-carry failed assumptions, verification-method validity, the executable-transport contract,
+**Outcome:** Onboarding work delegates through one manager-owned, digest-bound work order whose
+sections carry failed assumptions, verification-method validity, the executable-transport contract,
 irreversible postconditions, authority lifetimes, inventory invariants, and secret-safe capture
-— and the known-failed-assumption fixture stops regressing across POC→builder handoffs.
+— the builder returns only an accepted/input-required receipt, and the known-failed-assumption
+fixture is graded from resulting state rather than a second prose copy.
 
 **Source:** [`HANDOFF-001 spec`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) and
 its [paired lean plan](superpowers/plans/handoff-001-plan.md);
@@ -187,25 +189,22 @@ release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Current evidence:** Final candidate `ff51f42` contains the lean producer/consumer change, retained
-per-run diagnostics, observed-form oracle repairs, regenerated adapters, and the bounded
-subscription-backed Codex transport. T0, all 646 tests across 30 modules, and
-`claude plugin validate . --strict` passed on its immutable bytes. The operator-approved five-run
-diagnostic, two-run prompt smoke, and final 36-session Terra/medium pair all completed. In the final
-pair, baseline `4777df9` scored 1/18 runs and 0/6 strict cases; the candidate scored 6/18 runs and
-1/6 strict cases. The producer is a repeatable 3/3 improvement. Retained candidate responses show
-correct discovery, proportional short-path, builder echo, and reviewer behavior that remaining
-lexical assertions reject; one builder run also ended without a terminal response, and one
-first-artifact response invented removed `-verify-only` behavior. The
-[artifacts and decision record](../evals/baselines/2026-08-11-handoff-001/) preserve every response,
-assertion, condition, hash, token count, duration, and limitation. HANDOFF-001 is not accepted.
+**Current evidence:** The first Terra/medium round remains preserved under
+[`evals/baselines/2026-08-11-handoff-001`](../evals/baselines/2026-08-11-handoff-001/): it proved the
+producer at 3/3 but left five strict cases unresolved, which triggered this amendment. Those
+artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
+evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
+small receipts. The paired evaluator change keeps six cases by replacing the reviewer duplicate
+with a conflict receipt and a declarative builder fixture. Its trusted verifier is byte-checked,
+grades captured regular-file bytes, and records artifact hashes/results. Red-before-green controls,
+T0, all 101 behavioral-evaluator tests, all 651 tests across 30 modules, and
+`claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
+unaccepted.
 
-**Next action:** Spend no more model sessions yet. Add an offline replay/regrade path for retained
-responses, then simplify the five brittle relationship assertions around their existing
-wrong-direction controls and make the first-artifact case reject the removed `-verify-only`
-behavior it exposed. Keep first-artifact streaming instrumentation out: it still has no acceptance
-consumer. Any later paid pair waits for frozen evaluator/case/prompt hashes and separate operator
-approval.
+**Next action:** Freeze the candidate and request separate operator approval for the exact Claude
+model and the smallest three-session diagnostic: producer, functional builder, and conflict
+receipt, one run each. Do not run a full paired capture unless those responses and end-state
+artifacts are sound. Do not compare Claude results with the archived Terra approximation.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 

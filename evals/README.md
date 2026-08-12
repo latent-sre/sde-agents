@@ -162,10 +162,6 @@ claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
 ```bash
 python3 scripts/eval_behavioral.py --runs 1              # all cases
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
-
-# subscription-backed Codex lane: six HANDOFF cases, one run each
-python3 scripts/eval_behavioral.py --runtime codex --case 'handoff-*' \
-  --model gpt-5.6-terra --reasoning-effort medium --concurrency 1
 ```
 
 The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
@@ -180,6 +176,12 @@ main-session
 session. The artifact calls this
 `generated-role-projection`: it measures generated role behavior, not custom-agent discovery,
 routing, or delegation.
+
+The full current `handoff-*` selection is Claude-only. Its builder case grants `Bash` and `Write`
+inside the disposable scratch directory and requires `permission_mode: acceptEdits`, so the Codex
+projection refuses that selector before spend. The stored 2026-08-11 Terra captures remain valid
+for their exact prior no-tool cases; they are historical artifacts, not evidence for the amended
+functional suite.
 
 Codex execution requires an explicit, absolute, dedicated `CODEX_HOME` with a **ChatGPT
 subscription login**. Perform its one-time `codex login` using file credential storage and the
@@ -243,7 +245,12 @@ learning/runbook lifecycle composition, current-evidence precedence, architectur
 verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
 validation, plus proportional onboarding handoffs that preserve discovered constraints without
 turning a simple build into packet ceremony. Each case artifact records input/output usage and
-duration per run; an unavailable value is `null`, never a fabricated zero. The runner prints the
+duration. The HANDOFF builder additionally uses the existing `semantic_oracle` seam: it seeds three
+declarative JSON artifacts and a trusted acceptance program, refuses a changed verifier or linked
+artifact, runs only that unchanged verifier, and records its exit/output plus artifact SHA-256
+values. Model-authored Python is never executed as grader code; receipt patterns prove only the
+transfer identity while the trusted verifier proves the end state. An unavailable duration is
+`null`, never a fabricated zero. The runner prints the
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 
@@ -292,7 +299,7 @@ without measuring what it claimed. Every full case declares exactly one of the f
   contracts where an any-of assertion could pass after invoking only one half of the workflow.
 - **`allowed_tools`** — always passed through `--tools`, including an explicit empty value that
   disables all tools. Planning-only skill cases allow only `Skill`; reasoning-only pinned agents
-  allow none; the three scratch build/verification cases allow only `Bash` and `Write`. Names are
+  allow none; the four scratch build/verification cases allow only `Bash` and `Write`. Names are
   validated against the CLI's full adopted runtime vocabulary, not merely the smaller fleet grant
   set, so alternate built-ins such as `PowerShell` cannot arrive by default.
 - **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a

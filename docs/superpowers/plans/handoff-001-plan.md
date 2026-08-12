@@ -1,127 +1,94 @@
-# HANDOFF-001 plan — lean producer/consumer handoff
+# HANDOFF-001 plan — Claude manager-owned work order
 
 Paired with the approved
 [`HANDOFF-001 spec`](../specs/handoff-001-onboarding-handoff-packet.md); operational only while
-this round is active. The operator reactivated the item on 2026-08-11 with an explicit
-proportionality ruling: restore the evidence-carrying behavior, not PR #108's global packet schema
-and gates.
+this round is active. The operator approved this amendment on 2026-08-11 after the first
+implementation's Terra evidence showed that repeating the entire packet consumed context while
+lexical assertions obscured otherwise-correct behavior.
 
 ## Frozen baseline and success
 
-Baseline `4777df9cc97b5a855c2c7ba693ce990e4d6ee1c2` has no onboarding handoff producer, no builder
-echo, and 58 behavioral contracts. PR #108's candidate carried the behavior but also added a
-thirteen-slot linter/validator stack and more than one thousand lines of tests before its paired
-live runs or first-artifact measurement happened; `b1af3a3` removed that unproven machinery and
-honestly reset the roadmap to `ready`.
+Baseline `4777df9cc97b5a855c2c7ba693ce990e4d6ee1c2` has no onboarding producer or consumer. The
+first lean candidate proved the producer repeatably, but only 1/6 strict cases passed in the final
+Terra pair. Those artifacts remain valid historical evidence for their exact prompts, evaluator,
+and Codex runtime; they are not mixed with this amended Claude case set.
 
 This round succeeds when:
 
-- onboarding discovery that crosses into a builder context carries every task-specific constraint
-  the approved spec names, without carrying secrets or authority;
-- `sde-fullstack` echoes the load-bearing constraints before editing, rejects a regression encoded
-  in either code or tests, and returns missing/conflicting packet fields as a material fork;
-- a simple bounded build with no discovered constraint stays on the existing short prompt path;
-- the requested first Tier-1 artifact can precede non-blocking lifecycle lanes without reporting
-  those lanes complete or silently dropping their owners;
-- six focused behavioral cases discriminate each required and forbidden behavior with isolated
-  oracle mutations, and paired baseline/candidate runs measure compliance and total
-  artifact-containing response cost under identical pinned conditions; and
-- generated adapters, the validator, focused tests, the full suite, and the plugin contract are
-  green on the exact candidate bytes.
+- `homelab-platform` returns one complete `Work Order v1` block to the main coordinator;
+- the coordinator preserves exact LF-normalized UTF-8 bytes, computes SHA-256, and supplies the
+  unchanged block and digest to `sde-fullstack`;
+- a complete, conflict-free order receives only the three-line accepted receipt before work;
+- a missing or conflicting field receives an input-required receipt naming the field, with no
+  edit or reconstruction;
+- the builder's key constraint transfer is graded from a declarative scratch repository by a
+  trusted, unchanged acceptance program rather than inferred from response prose;
+- the simple-build exception and first-artifact/open-lane behavior remain proportional; and
+- generated adapters, T0, affected tests, T1, and `claude plugin validate . --strict` are green on
+  the exact candidate bytes.
 
-## One packet, six labeled lines
+## Work-order ownership
 
-The handoff uses the fleet's existing labeled-line dialect. It does not add a `packet_lint` shape,
-a schema helper, or a fleet-validator rule. The six lines group the spec's twelve semantics without
-discarding them:
+`agents/homelab-platform.md` owns the trigger, identity header, six field labels, field semantics,
+capture safety, authority boundary, and short-form exception. It has no `Agent` tool and returns
+the work order to its caller rather than attempting nested delegation.
 
-| Line | Approved spec semantics carried |
-|---|---|
-| `Objective` | task identity, bounded deliverable, explicit out of scope |
-| `Decisions and evidence` | fixed operator decisions, exact sources, verified environment facts and their probes |
-| `Forbidden regressions` | disproved assumptions, their replacement controls, and rejection tests for code and tests |
-| `Acceptance and invariants` | failure paths, verification-method validity, parsed relationships/postconditions, inventory-derived invariants |
-| `Authority and recovery` | authority boundary, broker/mediator and four transport states, irreversible postconditions/reconciliation, temporary-authority lifetime/cleanup |
-| `Work state` | blocking prerequisites and non-blocking lanes with owners |
+The main Claude coordinator owns transport identity. It normalizes the returned block to LF with
+one final newline, hashes those exact UTF-8 bytes, and gives the builder both the unchanged block
+and `Work-order digest: sha256:<digest>`. This is a manager instruction, not new deployment
+authority or a global runtime.
 
-Secret-safe capture governs the whole block: only field-scoped non-secret projections or references
-enter it; resolved material never does. When a source is immutable Git content, the existing
-`base_sha` / `candidate_sha` / `tree_oid` names are reused rather than inventing synonyms.
+`agents/sde-fullstack.md` owns only the receipt and consumption behavior. It does not repeat the
+work order. An accepted receipt contains status, exact ID, and exact digest. An input-required
+receipt contains status, available identity, conflicting field labels, and one recommended
+resolution. Existing material-fork, code-and-test regression, parsed-relationship, check-mode,
+secret, and Tier-2/3 rules remain authoritative.
 
-## Canonical payloads
+No `packet_lint` shape, fleet-validator rule, global hook, agent-local hook, typed workflow runtime,
+or new configuration surface is added. GRAPH-004 remains the separate trigger-bound typed-edge
+decision; HANDOFF-001 does not implement it by stealth.
 
-1. `agents/homelab-platform.md` owns the trigger, six-line template, field semantics, and short-form
-   exception. It returns the packet to its caller because the agent intentionally has no `Agent`
-   tool; the packet grants no delegation or execution authority.
-2. `agents/sde-fullstack.md` consumes the packet. Before its first edit it echoes the objective,
-   fixed decisions, verified constraints, forbidden regressions, acceptance/evidence method, and
-   authority/secret boundary. It never reconstructs an omitted field, stops on a missing or
-   conflicting field as a material fork, and never echoes resolved secret material.
-3. `README.md` records the ownership direction so the consumer paraphrase defers to the producer.
-4. Host and service onboarding skills stay unchanged. Their existing tier, capture-safety, and
-   checklist-completion rules remain authoritative; the producer decides when a bounded artifact
-   is handed to application-code implementation.
-5. Regenerate every host adapter from the two canonical agent edits. No description or inventory
-   change is planned, so no routing run or inventory rewrite is owed.
+## Six focused cases
 
-## Focused behavioral evidence
+The case inventory stays at six while removing the non-consumer reviewer duplicate:
 
-Add exactly six `handoff-001` contracts, with no `packet_shape`:
+1. producer preserves the three observed failed assumptions and replacement controls;
+2. discovery rejects skipped check-mode evidence and carries only secret-safe projections;
+3. the requested Tier-1 artifact appears first while blockers and lane owners remain explicit;
+4. a simple stateless service stays on the short path with real acceptance and authority;
+5. the builder consumes one digest-bound work order, edits the declarative fixture, passes the
+   trusted verifier, and returns the accepted receipt; and
+6. a conflicting live request returns the input-required receipt naming `Authority and recovery`.
 
-1. the producer carries all three observed failed assumptions and their replacement controls;
-2. discovery rejects skipped check-mode evidence and captures only secret-safe projections;
-3. a requested Tier-1 artifact is the response's first deliverable while live blockers and open
-   lanes remain explicit;
-4. a simple stateless service stays on the short path while preserving acceptance and authority;
-5. the builder echoes the packet, rejects regressions in both implementation and tests, and stops
-   on an authority conflict instead of guessing; and
-6. the reviewer independently rejects a green test that encodes a disproved constraint. This is a
-   regression cross-check, not a second packet consumer or owner.
+Case 5 reuses the behavioral evaluator's existing `semantic_oracle` seam. The evaluator seeds
+three JSON artifacts plus one trusted acceptance program in its disposable scratch directory. It
+refuses a changed verifier, rejects links/reparse points through the existing provenance reader,
+bounds artifact size, runs only the unchanged verifier under isolated Python, and persists the
+verifier result plus artifact hashes. It never executes model-authored Python as grader code.
 
-The existing `tier-gate-holds` case remains the adverse-authority oracle; duplicating it under a
-HANDOFF tag would re-prove the same boundary. Before any live run, each new case gets one passing
-control, every required pattern is removed once to prove that omission fails, and every forbidden
-pattern gets one isolated contradiction. The old regex forests, thirteen-slot shape, special probe
-parser, validator mutation matrix, and nine-case wholesale restore are out of scope.
+The ordinary code-reviewer contract remains covered elsewhere. Removing its HANDOFF-tagged case
+does not change the reviewer prompt or authority; it removes a second paid wording check for a role
+that does not produce or consume this work order.
 
-## Verification and publication boundary
+## Verification and paid boundary
 
-Deterministic work runs red-before-green oracle controls, adapter generation, T0, the affected test
-modules, T1, and `claude plugin validate . --strict`. A fresh-context prompt review judges both the
-full and short paths.
+Offline work runs the exact-byte digest controls, functional red/green fixture, verifier-tamper
+failure, session-to-oracle integration, benchmark evidence serialization, adapter generation, T0,
+the affected module, T1, and strict plugin validation. No model session is part of implementation.
 
-The paid/manual acceptance remains a separate, explicit boundary. The first-artifact case requires
-the Tier-1 artifact as its first response deliverable, while the runner persists only total per-run
-response duration. Report that value as end-to-end artifact-containing response cost, never as
-first-artifact or first-token latency; exact first-artifact timing remains unmeasured unless the
-operator separately chooses streaming instrumentation. After the six cases and candidate bytes
-freeze, run the same evaluator, case bytes, exact runtime, model, CLI, timeout, auth/isolation
-conditions, and `concurrency=1` against baseline `4777df9` and the candidate, three runs per case,
-recording per-run tokens and duration. The 2026-08-11 operator ruling selects the Codex/ChatGPT-
-subscription transport for this capture: generated-role projection, read-only sandbox,
-tool-reduced policy, suppressed host skill instructions, explicit reasoning effort, and the same
-instruction-clean ChatGPT login mode on both sides. Codex 0.147.0 leaves code-mode `exec`/`wait`
-visible while their host is
-disabled and omits those custom-call attempts from JSONL, so this is a same-runtime paired
-approximation, not Claude empty-allowlist parity. Every observable tool item invalidates its run.
-Codex has no atomic execution-equivalent effective-config or runtime-MCP preflight, so both sides
-must use the same independently controlled machine and ChatGPT workspace with no system, cloud, or
-managed MCP servers; pre/post empty MCP inventories are defense in depth, not proof of that state.
-Each side records its own selected-profile identity; the only intended identity difference is the
-HANDOFF-001 prompt change. It remains **36 sessions total** (six cases × three runs × two
-revisions), not 36 Codex sessions plus a
-duplicate Claude batch. A later Claude capture would be separate host evidence and needs its own
-approval; the two runtimes are never compared to each other.
+The previous `--runtime codex --case 'handoff-*'` command no longer describes this suite: the
+functional builder case intentionally grants `Bash` and `Write` in a disposable Claude session,
+which the bounded Codex projection refuses before spend. Existing Terra artifacts remain archived;
+do not rerun or reinterpret them as Claude evidence.
 
-The baseline worktree remains immutable until both captures finish. Report all three duration
-values; call the candidate's total response faster only when its median is lower and the
-baseline/candidate ranges do not overlap, otherwise report the duration result as inconclusive.
-No subscription session starts without the operator's approval of the exact Codex model, reasoning
-effort, and 36-session plan. Issue #60 is updated only with separate authorization to post
-externally.
+Any live Claude measurement needs separate operator approval after the candidate freezes. The
+smallest diagnostic is three candidate-only sessions: producer, functional builder, and conflict
+receipt, one run each. Only if those responses and end-state evidence are sound should a paired
+baseline/candidate capture be proposed. Runtime, CLI, exact model, timeout, case bytes, evaluator
+bytes, plugin identities, isolation, and concurrency must be identical within that pair.
 
 ## Rollback
 
-One revert removes the producer, consumer, six contracts, their oracle controls, the duration result
-field, and regenerated adapters. The existing tier/capture rules and `tier-gate-holds` case remain
-untouched.
+Revert the producer/consumer prompt commit and regenerate adapters; revert the functional
+case/evaluator commit to restore the prior six no-tool HANDOFF cases. Existing tier, capture,
+effect-broker, and reviewer controls remain untouched.

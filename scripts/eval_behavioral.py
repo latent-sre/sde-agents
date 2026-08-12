@@ -23,7 +23,7 @@ inputs move during a batch.
     python3 scripts/eval_behavioral.py                       # all cases, 1 run each
     python3 scripts/eval_behavioral.py --runs 3
     python3 scripts/eval_behavioral.py --case packet-slots-* --output-dir /tmp/after
-    python3 scripts/eval_behavioral.py --runtime codex --case handoff-* \
+    python3 scripts/eval_behavioral.py --runtime codex --case handoff-simple-build-stays-short \
         --model gpt-5.6-terra --reasoning-effort medium
 
 Pure standard library, and every assertion is offline once the transcript is captured.
@@ -34,6 +34,7 @@ import argparse
 import concurrent.futures
 import contextlib
 import fnmatch
+import hashlib
 import importlib.util
 import json
 import re
@@ -55,6 +56,68 @@ CLAUDE = shutil.which("claude")
 SCRATCH_ROOT = Path.home() / ".sde-agents" / "eval-scratch"
 _EXECUTING_EVALUATOR_SOURCE = globals().get("_SDE_EVAL_EXECUTING_SOURCE")
 
+_HANDOFF_ARTIFACT_FILES = (
+    "openbao.json",
+    "inventory.json",
+    "regression-tests.json",
+)
+_HANDOFF_INITIAL_FILES = {
+    "openbao.json": b'{"storage":"raft","disable_mlock":true,"swap":"enabled"}\n',
+    "inventory.json": b'{"service_count":7,"groups":{"bao-readers":[]}}\n',
+    "regression-tests.json": (
+        b'{"assertions":["disable_mlock_present","string_cooccurrence"]}\n'
+    ),
+}
+_HANDOFF_ACCEPTANCE_SOURCE = b'''import json
+import sys
+from pathlib import Path
+
+
+if globals().get("_SDE_SNAPSHOT", False):
+    snapshot = json.load(sys.stdin)
+
+    def load(name):
+        return json.loads(snapshot[name])
+else:
+    def load(name):
+        return json.loads(Path(name).read_text(encoding="utf-8"))
+
+
+failures = []
+try:
+    config = load("openbao.json")
+    inventory = load("inventory.json")
+    regression_tests = load("regression-tests.json")
+except Exception as exc:
+    print(f"acceptance: invalid artifact: {exc}")
+    raise SystemExit(1)
+
+if config.get("storage") != "raft":
+    failures.append("storage must remain raft")
+if "disable_mlock" in config:
+    failures.append("disable_mlock must be absent")
+if config.get("swap") != "denied":
+    failures.append("swap must be denied")
+if inventory.get("service_count") != 8:
+    failures.append("service_count must change from 7 to 8")
+if "svc-bao" not in inventory.get("groups", {}).get("bao-readers", []):
+    failures.append("svc-bao must be a parsed member of bao-readers")
+expected_assertions = {
+    "disable_mlock_absent",
+    "swap_denied",
+    "parsed_membership",
+}
+if set(regression_tests.get("assertions", [])) != expected_assertions:
+    failures.append("regression assertions must encode the replacement controls")
+
+if failures:
+    for failure in failures:
+        print(f"acceptance: FAIL: {failure}")
+    sys.exit(1)
+print("acceptance: PASS")
+'''
+_SEMANTIC_FILE_LIMIT = 64 * 1024
+
 
 @contextlib.contextmanager
 def scratch_cwd():
@@ -65,6 +128,102 @@ def scratch_cwd():
         yield cwd
     finally:
         shutil.rmtree(cwd, ignore_errors=True)
+
+
+def prepare_semantic_workspace(cwd: Path, semantic_oracle: str | None) -> None:
+    """Seed only the trusted, declarative fixture required by a functional case."""
+    if semantic_oracle != "handoff-builder-artifact":
+        return
+    for name, content in {
+        **_HANDOFF_INITIAL_FILES,
+        "acceptance.py": _HANDOFF_ACCEPTANCE_SOURCE,
+    }.items():
+        with (cwd / name).open("xb") as stream:
+            stream.write(content)
+
+
+def _semantic_regular_file(cwd: Path, name: str) -> bytes:
+    content = eval_routing._read_regular_file(cwd / name)
+    if len(content) > _SEMANTIC_FILE_LIMIT:
+        raise eval_routing.ProvenanceError(
+            f"functional artifact exceeds {_SEMANTIC_FILE_LIMIT} bytes: {name}"
+        )
+    return content
+
+
+def evaluate_semantic_workspace(
+    cwd: Path, semantic_oracle: str | None,
+) -> tuple[list[str], dict | None]:
+    """Return independent artifact findings plus non-sensitive, hash-bound evidence."""
+    if semantic_oracle is None:
+        return [], None
+    if semantic_oracle != "handoff-builder-artifact":
+        return [], None
+
+    evidence = {
+        "oracle": semantic_oracle,
+        "verifier_sha256": hashlib.sha256(_HANDOFF_ACCEPTANCE_SOURCE).hexdigest(),
+        "verifier_exit": None,
+        "verifier_stdout": "",
+        "artifact_sha256": {},
+    }
+    try:
+        verifier = _semantic_regular_file(cwd, "acceptance.py")
+    except eval_routing.ProvenanceError as exc:
+        return [f"semantic oracle {semantic_oracle}: {exc}"], evidence
+    if verifier != _HANDOFF_ACCEPTANCE_SOURCE:
+        return [
+            f"semantic oracle {semantic_oracle}: trusted verifier changed; it was not executed"
+        ], evidence
+
+    artifact_bytes = {}
+    try:
+        for name in _HANDOFF_ARTIFACT_FILES:
+            content = _semantic_regular_file(cwd, name)
+            artifact_bytes[name] = content
+            evidence["artifact_sha256"][name] = hashlib.sha256(content).hexdigest()
+    except eval_routing.ProvenanceError as exc:
+        return [f"semantic oracle {semantic_oracle}: {exc}"], evidence
+
+    try:
+        snapshot = {
+            name: content.decode("utf-8") for name, content in artifact_bytes.items()
+        }
+    except UnicodeDecodeError as exc:
+        return [f"semantic oracle {semantic_oracle}: artifact is not UTF-8: {exc}"], evidence
+
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                "_SDE_SNAPSHOT = True\n" + _HANDOFF_ACCEPTANCE_SOURCE.decode("utf-8"),
+            ],
+            input=json.dumps(snapshot, sort_keys=True),
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=cwd,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"semantic oracle {semantic_oracle}: verifier failed to run: {exc}"], evidence
+    stdout = (proc.stdout or "").strip()
+    evidence["verifier_exit"] = proc.returncode
+    evidence["verifier_stdout"] = stdout[:4096]
+    if proc.returncode != 0:
+        detail = stdout or (proc.stderr or "").strip() or "no verifier output"
+        return [
+            f"semantic oracle {semantic_oracle}: verifier exited {proc.returncode}: "
+            f"{detail[:500]}"
+        ], evidence
+    if stdout != "acceptance: PASS":
+        return [
+            f"semantic oracle {semantic_oracle}: verifier returned unexpected output: "
+            f"{stdout[:500]!r}"
+        ], evidence
+    return [], evidence
 
 # Reuse the routing runner's transcript reader rather than re-deriving it. Grading a behavioral
 # case on its final text ALONE proves only that some text arrived: the main session can satisfy a
@@ -125,6 +284,7 @@ def run_session(
     prompt: str, plugin_dir: Path, timeout: int, allowed_tools: list[str] | None = None,
     disallowed_tools: list[str] | None = None, agent: str | None = None,
     permission_mode: str | None = None, model: str | None = None, env: dict | None = None,
+    semantic_oracle: str | None = None,
 ) -> tuple[str, set[str], str | None, dict]:
     """Drive one headless session to completion; return (final text, fired, note, stats).
 
@@ -176,10 +336,14 @@ def run_session(
         command += ["--disallowed-tools", *disallowed_tools]
     try:
         with scratch_cwd() as cwd:
+            prepare_semantic_workspace(cwd, semantic_oracle)
             proc = subprocess.run(
                 command,
                 capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, timeout=timeout,
                 env=env,
+            )
+            semantic_findings, semantic_evidence = evaluate_semantic_workspace(
+                cwd, semantic_oracle
             )
     except subprocess.TimeoutExpired as exc:
         partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
@@ -191,6 +355,8 @@ def run_session(
     eval_routing.raise_for_auth_failure(proc.stdout or "", proc.returncode, proc.stderr or "")
 
     stats = eval_routing.transcript_stats(proc.stdout or "")
+    stats["semantic_findings"] = semantic_findings
+    stats["semantic_evidence"] = semantic_evidence
     fired = eval_routing.components_fired(proc.stdout or "")
     # Behavioral assertions require a completed answer. Routing intentionally preserves a
     # non-error result paired with a non-zero process exit, but doing that here would grade text
@@ -269,7 +435,10 @@ _BEHAVIORAL_LIST_FIELDS = (
     "must_not_match", "runbook_required_gaps",
 )
 _BEHAVIORAL_PERMISSION_MODES = frozenset({"acceptEdits"})
-_BEHAVIORAL_SEMANTIC_ORACLES = frozenset({"closed-learning-block"})
+_BEHAVIORAL_SEMANTIC_ORACLES = frozenset({
+    "closed-learning-block",
+    "handoff-builder-artifact",
+})
 # Behavioral cases control the CLI runtime, not only the subset this fleet grants to agents. Keep
 # the complete built-in vocabulary mirrored from scripts/validate_fleet.py:RUNTIME_TOOLS so an
 # unadopted default such as PowerShell cannot remain silently available to an eval session.
@@ -783,7 +952,12 @@ def lint_runbook_proposal(
     return findings
 
 
-def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[str]:
+def assert_case(
+    text: str,
+    case: dict,
+    fired: set[str] | None = None,
+    semantic_findings: list[str] | None = None,
+) -> list[str]:
     """Apply a case's deterministic assertions; return failure strings (empty = pass)."""
     schema_findings = validate_behavioral_case(
         case, require_required=False, allow_runtime_suite=True
@@ -851,6 +1025,13 @@ def assert_case(text: str, case: dict, fired: set[str] | None = None) -> list[st
 
     if case.get("semantic_oracle") == "closed-learning-block":
         failures += lint_closed_learning_block(text)
+    elif case.get("semantic_oracle") == "handoff-builder-artifact":
+        if semantic_findings is None:
+            failures.append(
+                "semantic oracle handoff-builder-artifact: workspace evidence unavailable"
+            )
+        else:
+            failures += semantic_findings
 
     for pattern in case.get("must_match", []):
         if not re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
@@ -1051,6 +1232,9 @@ def main(argv: list[str] | None = None) -> int:
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
     run_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
+    semantic_evidence: dict[str, list[dict | None]] = {
+        case["id"]: [] for case in cases
+    }
     observed_models: set[str] = set()
 
     def execute(
@@ -1061,7 +1245,7 @@ def main(argv: list[str] | None = None) -> int:
             text, fired, note, stats = run_session(
                 case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
                 case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
-                args.model, session_env,
+                args.model, session_env, case.get("semantic_oracle"),
             )
         else:
             codex_runtime.assert_clean_subscription_context()
@@ -1083,7 +1267,9 @@ def main(argv: list[str] | None = None) -> int:
         if note and not text:
             failures = [f"session produced nothing: {note}"]
         else:
-            failures = assert_case(text, case, fired)
+            failures = assert_case(
+                text, case, fired, stats.get("semantic_findings")
+            )
         retained_response = text if args.retain_run_evidence else None
         return run_index, case["id"], failures, note, stats, retained_response
 
@@ -1235,6 +1421,8 @@ def main(argv: list[str] | None = None) -> int:
                     if has_usage else None
                 )
                 durations[case["id"]].append(stats["duration_ms"])
+                if case.get("semantic_oracle") == "handoff-builder-artifact":
+                    semantic_evidence[case["id"]].append(stats.get("semantic_evidence"))
                 if args.retain_run_evidence:
                     run_evidence[case["id"]].append({
                         "response": response,
@@ -1271,6 +1459,8 @@ def main(argv: list[str] | None = None) -> int:
         }
         if args.retain_run_evidence:
             case_payload["run_evidence_per_run"] = run_evidence[case["id"]]
+        if case.get("semantic_oracle") == "handoff-builder-artifact":
+            case_payload["semantic_evidence_per_run"] = semantic_evidence[case["id"]]
         payload.append(case_payload)
 
     print("-" * 100)
