@@ -271,6 +271,12 @@ table `:19-24`.)
 11. root-cause in full; prompt-craft's baseline-before-change.
 12. sre-tool's pre-Phase-0 exit, mission transaction, reviewer independence, cli.md.
 13. postmortem's re-scoped blameless framing (`SKILL.md:14-16`).
+14. *(Added 2026-08-13, Correction 9's rescan.)* Group 1's fleet-coordination mechanisms: the
+    audit ledger's keeper/emitter split and written-exception acceptance, lab-incident's
+    contemporaneous timeline note and the outage→follow-up authority edge, security-audit's
+    transcript-aware observability audience, and upgrade-campaign's unbatched major
+    session+approval. Per-finding evidence in
+    [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md).
 
 ## Corrections — scan claims the round's evidence overturned
 
@@ -309,6 +315,21 @@ A later session must not re-apply these as findings:
    are a closed machine-checked vocabulary with four live consumers, and the session that must obey
    them is the one that cannot open a second file. **Do not re-propose this relocation.** Reducing
    the runbook body's cost has to come from somewhere the grammar is not.
+9. **The LOW tier's "vocabulary only" definition was unsound for the lab-operations group** —
+   added 2026-08-13 after the Group 1 rescan
+   ([`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md), which owns the per-finding
+   evidence). The scan's severity model judged prose against an audience of one human with
+   continuous memory; the fleet's artifacts are read by the next session, which has neither
+   memory nor grounds to trust unverified claims. Six of Group 1's ten LOWs are coordination
+   mechanisms wearing organizational vocabulary — the ledger keeper (write-authority principal),
+   the written exception (loop convergence), the timeline note (the only `[verified]`-capable
+   evidence a later session can hold), the outage downgrade (the edge ending the mitigate-first
+   authority inversion), the observability audience (agent sessions and their retained
+   transcripts), and majors-get-their-own-session (unbatched tier approval plus a fresh context).
+   A later proportionality round applies the two-question test — who is the real reader, what
+   consumes the artifact — before tiering, and reads the rescan record rather than re-deriving
+   it. The other groups' LOW dispositions stand unrescanned; re-judging them takes the same
+   per-finding read, not this correction alone.
 
 ## Round disposition as of this record
 
@@ -425,6 +446,15 @@ parked, below.
   risk for no behavior change — the exact trade Correction 7 measured going the wrong way. They are
   recorded here as observed, and a LOW is available as free evidence if a future round edits one of
   these files for a substantive reason anyway.
+
+### 2026-08-13 addendum — Group 1 re-dispositioned by rescan
+
+The batch drop above still governs Groups 2–4's LOWs. Group 1's ten, however, were re-scanned the
+same day under the engineering-program reading rule and now carry **individual** dispositions that
+supersede their membership in the batch: six kept as coordination mechanisms (KEEP 14), three
+drops confirmed, one partial, four sharpening edits landed (one with paired behavioral evidence),
+one gap deferred trigger-bound. [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md) owns
+the per-finding record; Correction 9 owns the lens error that made the rescan necessary.
 
 ### What closing this item does not claim
 

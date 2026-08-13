@@ -66,15 +66,19 @@ health check passing twice, not once). Then decide: recovered, no effect, or wor
   becomes a mystery: at the end nobody knows which change is load-bearing, and the postmortem's
   timeline is unreconstructible.
 - **Worse** → revert immediately, and treat that as information about the cause.
-- Keep a running timestamped note as you go — what you ran, at what time, what happened. You are
-  writing the postmortem's timeline right now, and memory will smooth it later.
+- Keep a running timestamped note as you go — what you ran, at what time, what happened —
+  emitted as you go, not saved up for the end: a session that ends mid-incident takes everything
+  unwritten with it. You are writing the postmortem's timeline right now, and memory will smooth
+  it later.
 
 ## Step 4 — confirm recovery honestly
 
 Recovered means the *user-visible* thing works, verified end to end — the page loads, the file
 saves, the stream plays — not that the container says healthy. Then confirm the signals hold at
 their normal baseline for a few minutes; a flapping service that happened to be up when you looked
-is not recovered. **Only then** downgrade the situation from "outage" to "follow-up."
+is not recovered. **Only then** downgrade the situation from "outage" to "follow-up" — an
+authority edge, not a label: the downgrade is what ends this skill's mitigate-first inversion and
+returns the lab to diagnose-before-you-touch.
 
 ## Step 5 — hand off, don't stop
 
