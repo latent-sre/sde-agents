@@ -62,8 +62,18 @@ the decision's own snapshot `c02d8e12`, not against a second post-implementation
   others landed — `code-reviewer → homelab-platform`, `sde-fullstack → homelab-platform`, and
   `self-improve-loop → runbook`.
 - **Removed (3).** `self-improve-loop` dropped its references to `eng-ladder`, `sde-fullstack`, and
-  `sre-tool`. Whether that narrowing was intended was flagged for the topology review and is the one
-  substantive question this artifact raised about the fleet rather than about itself.
+  `sre-tool`. This was the one substantive question the artifact raised about the fleet rather than
+  about itself, and it is **disposed here rather than archived unowned**: the narrowing was
+  intentional. All three disappeared in `d027755` (the LEARN-001 round), which rewrote the skill
+  around a discovery-routing table; the removed lines were a worked example (`sde-fullstack`
+  generates → `code-reviewer` evaluates, with the `sre-tool` review phase as checkpoint) and an
+  analogy to `eng-ladder` growth feedback, not routing declarations. `code-reviewer` survived the
+  rewrite and is still referenced. No routing capability was lost, so no roadmap item or ledger
+  candidate is owed — the concern is dropped with this as its stated reason.
+
+  Worth keeping as a reading note: the graph reports a **reference** disappearing, which is not the
+  same as a **capability** disappearing. Prose examples and routing paths are the same edge kind to
+  this tool, and only the source text distinguishes them.
 - **Members:** 30 → 31, the addition being `onboarding-map`.
 
 Integrity fields all clean on the real tree: no unreadable definitions, no unadopted tool
@@ -124,7 +134,10 @@ before/after timing is claimed and none is owed.
   finds lives in the host installation rather than in the checkout every other tier reads: run
   during acceptance, `scripts/fleet_doctor.py` reported **pass=14, warn=0, fail=0, exit 0** —
   repository worktree, generated adapters, platform contracts, and canonical line endings clean, all
-  four host CLIs present, and the Claude and Codex plugin inventories matching the generated roles.
+  four host CLIs present, `sde-agents` **present in** both the Claude and Codex plugin inventories,
+  and Codex's **standalone agents** matching the generated roles. The two plugin checks test
+  presence in `plugin list`, not plugin-content parity; the only generated-role comparison in that
+  count is the standalone Codex one.
   Three limits stated rather than implied: protection is not `strict`, so checks run on this
   branch's head and not on a merge preview against a newer `main`; CI is Linux while the artifact
   figures above came from a Windows run; and the doctor result binds the host it ran on, not the
