@@ -33,13 +33,20 @@ class CodexInstallMarkerIsIgnored(support.TempDirTestCase):
         root = self.base / "snapshot"
         root.mkdir()
         support.git(root, "init", "-q")
-        # A developer's global core.excludesFile also applies to `git status` here, so an operator
-        # who had ignored the marker globally would make the strip-the-rule test below pass
-        # whether or not the repository rule exists -- a green that reports the invoking user's
-        # git config rather than this repository's bytes (review finding, PR #130).
+        # `git status` here reads the invoking developer's global config, so two settings decide
+        # this fixture's verdict before the repository rule gets a vote. Both are pinned locally,
+        # and both were review findings on this PR -- the second reproduced at exit 1 with three
+        # failures under `GIT_CONFIG_GLOBAL` alone.
+        #   core.excludesFile          -- an operator who ignored the marker globally would make
+        #                                 the strip-the-rule proof below pass whether or not the
+        #                                 repository rule existed: a green reporting their config.
+        #   status.showUntrackedFiles  -- set to `no`, every untracked marker is suppressed and the
+        #                                 warn-expecting cases fail on their machine and nowhere
+        #                                 else. `all` also survives `normal`'s directory collapsing.
         empty = self.base / "empty-global-excludes"
         empty.write_text("", encoding="utf-8")
         support.git(root, "config", "core.excludesFile", str(empty))
+        support.git(root, "config", "status.showUntrackedFiles", "all")
         text = (REPO / ".gitignore").read_text(encoding="utf-8")
         (root / ".gitignore").write_text(
             text if gitignore is None else gitignore, encoding="utf-8", newline="\n"
