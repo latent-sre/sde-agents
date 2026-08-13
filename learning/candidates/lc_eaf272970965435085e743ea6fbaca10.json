@@ -2,8 +2,8 @@
   "applicability": "repositories whose review signal is an asynchronous bot pass. A blocking required-review gate mechanically covers the merge half only; the completion-reporting half still applies there, since no gate stops a coordinator calling the task done before the passes land",
   "candidate_id": "lc_eaf272970965435085e743ea6fbaca10",
   "created_at": "2026-08-11T04:44:43.999699Z",
-  "destination": "AGENTS.md Opening a pull request (automated review lands after you open)",
-  "disposition": "add",
+  "destination": "AGENTS.md Opening a pull request (the automated review is request-triggered)",
+  "disposition": "supersede",
   "evidence": {
     "environment": "python-3.12/windows",
     "provenance": "verified",
@@ -19,8 +19,8 @@
   },
   "observation": "This repository's automated review posts two to five minutes after a pull request is opened. A PR merged four minutes after opening was reverted when its P1 landed two minutes after the merge.",
   "owner": "fleet-maintainer",
-  "promotion_state": "promoted",
-  "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
+  "promotion_state": "retired",
+  "reason": "The observation is refuted: the passes do not follow gh pr create by two to five minutes, they follow an explicit review_requested event by about ten minutes (PR #124 requested 07:07:07, reviewed 07:17:28 and 07:17:44), and PR #128 merged unreviewed while a session waited on a pass nobody had asked for. The expected_behavior it carried is unchanged and still ships; only its mechanism was wrong, so this supersedes rather than drops it. Replacement text lands in the same change (PR #130).",
   "recurrence": {
     "count": 3,
     "sources": [
@@ -90,7 +90,16 @@
       "owner": "fleet-maintainer",
       "reason": "Operator approved the destination edit 2026-08-11 after the second occurrence; the rule ships in the same change that records it.",
       "to": "promoted"
+    },
+    {
+      "at": "2026-08-13T05:36:12.059755Z",
+      "destination": "AGENTS.md Opening a pull request (the automated review is request-triggered)",
+      "disposition": "supersede",
+      "from": "promoted",
+      "owner": "fleet-maintainer",
+      "reason": "The observation is refuted: the passes do not follow gh pr create by two to five minutes, they follow an explicit review_requested event by about ten minutes (PR #124 requested 07:07:07, reviewed 07:17:28 and 07:17:44), and PR #128 merged unreviewed while a session waited on a pass nobody had asked for. The expected_behavior it carried is unchanged and still ships; only its mechanism was wrong, so this supersedes rather than drops it. Replacement text lands in the same change (PR #130).",
+      "to": "retired"
     }
   ],
-  "updated_at": "2026-08-11T05:01:10.039082Z"
+  "updated_at": "2026-08-13T05:36:12.059755Z"
 }

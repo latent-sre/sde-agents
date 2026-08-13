@@ -26,17 +26,27 @@ class CodexInstallMarkerIsIgnored(support.TempDirTestCase):
     """
 
     MARKER = ".codex-marketplace-install.json"
+    RULE = "/.codex-marketplace-install.json"
 
     def _snapshot(self, gitignore: str | None = None) -> Path:
         """A committed git repo carrying the shipped .gitignore, as a snapshot checkout does."""
         root = self.base / "snapshot"
         root.mkdir()
         support.git(root, "init", "-q")
+        # A developer's global core.excludesFile also applies to `git status` here, so an operator
+        # who had ignored the marker globally would make the strip-the-rule test below pass
+        # whether or not the repository rule exists -- a green that reports the invoking user's
+        # git config rather than this repository's bytes (review finding, PR #130).
+        empty = self.base / "empty-global-excludes"
+        empty.write_text("", encoding="utf-8")
+        support.git(root, "config", "core.excludesFile", str(empty))
         text = (REPO / ".gitignore").read_text(encoding="utf-8")
         (root / ".gitignore").write_text(
             text if gitignore is None else gitignore, encoding="utf-8", newline="\n"
         )
-        support.git(root, "add", ".gitignore")
+        (root / "tests" / "fixtures").mkdir(parents=True)
+        (root / "tests" / "fixtures" / "kept.txt").write_text("tracked\n", encoding="utf-8")
+        support.git(root, "add", "-A")
         support.git(
             root, "-c", "user.email=t@example.invalid", "-c", "user.name=t",
             "commit", "-qm", "seed",
@@ -58,10 +68,12 @@ class CodexInstallMarkerIsIgnored(support.TempDirTestCase):
     def test_without_the_rule_the_same_tree_would_warn(self) -> None:
         # Non-vacuity, proven in-test rather than by hand: strip only this rule and the identical
         # tree warns, so the new .gitignore entry -- not some pre-existing rule, and not the
-        # check's own behavior -- is what keeps a snapshot host at exit 0.
+        # check's own behavior -- is what keeps a snapshot host at exit 0. The filter matches the
+        # rule LINE exactly rather than any line mentioning the marker, so a later comment naming
+        # the file cannot silently widen what this proof removes (review finding, PR #130).
         shipped = (REPO / ".gitignore").read_text(encoding="utf-8")
         stripped = "\n".join(
-            line for line in shipped.splitlines() if self.MARKER not in line
+            line for line in shipped.splitlines() if line.strip() != self.RULE
         )
         self.assertNotEqual(shipped, stripped, "the rule under test is missing from .gitignore")
         root = self._snapshot(gitignore=stripped + "\n")
@@ -71,6 +83,19 @@ class CodexInstallMarkerIsIgnored(support.TempDirTestCase):
 
         self.assertEqual("warn", check.status)
         self.assertIn(self.MARKER, " ".join(check.details["entries"]))
+
+    def test_a_nested_marker_is_somebody_s_real_file_and_still_warns(self) -> None:
+        # The rule is anchored to the snapshot root because Codex writes it only there. A slashless
+        # pattern would match the basename at every depth and hide a genuine local addition; this
+        # is the test that keeps the anchor from being dropped (review finding, PR #130).
+        root = self._snapshot()
+        nested = root / "tests" / "fixtures" / self.MARKER
+        nested.write_text('{"plugin": "sde-agents"}', encoding="utf-8")
+
+        check = self._worktree_status(root)
+
+        self.assertEqual("warn", check.status, check.details)
+        self.assertIn("tests/fixtures/" + self.MARKER, " ".join(check.details["entries"]))
 
     def test_a_real_local_edit_still_warns(self) -> None:
         # The rule must ignore exactly one host-generated marker, never soften the check itself.

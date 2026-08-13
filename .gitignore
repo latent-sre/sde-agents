@@ -31,5 +31,9 @@ learning/candidates/.lc_*.tmp
 # fleet-doctor exit, so the health check would report non-zero forever on that host. A status that
 # is always non-zero teaches an operator to ignore it, which is the same silence the exit code was
 # changed to break. Found on a Linux Codex host within an hour of shipping that change
-# (2026-08-13).
-.codex-marketplace-install.json
+# (2026-08-13). Anchored with a leading slash: Codex writes the marker only at the snapshot root,
+# and a slashless pattern matches the basename at EVERY depth — measured, a nested
+# `tests/fixtures/.codex-marketplace-install.json` is reported with the anchor and silently hidden
+# without it. A nested occurrence is somebody's real local addition and must still reach the
+# operator (review finding, PR #130).
+/.codex-marketplace-install.json
