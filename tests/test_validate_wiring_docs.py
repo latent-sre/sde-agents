@@ -97,6 +97,39 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(any("'scripts/probe_plugins.py'" in i for i in issues), issues)
 
+    def test_stale_path_in_the_program_doc_is_reported(self) -> None:
+        # The program map exists so the engineering program's documentation cannot go stale, which
+        # makes it the one document least entitled to stale paths of its own — same
+        # rename-a-script failure as the guide, same tripwire.
+        def mutate(repo: Path) -> None:
+            path = repo / "docs" / "engineering-program.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "scripts/ledger_drift.py", "scripts/ledger_drifts.py"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("'scripts/ledger_drifts.py'" in i for i in issues), issues)
+
+    def test_repo_without_the_program_doc_is_valid(self) -> None:
+        # Self-gating, like the guide: a repo that carries no program map makes no map claims.
+        # AGENTS.md names the map as a path, so that mention leaves with it — otherwise the
+        # guide's own stale-path check correctly fires on the dangling reference.
+        def mutate(repo: Path) -> None:
+            (repo / "docs" / "engineering-program.md").unlink()
+            guide = repo / "AGENTS.md"
+            guide.write_text(
+                guide.read_text(encoding="utf-8").replace(
+                    "docs/engineering-program.md", "docs"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertEqual([], issues)
+
     def test_alias_drift_in_the_guide_is_reported(self) -> None:
         # Add an alias to ALIAS_MODELS (or drop one) and the guide's paraphrase must follow.
         def mutate(repo: Path) -> None:

@@ -14,37 +14,26 @@ and the model-alias list are checked against the source and fail on drift.
 
 ## The engineering program
 
-This is not a prompt library. It is one engineering program with four strands, and most of the
-disciplines below that look odd in isolation are mechanisms of one of them:
+This is not a prompt library. It is one program with four strands: **handoff engineering** —
+stateless sessions coordinate only through artifacts (packets, ledger rows, digest-bound work
+orders with receipt-only returns), so a handoff is complete only when the receiver can act on the
+artifact alone; **loop engineering** — audits, incidents, campaigns, and eval rounds must converge
+across memoryless sessions, which is what written exceptions, recurrence-merged ledger rows, and
+literal status transitions are for; **graph engineering** — authority is typed edges with
+host-specific enforcement, owned by `docs/decisions/2026-07-31-ai-graph-engineering.md`; and
+**self-learning** — `scripts/learning_ledger.py` gates lessons behind evidence-bound quarantine
+because a session replays a stored lesson uncritically. `docs/engineering-program.md` maps each
+strand to its implementing mechanisms and the checks that keep them honest, and is held to the
+same stale-path tripwire as this file.
 
-- **Handoff engineering.** Sessions are stateless and forget everything at exit, so a fleet
-  artifact — a review packet, a ledger row, a work order, a runbook slot, an audit findings
-  table — is the only bridge between the session that wrote it and the session that acts on it.
-  HANDOFF-001's digest-bound work orders are the explicit form; the packet contracts everywhere
-  else are the ambient form.
-- **Loop engineering.** Audits, incidents, upgrade campaigns, and eval rounds are loops that must
-  converge across sessions. Written exceptions, recurrence-merged ledger rows, and literal status
-  transitions (`open` → `accepted`, outage → follow-up) are the convergence mechanisms: without
-  them a memoryless successor re-flags the same finding forever, or holds emergency authority
-  past the emergency.
-- **Graph engineering.** Authority is typed edges: which member may write what, who hands to
-  whom, where approval sits. A read-only emitter paired with a write-authority consumer — the
-  audit skills' ledger rows, the guard roster — is a deliberate split, not indirection. Owned by
-  `docs/decisions/2026-07-31-ai-graph-engineering.md`.
-- **Self-learning.** The fleet improves itself through `scripts/learning_ledger.py` and the
-  `self-improve-loop` skill: evidence-bound, quarantined intake with staged promotion, because a
-  session replays stored lessons uncritically — an unverified lesson propagates its error into
-  every future session that retrieves it.
-
-The reading rule that follows, binding on reviews of fleet prose: **the reader is the next
-session, not the operator's memory.** A fleet of stateless workers re-creates the conditions
-organizations invented ceremony for — no shared memory, artifact-only communication, claims that
-cannot be trusted unverified — so owner slots, status lifecycles, contemporaneous capture, and
-written justifications are often coordination mechanisms wearing organizational vocabulary.
-Before trimming one as disproportionate, identify its real reader and confirm nothing consumes it
-(PROP-002's scanner judged against an audience of one human and mis-tiered exactly this class).
-The counterweight binds equally: coordination is not free — prefer fewer handoffs over richer
-ones, keep one writer per artifact, and put structure only at the boundaries that remain.
+The reading rule to apply in any review of fleet prose: **the reader is the next session, not the
+operator's memory.** A fleet of stateless workers re-creates the conditions organizations invented
+ceremony for — no shared memory, artifact-only communication, claims that cannot be trusted
+unverified — so owner slots, status lifecycles, contemporaneous capture, and written
+justifications are often coordination mechanisms wearing organizational vocabulary. Identify the
+real reader and what consumes an artifact before trimming it. The counterweight binds equally:
+coordination is not free — prefer fewer handoffs over richer ones, one writer per artifact,
+structure only at the boundaries that remain.
 
 ## Map
 

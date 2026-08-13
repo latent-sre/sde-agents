@@ -20,12 +20,13 @@ not re-enter the queue unless the roadmap imports them.
 
 ## Current documents
 
-The roadmap, decision records, and any active-round spec/plan listed below are live. Everything
-else here is historical evidence.
+The roadmap, the engineering-program map, decision records, and any active-round spec/plan listed
+below are live. Everything else here is historical evidence.
 
 | Document | State | Read it for |
 |---|---|---|
 | [`fleet-roadmap.md`](fleet-roadmap.md) | Live | Every unfinished, blocked, deferred, and decision-needed item. Nothing else adds work |
+| [`engineering-program.md`](engineering-program.md) | Live | The durable map from each program strand — handoff, loop, graph, self-learning — to the mechanisms implementing it and the checks keeping it honest. Mechanism-anchored by rule: no live item IDs, counts, or episodes, and the validator resolves every path it names |
 | [`superpowers/specs/handoff-001-onboarding-handoff-packet.md`](superpowers/specs/handoff-001-onboarding-handoff-packet.md) | Approved | HANDOFF-001's scope, twelve required semantics, paired-eval acceptance, non-goals, and rollback boundary |
 | [`superpowers/plans/handoff-001-plan.md`](superpowers/plans/handoff-001-plan.md) | Operational | The active lean HANDOFF-001 payload: one six-line producer packet, one builder consumer, six focused cases, and no global packet gate |
 | [`archive/2026-08/prop-002-outcome-2026-08-13.md`](archive/2026-08/prop-002-outcome-2026-08-13.md) | Historical outcome record | What PROP-002 landed and closed: the five HIGH clusters (PR #132), the six conditioned MEDIUM mandates (`eb53758`), and the five lessons — chiefly that "move it to a reference" is a reachability change in a skill graded by tool-restricted sessions, that controls whose adversary is an untrusted LLM worker read as org ceremony and are not, and why six findings were sequenced onto other items' paid runs instead of edited |
