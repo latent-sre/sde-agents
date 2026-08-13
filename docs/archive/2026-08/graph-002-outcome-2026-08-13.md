@@ -1,8 +1,9 @@
 # GRAPH-002 outcome — operator capability graph and workflow-design validator
 
-**Status: landed 2026-08-13** (PR #125, merge `10246d8`). This record retires the round's spec and
-plan, which were deleted at closeout per the convention that their absence means no round is
-running. Both are preserved in Git history at `60ba49e` as
+**Status: closed 2026-08-13** — implementation merged (PR #125, merge `10246d8`), retired to this
+record (PR #127, merge `92f0611`), and accepted by the operator the same day. This record retires
+the round's spec and plan, which were deleted at closeout per the convention that their absence
+means no round is running. Both are preserved in Git history at `60ba49e` as
 `docs/superpowers/specs/graph-002-descriptive-capability-graph.md` and
 `docs/superpowers/plans/graph-002-plan.md`; read them with `git show`. Governed by the accepted
 [AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md) as amended
@@ -59,15 +60,27 @@ before/after timing is claimed and none is owed.
 
 ## Operator acceptance
 
-*To be completed by the operator. The plan's Payload 4 requires reviewing one real-tree artifact
-and supplying one non-authoritative workflow design, recording whether each output answered its
-stated question, plus any limitation or rejected design — without promoting the design file into
-an executable contract.*
+**Accepted by the operator on 2026-08-13.** Payload 4 is satisfied and GRAPH-002 is closed.
 
-- **Real-tree capability JSON and Mermaid reviewed:** _pending_
-- **Workflow design supplied to the CLI:** _pending_
-- **Did each output answer its stated operator question:** _pending_
-- **Limitations or rejected designs recorded:** _pending_
+- **Real-tree capability JSON and Mermaid reviewed:** yes. Emitted from `main`, first at `10246d8`
+  and re-emitted at `24f8711` after PRs #127 and #128 landed; both runs are identical on every
+  reported series (155 edges, 85 grants, 7 preloads, the same unreferenced and preload-only
+  members, 54 relationship gaps, 10 clusters), so the acceptance is not bound to a single transient
+  head.
+- **Workflow design supplied to the CLI:** yes — one non-authoritative six-node design
+  (`review-then-apply`: deterministic entry, agent, repo-script verifier, human gate, effect,
+  terminal). Result `design-consistent (NOT runtime-enforced)`, `design_digest`
+  `bfdcaf3501395783bf7b47cb9a68b219181e66fb66527b83e45f8db31c12624d`. The file was **not** promoted
+  into a committed contract, and no digest was resolved: that remains GRAPH-004's.
+- **Did each output answer its stated operator question:** yes for all five. The answers are the
+  table above, produced by the tool rather than assembled by hand.
+- **Limitations recorded:** the "Deliberately not done" section below is the accepted limitation
+  set. Two are worth carrying forward as live reading caveats rather than defects: 54 relationship
+  gaps rest on **cluster co-membership only** and are not behavioral coverage, and every Codex
+  authority projection is `unknown_or_inherited` — the report states what each host *requests*, and
+  only Claude's guard coverage is a control it can evidence.
+- **Rejected designs:** none. No design was refused during acceptance; the validator's refusal
+  paths are covered by tests rather than by a rejected operator submission.
 
 ## Review history, and what it cost
 
