@@ -158,10 +158,11 @@ promote it only when the applicable gates hold:
 1. **Targeted proof** — the reproducer or acceptance case improves for the expected reason.
 2. **Regression and adverse proof** — relevant broad checks, held-out variants, negative cases, and
    failure paths do not regress. Reusing only the examples that tuned the candidate is not proof.
-3. **Fresh evaluator** — a separate context or deterministic verifier judges the candidate. The
-   author is not its sole grader or approver. A measured comparison runs under the repository's
-   eval harness when one exists — it records the model, artifact, and grader conditions — and a
-   change inside the measured noise is inconclusive.
+3. **Fresh evaluator, comparable conditions** — a separate context or deterministic verifier
+   judges the candidate; the author is not its sole grader or approver. Record the conditions the
+   comparison depends on — model, artifact, grader, and seed or repetitions — by hand, or via the
+   repository's eval harness when one exists. Results are rates over runs, not booleans; a change
+   inside the measured noise is inconclusive.
 4. **Exact-artifact proof** — evaluate the bytes users will receive. For this fleet that includes
    regenerated host adapters and their parity check, not only the canonical source.
 
@@ -169,8 +170,9 @@ The candidate block above already names the evidence, disposition, destination, 
 the traceability record; do not restate it as a separate gate. Close by saying how to revert and
 when version-dependent guidance must be rechecked.
 
-If a gate fails, do not promote. Keep the rejection evidence so a later loop does not rediscover the
-same dead end. Use a small iteration budget, usually two or three candidate deltas; a failure whose
+If a gate fails — or was never run — do not promote, and do not merge or ship the artifact change
+either: an unrun gate does not hold. Keep the rejection evidence so a later loop does not rediscover
+the same dead end. Use a small iteration budget, usually two or three candidate deltas; a failure whose
 cause is unclear exits to `root-cause` rather than consuming another turn.
 
 Promotion is not the end of the lifecycle for plugin-shipped destinations: a

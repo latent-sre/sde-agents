@@ -34,6 +34,28 @@ single tracker instead of leaking into memory or issue lists.
 
 ### Ready
 
+#### PROP-002 — right-size skill-level enterprise ceremony
+
+**Status:** `active` — the five HIGH clusters from the 2026-08-13 four-scanner proportionality
+sweep are fixed on `chore/prop-002-self-improve` (H1–H5, one commit each, plus the deep-review
+fix commit); the PR and the MEDIUM backlog are the open remainder.
+**Outcome:** skill prose proportionate to a single-operator lab — mandates conditioned on the
+scale that pays for them, sibling contracts delegated to their owner, live mechanisms
+(learning ledger, run-state control plane, release-retest lifecycle) untouched.
+**Source:** the four-scanner sweep (this round's PR carries the findings summary); deep-review
+verdict `merge-with-nits`, zero confirmed criticals, on `70747b8`.
+**Prerequisites:** none.
+**Acceptance:** H1–H5 plus review fixes merged with T1 green; paired behavioral evidence for
+every contract that grades edited text (stored-baseline match, or fresh before/after under
+pinned conditions); the MEDIUM backlog triaged — worked, deferred trigger-bound, or dropped
+with reason. The backlog's largest items: relocating `runbook`'s propose grammar to a
+references/ file loaded on the propose path (its consumers `packet_lint.py` and the behavioral
+contracts are live — relocate, never delete), the phantom-second-human owner/escalation slots
+in `runbook`, `onboarding-map`'s repeated authority restatement, `eng-ladder` Mode 3 and the
+consult protocol, and `ci-actions`' unconditioned SBOM/workflow-lint mandates.
+**Next action:** open the PR and hand the operator the review request; write the outcome record
+at close and retire this item to it.
+
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six

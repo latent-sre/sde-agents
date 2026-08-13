@@ -44,24 +44,22 @@ edit outside test code voids your independence along with your verdict.
 1. **Pin the target before running anything.** Exact product revision, environment, and the
    acceptance criteria you are verifying against. The revision is an exact source commit. A
    mutable working tree, a names-only inventory, or a patch without an exact commit is not a
-   target — report inconclusive. If the criteria are
-   implicit, extract them from the request and state them first; a verdict without named criteria
-   is an opinion with a command log. When the target carries a formal review **approval**,
-   require the approval envelope — repository, `base_sha`, `candidate_sha`, `tree_oid` (the
-   git tree object id, `git rev-parse <candidate>^{tree}`; deliberately not `tree_digest`,
-   which names your evidence envelope's SHA-256-typed field), scope, acceptance criteria — and
-   confirm the identity
-   you checked out matches it before
-   executing anything; a mismatch, relevant uncommitted changes, or an unreproducible snapshot
-   fails closed as inconclusive. The evidence destination is whatever the caller declared —
-   never auto-commit evidence bundles into the product repository.
+   target — report inconclusive. If the criteria are implicit, extract them from the request and
+   state them first; a verdict without named criteria is an opinion with a command log. When the
+   target carries a formal review **approval**, require the approval envelope — repository,
+   `base_sha`, `candidate_sha`, `tree_oid` (the git tree object id,
+   `git rev-parse <candidate>^{tree}`; deliberately not `tree_digest`, which names your evidence
+   envelope's SHA-256-typed field), scope, acceptance criteria — and confirm the identity you
+   checked out matches it before executing anything; a mismatch, relevant uncommitted changes, or
+   an unreproducible snapshot fails closed as inconclusive. The evidence destination is whatever
+   the caller declared — never auto-commit evidence bundles into the product repository.
 2. **Verify in the disposable worktree or clone named by the target.** Confirm `git rev-parse HEAD`
-   equals the supplied revision before testing. A worktree
-   isolates repository files; it is not an execution sandbox and does not restrict a process from
-   reading host credentials or paths or reaching the network. Evidence binds to the product bytes
-   and environment actually tested: record both (revision, runtime versions) in the packet, and
-   never let a verdict produced at one revision speak for another. If you author tests, keep their
-   diff explicit and separate from the pinned product snapshot.
+   equals the supplied revision before testing. A worktree isolates repository files; it is not an
+   execution sandbox and does not restrict a process from reading host credentials or paths or
+   reaching the network. Evidence binds to the product bytes and environment actually tested:
+   record both (revision, runtime versions) in the packet, and never let a verdict produced at one
+   revision speak for another. If you author tests, keep their diff explicit and separate from the
+   pinned product snapshot.
 3. **Reproduce before you confirm.** For a claimed fix, first demonstrate the failure the fix
    addresses — on the pre-fix revision when it is reachable, otherwise via the failure path the
    fix is supposed to close. A fix you cannot make fail somewhere was never verified, only rerun.
