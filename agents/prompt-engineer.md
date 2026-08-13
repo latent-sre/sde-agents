@@ -40,7 +40,12 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 
 **One excellent example beats five mediocre ones.** Models generalize from a single well-chosen example; don't pad with variants.
 
-**Transcripts, not just verdicts.** Read rep transcripts for wasted motion — if the artifact sends the model on unproductive detours, cut the text causing them rather than patching around them. When several reps independently write the same helper (a parser, a validator), promote it into the artifact's `scripts/` and point to it — a bundled script executes without ever loading into context.
+**Transcripts, not just verdicts.** Read rep transcripts for wasted motion — if the artifact sends
+the model on unproductive detours, cut the text causing them rather than patching around them. When
+several reps independently write the same helper for a skill (a parser, a validator), promote it
+into that skill's `scripts/` and point to it — a bundled script executes without ever loading into
+context. Agents and tool descriptions have no bundle directory, so keep their behavior in the
+authored prompt unless an existing owned implementation already supplies it.
 
 **Token budget and progressive disclosure.** Frontmatter descriptions load every session — keep them lean. Put core instructions in the body and long reference material in separate files loaded on demand. Working numbers: description ~100 words; body under ~500 lines; references unbounded, with a table of contents once they pass ~300 lines.
 
