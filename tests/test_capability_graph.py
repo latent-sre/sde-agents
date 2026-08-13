@@ -7,6 +7,7 @@ section that silently changes meaning still produces a well-shaped document.
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -505,16 +506,34 @@ class ToolVocabularyTests(unittest.TestCase):
 
 class OutputPathTests(unittest.TestCase):
     def test_colliding_emit_and_mermaid_destinations_are_refused(self):
-        """Writing both to one path let the Mermaid render destroy the JSON and still exit 0."""
+        """Writing both to one path let the Mermaid render destroy the JSON and still exit 0.
+
+        The second spelling must be a genuinely equivalent path. An earlier version built it as
+        `f"./{target}"`, which on POSIX prefixes an absolute path with `./` and yields a RELATIVE
+        path to a directory that does not exist -- so the two were different files, the guard
+        correctly did not fire, and the test only passed on Windows where the string happened to
+        resolve equal. `os.path.join(out, ".", name)` is the same file by any resolution.
+        """
         with _tree() as name, TemporaryDirectory() as out:
             target = Path(out) / "graph.out"
+            equivalent = os.path.join(out, ".", "graph.out")
+            self.assertEqual(Path(equivalent).resolve(), target.resolve())
             self.assertEqual(
                 capability_graph.main(
-                    ["--root", name, "--emit", str(target), "--mermaid", f"./{target}"]
+                    ["--root", name, "--emit", str(target), "--mermaid", equivalent]
                 ),
                 2,
             )
             self.assertFalse(target.exists())
+
+    def test_an_unwritable_destination_exits_cleanly(self):
+        """A missing parent directory is an invocation problem, not a crash: `_write` raised
+        FileNotFoundError straight out of main() with a traceback."""
+        with _tree() as name, TemporaryDirectory() as out:
+            missing = Path(out) / "no-such-dir" / "graph.json"
+            self.assertEqual(
+                capability_graph.main(["--root", name, "--emit", str(missing)]), 2
+            )
 
     def test_distinct_destinations_both_write(self):
         with _tree() as name, TemporaryDirectory() as out:

@@ -604,10 +604,16 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-    if args.emit:
-        _write(Path(args.emit), payload)
-    if args.mermaid:
-        _write(Path(args.mermaid), render_mermaid(document))
+    # A destination that cannot be written is an invocation problem and exits 2, the same class as
+    # an unreadable manifest. Letting OSError escape printed a traceback for a mistyped path.
+    try:
+        if args.emit:
+            _write(Path(args.emit), payload)
+        if args.mermaid:
+            _write(Path(args.mermaid), render_mermaid(document))
+    except OSError as error:
+        print(f"cannot write output: {error}", file=sys.stderr)
+        return 2
     if not args.emit and not args.mermaid:
         sys.stdout.write(payload)
     return 0
