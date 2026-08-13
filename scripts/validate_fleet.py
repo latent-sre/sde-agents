@@ -16,8 +16,26 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+# The fleet's one parser lives in fleet_records; these names are re-exported here because
+# generate_platform_adapters.py and the test suite reach them as attributes of this module. A
+# second frontmatter or reference parser would let the graph and the validator disagree about the
+# same tree with nothing to arbitrate them.
+import fleet_records  # noqa: E402  (sibling module; scripts/ is not a package)
+from fleet_records import (  # noqa: E402  (sibling module; scripts/ is not a package)
+    LIST_ITEM_RE,
+    NAME_RE,
+    TOP_LEVEL_KEY_RE,
+    definition_markdown_files,
+    frontmatter_span,
+    is_runtime_byproduct,
+    parse_frontmatter,
+    parse_frontmatter_lines,
+    read_text,
+    split_tools,
+)
+
 # The optional `./` is load-bearing. Without it the lookbehind rejected any link written
 # `./references/foo.md`, so such a link matched nothing: the existence check never ran (a broken
 # path shipped silently) and the orphan check counted the target as unlinked. The dot remains in
@@ -27,11 +45,6 @@ NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 BUNDLE_REF_RE = re.compile(
     r"(?<![\w./])(?:\./)?(?:references|assets|scripts)/[A-Za-z0-9._/-]*[A-Za-z0-9_-]"
 )
-TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$")
-# A YAML block-sequence item, e.g. `  - backend-craft`. TOP_LEVEL_KEY_RE is anchored at column zero
-# and never matches an indented `- item` line, so a key like `skills:` whose value is a block
-# sequence rather than an inline scalar needs its own reader or it silently parses to "".
-LIST_ITEM_RE = re.compile(r"^\s*-\s+(\S.*?)\s*$")
 # The two free-prose frontmatter fields — the only ones whose value is a sentence, so the only ones
 # that can carry a colon-space into a plain YAML scalar. See validate_yaml_scalar_quoting.
 PROSE_SCALAR_FIELDS = ("description", "argument-hint")
@@ -225,28 +238,6 @@ MCP_EXACT_TOOL_RE = re.compile(r"^mcp__[A-Za-z0-9_.-]+__[A-Za-z0-9_.-]+$")
 MCP_SERVER_GRANT_RE = re.compile(r"^mcp__[A-Za-z0-9_.-]+(?:__\*)?$")
 
 
-def split_tools(raw: str) -> list[str]:
-    """Split a `tools:` value on top-level commas only.
-
-    A naive ``raw.split(",")`` shreds a scoped grant: `Agent(worker, researcher)` becomes
-    `Agent(worker` and `researcher)`. Splitting at paren depth 0 keeps the scope intact so it can be
-    judged rather than mangled into two bogus tool names.
-    """
-    entries: list[str] = []
-    depth = 0
-    current: list[str] = []
-    for char in raw:
-        if char == "(":
-            depth += 1
-        elif char == ")":
-            depth = max(0, depth - 1)
-        if char == "," and depth == 0:
-            entries.append("".join(current))
-            current = []
-            continue
-        current.append(char)
-    entries.append("".join(current))
-    return [entry.strip(" []'\"") for entry in entries if entry.strip(" []'\"")]
 # Canonical evidence-label phrasing; agent files may extend a definition but
 # must contain these exact stems so the triad cannot drift file by file.
 EVIDENCE_LABEL_STEMS = (
@@ -319,97 +310,6 @@ INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 # (`*`, `<`, `>`, `$`, `{`) so illustrative forms like `agents/*.md` and `skills/<name>/SKILL.md`
 # self-exclude and only concrete, resolvable paths are asserted.
 GUIDE_PATH_TOKEN_RE = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_./-]*")
-
-
-def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
-
-
-def is_runtime_byproduct(path: Path) -> bool:
-    """Return whether a path is Python execution residue, not distributable fleet source."""
-
-    return "__pycache__" in path.parts or path.suffix.lower() in {".pyc", ".pyo"}
-
-
-def frontmatter_span(lines: list[str]) -> int | None:
-    """Return the closing marker index for a complete frontmatter block."""
-
-    if not lines or lines[0].strip() != "---":
-        return None
-    return next(
-        (index for index in range(1, len(lines)) if lines[index].strip() == "---"),
-        None,
-    )
-
-
-def parse_frontmatter_lines(lines: list[str], end: int) -> dict[str, str] | None:
-    """Parse the fleet's YAML subset from one already-decoded source snapshot."""
-
-    fields: dict[str, str] = {}
-    i = 1
-    while i < end:
-        if not lines[i].strip() or lines[i].lstrip().startswith("#"):
-            i += 1
-            continue
-
-        match = TOP_LEVEL_KEY_RE.match(lines[i])
-        if not match:
-            # Skipping an unparseable line loses whatever it configured without a word: a typo'd
-            # `tools Read, Write` would read as no tools authority at all, and the file would
-            # validate. Refuse the block instead so the caller reports it.
-            return None
-
-        key, value = match.groups()
-        if key in fields:
-            # YAML keeps the last duplicate. A file carrying `model: opus` then `model: inherit`
-            # would validate against a value its author never intended to be the live one.
-            return None
-        value = value.strip()
-        if value in {">", ">-", "|", "|-"}:
-            parts: list[str] = []
-            i += 1
-            while i < end and not TOP_LEVEL_KEY_RE.match(lines[i]):
-                parts.append(lines[i].strip())
-                i += 1
-            fields[key] = " ".join(part for part in parts if part).strip()
-            continue
-
-        if not value:
-            # An empty inline value can mean a YAML block sequence follows (`skills:` then indented
-            # `- item` lines). Collect it so a value like `skills:` doesn't silently become "" with
-            # nothing downstream ever able to check it -- see LIST_ITEM_RE.
-            # Skip blank lines and comments within the sequence, mirroring the outer loop, so that
-            # `skills:\n  # note\n  - item` doesn't leave `- item` stranded in the outer loop
-            # where it fails TOP_LEVEL_KEY_RE and returns None.
-            items: list[str] = []
-            j = i + 1
-            while j < end:
-                line = lines[j]
-                if not line.strip() or line.lstrip().startswith("#"):
-                    j += 1
-                    continue
-                item_match = LIST_ITEM_RE.match(line)
-                if not item_match:
-                    break
-                items.append(item_match.group(1).strip("'\""))
-                j += 1
-            if items:
-                fields[key] = ", ".join(items)
-                i = j
-                continue
-
-        fields[key] = value.strip("'\"")
-        i += 1
-
-    return fields
-
-
-def parse_frontmatter(path: Path) -> dict[str, str] | None:
-    """Parse the small YAML subset used by the fleet frontmatter."""
-
-    lines = read_text(path).splitlines()
-    end = frontmatter_span(lines)
-    return None if end is None else parse_frontmatter_lines(lines, end)
 
 
 def validate_name(name: str, kind: str, source: Path) -> list[str]:
@@ -903,16 +803,6 @@ def validate_yaml_scalar_quoting(root: Path) -> list[str]:
     return issues
 
 
-def definition_markdown_files(root: Path) -> list[Path]:
-    """Every markdown file the fleet ships as behavior: agent bodies, SKILL.md files, and each
-    skill's references/ and assets/ — the surface a cross-reference or platform-fact rule must
-    cover, because all of it is loaded (or read by path) into real sessions."""
-    files = sorted((root / "agents").glob("*.md")) if (root / "agents").is_dir() else []
-    if (root / "skills").is_dir():
-        files += sorted((root / "skills").rglob("*.md"))
-    return files
-
-
 def validate_bare_skill_references(root: Path, skill_names: list[str]) -> list[str]:
     """A bare backticked skill name in an agent body asserts "already in context".
 
@@ -1394,17 +1284,16 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
     # silent. The token matcher therefore captures uppercase and invalid punctuation too, so
     # syntax is rejected explicitly instead of being skipped or truncated to a valid prefix.
     if plugin_name:
-        ns_ref_re = re.compile(
-            rf"(?<![\w/.-])(?P<slash>/)?{re.escape(plugin_name)}:"
-            r"(?P<target>[^\s`'\"<>()\[\]{},;!?]*)"
-        )
         agents = set(agent_names)
         skills = set(skill_names)
-        for path in definition_markdown_files(root):
-            references = {
-                (bool(match.group("slash")), match.group("target").rstrip(".:"))
-                for match in ns_ref_re.finditer(read_text(path))
-            }
+        # One shared extraction, consumed here and by the capability graph. Deduping per file to
+        # (slash, target) keeps one message per distinct reference however many times a file
+        # repeats it; the records themselves stay per-occurrence so the graph can still cite a
+        # line.
+        by_path: dict[Path, set[tuple[bool, str]]] = {}
+        for record in fleet_records.collect_references(root, plugin_name):
+            by_path.setdefault(record.path, set()).add((record.is_slash_command, record.target))
+        for path, references in by_path.items():
             for is_slash_command, target in sorted(references):
                 reference = f"{'/' if is_slash_command else ''}{plugin_name}:{target}"
                 if not NAME_RE.fullmatch(target):

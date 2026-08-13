@@ -28,6 +28,9 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/readonly-guard.py` | Allowlist guard for read-only agents that hold `Bash`. Read its docstring before touching it. |
 | `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
 | `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |
+| `scripts/fleet_records.py` | The fleet's one parser for frontmatter, `tools:` values, and namespaced references, plus the typed records built from them. It records and never judges; a second parser would let two reports about the same tree disagree with nothing to arbitrate them. It parses an inspected tree as data and never imports or executes it, so a foreign or frozen-baseline checkout is safe to read. |
+| `scripts/capability_graph.py` | On-demand operator topology report over a fleet checkout — authored edges, per-host authority projections, and the routing overlay, kept separate on purpose. Advisory only: it is never a T0 or PR gate, and it emits no unioned fleet authority. |
+| `scripts/workflow_contract.py` | Design-consistency validator for one prospective workflow document (schema v1). It proves `design-consistent`, never `runtime-enforced`: nothing here executes, and no host validates a workflow this way at dispatch. Takes one explicit path, never scans a directory, and `validate_fleet.py` never calls it. |
 | `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
 | `scripts/run_tests.py` | Parallel test runner — one process per module, exactly the discovery invocation T0 uses. |
 | `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
@@ -130,6 +133,40 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
   Codex 0.147.0 cannot expose every code-mode tool attempt or atomically attest managed MCP state,
   so this is same-host paired evidence with a no-MCP activation prerequisite, not Claude
   empty-allowlist parity. See `evals/README.md`.
+
+One report is manual, on demand, and **offline** — no model session, no API cost:
+
+```bash
+python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.mmd
+```
+
+Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
+candidate — output is sorted, timestamp-free, LF, and repository-relative, so identical trees in
+different directories emit identical bytes and the two documents diff cleanly. Generated output is
+never committed. An agent declaring no `tools:` inherits every tool, so the report separates
+declared grants from `tool_authority_undeclared`, withholds the host projections it cannot derive,
+and marks itself INCOMPLETE rather than showing an empty grant. Read it with its three layers kept
+apart: authored edges are what the
+files declare, each host projection states only that host's control and its limitations, and the
+routing overlay is co-membership plus separately identified case assertions — co-membership is not
+behavioral coverage. Every section is advisory. Deliberately **not** a T0, CI, or PR gate: an
+advisory that became a gate would make each topology observation a merge blocker.
+
+The design validator is the other offline on-demand tool, and it takes one explicit document:
+
+```bash
+python3 scripts/workflow_contract.py path/to/design.json --root .
+```
+
+Exit 0 prints a `design_digest`; exit 1 lists ordered defects, each with a deterministic witness
+(entry→stuck node, a cycle, an illegal zone edge, a wrong-kind binding, or an approval bypass path);
+exit 2 means the input could not be read, which is not a design defect. Read the verdict as what it
+says — **design-consistent, not runtime-enforced**. No host checks a workflow this way at dispatch,
+so this is a reviewable property of the document, and approval coverage stops at every `subgraph`
+boundary, which the summary lists as unverified interiors. Schema v1 is deliberately narrow: `all`
+joins, acyclic graphs, all-path human approval, finite condition routes, and no embedded
+expressions. `any`/quorum joins, late arrival, cancellation, and reset wait for GRAPH-004, because a
+validator that guessed at those semantics would certify designs whose behavior nobody has defined.
 
 ## Change playbooks
 

@@ -1,7 +1,8 @@
 # AI graph engineering boundary for the fleet
 
 **Status:** Accepted -- 2026-08-01 by the operator, amended the same day with the WF-001 probe
-evidence below; revised 2026-07-31 by an independent cross-model review
+evidence below and on 2026-08-12 with the GRAPH-002 operator-consumer ruling; revised 2026-07-31
+by an independent cross-model review
 **Date:** 2026-07-31
 **Evidence snapshot:** `c02d8e12cb2c3d086890b884942908d18bcdbd17`
 **Review evidence:**
@@ -382,6 +383,14 @@ the first descriptive slice, not with the executor.
   converged on the same check list from external evidence; see the WF-001 spec's research notes).
 
 This work does not execute models and therefore needs no model baseline.
+
+**Amended 2026-08-12 (operator-consumer ruling, GRAPH-002 drafting):** the descriptive layer's
+consumer is the operator, not the T0 validator -- both tools ship as on-demand operator CLIs, and
+`validate_fleet.py` gains no graph semantic checks in this round; that wiring, like contract
+resolution, is GRAPH-004's when a committed contract and runtime consumer exist. Schema v1 is
+deliberately narrower than the retained contract design (no cycles, `all` joins only); the
+retained envelope remains the target for the deferred execution phases, reachable only through a
+schema-version change. The "Consequences if accepted" list is read under this ruling.
 
 ### Accepted -- effect-broker unknown-outcome reconciliation (SAFE-002)
 

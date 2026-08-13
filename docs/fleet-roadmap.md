@@ -116,29 +116,41 @@ Named audit material from the 2026-08-09 estate feedback: the Learning-bullet sp
 value is one line — a compression candidate gated on the pinned learning-slot behavioral
 contracts holding.
 
-#### GRAPH-002 — land the descriptive capability graph and contract validator
+#### GRAPH-002 — land the operator capability graph and workflow-design validator
 
-**Status:** `ready`
+**Status:** `active` — spec and plan approved by the operator on 2026-08-12 after independent
+citation verification and a zero-critical branch deep-review.
 
-**Outcome:** The accepted GRAPH-001 descriptive layer exists: a derived machine-readable
-capability graph over the canonical definitions and a standard-library workflow-contract
-parser/validator, including the graph-level checks the decision names (unreferenced components,
-eval-uncovered routing edges, self-loops, hub concentration, prompt-surface→tool reachability).
+**Outcome:** The accepted GRAPH-001 descriptive layer exists as two operator-facing, on-demand
+tools: a derived machine-readable capability graph that separates authored topology,
+host-specific authority projections, and measured evidence; and a standard-library workflow-design
+parser/validator with explicit, deliberately narrow semantics and deterministic witness paths.
 
 **Source:** Accepted
 [`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md) — the
 "Accepted -- descriptive compiler and contract validator" work.
 
-**Prerequisites:** None hard. Sequence after WF-001 closes: both rounds edit
-`scripts/validate_fleet.py`, and serializing them keeps each round's mutation tests reviewable.
+**Prerequisites:** None hard. WF-001 is closed. The graph reuses a typed refactor of the existing
+canonical parser, but neither new analysis becomes mandatory T0 work.
 
-**Acceptance:** The decision's descriptive-layer acceptance-evidence list (a fixture or mutation
-test per invariant; parser/validator tests for the negative contracts; no new runtime
-dependency), delivered under its own bounded spec and paired plan.
+**Acceptance:** The operator reviews one real-tree graph artifact and one explicit-path workflow
+design; stable metric identity, host-specific authority limitations, typed bindings, `all`-join
+semantics, mixed-dependency cycle rejection, all-path human approval, and witness diagnostics are
+covered by focused tests; no new runtime dependency or gate-for-gate T0/PR wiring lands.
 
-**Next action:** Author the bounded spec and plan — WF-001 retired to its
-[outcome record](archive/2026-08/wf-001-outcome-2026-08-01.md) on 2026-08-01, so the
-validator-churn sequencing gate is satisfied.
+**Next action:** Operator acceptance. The edge-identity reproduction and Payloads 1–4 have landed
+against the approved
+[spec](superpowers/specs/graph-002-descriptive-capability-graph.md) and paired
+[plan](superpowers/plans/graph-002-plan.md); the identity reproduction is recorded in that plan's
+activation section. What remains is the plan's sequence items 6 and 7: the operator reviews one
+real-tree graph artifact and supplies one workflow design to the CLI, those dispositions and the
+measured standalone timings are recorded, and the round retires to an outcome record. The
+capability graph is an on-demand operator report, not a new PR/T0 gate;
+the workflow tool is an explicit-path design-consistency validator with a deliberately narrow v1
+(`all` joins, acyclic graphs, all-path human approval, deterministic witnesses), not runtime
+enforcement. GRAPH-004 still owns committed contracts, digest resolution, and execution. The
+WF-001 validator-churn sequencing gate was satisfied when that round retired to its
+[outcome record](archive/2026-08/wf-001-outcome-2026-08-01.md) on 2026-08-01.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
