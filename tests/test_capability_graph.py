@@ -284,6 +284,90 @@ class UnreadableDefinitionTests(unittest.TestCase):
         self.assertEqual(document["unreadable_definitions"], [])
 
 
+class OccurrenceSeriesTests(unittest.TestCase):
+    def test_bundled_reference_occurrences_reach_the_artifact(self):
+        """The stable edge identity excludes references/ files by design; dropping them from the
+        document entirely meant that whole surface appeared in no baseline diff at all."""
+        with _tree() as name:
+            root = Path(name)
+            bundle = root / "skills" / "linked-skill" / "references"
+            bundle.mkdir()
+            (bundle / "detail.md").write_text(f"See {PLUGIN}:builder.\n", encoding="utf-8")
+            document = _document(root)
+        bundled = document["bundled_reference_occurrences"]
+        self.assertEqual(len(bundled), 1)
+        self.assertEqual(bundled[0]["source"], "linked-skill")
+        self.assertEqual(bundled[0]["target"], "builder")
+        self.assertFalse(Path(bundled[0]["path"]).is_absolute())
+        # ...and the edge identity still excludes it.
+        self.assertNotIn(
+            ("linked-skill", "builder"),
+            {(e["source"], e["target"]) for e in document["reference_edges"]},
+        )
+
+    def test_surface_series_is_emitted_with_all_three_keys(self):
+        with _tree() as name:
+            document = _document(Path(name))
+        self.assertEqual(
+            sorted(document["surface_occurrences"]), ["body", "description", "frontmatter"]
+        )
+
+
+class UnreadableClusterTests(unittest.TestCase):
+    def test_a_malformed_cluster_is_named_not_silently_skipped(self):
+        """Corruption and intentional removal produce the same absence unless it is recorded, and
+        this overlay exists to be diffed across two trees."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "evals" / "routing" / "broken.json").write_text(
+                "{not json", encoding="utf-8"
+            )
+            document = _document(root)
+        overlay = document["measurement_overlay"]
+        self.assertEqual(overlay["unreadable_clusters"], ["evals/routing/broken.json"])
+        self.assertIn("INCOMPLETE", document["report"]["host_authority_paths"]["note"])
+
+    def test_a_clean_tree_names_no_unreadable_clusters(self):
+        with _tree() as name:
+            overlay = _document(Path(name))["measurement_overlay"]
+        self.assertEqual(overlay["unreadable_clusters"], [])
+
+
+class EndpointIntegrityTests(unittest.TestCase):
+    def test_an_unparseable_source_emits_no_phantom_edge(self):
+        """The definition contributes no node but its body is still scanned, so checking only the
+        target left an edge whose source appears in no node list -- a phantom node in Mermaid."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "broken.md").write_text(
+                f"---\nname: broken\ntools Read, Write\n---\n\nSee {PLUGIN}:builder here.\n",
+                encoding="utf-8",
+            )
+            document = _document(root)
+        sources = {e["source"] for e in document["reference_edges"]}
+        self.assertNotIn("broken", sources)
+        self.assertNotIn("broken", document["nodes"]["agents"])
+        self.assertEqual(document["unreadable_definitions"], ["agents/broken.md"])
+
+    def test_every_mermaid_edge_endpoint_has_a_declared_node(self):
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "broken.md").write_text(
+                f"---\nname: broken\ntools Read, Write\n---\n\nSee {PLUGIN}:builder here.\n",
+                encoding="utf-8",
+            )
+            document = _document(root)
+        declared = {
+            capability_graph._mermaid_id(n)
+            for n in document["nodes"]["agents"] + document["nodes"]["skills"]
+        }
+        for line in capability_graph.render_mermaid(document).splitlines()[1:]:
+            if "-->" in line or "-.preload.->" in line:
+                left, right = line.replace("-.preload.->", "-->").split("-->")
+                self.assertIn(left.strip(), declared, line)
+                self.assertIn(right.strip(), declared, line)
+
+
 class MermaidSafetyTests(unittest.TestCase):
     def test_member_names_cannot_inject_mermaid_statements(self):
         """This tool records without judging, and NAME_RE is enforced only by validate_fleet.py,

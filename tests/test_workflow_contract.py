@@ -436,6 +436,73 @@ class SchemaStrictnessTests(unittest.TestCase):
         document["nodes"][1]["max_attempts"] = 0
         self.assertTrue(any("positive integer" in d for d in _check(document)))
 
+    def test_allows_naming_an_undeclared_zone_is_rejected(self):
+        """A typo'd or removed zone that no current edge traverses was stored unchecked, so the
+        document validated while carrying a transition policy that can never resolve."""
+        document = _mutate()
+        document["zones"][0]["allows"] = ["apply", "typo-zone"]
+        self.assertTrue(any("is not a declared zone" in d for d in _check(document)))
+
+    def test_non_string_edge_endpoints_are_rejected_before_lookup(self):
+        """A list or object endpoint is unhashable, so `in nodes` raised an uncaught TypeError and
+        the CLI printed a traceback instead of a diagnostic."""
+        for bad in ([], {}, 7, None):
+            document = _mutate()
+            document["edges"][0] = {"from": bad, "to": "reviewer", "kind": "control"}
+            diagnostics = _check(document)  # must not raise
+            self.assertTrue(
+                any("must be node-id strings" in d for d in diagnostics), repr(bad)
+            )
+
+    def test_overlapping_condition_routes_are_a_duplicate_transition(self):
+        """Serializing the whole values list gave ['a','b'] and ['b','c'] different identities, so
+        route 'b' could be declared twice and still validate."""
+        document = _mutate()
+        document["edges"][0] = {
+            "from": "start", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["a", "b"],
+        }
+        document["edges"].append({
+            "from": "start", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["b", "c"],
+        })
+        diagnostics = _check(document)
+        self.assertTrue(any("duplicate transition" in d for d in diagnostics))
+        self.assertTrue(any("route 'b'" in d for d in diagnostics))
+
+    def test_a_repeated_value_inside_one_edge_is_rejected(self):
+        document = _mutate()
+        document["edges"][0] = {
+            "from": "start", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["a", "a"],
+        }
+        self.assertTrue(any("duplicate transition" in d for d in _check(document)))
+
+    def test_disjoint_condition_routes_remain_representable(self):
+        document = _mutate()
+        document["edges"][0] = {
+            "from": "start", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["a"],
+        }
+        document["edges"].append({
+            "from": "start", "to": "reviewer", "kind": "condition",
+            "state_field": "status", "values": ["b"],
+        })
+        self.assertEqual([d for d in _check(document) if "duplicate transition" in d], [])
+
+    def test_approval_bypass_is_found_through_an_unresolved_subgraph(self):
+        """An unresolved subgraph is opaque but still traversable: stopping the search at its
+        boundary would let a visible outer path around the human gate pass."""
+        document = _mutate()
+        document["nodes"].append({
+            "id": "inner", "kind": "subgraph", "zone": "review",
+            "binding": {"domain": "contract-digest", "ref": "a" * 64},
+        })
+        document["edges"].append({"from": "start", "to": "inner", "kind": "control"})
+        document["edges"].append({"from": "inner", "to": "deploy", "kind": "failure"})
+        diagnostics = _check(document)
+        self.assertTrue(any("'start' -> 'inner' -> 'deploy'" in d for d in diagnostics))
+
     def test_ill_typed_containers_produce_diagnostics_not_a_traceback(self):
         """`list(None)` and `sorted(["b", 1])` raised uncaught, so the CLI printed a Python
         traceback instead of the ordered diagnostics its exit-1 contract promises -- a malformed

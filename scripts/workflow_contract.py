@@ -221,6 +221,18 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             )
         zones[zone_id] = list(allows)
 
+    # Allow targets are checked after every zone id is known. An `allows` naming a typo'd or
+    # removed zone that no current edge happens to traverse would otherwise be stored unchecked, and
+    # the document reported design-consistent while carrying a transition policy that can never
+    # resolve.
+    for zone_id, allows in sorted(zones.items()):
+        for target in allows:
+            if target not in zones:
+                diagnostics.append(
+                    f"zones[{zone_id!r}]: allows {target!r}, which is not a declared zone; the "
+                    f"transition it permits can never resolve"
+                )
+
     nodes: dict[str, dict] = {}
     agent_names = {m.name for m in fleet_records.collect(root).members if m.kind == "agent"}
     fleet_tools = _fleet_tool_identifiers()
@@ -261,6 +273,16 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             raise Defect(f"{label}: must be an object")
         diagnostics += _unknown(edge, EDGE_KEYS, label)
         source, target, kind = edge.get("from"), edge.get("to"), edge.get("kind")
+        # Endpoint TYPE before endpoint membership: a list or object endpoint is unhashable, so the
+        # `in nodes` lookup raised an uncaught TypeError and the CLI printed a traceback instead of
+        # the ordered diagnostic its exit-1 contract promises.
+        if not isinstance(source, str) or not isinstance(target, str):
+            diagnostics.append(
+                f"{label}: 'from' and 'to' must be node-id strings, not "
+                f"{type(source).__name__}/{type(target).__name__}"
+            )
+            edges.append(edge)
+            continue
         if source not in nodes:
             diagnostics.append(f"{label}: from {source!r} is not a declared node")
         if target not in nodes:
@@ -271,15 +293,21 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             )
         diagnostics += _edge_field_defects(edge, label, nodes)
 
-        # Distinct enum routes stay representable; an accidental duplicate transition does not.
-        route = edge.get("values") if kind == "condition" else None
-        identity = (source, target, kind, json.dumps(route, sort_keys=True))
-        if identity in seen_identity:
-            diagnostics.append(
-                f"{label}: duplicate transition {source!r}->{target!r} ({kind}) already declared "
-                f"at {seen_identity[identity]}"
-            )
-        seen_identity[identity] = label
+        # Duplicate identity is PER FINITE ROUTE VALUE, not per value list. Serializing the whole
+        # list gave `["a","b"]` and `["b","c"]` different identities, so route `b` could be declared
+        # twice and still validate -- and a repeated value inside one list went unnoticed too.
+        # Distinct enum routes stay representable; an ambiguous transition does not.
+        routes = edge.get("values") if kind == "condition" else None
+        route_values = routes if isinstance(routes, list) and routes else [None]
+        for route in route_values:
+            identity = (source, target, kind, json.dumps(route, sort_keys=True))
+            if identity in seen_identity:
+                route_note = f" for route {route!r}" if route is not None else ""
+                diagnostics.append(
+                    f"{label}: duplicate transition {source!r}->{target!r} ({kind}){route_note} "
+                    f"already declared at {seen_identity[identity]}"
+                )
+            seen_identity[identity] = label
         edges.append(edge)
 
     if document["entry"] not in nodes:

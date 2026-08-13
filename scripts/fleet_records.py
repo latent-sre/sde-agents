@@ -271,6 +271,10 @@ class FleetRecords:
     # usable identity -- but dropping them without a trace makes a broken file indistinguishable
     # from a deleted one to anyone diffing two trees, so every consumer must surface them.
     unparseable: tuple[Path, ...] = ()
+    # Routing-cluster files that could not be read. Skipping them silently makes corruption
+    # indistinguishable from an intentional removal of routing evidence, which matters precisely
+    # because this data is used to compare a baseline tree against a candidate.
+    unreadable_clusters: tuple[Path, ...] = ()
 
     @property
     def agents(self) -> tuple[Member, ...]:
@@ -392,7 +396,7 @@ def core_definition_paths(root: Path) -> set[Path]:
     return paths
 
 
-def collect_routing_clusters(root: Path) -> tuple[RoutingCluster, ...]:
+def collect_routing_clusters(root: Path) -> tuple[tuple[RoutingCluster, ...], tuple[Path, ...]]:
     """Routing clusters as a measurement overlay.
 
     Cluster co-membership is NOT behavioral coverage of a relationship: two members sharing a
@@ -401,16 +405,20 @@ def collect_routing_clusters(root: Path) -> tuple[RoutingCluster, ...]:
     """
     directory = root / "evals" / "routing"
     if not directory.is_dir():
-        return ()
+        return (), ()
     clusters: list[RoutingCluster] = []
+    unreadable: list[Path] = []
     for path in sorted(directory.glob("*.json")):
         try:
             spec = json.loads(read_text(path))
         except (json.JSONDecodeError, UnicodeDecodeError):
-            # A malformed cluster is the validator's finding to report, not this collector's to
-            # raise: refusing here would take the whole graph down over one unrelated file.
+            # A malformed cluster is the validator's finding to raise, not this collector's --
+            # refusing here would take the whole graph down over one unrelated file -- but it is
+            # recorded rather than dropped, so a consumer can tell corruption from removal.
+            unreadable.append(path)
             continue
         if not isinstance(spec, dict):
+            unreadable.append(path)
             continue
         cases = tuple(
             RoutingCase(
@@ -431,7 +439,7 @@ def collect_routing_clusters(root: Path) -> tuple[RoutingCluster, ...]:
                 cases=cases,
             )
         )
-    return tuple(clusters)
+    return tuple(clusters), tuple(unreadable)
 
 
 def parse_guarded_agents(root: Path) -> frozenset[str] | None:
@@ -499,12 +507,14 @@ def collect(root: Path, plugin_name: str = ""):
                 Member(fields.get("name", path.parent.name), "skill", path, dict(fields), body)
             )
 
+    clusters, unreadable_clusters = collect_routing_clusters(root)
     return FleetRecords(
         root=root,
         plugin_name=plugin_name,
         members=tuple(members),
         references=collect_references(root, plugin_name),
-        clusters=collect_routing_clusters(root),
+        clusters=clusters,
+        unreadable_clusters=unreadable_clusters,
         # The roster is read from the tree being reported on, never accepted from the caller. A
         # caller holding THIS repo's roster while pointing root at a foreign or baseline checkout
         # would otherwise attribute one tree's guard coverage to another -- the same class of
@@ -526,10 +536,14 @@ def stable_edges(records: FleetRecords) -> set[tuple[str, str]]:
     Verified against the decision's own snapshot `c02d8e12`, where it returns exactly 140.
     """
     names = {m.name for m in records.members}
+    # BOTH endpoints must resolve to a collected member. Checking only the target let a definition
+    # with unparseable frontmatter -- which contributes no node but whose body is still scanned --
+    # emit an edge from a source that appears in no node list, breaking endpoint integrity for JSON
+    # consumers and making Mermaid invent a phantom node.
     return {
         (r.source, r.target)
         for r in records.references
-        if r.in_core_definition and r.target in names
+        if r.in_core_definition and r.source in names and r.target in names
     }
 
 

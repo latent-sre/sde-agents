@@ -153,6 +153,25 @@ def build_document(records) -> dict:
         "reference_edges": reference_edges,
         "report": _report(records, reference_edges, tool_grants, inherits_all),
         "schema_version": SCHEMA_VERSION,
+        # The separate occurrence series the plan promises, covering the WHOLE authored reference
+        # surface -- including the 60 occurrences in bundled references/ files that the stable edge
+        # identity deliberately excludes. Without it those occurrences appear in no baseline diff at
+        # all. Never differenced against the edge count: different things, on purpose.
+        "surface_occurrences": fleet_records.surface_occurrences(records),
+        "bundled_reference_occurrences": sorted(
+            (
+                {
+                    "line": r.line,
+                    "path": _relative(r.path, records.root),
+                    "source": r.source,
+                    "target": r.target,
+                }
+                for r in records.references
+                if not r.in_core_definition
+                and r.target in {m.name for m in records.members}
+            ),
+            key=lambda o: (o["path"], o["line"], o["target"]),
+        ),
         "tool_grants": tool_grants,
         "tool_authority_undeclared": inherits_all,
         # A definition the parser refused contributes no node but may still contribute reference
@@ -253,10 +272,15 @@ def _measurement_overlay(records) -> dict:
         "members_with_case_assertions": {
             member: sorted(cases) for member, cases in sorted(asserted.items())
         },
+        # A corrupt cluster file and a deliberately removed one produce the same absence unless the
+        # unreadable ones are named, and this overlay exists to be diffed across two trees.
+        "unreadable_clusters": sorted(
+            _relative(path, records.root) for path in records.unreadable_clusters
+        ),
     }
 
 
-def _incomplete_note(inherits_all: list[str], unreadable: tuple) -> str:
+def _incomplete_note(inherits_all: list[str], unreadable: tuple, clusters: tuple = ()) -> str:
     """Say what the report could not establish, in the report itself."""
     notes = []
     if inherits_all:
@@ -268,6 +292,11 @@ def _incomplete_note(inherits_all: list[str], unreadable: tuple) -> str:
         notes.append(
             f" INCOMPLETE: {len(unreadable)} definition(s) could not be parsed and contribute no "
             f"node; see unreadable_definitions before reading an absence as a removal."
+        )
+    if clusters:
+        notes.append(
+            f" INCOMPLETE: {len(clusters)} routing-cluster file(s) could not be read; see "
+            f"measurement_overlay.unreadable_clusters before reading missing evidence as removed."
         )
     return "".join(notes)
 
@@ -361,7 +390,10 @@ def _report(
             # operator has to go looking for would defeat reading the report at all.
             "inherits_all_tools": inherits_all,
             "note": "Prose cross-references and skill preloads are influence edges and are not "
-            "traversed as authority." + _incomplete_note(inherits_all, records.unparseable),
+            "traversed as authority."
+            + _incomplete_note(
+                inherits_all, records.unparseable, records.unreadable_clusters
+            ),
         },
         "hub_concentration": hub,
         "reached_only_by_preload": preload_only,
