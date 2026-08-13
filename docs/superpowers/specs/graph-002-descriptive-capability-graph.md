@@ -58,23 +58,23 @@ A prose reference does not transfer the target member's tools to the source. A s
 conservative potential delegation path, but it must not merge the target principal's grants into
 the caller's authority.
 
-### 2. Five report sections, all advisory
+### 2. Six report sections, all advisory
 
 The decision-named checks remain report sections rather than validator failures:
 
-1. **Unreferenced components:** members with no inbound reference from a *different* member **and
-   no inbound skill preload**. Self-references do not count as external adoption.
+1. **Unreferenced components:** members with no inbound reference from a *different* member.
+   Self-references do not count as external adoption. Skill preloads are **not** folded in; section
+   6 reports them.
 
-   *Amendment pending operator confirmation (2026-08-13, implementation round.)* As approved, this
-   read "no inbound reference" alone, and the first real-tree run then listed `code-craft` — which
-   `sde-fullstack` preloads — as adopted by nobody. A preload is the stronger adoption relation: it
-   places the skill in the agent's context, where a reference only names it. Two review rounds took
-   opposite sides of this, so the reasoning is recorded rather than settled by whoever edited last.
-   Reverting to the reference-only definition is coherent — `reached_only_by_preload` already
-   reports the case separately — but it puts a member in both lists at once and restores an entry
-   that reads as an orphan while being in active use. The operator owns the call; the code
-   currently implements the union, and `reached_only_by_preload` keeps the distinction visible
-   either way.
+   *Implementation note (2026-08-13).* This definition was briefly widened to "no reference **and**
+   no preload" because the first real-tree run listed `code-craft` — which `sde-fullstack` preloads
+   — as adopted by nobody, which reads as an orphan. The union was the wrong repair: it made a
+   section mean something its own name does not say, and a metric whose label and definition
+   disagree is the thing baseline/candidate comparisons cannot survive. The real gap was that the
+   report had no way to say "adopted, but only by preload" — section 6 now does. A preloaded skill
+   therefore appears in **both** lists, and the pair is the correct picture rather than a
+   contradiction: section 1 answers "does anything reference this?", section 6 answers "is it
+   reached another way?".
 2. **Routing-cluster relationship gaps:** reference endpoints that never appear together in a
    routing cluster, labeled as co-membership evidence only. A future behavioral case may add a
    separate measured-coverage label.
@@ -83,6 +83,11 @@ The decision-named checks remain report sections rather than validator failures:
    retained as metadata rather than a changed edge identity.
 5. **Host-specific potential authority paths:** direct declarations and host controls, with dynamic
    delegation shown as a principal switch and every unknown effective-authority boundary retained.
+6. **Reached only by preload:** members with no inbound reference that at least one agent preloads
+   through frontmatter `skills:`. A preload is the stronger adoption relation — it places the skill
+   in the agent's context, where a reference only names it — so section 1 read alone would call such
+   a member an orphan. Added during implementation (2026-08-13); kept as its own section rather than
+   merged into section 1 so neither metric means something its name does not say.
 
 The operator consumes these sections during topology review. No threshold or merge rule is created
 in this round. A report can support a decision without every advisory becoming a gate.

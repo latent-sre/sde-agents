@@ -77,17 +77,24 @@ def _document(root: Path) -> dict:
 
 
 class ReportSectionTests(unittest.TestCase):
-    def test_unreferenced_excludes_members_reached_only_by_preload(self):
-        """A preloaded skill is adopted. Counting references alone reported a live skill as an
-        orphan -- found against the real tree, where sde-fullstack preloads code-craft."""
+    def test_unreferenced_means_no_inbound_reference_and_nothing_else(self):
+        """The section is named for references and the approved spec defines it that way.
+
+        Folding preloads in made a metric mean something its own label does not say. The
+        false-orphan risk that motivated the union is answered by `reached_only_by_preload`, which
+        reports the stronger relation under its own name -- so a preloaded skill appears in BOTH
+        lists, and the two together are the correct picture rather than a contradiction.
+        """
         with _tree() as name:
             report = _document(Path(name))["report"]
-        # dispatcher and reviewer are referenced by nobody either; solo-skill is the skill case.
         self.assertEqual(
-            report["unreferenced_components"], ["dispatcher", "reviewer", "solo-skill"]
+            report["unreferenced_components"],
+            ["dispatcher", "preloaded-skill", "reviewer", "solo-skill"],
         )
-        self.assertNotIn("preloaded-skill", report["unreferenced_components"])
         self.assertEqual(report["reached_only_by_preload"], ["preloaded-skill"])
+        # The pair is what an operator reads: unreferenced, but adopted by preload.
+        self.assertIn("preloaded-skill", report["unreferenced_components"])
+        self.assertIn("preloaded-skill", report["reached_only_by_preload"])
 
     def test_a_self_loop_is_not_adoption(self):
         """A member that only names itself has been adopted by nobody, so it stays unreferenced."""

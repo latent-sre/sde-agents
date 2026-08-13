@@ -93,13 +93,20 @@ against 157 — because `onboarding-map` references `host-onboard` and `service-
 forms. The approved identity collapses that dimension while Payload 1 retains each reference's
 exact form, so the report may show the divergence and may never call it a topology change.
 
-**Payload 2 must union the reference and preload series to answer question 1 honestly.** Eight
-agents gained a namespaced `/sde-agents:self-improve-loop` discovery-routing edge (none carried one
-at the snapshot), while `prompt-engineer`, `sde-fullstack`, and `verification-engineer` reach the
-same skill through a frontmatter `skills:` preload and therefore correctly use the bare form. A
-concentration measure built on namespaced references alone would report 8 inbound and miss that all
-11 agents reach that skill — and it would rank the weaker relationship above the stronger one,
-since a preload puts the skill in context while a reference only names it.
+**Payload 2 must report the reference and preload series side by side to answer question 1
+honestly.** Eight agents gained a namespaced `/sde-agents:self-improve-loop` discovery-routing edge
+(none carried one at the snapshot), while `prompt-engineer`, `sde-fullstack`, and
+`verification-engineer` reach the same skill through a frontmatter `skills:` preload and therefore
+correctly use the bare form. A view built on namespaced references alone would report 8 inbound and
+miss that all 11 agents reach that skill — and it would rank the weaker relationship above the
+stronger one, since a preload puts the skill in context while a reference only names it.
+
+*Resolved 2026-08-13.* "Side by side", not merged. The first implementation read this paragraph as
+a licence to fold preloads into `unreferenced_components`, which made that section mean something
+its own name does not say. The correct shape is two sections — section 1 counts references, section
+6 names members reached only by preload — plus `preload_inbound_degree` as its own column in hub
+concentration. Every series stays comparable to the measure it summarizes, and the operator still
+sees both facts about `code-craft` in one report.
 
 **Two review claims answered against the shipped tools, recorded so they are not re-raised.** The
 narrowing to acyclic graphs and `all`-only joins **is** authoritatively amended: the accepted
@@ -149,7 +156,7 @@ The deterministic JSON document contains:
 - `preload_edges` and direct `tool_grants`;
 - `host_authority`: one projection per supported host, each with an evidence label and limitations;
 - `measurement_overlay`: cluster co-membership plus separately identified case assertions;
-- `report`: the five advisory sections.
+- `report`: the six advisory sections.
 
 Sorted keys, sorted records, LF newlines, UTF-8, and no timestamps make baseline/candidate bytes
 diffable. `--emit <path>` writes JSON; `--mermaid <path>` writes the same node/edge identity as a
@@ -299,7 +306,7 @@ Expose SHA-256 over LF-normalized UTF-8 bytes, lowercase 64-hex. The CLI reports
 
 - stable historical edge identity plus separate occurrence/surface series;
 - unreferenced calculation excluding self-loops;
-- independent expected-record assertions for all five report sections;
+- independent expected-record assertions for all six report sections;
 - cluster co-membership never labeled behavioral coverage;
 - direct reference/preload never transfers tools;
 - dynamic delegation changes principal and preserves target authority separately;

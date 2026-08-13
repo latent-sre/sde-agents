@@ -387,7 +387,7 @@ def _incomplete_note(inherits_all: list[str], unreadable: tuple, clusters: tuple
 def _report(
     records, reference_edges: list[dict], tool_grants: dict, inherits_all: list[str]
 ) -> dict:
-    """The five advisory sections. Every one is an observation; none is a verdict."""
+    """The six advisory sections. Every one is an observation; none is a verdict."""
 
     member_names = sorted(m.name for m in records.members)
     external = {(e["source"], e["target"]) for e in reference_edges if e["source"] != e["target"]}
@@ -404,13 +404,12 @@ def _report(
         if source != skill:
             preload_inbound[skill] += 1
 
-    # A member nothing else reaches, by either route. Self-references are excluded because a file
-    # naming itself is not adoption by anyone.
-    unreferenced = [
-        name
-        for name in member_names
-        if external_inbound[name] == 0 and preload_inbound[name] == 0
-    ]
+    # Strictly what the section is named and what the approved spec defines: no inbound REFERENCE
+    # from a different member. Self-references are excluded because a file naming itself is not
+    # adoption by anyone. Preloads are deliberately NOT folded in -- `reached_only_by_preload`
+    # below answers that question under its own name, so an operator sees both facts instead of a
+    # metric whose meaning has drifted from its label.
+    unreferenced = [name for name in member_names if external_inbound[name] == 0]
     # Surfaced separately so the distinction stays visible instead of being silently folded away:
     # these members ARE adopted, and only a reference-only measure would call them orphans.
     preload_only = [
