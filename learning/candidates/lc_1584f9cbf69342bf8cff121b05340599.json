@@ -1,0 +1,52 @@
+{
+  "applicability": "any repository whose tests shell out to a version-control or host tool. A shared hermetic fixture helper would prevent the class and is deliberately unbuilt: one consumer today, so it waits trigger-bound like any other mechanism",
+  "candidate_id": "lc_1584f9cbf69342bf8cff121b05340599",
+  "created_at": "2026-08-13T06:09:38.582676Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "python-3.12/windows",
+    "provenance": "verified",
+    "revision": "279d383",
+    "source_kind": "review",
+    "source_reference": "PR #130 and PR #131 automated review findings; two occurrences in one pull request"
+  },
+  "expected_behavior": "A fixture that runs a real external command pins every host setting that decides what the command prints, in the fixture's own local configuration, before asserting on its output. Reproduce the hostile setting and record the before and after results rather than reasoning that the default is safe.",
+  "fingerprint": "77dc06a355bbc7cbfe223280408d713d7fc3d0dbb49c2387610e29df67d3a9d0",
+  "freshness": {
+    "as_of": "2026-08-13T06:09:38.582676Z",
+    "review_at": "2026-09-12T06:09:38.582676Z"
+  },
+  "observation": "A test fixture that shells out to a real version-control status command inherits the invoking developer's global configuration, and two host settings silently decided its verdict. A global excludes-file entry covering the file under test would make a non-vacuity proof pass whether or not the repository rule existed, a false green. A global setting suppressing untracked-file display failed three cases on that machine alone, a false red, reproduced by pointing the tool at a synthetic global config: three failures before pinning the setting locally, none after.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "python-3.12/windows",
+        "observed_at": "2026-08-13T06:09:38.582676Z",
+        "provenance": "verified",
+        "revision": "279d383",
+        "source_kind": "review",
+        "source_reference": "PR #130 and PR #131 automated review findings; two occurrences in one pull request"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-13T06:09:38.582676Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "tests that assert on the output of a real external command; excludes tests that mock or synthesize that output, which have no host configuration to inherit",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-13T06:09:38.582676Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-13T06:09:38.582676Z"
+}
