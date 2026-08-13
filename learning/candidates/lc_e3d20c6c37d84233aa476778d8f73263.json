@@ -1,0 +1,52 @@
+{
+  "applicability": "any reviewed component where the reviewer can enumerate unbounded 'what if this input is hostile' instances",
+  "candidate_id": "lc_e3d20c6c37d84233aa476778d8f73263",
+  "created_at": "2026-08-13T04:01:39.048155Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "static review of scripts/workflow_contract.py and scripts/fleet_records.py",
+    "provenance": "verified",
+    "revision": "9db2aea",
+    "source_kind": "review-round",
+    "source_reference": "PR #125 Codex review rounds at heads 1d86e9e, 6b0929e, 225ecf5, 9db2aea"
+  },
+  "expected_behavior": "When review findings cite the previous fix and name an adjacent unchecked instance, treat the class as the defect rather than the field: add one shape table covering every field plus a table-driven test that drives each with a wrong type, so a future omission surfaces as a missing table row instead of a crash.",
+  "fingerprint": "7ae77031efac9575bcae39034ba3087e64394ccca752c1e658769dd4e9aa703d",
+  "freshness": {
+    "as_of": "2026-08-13T04:01:39.048155Z",
+    "review_at": "2026-09-12T04:01:39.048155Z"
+  },
+  "observation": "Three consecutive review rounds raised ill-typed-input findings whose own text cited the previous round's fix ('beyond the prior endpoint fix, kind still reaches a set lookup unchecked'; 'after the malformed-cluster fix, not malformed object fields'). Each field-level isinstance patch left the next unchecked field as the next round's finding, so the round count did not converge on correctness.",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "static review of scripts/workflow_contract.py and scripts/fleet_records.py",
+        "observed_at": "2026-08-13T04:01:39.048155Z",
+        "provenance": "verified",
+        "revision": "9db2aea",
+        "source_kind": "review-round",
+        "source_reference": "PR #125 Codex review rounds at heads 1d86e9e, 6b0929e, 225ecf5, 9db2aea"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-13T04:01:39.048155Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "input validation in operator CLIs that parse caller-supplied documents",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-13T04:01:39.048155Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-13T04:01:39.048155Z"
+}

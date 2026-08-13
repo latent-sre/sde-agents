@@ -1,0 +1,125 @@
+# GRAPH-002 outcome — operator capability graph and workflow-design validator
+
+**Status: landed 2026-08-13** (PR #125, merge `10246d8`). This record retires the round's spec and
+plan, which were deleted at closeout per the convention that their absence means no round is
+running. Both are preserved in Git history at `60ba49e` as
+`docs/superpowers/specs/graph-002-descriptive-capability-graph.md` and
+`docs/superpowers/plans/graph-002-plan.md`; read them with `git show`. Governed by the accepted
+[AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md) as amended
+2026-08-12.
+
+## What landed
+
+Two on-demand operator CLIs on a shared parser, none of it wired into T0, CI, or a PR gate:
+
+- **`scripts/fleet_records.py`** — the fleet's one parser for frontmatter, `tools:` values, and
+  namespaced references, plus typed records. It records and never judges; every policy question
+  stays in `validate_fleet.py`, so no new gate shipped. It parses an inspected tree as data and
+  never imports or executes it, which is what makes a foreign or frozen-baseline checkout safe.
+- **`scripts/capability_graph.py`** — a deterministic topology report that keeps authored edges,
+  per-host authority projections, and the routing overlay separate. No unioned fleet authority is
+  emitted, because no such thing exists at runtime.
+- **`scripts/workflow_contract.py`** — schema-v1 design consistency for one explicit document,
+  reporting `design-consistent` and never `runtime-enforced`.
+- **`scripts/validate_fleet.py`** — 165 lines lighter, consuming the shared collector rather than
+  its own copy of the parser.
+
+Suite: 666 → 819 tests, 30 → 33 modules.
+
+## The measure, and why it is trustworthy
+
+The decision published four series but never the identity rule that produced them. Rather than
+assume one, the plausible variants were swept at the decision's own snapshot `c02d8e12` and only
+the variant reproducing every published number exactly was kept — 140 cross-reference edges, 85
+tool-authority edges, 4 skill preloads, and the routing overlay at 8 clusters / 38 member-to-cluster
+edges / 117 cases (64 positive, 53 negative) / 29 members covered. Measuring the candidate under a
+guessed identity would have made every delta unattributable between a changed tree and a changed
+measure.
+
+**Stable identity:** distinct `(source_member, target_member)` pairs over core definition files
+only, self-loops included, with surface and slash form as metadata. No other swept variant returns
+140.
+
+## The five frozen operator questions, answered from `main` at `10246d8`
+
+| Question | Answer |
+|---|---|
+| 1 — isolated / concentrated | Unreferenced: `code-craft`, `onboarding-map`; `code-craft` is reached only by preload. Top hubs: `homelab-platform` 18, `sde-fullstack` 12, `principal-engineer` 10, `code-reviewer` 9 |
+| 2 — changed vs the dated measure | Edges 140 → 155; tool grants 85 → 85 with no per-agent change; preloads 4 → 7 |
+| 3 — host request / withhold | Claude guards 3 roles; Copilot withholds `execute` from those same 3 by guard; Codex requests `workspace-write` for 7 of 11; `lab-audit` and `security-audit` declare skill-level denies that portable hosts strip |
+| 4 — where authority is unknown | Every Codex role `unknown_or_inherited`; `prompt-engineer` the sole dynamic-delegation principal switch |
+| 5 — behavioral evidence | 30 members carry positive case assertions, 31 carry negative ones; 54 reference relationships rest on co-membership only |
+
+Integrity fields all clean on the real tree: no unreadable definitions, no unadopted tool
+identifiers, no unresolved preload targets, no duplicate cluster identities.
+
+**Standalone cost** (median of five, one quiet machine, `main` @ `10246d8`): capability graph
+**122 ms**, workflow validator **81 ms**. Neither enters the T0 path, so no `validate_fleet.py`
+before/after timing is claimed and none is owed.
+
+## Operator acceptance
+
+*To be completed by the operator. The plan's Payload 4 requires reviewing one real-tree artifact
+and supplying one non-authoritative workflow design, recording whether each output answered its
+stated question, plus any limitation or rejected design — without promoting the design file into
+an executable contract.*
+
+- **Real-tree capability JSON and Mermaid reviewed:** _pending_
+- **Workflow design supplied to the CLI:** _pending_
+- **Did each output answer its stated operator question:** _pending_
+- **Limitations or rejected designs recorded:** _pending_
+
+## Review history, and what it cost
+
+Five review rounds ran against this branch: one adversarial Codex pass, one `deep-review` workflow
+(two lanes), and three GitHub PR passes. Roughly thirty findings; the ones that mattered:
+
+- A test pinning live edge counts (155/7/85) had turned an explicitly advisory report into a CI
+  blocker — one routine namespaced cross-reference failed the suite with `156 != 155`, while the
+  tool's own docstring said the design is never a gate.
+- Inherited-all tool authority rendered as *least* privilege: an agent with no `tools:` inherits
+  every tool and was displayed with an empty grant.
+- An unreadable guard roster reported as *not guarded*, twice, in different projections —
+  `bool(None)` is `False`.
+- Absolute occurrence paths defeated the baseline-versus-candidate comparison the artifact exists
+  for, and the determinism test that missed it asserted the weaker same-root property.
+- Untyped data edges and ordinary predicates (`status == 'ok'`) passing schema v1.
+
+**Two rulings settled here rather than re-litigated.** Schema v1's narrowing to acyclic graphs and
+`all`-only joins is authoritatively amended in the decision record, so no accepted behavior was
+silently omitted. Approval coverage already traverses an unresolved `subgraph` as opaque but
+traversable; that is now pinned by a regression test rather than incidental.
+
+## Lessons this round paid for
+
+1. **A static-review class can regenerate indefinitely.** Three rounds of field-by-field
+   `isinstance` patches each cited the previous round's fix and named the next unchecked field. One
+   shape table plus a test driving all 26 fields ended it. When findings cite your last fix, the
+   diagnosis is the class, not the field.
+2. **A prose invariant is not enforcement.** Three times in one round a correct sentence sat beside
+   an artifact that violated it — `Member.tools`' docstring versus the graph that read it, the
+   diffability claim versus absolute paths, and "never a CI gate" versus a pinned-count test. The
+   sentence is the test's specification; if no test asserts it, it is decoration.
+3. **One ambiguous word in a plan produced a wrong implementation defended for three rounds.**
+   "Union the reference and preload series" was meant as *report both* and implemented as *merge
+   into one metric*, which made `unreferenced_components` mean something its own name does not say.
+   The plan sentence now says "side by side"; the fix that sticks is the one that removes the
+   misreading, not the one that corrects its output.
+4. **Local-only verification has a platform ceiling, and it hides vacuous tests.** The first CI run
+   this branch ever had failed on Ubuntu inside a test written two commits earlier: `f"./{target}"`
+   prefixes an absolute POSIX path with `./` and yields a relative path to a nonexistent directory,
+   so the assertion was vacuous on Windows and wrong on Linux. Five static rounds could not have
+   found it — a reviewer reads the intent, not the filesystem semantics.
+
+## Deliberately not done
+
+- `design_digest` is not a resolved `contract_digest`; GRAPH-004 owns committed contracts, digest
+  resolution, and execution.
+- No threshold on any advisory section, including the 54 co-membership-only relationship gaps.
+- Tool nodes stay out of the Mermaid view — 29 tool nodes in a 31-member diagram costs the
+  readability the diagram exists for; the docstring claims "member topology" rather than
+  completeness it does not have.
+- `_find_cycle` is iterative and handles a 1200-node chain, but no explicit node-count bound is
+  declared in schema v1.
+- The symlink-containment test skips where symlink creation is not permitted; the containment logic
+  is covered by a relative-path escape test that does run.
