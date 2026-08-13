@@ -277,6 +277,13 @@ table `:19-24`.)
     transcript-aware observability audience, and upgrade-campaign's unbatched major
     session+approval. Per-finding evidence in
     [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md).
+15. *(Added 2026-08-13, the Group 2 rescan.)* Group 2's coordination mechanisms:
+    onboarding-map's four-state authority lifecycle, host-onboard's per-apply approval-evidence
+    slot and its deliberately redundant authority preamble (unguarded by any contract, so a trim
+    is unmeasurable), runbook's Owner / Escalation-stop / approvals slots (the disposition gate's
+    own inputs, with five named consumers), and postmortem's action-artifact-proof rule, both
+    retro lists, and its draft|final settledness marker. Per-finding evidence in
+    [`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md).
 
 ## Corrections — scan claims the round's evidence overturned
 
@@ -328,8 +335,13 @@ A later session must not re-apply these as findings:
    transcripts), and majors-get-their-own-session (unbatched tier approval plus a fresh context).
    A later proportionality round applies the two-question test — who is the real reader, what
    consumes the artifact — before tiering, and reads the rescan record rather than re-deriving
-   it. The other groups' LOW dispositions stand unrescanned; re-judging them takes the same
-   per-finding read, not this correction alone.
+   it. Group 2 was re-scanned the same day under the same method
+   ([`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md)) — six further flips, zero edits
+   owed, and the `runbook` "enterprise-shaped" verdict inverted: its slots are the fleet's
+   most-consumed artifact contract. **Groups 3 and 4 stand unrescanned**; the Group 2 record ends
+   with their standing findings enumerated, mis-tier suspects flagged, and the constraints a
+   rescanner must check first. Re-judging them takes the same per-finding read, not this
+   correction alone.
 
 ## Round disposition as of this record
 
@@ -447,14 +459,20 @@ parked, below.
   recorded here as observed, and a LOW is available as free evidence if a future round edits one of
   these files for a substantive reason anyway.
 
-### 2026-08-13 addendum — Group 1 re-dispositioned by rescan
+### 2026-08-13 addendum — Groups 1 and 2 re-dispositioned by rescan
 
-The batch drop above still governs Groups 2–4's LOWs. Group 1's ten, however, were re-scanned the
-same day under the engineering-program reading rule and now carry **individual** dispositions that
-supersede their membership in the batch: six kept as coordination mechanisms (KEEP 14), three
-drops confirmed, one partial, four sharpening edits landed (one with paired behavioral evidence),
-one gap deferred trigger-bound. [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md) owns
-the per-finding record; Correction 9 owns the lens error that made the rescan necessary.
+The batch drop above now governs only **Groups 3 and 4's** LOWs. Groups 1 and 2 were re-scanned
+the same day under the engineering-program reading rule and carry **individual** dispositions that
+supersede their membership in the batch. Group 1: six kept as coordination mechanisms (KEEP 14),
+three drops confirmed, one partial, four sharpening edits landed (one with paired behavioral
+evidence), one gap deferred trigger-bound —
+[`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md). Group 2: six further flips
+(KEEP 15), zero edits owed — every remaining finding was fully wired mechanism, riding a recorded
+measurement, or a surviving drop — plus two gaps recorded, the larger being that host-onboard and
+service-onboard's authority preambles are graded by no behavioral contract —
+[`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md), whose closing section enumerates
+Groups 3–4's standing findings and the constraints their rescanner must check first. Correction 9
+owns the lens error that made both rescans necessary.
 
 ### What closing this item does not claim
 
