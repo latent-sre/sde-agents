@@ -19,11 +19,11 @@ workspace under an operator-owned identity, issuing time-limited leases and acce
 only with a schema-valid evidence envelope bound to the same run, task, attempt, and target
 revision — a worker cannot claim a completion it did not earn. Lease tokens travel on stdin and
 never enter prompts, argv, progress files, or evidence. If that trusted state boundary is
-unavailable for such a run, degrade to one attended worker at a time and say explicitly that
-cancellation, supersession, lease expiry, and completion are not durably enforced. An ordinary
-attended build — including a small parallel batch — runs on progress files and checkpoint packets;
-that is the pipeline's normal mode, not a degraded one. Progress shards and conversation memory
-are cooperative worker output, never authoritative control-plane state.
+unavailable for such a run, degrade to one attended worker at a time and state plainly that
+cancellation, supersession, lease expiry, and completion are **not durably enforced** — never
+claim durable control-plane state from progress shards or conversation memory, which are
+cooperative worker output. An ordinary attended build — including a small parallel batch — runs on
+progress files and checkpoint packets; that is the pipeline's normal mode, not a degraded one.
 
 **Multi-component builds** (e.g. a web UI plus the backend API behind it): the contract, parallel-batch, and review-routing rules live in [`references/multi-component.md`](references/multi-component.md). Read it at Phase 1, the moment the design has more than one component — before spawning any builder. Single-component runs never need it.
 
