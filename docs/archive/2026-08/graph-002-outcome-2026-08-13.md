@@ -49,7 +49,7 @@ only, self-loops included, with surface and slash form as metadata. No other swe
 | 2 — changed vs the dated measure | Edges 140 → 155 (**18 added, 3 removed**); tool grants 85 → 85 with no per-agent change; preloads 4 → 7. The relationship-level list is below — the frozen question asks *which* relationships changed, and an aggregate does not answer it |
 | 3 — host request / withhold | Claude guards 3 roles; Copilot withholds `execute` from those same 3 by guard; Codex requests `workspace-write` for 7 of 11; `lab-audit` and `security-audit` declare skill-level denies that portable hosts strip |
 | 4 — where authority is unknown | Every Codex role `unknown_or_inherited`; `prompt-engineer` the sole dynamic-delegation principal switch |
-| 5 — behavioral evidence | 30 members carry positive case assertions, 31 carry negative ones; 54 reference relationships rest on co-membership only |
+| 5 — behavioral evidence | **Partly answered, and the limit matters.** 30 members carry positive case assertions and 31 carry negative ones — but assertions are *per member*, not per relationship, so they do not establish which **relationships** have behavioral evidence. What the overlay does establish is the co-membership half: 54 reference relationships have endpoints that share **no** routing cluster at all |
 
 **Question 2 in full — which relationships changed.** Reproduced under the stable identity against
 the decision's own snapshot `c02d8e12`, not against a second post-implementation head:
@@ -116,8 +116,13 @@ before/after timing is claimed and none is owed.
   and the verdict's wording is itself the answer — it establishes a document property and declines
   to claim an execution one.
 - **Limitations recorded:** the "Deliberately not done" section below is the accepted limitation
-  set. Two are worth carrying forward as live reading caveats rather than defects: 54 relationship
-  gaps rest on **cluster co-membership only** and are not behavioral coverage, and every Codex
+  set. Two are worth carrying forward as live reading caveats rather than defects. First, the 54
+  `routing_cluster_relationship_gaps` are relationships whose endpoints appear in **no shared
+  routing cluster** — `_report` selects an edge precisely when its endpoints are absent from every
+  cluster pairing. An earlier draft of this record described them as resting "on co-membership
+  only", which is the inverse of what the section computes; they have *less* evidence than a
+  co-listed pair, not more. Relationship-level behavioral evidence is not derived at all, because
+  routing cases assert that a member fires, not that a pair is exercised. Second, every Codex
   authority projection is `unknown_or_inherited` — for Codex the report states what the profile
   *requests*, not what the host granted. Two host controls **are** evidenced and must not be read
   as unknown alongside it: Claude's guard coverage, and Copilot/VS Code's omission of `execute` from
@@ -129,8 +134,11 @@ before/after timing is claimed and none is owed.
   same way. The **suite and the plugin contract** are guaranteed structurally rather than by citing
   a run, because a cited SHA goes stale the moment a review correction adds bytes — which happened
   here twice. `validate (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift` are
-  **required status checks on `main`**, so the bytes that merge are necessarily bytes those passed
-  on. The **doctor check is local-only and CI can never substitute for it**, because the drift it
+  **required status checks on `main`**, so no head reaches `main` without them green *on that
+  head*. That is narrower than it first reads: protection is **not `strict`**, so the checks run on
+  this branch's head and not on a merge preview. If `main` advances after they pass, the merge
+  combines a tested branch with an untested base, and no run has seen the resulting tree. The claim
+  is therefore about the branch bytes, not the merged bytes. The **doctor check is local-only and CI can never substitute for it**, because the drift it
   finds lives in the host installation rather than in the checkout every other tier reads: run
   during acceptance, `scripts/fleet_doctor.py` reported **pass=14, warn=0, fail=0, exit 0** —
   repository worktree, generated adapters, platform contracts, and canonical line endings clean, all
@@ -138,10 +146,8 @@ before/after timing is claimed and none is owed.
   and Codex's **standalone agents** matching the generated roles. The two plugin checks test
   presence in `plugin list`, not plugin-content parity; the only generated-role comparison in that
   count is the standalone Codex one.
-  Three limits stated rather than implied: protection is not `strict`, so checks run on this
-  branch's head and not on a merge preview against a newer `main`; CI is Linux while the artifact
-  figures above came from a Windows run; and the doctor result binds the host it ran on, not the
-  merged bytes. The Linux/Windows split is not cosmetic on this round — the only defect CI ever
+  Two further limits: CI is Linux while the artifact figures above came from a Windows run, and the
+  doctor result binds the host and the clean worktree it ran on, not the merged bytes. The Linux/Windows split is not cosmetic on this round — the only defect CI ever
   caught here was a test that passed vacuously on Windows and failed on POSIX.
 
 ## Review history, and what it cost
