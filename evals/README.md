@@ -261,12 +261,26 @@ prints the
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 
-By default, a behavioral artifact does not retain raw model text. For diagnosis only,
-`--retain-run-evidence` adds an ordered `run_evidence_per_run` list containing each final response
-and that run's assertion failures; it requires `--output-dir`, and the conditions block records
-that retention was enabled. Treat the resulting `benchmark.json` as potentially sensitive model
-output: inspect it before committing or sharing it. The flag is evidence for separating a grader
-defect from a prompt defect, not a different scoring path.
+**Retained text.** `benchmark.json` itself never holds raw model text by default. But a run under
+`--output-dir` whose assertions failed writes its final response to `failing-run-evidence.json`
+beside the benchmark — the failing run's text, its `run_index`, its assertion failures, and a copy
+of the conditions so the file can state what it measured on its own. Passing runs are never in it,
+and a batch with no failures does not create it. This is not optional, because the thing it
+prevents is: the runner reads a failing session's text, grades it, drops it, and the
+grammar-versus-text call then costs a second paid session — 22 of the 76 sessions in the
+2026-08-10 calibration round were that re-buy, and a grader repaired without the sentence it
+misread is a grader tuned into agreeing with itself.
+
+For the wider case, `--retain-run-evidence` adds an ordered `run_evidence_per_run` list to
+`benchmark.json` containing **every** run's final response and failures, passing runs included; it
+requires `--output-dir`, and it supersedes the separate file rather than duplicating it. Both are
+evidence for separating a grader defect from a prompt defect, not a different scoring path.
+
+The conditions block always names which form is present (`failing_run_evidence`), so a run with no
+evidence file is readable as "every run passed" rather than "the text was dropped". Treat any
+retained text as potentially sensitive model output: inspect it before committing or sharing it.
+`failing-run-evidence.json` is deliberately a separate file so it can be deleted or ignored without
+touching the comparison-grade artifact `eval_baseline.py` reads.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or

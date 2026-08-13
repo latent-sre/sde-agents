@@ -49,6 +49,12 @@ REPO = Path(__file__).resolve().parents[1]
 CASES_DIR = REPO / "evals" / "behavioral"
 CLAUDE = shutil.which("claude")
 
+# Written beside benchmark.json, never inside it. benchmark.json is the comparison-grade artifact
+# eval_baseline.py reads across every stored baseline; growing it by default with diagnostic model
+# text would put prose nobody compares inside the file whose whole job is comparison. Separate also
+# means an operator can delete or ignore this file without touching the measurement.
+FAILING_EVIDENCE_FILENAME = "failing-run-evidence.json"
+
 # NOT under tempfile.gettempdir(), deliberately. The CLI's sandbox write-blocks the %TEMP% tree,
 # and a behavioral session launched with its cwd there cannot Write even under acceptEdits —
 # observed directly on CLI 2.1.220 (2026-07-29): packet-slots-builder's builder had both Write
@@ -1401,6 +1407,7 @@ def main(argv: list[str] | None = None) -> int:
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
     run_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
+    failing_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
     semantic_evidence: dict[str, list[dict | None]] = {
         case["id"]: [] for case in cases
     }
@@ -1408,7 +1415,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def execute(
         job: tuple[dict, int],
-    ) -> tuple[int, str, list[str], str | None, dict, str | None]:
+    ) -> tuple[int, str, list[str], str | None, dict, str]:
         case, run_index = job
         if args.runtime == "claude":
             text, fired, note, stats = run_session(
@@ -1439,8 +1446,12 @@ def main(argv: list[str] | None = None) -> int:
             failures = assert_case(
                 text, case, fired, stats.get("semantic_findings")
             )
-        retained_response = text if args.retain_run_evidence else None
-        return run_index, case["id"], failures, note, stats, retained_response
+        # The response is carried in memory unconditionally; what reaches disk is decided at write
+        # time. Dropping it here is what made a failing run's text re-buyable only by paying for
+        # the session again (22 of 76 sessions in the 2026-08-10 calibration round were exactly
+        # that re-buy), and a grader repaired without the sentence it misread is a grader tuned
+        # into agreeing with itself.
+        return run_index, case["id"], failures, note, stats, text
 
     done = 0
     auth_mode = None
@@ -1597,6 +1608,16 @@ def main(argv: list[str] | None = None) -> int:
                         "response": response,
                         "failures": failures,
                     })
+                # A failing run is the only run whose text has a diagnostic consumer, so it is the
+                # only one retained by default. Passing runs stay opt-in under
+                # --retain-run-evidence: retaining them costs the same sensitive-output exposure
+                # for text nobody is going to read.
+                if failures:
+                    failing_evidence[case["id"]].append({
+                        "run_index": run_index,
+                        "failures": failures,
+                        "response": response,
+                    })
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")
@@ -1635,6 +1656,16 @@ def main(argv: list[str] | None = None) -> int:
     print("-" * 100)
     print(f"{passed_cases}/{len(cases)} cases passed every run")
 
+    failing_payload = [
+        {
+            "id": case["id"],
+            "suite": case["suite"],
+            "failing_runs": failing_evidence[case["id"]],
+        }
+        for case in cases
+        if failing_evidence[case["id"]]
+    ]
+
     if args.output_dir:
         # The same contract the routing artifacts carry: a benchmark without its conditions cannot
         # state what it measured, so two of them cannot be validly compared (EVAL-002).
@@ -1648,6 +1679,17 @@ def main(argv: list[str] | None = None) -> int:
             "concurrency": args.concurrency,
             "auth_provider": auth_mode,
             "run_evidence_retained": bool(args.retain_run_evidence),
+            # An artifact must be able to say what text it holds. Three states, never a bare bool:
+            # a reader of a run with no failures must be able to tell "nothing failed" from "the
+            # text was dropped", which is the ambiguity that made the re-buy look necessary.
+            "failing_run_evidence": (
+                f"benchmark.json ({len(failing_payload)} case(s); --retain-run-evidence "
+                "retains every run)"
+                if args.retain_run_evidence
+                else f"{FAILING_EVIDENCE_FILENAME} ({len(failing_payload)} case(s))"
+                if failing_payload
+                else "none (every run passed)"
+            ),
             # Same rule as the routing runner: isolation is a measurement condition, and two
             # artifacts differing on it are not comparable.
             "clean_room": bool(args.clean_room),
@@ -1730,6 +1772,25 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
+        # Written inside the same provenance-guarded block, so the evidence and the benchmark it
+        # explains are always the same batch or neither exists. An evidence file surviving a batch
+        # whose benchmark was withheld could not state what it measured, which is the defect the
+        # conditions rule exists to prevent -- and it would read as a measurement.
+        if failing_payload and not args.retain_run_evidence:
+            evidence_path = args.output_dir / FAILING_EVIDENCE_FILENAME
+            evidence_path.write_text(
+                json.dumps({
+                    "kind": "behavioral-failing-run-evidence",
+                    "benchmark": "benchmark.json",
+                    "conditions": conditions,
+                    "cases": failing_payload,
+                }, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(
+                f"wrote {evidence_path} (raw model text from failing runs; inspect before "
+                "committing or sharing)"
+            )
 
     return 0 if passed_cases == len(cases) else 1
 

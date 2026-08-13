@@ -106,10 +106,13 @@ runs and deferred repairs do not satisfy this clause.
 pattern-setter question for the original seven: **the closed contracts are right and the skill
 text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
 by a Skill-only session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three
-contracts settled 3/3. Two follow-ups now own the residue on that half: (1) implement
-failing-run transcript retention in `scripts/eval_behavioral.py` (`lc_2e549c0b` — 22 of 76
-sessions were re-buys of text the runner had already read and dropped), which gates settling
-the four contracts parked at 1–2/3; (2) a canonical `self-improve-loop` SKILL.md edit adding
+contracts settled 3/3. Two follow-ups now own the residue on that half: (1) **landed
+2026-08-13** — failing-run transcript retention in `scripts/eval_behavioral.py` (`lc_2e549c0b`,
+promoted; 22 of 76 sessions were re-buys of text the runner had already read and dropped). A
+failing run under `--output-dir` now writes its final text to `failing-run-evidence.json` beside
+the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
+artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
+(2) a canonical `self-improve-loop` SKILL.md edit adding
 the grammar literal to the body, owing paired before/after reruns of the seven affected
 contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
 repairs) — their first-contact single runs remain diagnostic only.

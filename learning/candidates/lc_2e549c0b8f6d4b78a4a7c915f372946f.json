@@ -19,8 +19,8 @@
   },
   "observation": "The behavioral runner discards the transcript it graded, so every grammar-vs-text calibration call on a failing case requires re-buying the session before the decision can be made offline; four contracts ended the round unsettled at 1-2/3 for exactly this reason -- repairing a grader without the observed sentence is how it gets tuned into agreeing with itself.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Intake from the prompt-engineer calibration handoff; the 22-of-76 re-buy measurement is the demonstrated consumer. Implementation is a follow-up code round with its firing tests.",
+  "promotion_state": "promoted",
+  "reason": "Landed: failing runs under --output-dir write their final text to failing-run-evidence.json beside the benchmark, carrying run_index, assertion failures, and a conditions copy so the file states what it measured. Passing runs stay opt-in under --retain-run-evidence, which supersedes the separate file rather than duplicating its bytes; the conditions block names which form is present so an absent file reads as every-run-passed. Four firing tests, each proven non-vacuous by mutation.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Intake from the prompt-engineer calibration handoff; the 22-of-76 re-buy measurement is the demonstrated consumer. Implementation is a follow-up code round with its firing tests.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-13T15:16:25.810808Z",
+      "destination": "scripts/eval_behavioral.py (failing-run transcript retention)",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Operator selected this candidate's implementation from the LEARN-002 backlog on 2026-08-13; the 22-of-76 re-buy measurement is the demonstrated consumer and the destination is unchanged since intake.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-13T15:16:33.223983Z",
+      "destination": "scripts/eval_behavioral.py (failing-run transcript retention)",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed: failing runs under --output-dir write their final text to failing-run-evidence.json beside the benchmark, carrying run_index, assertion failures, and a conditions copy so the file states what it measured. Passing runs stay opt-in under --retain-run-evidence, which supersedes the separate file rather than duplicating its bytes; the conditions block names which form is present so an absent file reads as every-run-passed. Four firing tests, each proven non-vacuous by mutation.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-10T08:38:22.827243Z"
+  "updated_at": "2026-08-13T15:16:33.223983Z"
 }
