@@ -67,11 +67,14 @@ before/after timing is claimed and none is owed.
   unchanged** across both heads — 155 edges, 85 grants, 7 preloads, the same unreferenced and
   preload-only members, 54 relationship gaps, 10 clusters — so the accepted findings do not depend
   on a single transient head. The two documents are **not** byte-identical (140,991 vs 140,995
-  bytes): PR #128 edited `agents/homelab-platform.md`, moving one occurrence from line 163 to 198,
-  and `reference_edges` carries per-occurrence line numbers. That is worth knowing before using
-  this artifact for baseline-versus-candidate diffing — occurrence records shift with any edit to a
-  referring file, while the edge identity does not, which is exactly why the two are separate
-  series.
+  bytes). PR #128 edited `agents/homelab-platform.md`, and because `reference_edges` carries
+  per-occurrence line numbers, **16 edge records changed** across six distinct shifts (89→124,
+  90→125, 97→132, 157→192, 163→198, 165→200), all within that one file. The **edge identity set is
+  unchanged** — same pairs, same count. That contrast is the thing to carry into any
+  baseline-versus-candidate diff: a single edit to one referring file rewrites occurrence records
+  in bulk while the topology it describes stays put, so diffing whole artifacts reports churn that
+  diffing the identity does not. It is why the two are separate series, and why a reviewer comparing
+  snapshots should compare the identity first and treat occurrence movement as location metadata.
 - **Workflow design supplied to the CLI:** yes — one non-authoritative six-node design
   (`review-then-apply`: deterministic entry, agent, repo-script verifier, human gate, effect,
   terminal). Result `design-consistent (NOT runtime-enforced)`, `design_digest`
