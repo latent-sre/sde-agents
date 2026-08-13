@@ -34,35 +34,6 @@ single tracker instead of leaking into memory or issue lists.
 
 ### Ready
 
-#### PROP-002 — right-size skill-level enterprise ceremony
-
-**Status:** `ready` — the five HIGH clusters from the 2026-08-13 four-scanner proportionality
-sweep are fixed and under review in PR #132; the MEDIUM backlog and the close-out are the open
-remainder. Deliberately not a spec/plan round: the HIGH fixes shipped as reviewed, evidence-bound
-commits, and a retroactive spec for landed work would be the ceremony this item exists to remove.
-The backlog runs the same way, or opens a proper round if it grows one.
-**Outcome:** skill prose proportionate to a single-operator lab — mandates conditioned on the
-scale that pays for them, sibling contracts delegated to their owner, live mechanisms
-(learning ledger, run-state control plane, release-retest lifecycle) untouched.
-**Source:** the four-scanner sweep — full findings, KEEP lists, and the overturned-claims record
-in `docs/archive/2026-08/prop-002-scan-findings-2026-08-13.md`; deep-review verdict
-`merge-with-nits`, zero confirmed criticals, on `70747b8`.
-**Prerequisites:** none.
-**Acceptance:** H1–H5 plus review fixes merged with T1 green; paired behavioral evidence for
-every contract that grades edited text (stored-baseline match, or fresh before/after under
-pinned conditions); every finding the scan archive still marks `open` — MEDIUM **and** LOW —
-triaged as worked, deferred trigger-bound, or dropped with reason, since that archive is
-evidence and this item is the only place its remainder can be owned. A LOW cluster may be
-dispositioned as one batch under a shared reason; what it may not be is left unmentioned, which
-would retire the item while reading as completed work. The backlog's largest items: relocating `runbook`'s propose grammar to a
-references/ file loaded on the propose path (its consumers `packet_lint.py` and the behavioral
-contracts are live — relocate, never delete), the phantom-second-human owner/escalation slots
-in `runbook`, `onboarding-map`'s repeated authority restatement, `eng-ladder` Mode 3 and the
-consult protocol, and `ci-actions`' unconditioned SBOM/workflow-lint mandates.
-**Next action:** disposition the remaining PR #132 review comments on the current head and wait
-for a pass on those bytes, then triage the MEDIUM and LOW backlog above; write the outcome record
-at close and retire this item to it.
-
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
@@ -116,6 +87,18 @@ artifacts instead of a re-buy; the settling runs themselves are still owed and a
 the grammar literal to the body, owing paired before/after reruns of the seven affected
 contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
 repairs) — their first-contact single runs remain diagnostic only.
+
+**Rides this item (PROP-002 deferrals, 2026-08-13).** Three proportionality trims sit in files
+this item is already paying to re-measure, so they ride its runs rather than buying their own:
+`runbook`'s owner/escalation slots (`SKILL.md:100,112`) and `references/example.md`'s two-role
+framing, and `self-improve-loop`'s candidate block (`SKILL.md:209-217` plus
+`references/discovery-routing.md:98-109`) and five retro types (`references/retro-protocol.md:7-90`).
+They are optional to this item's acceptance — closing LEARN-002 does not require making them — but
+they must not be made *without* its measurement. The disposition and reasoning are in
+[`prop-002-scan-findings-2026-08-13.md`](archive/2026-08/prop-002-scan-findings-2026-08-13.md).
+Note the constraint that record's Correction 8 establishes before touching `runbook`: its propose
+grammar cannot move to `references/`, because the contract that grades it runs skill-only and has
+no `Read`.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -266,6 +249,12 @@ amendment, not a roadmap sentence.
 **Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then captures
 the paired routing run; the smoke run follows the 1.7.4 release.
 
+**Rides this item (PROP-002 deferral, 2026-08-13).** `onboarding-map`'s description restates "this
+authorizes nothing" a fourth time; the body's three other copies were reconciled in `eb53758`, but
+the description drives routing and this skill sits in the `homelab-ops` cluster whose paired
+'before' capture this item owes at merge base `4fef0ce`. Trimming it first would invalidate that
+side. Optional to acceptance; not to be made without the capture.
+
 #### LADDER-001 — measure the ownership-vs-consult calibration
 
 **Status:** `ready` — the guidance itself shipped 2026-08-03 (`6fa2be3`, PR #68) and both cluster
@@ -303,6 +292,13 @@ indicts the Mode 1 text, `eng-ladder` firing indicts the scoped-work narrowing i
 description — and the repair goes to the skill, never to the grader.
 
 **Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
+
+**Rides this item (PROP-002 deferral, 2026-08-13).** Two `eng-ladder` proportionality trims —
+Mode 3's growth-feedback machinery (`SKILL.md:33-35`) and the formal consult-and-decision-record
+protocol (`SKILL.md:21`) — wait for this measurement rather than preceding it. Editing the skill
+first would move the bytes out from under the capture this item exists to buy, and `SKILL.md:21` is
+Mode 1 text adjacent to what `ladder-report-not-absorb` grades. Optional to acceptance; not to be
+made without the run.
 
 #### ACK-001 — make a dropped Learning handoff visible
 

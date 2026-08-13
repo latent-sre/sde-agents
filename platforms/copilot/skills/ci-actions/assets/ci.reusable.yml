@@ -14,6 +14,8 @@
 #   REPLACE_WITH_IMAGE_DIGEST  — a `docker://` step, pinned to an IMAGE MANIFEST DIGEST resolved by
 #                                the registry, written in full as `sha256:...`:
 #       docker buildx imagetools inspect rhysd/actionlint:v1.7.4 --format '{{.Manifest.Digest}}'
+#       (without a Docker toolchain: `skopeo inspect --format '{{.Digest}}'
+#        docker://rhysd/actionlint:v1.7.4`)
 #
 # A commit SHA on a `docker://` line is an image reference that does not exist, so the job never
 # starts. Keep the trailing `# v4.2.2` comment either way, so the next reader knows what is pinned.
