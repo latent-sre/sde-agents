@@ -483,7 +483,18 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
         print(render_human(report))
-    return 1 if report["summary"]["fail"] else 0  # type: ignore[index]
+    # A warning used to exit 0, which made the doctor agree with any caller that asked "is this
+    # healthy?" while printing that it was not. Field-proven cost (issue #126): a stale standalone
+    # Codex `homelab-platform` profile shadowed the shipped one for a whole session -- the doctor
+    # had already detected it and reported WARN, and the operator found the drift the hard way,
+    # through `install_codex_agents.py --check`, because nothing an exit status reaches ever said
+    # so. Warnings are distinct from failures rather than promoted into them: 1 still means a check
+    # FAILED, 3 means the fleet is intact but this host has drifted from it, and only 0 means
+    # nothing needs attention.
+    summary = report["summary"]  # type: ignore[assignment]
+    if summary["fail"]:
+        return 1
+    return 3 if summary["warn"] else 0
 
 
 if __name__ == "__main__":

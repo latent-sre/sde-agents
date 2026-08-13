@@ -37,6 +37,7 @@ and the model-alias list are checked against the source and fail on drift.
 | `scripts/eval_codex_runtime.py` | Narrow Codex behavioral transport; it captures each selected generated agent once, requires a dedicated instruction-clean Codex home, rejects observable tool events, and reuses opaque ChatGPT login state without reading credentials. |
 | `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
 | `scripts/ledger_drift.py` | Advisory CI watch for pending learning candidates whose named destinations changed later, plus intake with no watchable destination. |
+| `scripts/fleet_doctor.py` | Read-only health report over the repository **and this host's installation** — generated-adapter drift, manifest alignment, canonical line endings, which host CLIs are present, and whether the standalone Codex agents still match the generated roles. It is the only check that sees the gap between what this repository ships and what your session actually loads; a stale installed profile is invisible to every other tier because they all read the checkout. Exit 0 clean, 3 warnings, 1 a failed check, 2 unreadable. It never generates, installs, prunes, or runs a model session — the fix it reports is yours to run. |
 | `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
 | `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. GitHub issues are evidence-bound intake, not a second tracker — an issue adds work only when the roadmap imports it, per `docs/README.md` rule 7. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file; a spec headed drafted merely awaits operator approval and starts nothing. |
 | `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
@@ -56,7 +57,14 @@ instead of recomputing it.
   the same thing at the sum of the module times instead of roughly the longest one), plus
   `claude plugin validate . --strict` for the platform contract. CI runs the validator, the
   tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
-  Linux.
+  Linux. Also run `python3 scripts/fleet_doctor.py` — it is **local-only and CI can never
+  substitute for it**, because the drift it finds lives in your host installation rather than in
+  the checkout every other tier reads. Exit 3 means this host has drifted from what the
+  repository ships; the usual repair is
+  `python3 scripts/install_codex_agents.py --user`. Treat a warning as owed work before you
+  measure anything: a session running against a stale installed profile is not testing the fleet
+  you edited, which is how a superseded, materially stricter `homelab-platform` profile drove a
+  whole Codex-host session and cost roughly ten hours (issue #126).
 - **T2 — merge and weekly** (CI-owned): pushes to main, the Monday sweep, and manual dispatch
   run the full Linux/macOS/Windows matrix, so platform-specific guard and hook paths are
   exercised without billing every PR for them (see the matrix comment in
