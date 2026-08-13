@@ -36,9 +36,11 @@ single tracker instead of leaking into memory or issue lists.
 
 #### PROP-002 — right-size skill-level enterprise ceremony
 
-**Status:** `active` — the five HIGH clusters from the 2026-08-13 four-scanner proportionality
-sweep are fixed on `chore/prop-002-self-improve` (H1–H5, one commit each, plus the deep-review
-fix commit); the PR and the MEDIUM backlog are the open remainder.
+**Status:** `ready` — the five HIGH clusters from the 2026-08-13 four-scanner proportionality
+sweep are fixed and under review in PR #132; the MEDIUM backlog and the close-out are the open
+remainder. Deliberately not a spec/plan round: the HIGH fixes shipped as reviewed, evidence-bound
+commits, and a retroactive spec for landed work would be the ceremony this item exists to remove.
+The backlog runs the same way, or opens a proper round if it grows one.
 **Outcome:** skill prose proportionate to a single-operator lab — mandates conditioned on the
 scale that pays for them, sibling contracts delegated to their owner, live mechanisms
 (learning ledger, run-state control plane, release-retest lifecycle) untouched.
