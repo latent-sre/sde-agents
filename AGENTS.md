@@ -269,16 +269,23 @@ disposition.
   situational — a description edit owes a before/after routing run, a guard or hook edit owes the
   probe, a validator rule owes a test proven to fail without it, and a canonical fleet edit owes
   regenerated host adapters. Fill the rows you tripped.
-- **The automated review arrives after you open, not with it.** Copilot and Codex post two to five
-  minutes behind `gh pr create`, so a PR reported finished at open is reported before its review
-  exists. Wait for both passes **on the current head**, then disposition every comment — applied,
+- **The automated review is request-triggered, and opening a PR does not request it.** Every bot
+  pass in this repository's history is preceded by a `review_requested` event, and the passes land
+  roughly **ten minutes after that request** rather than after `gh pr create` — PR #124 was
+  requested at 07:07:07 and reviewed at 07:17:28 and 07:17:44. Request Copilot explicitly; the
+  Codex connector has followed that request without needing one of its own. Requesting is a step
+  you take, not a wait you serve. Then wait for both passes **on the current head**, and
+  disposition every comment — applied,
   or declined with the reason. Applying one writes new bytes, and the passes that cleared the
   previous head never saw them: the last review-driven edit owes another wait, or the gate is
-  satisfiable by a review of code the fix already replaced. Three rounds paid for this line — a PR
+  satisfiable by a review of code the fix already replaced. Four rounds paid for this line — a PR
   merged four minutes after opening carried a P1 that landed two minutes *after* the merge and cost
   a revert; a later PR's unread comments correctly refuted a claim that would otherwise have
-  promoted an unsupported rule into this file; and the head-binding clause exists because the first
-  draft of this very rule shipped with that loophole in it.
+  promoted an unsupported rule into this file; the head-binding clause exists because the first
+  draft of this very rule shipped with that loophole in it; and the sentence you are reading
+  replaced one asserting the reviews arrive "two to five minutes behind `gh pr create`", which read
+  as a wait rather than an action and let PR #128 merge unreviewed while a session sat waiting for a
+  pass nobody had asked for.
 
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.
