@@ -97,13 +97,17 @@ before/after timing is claimed and none is owed.
   adapters rather than by reparsing them.
 - **Rejected designs:** none. No design was refused during acceptance; the validator's refusal
   paths are covered by tests rather than by a rejected operator submission.
-- **T1 on the exact accepted bytes:** the plan's final sequence step requires `run_tests.py` and
-  `claude plugin validate . --strict` on the candidate, and the acceptance edit is itself the last
-  bytes. GitHub Actions run `31668922932` on `ec27c44` is that evidence: `validate
-  (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift` all pass. It is stronger
-  than the local run it replaces — Linux rather than the Windows development host, which matters on
-  this round specifically, since the only defect CI ever caught here was a test that passed
-  vacuously on Windows and failed on POSIX.
+- **T1 on the exact accepted bytes:** guaranteed structurally rather than by citing a run, because
+  a cited SHA goes stale the moment a review correction adds bytes — which is what happened here
+  once already. `validate (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift`
+  are **required status checks on `main`**, so the bytes that merge are necessarily bytes on which
+  the suite and the plugin contract passed; no head reaches `main` without them green on that head.
+  Observed while this record was written: run `31668922932` green on `ec27c44` and run `31669715039`
+  green on `0b7bd03`. Two limits worth stating: protection is not `strict`, so the checks run on
+  this branch's head rather than on a merge preview against a newer `main`; and CI is Linux, while
+  the artifact figures above came from a Windows run. That distinction is not cosmetic on this
+  round — the only defect CI ever caught here was a test that passed vacuously on Windows and
+  failed on POSIX.
 
 ## Review history, and what it cost
 
