@@ -12,6 +12,40 @@ on conflict — fix the paraphrase here, never the source. The validator holds t
 rule: the `@AGENTS.md` bridge in `CLAUDE.md`, every concrete multi-segment repo path named here,
 and the model-alias list are checked against the source and fail on drift.
 
+## The engineering program
+
+This is not a prompt library. It is one engineering program with four strands, and most of the
+disciplines below that look odd in isolation are mechanisms of one of them:
+
+- **Handoff engineering.** Sessions are stateless and forget everything at exit, so a fleet
+  artifact — a review packet, a ledger row, a work order, a runbook slot, an audit findings
+  table — is the only bridge between the session that wrote it and the session that acts on it.
+  HANDOFF-001's digest-bound work orders are the explicit form; the packet contracts everywhere
+  else are the ambient form.
+- **Loop engineering.** Audits, incidents, upgrade campaigns, and eval rounds are loops that must
+  converge across sessions. Written exceptions, recurrence-merged ledger rows, and literal status
+  transitions (`open` → `accepted`, outage → follow-up) are the convergence mechanisms: without
+  them a memoryless successor re-flags the same finding forever, or holds emergency authority
+  past the emergency.
+- **Graph engineering.** Authority is typed edges: which member may write what, who hands to
+  whom, where approval sits. A read-only emitter paired with a write-authority consumer — the
+  audit skills' ledger rows, the guard roster — is a deliberate split, not indirection. Owned by
+  `docs/decisions/2026-07-31-ai-graph-engineering.md`.
+- **Self-learning.** The fleet improves itself through `scripts/learning_ledger.py` and the
+  `self-improve-loop` skill: evidence-bound, quarantined intake with staged promotion, because a
+  session replays stored lessons uncritically — an unverified lesson propagates its error into
+  every future session that retrieves it.
+
+The reading rule that follows, binding on reviews of fleet prose: **the reader is the next
+session, not the operator's memory.** A fleet of stateless workers re-creates the conditions
+organizations invented ceremony for — no shared memory, artifact-only communication, claims that
+cannot be trusted unverified — so owner slots, status lifecycles, contemporaneous capture, and
+written justifications are often coordination mechanisms wearing organizational vocabulary.
+Before trimming one as disproportionate, identify its real reader and confirm nothing consumes it
+(PROP-002's scanner judged against an audience of one human and mis-tiered exactly this class).
+The counterweight binds equally: coordination is not free — prefer fewer handoffs over richer
+ones, keep one writer per artifact, and put structure only at the boundaries that remain.
+
 ## Map
 
 | Path | What it is |
