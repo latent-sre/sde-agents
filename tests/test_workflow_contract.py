@@ -633,6 +633,44 @@ class SchemaStrictnessTests(unittest.TestCase):
             [d for d in _check(document) if "classification" in d], []
         )
 
+    def test_a_zone_missing_allows_is_rejected(self):
+        """Defaulting a missing key to [] turned a typo or deletion into policy."""
+        document = _mutate()
+        del document["zones"][0]["allows"]
+        self.assertTrue(any("missing required key 'allows'" in d for d in _check(document)))
+
+    def test_the_cycle_witness_is_the_shortest_cycle_not_the_first_found(self):
+        """A self-loop later in traversal order must win over a longer cycle found first."""
+        document = _mutate()
+        for node_id in ("b", "c", "d", "x"):
+            document["nodes"].append(
+                {"id": node_id, "kind": "deterministic", "zone": "review"}
+            )
+        # Long cycle b -> c -> d -> b reached first by sorted DFS, plus a self-loop on x.
+        document["edges"] += [
+            {"from": "start", "to": "b", "kind": "control"},
+            {"from": "b", "to": "c", "kind": "control"},
+            {"from": "c", "to": "d", "kind": "control"},
+            {"from": "d", "to": "b", "kind": "control"},
+            {"from": "start", "to": "x", "kind": "control"},
+            {"from": "x", "to": "x", "kind": "control"},
+        ]
+        witness = [d for d in _check(document) if "cycle rejected" in d]
+        self.assertTrue(witness)
+        self.assertIn("'x' -> 'x'", witness[0])
+
+    def test_duplicate_object_keys_are_refused_at_read_time(self):
+        """json.loads keeps the last silently while the digest binds both declarations."""
+        with TemporaryDirectory() as out:
+            path = Path(out) / "dup.json"
+            path.write_text('{"schema_version": 1, "name": "a", "name": "b"}', encoding="utf-8")
+            self.assertEqual(wc.main([str(path), "--root", str(REPO)]), 2)
+
+    def test_duplicate_object_keys_hook_names_the_key(self):
+        with self.assertRaises(ValueError) as caught:
+            wc._no_duplicate_keys([("name", "a"), ("name", "b")])
+        self.assertIn("'name'", str(caught.exception))
+
     def test_duplicate_node_ids_are_rejected(self):
         document = _mutate()
         document["nodes"].append({"id": "verify", "kind": "deterministic", "zone": "review"})

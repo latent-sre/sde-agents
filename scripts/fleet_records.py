@@ -429,6 +429,30 @@ def core_definition_paths(root: Path) -> set[Path]:
     return paths
 
 
+def _cluster_shape_ok(spec) -> bool:
+    """Whether a cluster document is shaped well enough to iterate -- NESTED fields included.
+
+    Checking only the top-level containers left `"expect_fires": 1` to crash `tuple(...)` one level
+    down, so the CLI died on a corrupt tree instead of listing the file as unreadable. Every
+    collection this collector iterates is checked here, because a shape check that stops at depth
+    one just relocates the crash.
+    """
+    if not isinstance(spec, dict):
+        return False
+    if not isinstance(spec.get("members", []), list):
+        return False
+    cases = spec.get("cases", [])
+    if not isinstance(cases, list):
+        return False
+    for case in cases:
+        if not isinstance(case, dict):
+            return False
+        for field in ("expect_fires", "expect_not_fires", "tags"):
+            if not isinstance(case.get(field, []), list):
+                return False
+    return True
+
+
 def collect_routing_clusters(root: Path) -> tuple[tuple[RoutingCluster, ...], tuple[Path, ...]]:
     """Routing clusters as a measurement overlay.
 
@@ -453,11 +477,7 @@ def collect_routing_clusters(root: Path) -> tuple[tuple[RoutingCluster, ...], tu
         # Syntactically valid JSON with an ill-shaped field is the same problem one level in:
         # `"cases": null` or a scalar `members` crashed the iteration below, so the CLI died on a
         # corrupt tree instead of recording it. Shape is checked before anything iterates.
-        if (
-            not isinstance(spec, dict)
-            or not isinstance(spec.get("members", []), list)
-            or not isinstance(spec.get("cases", []), list)
-        ):
+        if not _cluster_shape_ok(spec):
             unreadable.append(path)
             continue
         cases = tuple(

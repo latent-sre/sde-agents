@@ -474,6 +474,53 @@ class MermaidSafetyTests(unittest.TestCase):
             self.assertRegex(identifier, r"^[A-Za-z0-9_]+$")
 
 
+class ToolVocabularyTests(unittest.TestCase):
+    def test_unadopted_identifiers_are_not_promoted_to_capabilities(self):
+        """An inspected tree no validator has run on can declare anything; presenting `Wrte` as a
+        capability asserts something that does not exist and contradicts the Copilot projection."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "reviewer.md").write_text(
+                _agent("reviewer", "Read, Wrte, Bash(git diff:*)", body="Body."),
+                encoding="utf-8",
+            )
+            document = _document(root)
+        self.assertNotIn("Wrte", document["nodes"]["tools"])
+        self.assertIn("Read", document["nodes"]["tools"])
+        self.assertEqual(
+            document["tool_identifiers_unadopted"], ["Bash(git diff:*)", "Wrte"]
+        )
+
+    def test_a_clean_tree_reports_no_unadopted_identifiers(self):
+        with _tree() as name:
+            self.assertEqual(_document(Path(name))["tool_identifiers_unadopted"], [])
+
+
+class OutputPathTests(unittest.TestCase):
+    def test_colliding_emit_and_mermaid_destinations_are_refused(self):
+        """Writing both to one path let the Mermaid render destroy the JSON and still exit 0."""
+        with _tree() as name, TemporaryDirectory() as out:
+            target = Path(out) / "graph.out"
+            self.assertEqual(
+                capability_graph.main(
+                    ["--root", name, "--emit", str(target), "--mermaid", f"./{target}"]
+                ),
+                2,
+            )
+            self.assertFalse(target.exists())
+
+    def test_distinct_destinations_both_write(self):
+        with _tree() as name, TemporaryDirectory() as out:
+            js, mmd = Path(out) / "g.json", Path(out) / "g.mmd"
+            self.assertEqual(
+                capability_graph.main(
+                    ["--root", name, "--emit", str(js), "--mermaid", str(mmd)]
+                ),
+                0,
+            )
+            self.assertTrue(js.exists() and mmd.exists())
+
+
 class MermaidIdentityTests(unittest.TestCase):
     def test_names_that_sanitize_alike_stay_distinct(self):
         """`a;b` and `a?b` both reduce to `a_b`, which merged two JSON nodes into one visual node

@@ -248,6 +248,22 @@ class RoutingOverlayTests(unittest.TestCase):
         self.assertGreater(len(cases), 0)
         self.assertEqual({c.polarity for c in cases}, {"positive", "negative"})
 
+    def test_a_scalar_nested_case_field_is_unreadable_not_a_crash(self):
+        """Checking only top-level containers relocated the crash one level down: `expect_fires: 1`
+        killed `tuple(...)` instead of listing the file as unreadable."""
+        for payload in (
+            '{"cluster":"x","cases":[{"id":"a","expect_fires":1}]}',
+            '{"cluster":"x","cases":[{"id":"a","tags":"nope"}]}',
+            '{"cluster":"x","cases":["not-an-object"]}',
+        ):
+            handle = _tree(None)
+            with handle:
+                root = Path(handle.name)
+                (root / "evals" / "routing").mkdir(parents=True, exist_ok=True)
+                (root / "evals" / "routing" / "bad.json").write_text(payload, encoding="utf-8")
+                records = fleet_records.collect(root, PLUGIN)  # must not raise
+            self.assertEqual([p.name for p in records.unreadable_clusters], ["bad.json"])
+
     def test_a_malformed_cluster_does_not_take_the_collector_down(self):
         handle = _tree(None)
         with handle:

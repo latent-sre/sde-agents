@@ -86,6 +86,13 @@ def _relative(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def _adopted_tool_vocabulary() -> set[str]:
+    """The fleet's adopted tool identifiers, taken from the validator so one allowlist governs."""
+    import validate_fleet  # noqa: PLC0415  (deferred; keeps import cost off the common path)
+
+    return set(validate_fleet.FLEET_TOOLS) | set(validate_fleet.FLEET_MCP_TOOLS)
+
+
 def _sorted_occurrences(references, root: Path) -> list[dict]:
     """Occurrence metadata for one stable edge, ordered so two runs diff cleanly."""
     return [
@@ -138,7 +145,14 @@ def build_document(records) -> dict:
     declared = [a for a in sorted(records.agents, key=lambda m: m.name) if a.declares_tools]
     inherits_all = sorted(a.name for a in records.agents if not a.declares_tools)
     tool_grants = {agent.name: sorted(agent.tools) for agent in declared}
-    adopted_tools = sorted({tool for tools in tool_grants.values() for tool in tools})
+    # `nodes.tools` names CAPABILITIES, so only identifiers this fleet actually adopts belong
+    # there. An inspected tree no validator has run on can declare `Wrte` or `Bash(git diff:*)`,
+    # and promoting those made the artifact assert a capability that does not exist -- and
+    # contradict its own Copilot projection, which drops them.
+    vocabulary = _adopted_tool_vocabulary()
+    declared = {tool for tools in tool_grants.values() for tool in tools}
+    adopted_tools = sorted(declared & vocabulary)
+    unadopted_tools = sorted(declared - vocabulary)
 
     return {
         "extractor_version": EXTRACTOR_VERSION,
@@ -188,6 +202,7 @@ def build_document(records) -> dict:
         ),
         "tool_grants": tool_grants,
         "tool_authority_undeclared": inherits_all,
+        "tool_identifiers_unadopted": unadopted_tools,
         # A definition the parser refused contributes no node but may still contribute reference
         # occurrences, so omitting it entirely lets an operator diffing a baseline read a broken
         # file as a deleted member.
@@ -579,6 +594,17 @@ def main(argv: list[str] | None = None) -> int:
     document = build_document(records)
     payload = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
+    # Both artifacts are promised; writing them to one path let the Mermaid render silently
+    # destroy the JSON and still exit 0. Equivalent spellings resolve to the same file, so the
+    # comparison is on the resolved path, not the string.
+    if args.emit and args.mermaid:
+        if Path(args.emit).resolve() == Path(args.mermaid).resolve():
+            print(
+                f"--emit and --mermaid resolve to the same file "
+                f"({Path(args.emit).resolve()}); writing both would destroy one",
+                file=sys.stderr,
+            )
+            return 2
     if args.emit:
         _write(Path(args.emit), payload)
     if args.mermaid:

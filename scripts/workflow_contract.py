@@ -224,33 +224,38 @@ def _find_cycle(adjacency: dict[str, list[str]], nodes: list[str]) -> list[str]:
     raised RecursionError on a valid ~1000-node chain -- reporting a crash for a design that is
     merely large, which is worse than a wrong verdict because it looks like a broken tool.
     """
-    WHITE, GREY, BLACK = 0, 1, 2
-    colour = {node: WHITE for node in nodes}
-
-    for root in sorted(nodes):
-        if colour[root] != WHITE:
-            continue
-        # Each frame is (node, iterator of its sorted successors); `stack` is the live path.
-        stack: list[str] = [root]
-        frames = [(root, iter(sorted(adjacency.get(root, ()))))]
-        colour[root] = GREY
-        while frames:
-            node, successors = frames[-1]
-            advanced = False
-            for nxt in successors:
-                if colour.get(nxt) == GREY:
-                    return stack[stack.index(nxt):] + [nxt]
-                if colour.get(nxt) == WHITE:
-                    colour[nxt] = GREY
-                    stack.append(nxt)
-                    frames.append((nxt, iter(sorted(adjacency.get(nxt, ())))))
-                    advanced = True
+    # The SHORTEST cycle, not the first one DFS happens to close. Returning the first back edge
+    # reported a three-edge cycle while a self-loop sat later in traversal order, and the plan
+    # promises a shortest deterministic witness for every path failure. BFS from each node back to
+    # itself gives the shortest cycle through that node; the global minimum, tie-broken by sorted
+    # start node, is deterministic.
+    best: list[str] = []
+    for start in sorted(nodes):
+        previous: dict[str, str] = {}
+        seen = {start}
+        queue = deque([start])
+        found = None
+        while queue and found is None:
+            node = queue.popleft()
+            for nxt in sorted(adjacency.get(node, ())):
+                if nxt == start:
+                    found = node
                     break
-            if not advanced:
-                colour[node] = BLACK
-                frames.pop()
-                stack.pop()
-    return []
+                if nxt not in seen:
+                    seen.add(nxt)
+                    previous[nxt] = node
+                    queue.append(nxt)
+        if found is None:
+            continue
+        path = [start]
+        hop = found
+        while hop != start:
+            path.append(hop)
+            hop = previous[hop]
+        cycle = [start] + list(reversed(path[1:])) + [start]
+        if not best or len(cycle) < len(best):
+            best = cycle
+    return best
 
 
 def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
@@ -284,6 +289,13 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             raise Defect(f"{label}: must be an object")
         diagnostics += _unknown(zone, ZONE_KEYS, label)
         zone_id = zone.get("id")
+        if "allows" not in zone:
+            # Defaulting a missing key to [] turned a typo or deletion into policy: the zone
+            # silently permitted nothing and the document still validated.
+            diagnostics.append(
+                f"{label}: missing required key 'allows'; a zone with no declared destinations "
+                f"must say so explicitly rather than inherit an empty default"
+            )
         allows = zone.get("allows", [])
         if not isinstance(zone_id, str) or not zone_id:
             raise Defect(f"{label}: id must be a non-empty string")
@@ -705,6 +717,19 @@ def _unverified_interiors(nodes) -> list[str]:
     )
 
 
+def _no_duplicate_keys(pairs):
+    """json object hook that refuses a duplicated key instead of keeping the last value."""
+    seen = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ValueError(
+                f"duplicate object key {key!r}; the document is ambiguous about its own value "
+                f"while the digest binds both declarations"
+            )
+        seen[key] = value
+    return seen
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("design", help="path to one workflow design JSON document")
@@ -714,8 +739,12 @@ def main(argv: list[str] | None = None) -> int:
     path = Path(args.design)
     try:
         raw = path.read_bytes()
-        document = json.loads(raw.decode("utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        # Duplicate keys make the reviewed bytes ambiguous: json.loads keeps the last silently
+        # while the digest binds both declarations, so a reader and the validator can disagree
+        # about what was approved. The fleet's own frontmatter parser refuses last-wins for the
+        # same reason.
+        document = json.loads(raw.decode("utf-8"), object_pairs_hook=_no_duplicate_keys)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
         print(f"{path}: unreadable design document: {error}", file=sys.stderr)
         return 2
 
