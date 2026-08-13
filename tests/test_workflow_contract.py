@@ -482,16 +482,66 @@ class SchemaStrictnessTests(unittest.TestCase):
         document["zones"][0]["allows"] = ["apply", "typo-zone"]
         self.assertTrue(any("is not a declared zone" in d for d in _check(document)))
 
-    def test_non_string_edge_endpoints_are_rejected_before_lookup(self):
-        """A list or object endpoint is unhashable, so `in nodes` raised an uncaught TypeError and
-        the CLI printed a traceback instead of a diagnostic."""
-        for bad in ([], {}, 7, None):
+    def test_every_declared_field_rejects_a_wrong_type_without_crashing(self):
+        """The whole ill-typed-input class in one assertion.
+
+        Patching isinstance guards field by field never terminated: each fix left the next
+        unchecked field as the next review's finding, while an unhashable value reaching a set
+        lookup crashed the CLI. This drives every field in the shape tables with a wrong type and
+        requires a diagnostic rather than a traceback, so an omission shows up as a missing table
+        row instead of as a crash in production.
+        """
+        wrong = {"string": [], "integer": "x", "list": {}, "object": []}
+        checked = 0
+        for scope, shape in (
+            ("document", wc.DOCUMENT_SHAPE),
+            ("zones", wc.ZONE_SHAPE),
+            ("nodes", wc.NODE_SHAPE),
+            ("edges", wc.EDGE_SHAPE),
+        ):
+            for field, expected in shape.items():
+                document = _mutate()
+                if scope == "document":
+                    document[field] = wrong[expected]
+                else:
+                    document[scope][0][field] = wrong[expected]
+                diagnostics = _check(document)  # must not raise
+                if field == "schema_version":
+                    # Refused earlier by the version pin, which is its own correct gate.
+                    self.assertTrue(any("must be exactly 1" in d for d in diagnostics))
+                else:
+                    self.assertTrue(
+                        any(repr(field) in d and expected in d for d in diagnostics),
+                        f"{scope}.{field} ({expected}) gave no shape diagnostic: {diagnostics}",
+                    )
+                checked += 1
+        self.assertEqual(checked, 26)
+
+    def test_wrong_typed_container_items_are_rejected(self):
+        for patch, needle in (
+            (lambda d: d["nodes"].append("not-an-object"), "must be an object"),
+            (lambda d: d["edges"].append(7), "must be an object"),
+            (lambda d: d["zones"].append(None), "must be an object"),
+            (lambda d: d["terminals"].append({}), "must be a string"),
+            (lambda d: d["zones"][0]["allows"].append(3), "must be a string"),
+        ):
             document = _mutate()
-            document["edges"][0] = {"from": bad, "to": "reviewer", "kind": "control"}
-            diagnostics = _check(document)  # must not raise
-            self.assertTrue(
-                any("must be node-id strings" in d for d in diagnostics), repr(bad)
-            )
+            patch(document)
+            self.assertTrue(any(needle in d for d in _check(document)), needle)
+
+    def test_a_boolean_is_not_an_integer_budget(self):
+        document = _mutate()
+        document["nodes"][1]["max_attempts"] = True
+        self.assertTrue(any("must be a integer" in d for d in _check(document)))
+
+    def test_shape_defects_suppress_the_semantic_pass(self):
+        """Continuing into graph checks with a wrong-typed field is how an unhashable value reaches
+        `in nodes`; the gate must return alone."""
+        document = _mutate()
+        document["edges"][0]["from"] = []
+        document["edges"].append({"from": "start", "to": "deploy", "kind": "failure"})
+        diagnostics = _check(document)
+        self.assertTrue(all("bypass" not in d and "witness" not in d for d in diagnostics))
 
     def test_overlapping_condition_routes_are_a_duplicate_transition(self):
         """Serializing the whole values list gave ['a','b'] and ['b','c'] different identities, so

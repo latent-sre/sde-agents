@@ -80,6 +80,75 @@ IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 IDENTIFIER_FIELDS = ("schema", "state_field", "classification", "input_schema", "output_schema")
 
 
+# Every field's expected type, in one table, checked before ANY semantic work runs. Patching
+# isinstance guards field by field does not terminate: each fix leaves the next unchecked field as
+# the next review's finding, and a set lookup or iteration over the wrong type raises an uncaught
+# TypeError, so the CLI prints a traceback instead of the exit-1 diagnostic it promises. A gate that
+# names every field settles the whole class at once and makes an omission visible as a missing table
+# row rather than as a crash.
+STR, INT, LIST, DICT = "string", "integer", "list", "object"
+DOCUMENT_SHAPE = {
+    "schema_version": INT, "name": STR, "entry": STR,
+    "terminals": LIST, "zones": LIST, "nodes": LIST, "edges": LIST,
+}
+ZONE_SHAPE = {"id": STR, "allows": LIST}
+NODE_SHAPE = {
+    "id": STR, "kind": STR, "zone": STR, "binding": DICT, "join": DICT,
+    "input_schema": STR, "output_schema": STR, "max_attempts": INT, "timeout_ms": INT,
+}
+EDGE_SHAPE = {
+    "from": STR, "to": STR, "kind": STR, "schema": STR, "state_field": STR,
+    "values": LIST, "effect": STR, "classification": STR,
+}
+_TYPES = {STR: str, INT: int, LIST: list, DICT: dict}
+
+
+def _typed(value, expected: str) -> bool:
+    if expected == INT:
+        # bool is an int subclass; `true` is not a budget.
+        return isinstance(value, int) and not isinstance(value, bool)
+    return isinstance(value, _TYPES[expected])
+
+
+def _shape_defects(container, shape: dict, label: str) -> list[str]:
+    """Type-check every present field against the table. Absence is the caller's rule, not ours."""
+    return [
+        f"{label}: {key!r} must be a {expected}, not {type(container[key]).__name__}"
+        for key, expected in sorted(shape.items())
+        if key in container and not _typed(container[key], expected)
+    ]
+
+
+def _document_shape_defects(document) -> list[str]:
+    """One pass over the whole document before any lookup, iteration, or set membership."""
+    defects = _shape_defects(document, DOCUMENT_SHAPE, "document")
+    for key in ("terminals", "zones", "nodes", "edges"):
+        if key in document and not isinstance(document[key], list):
+            return defects  # already reported; iterating it below would be the crash we prevent
+    for index, terminal in enumerate(document.get("terminals", [])):
+        if not isinstance(terminal, str):
+            defects.append(
+                f"terminals[{index}]: must be a string, not {type(terminal).__name__}"
+            )
+    for name, shape in (("zones", ZONE_SHAPE), ("nodes", NODE_SHAPE), ("edges", EDGE_SHAPE)):
+        for index, item in enumerate(document.get(name, [])):
+            if not isinstance(item, dict):
+                defects.append(
+                    f"{name}[{index}]: must be an object, not {type(item).__name__}"
+                )
+                continue
+            defects.extend(_shape_defects(item, shape, f"{name}[{index}]"))
+    for index, zone in enumerate(document.get("zones", [])):
+        if isinstance(zone, dict) and isinstance(zone.get("allows"), list):
+            for position, target in enumerate(zone["allows"]):
+                if not isinstance(target, str):
+                    defects.append(
+                        f"zones[{index}].allows[{position}]: must be a string, not "
+                        f"{type(target).__name__}"
+                    )
+    return defects
+
+
 class Defect(Exception):
     """A fatal structural problem: validation cannot continue meaningfully past it."""
 
@@ -149,30 +218,38 @@ def _reachable(adjacency: dict[str, list[str]], start: str) -> set[str]:
 
 
 def _find_cycle(adjacency: dict[str, list[str]], nodes: list[str]) -> list[str]:
-    """Return one cycle as a node path, choosing deterministically by sorted traversal."""
+    """Return one cycle as a node path, choosing deterministically by sorted traversal.
+
+    Iterative rather than recursive: the schema declares no node-count bound, and a recursive DFS
+    raised RecursionError on a valid ~1000-node chain -- reporting a crash for a design that is
+    merely large, which is worse than a wrong verdict because it looks like a broken tool.
+    """
     WHITE, GREY, BLACK = 0, 1, 2
     colour = {node: WHITE for node in nodes}
-    stack: list[str] = []
 
-    def visit(node: str) -> list[str]:
-        colour[node] = GREY
-        stack.append(node)
-        for nxt in sorted(adjacency.get(node, ())):
-            if colour.get(nxt) == GREY:
-                return stack[stack.index(nxt):] + [nxt]
-            if colour.get(nxt) == WHITE:
-                found = visit(nxt)
-                if found:
-                    return found
-        stack.pop()
-        colour[node] = BLACK
-        return []
-
-    for node in sorted(nodes):
-        if colour[node] == WHITE:
-            found = visit(node)
-            if found:
-                return found
+    for root in sorted(nodes):
+        if colour[root] != WHITE:
+            continue
+        # Each frame is (node, iterator of its sorted successors); `stack` is the live path.
+        stack: list[str] = [root]
+        frames = [(root, iter(sorted(adjacency.get(root, ()))))]
+        colour[root] = GREY
+        while frames:
+            node, successors = frames[-1]
+            advanced = False
+            for nxt in successors:
+                if colour.get(nxt) == GREY:
+                    return stack[stack.index(nxt):] + [nxt]
+                if colour.get(nxt) == WHITE:
+                    colour[nxt] = GREY
+                    stack.append(nxt)
+                    frames.append((nxt, iter(sorted(adjacency.get(nxt, ())))))
+                    advanced = True
+                    break
+            if not advanced:
+                colour[node] = BLACK
+                frames.pop()
+                stack.pop()
     return []
 
 
@@ -192,15 +269,13 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
     for required in ("name", "entry", "terminals", "zones", "nodes", "edges"):
         if required not in document:
             raise Defect(f"document: missing required key {required!r}")
-    # Container shape is checked before anything iterates. Without this, a scalar or null where a
-    # list belongs raised an uncaught TypeError and the CLI printed a Python traceback instead of
-    # the ordered diagnostics its exit-1 contract promises -- a malformed document looked like a
-    # crashed tool.
-    for key in ("terminals", "zones", "nodes", "edges"):
-        if not isinstance(document[key], list):
-            raise Defect(
-                f"document: {key!r} must be a list, not {type(document[key]).__name__}"
-            )
+
+    # The shape gate runs before every lookup, iteration, and set-membership test below. Its
+    # findings are returned alone: continuing into semantic checks with a wrong-typed field is
+    # exactly how an unhashable value reaches `in nodes` and crashes the CLI.
+    shape = _document_shape_defects(document)
+    if shape:
+        return diagnostics + shape, {}, {"edges": [], "zones": {}}
 
     zones: dict[str, list[str]] = {}
     for index, zone in enumerate(document["zones"]):
@@ -214,12 +289,8 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             raise Defect(f"{label}: id must be a non-empty string")
         if zone_id in zones:
             diagnostics.append(f"{label}: duplicate zone id {zone_id!r}")
-        if not isinstance(allows, list) or not all(isinstance(a, str) for a in allows):
-            # Refuse before sorting or copying: `sorted(["b", 1])` and `list(None)` both raise, and
-            # a diagnostic already appended does not help if the next line crashes the process.
-            diagnostics.append(f"{label}: allows must be a list of zone-id strings")
-            zones[zone_id] = []
-            continue
+        # `allows` is already known to be a list of strings: the shape gate refused anything else
+        # before this loop could sort or copy it.
         if allows != sorted(allows):
             diagnostics.append(
                 f"{label}: allows must be a sorted list so two equivalent documents cannot "
@@ -283,16 +354,8 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             raise Defect(f"{label}: must be an object")
         diagnostics += _unknown(edge, EDGE_KEYS, label)
         source, target, kind = edge.get("from"), edge.get("to"), edge.get("kind")
-        # Endpoint TYPE before endpoint membership: a list or object endpoint is unhashable, so the
-        # `in nodes` lookup raised an uncaught TypeError and the CLI printed a traceback instead of
-        # the ordered diagnostic its exit-1 contract promises.
-        if not isinstance(source, str) or not isinstance(target, str):
-            diagnostics.append(
-                f"{label}: 'from' and 'to' must be node-id strings, not "
-                f"{type(source).__name__}/{type(target).__name__}"
-            )
-            edges.append(edge)
-            continue
+        # Endpoints are already known to be strings; the shape gate refuses an unhashable value
+        # before it can reach this membership test.
         if source not in nodes:
             diagnostics.append(f"{label}: from {source!r} is not a declared node")
         if target not in nodes:

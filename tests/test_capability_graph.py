@@ -119,6 +119,34 @@ class ReportSectionTests(unittest.TestCase):
         self.assertEqual(occurrence["surface"], "body")
         self.assertGreater(occurrence["line"], 0)
 
+    def test_hub_degrees_cover_the_identity_they_summarize(self):
+        """Totalling only external edges gave rows summing to 153 against a 155-edge identity, so
+        the section was not comparable to the count it claims to summarize. Self-loops are part of
+        the approved identity; only the adoption and gap checks exclude them."""
+        with _tree() as name:
+            document = _document(Path(name))
+        hub = document["report"]["hub_concentration"]
+        self.assertEqual(
+            sum(row["inbound_degree"] for row in hub), len(document["reference_edges"])
+        )
+        # linked-skill's only inbound beyond builder is its own self-loop.
+        rows = {row["member"]: row for row in hub}
+        self.assertEqual(rows["linked-skill"]["inbound_degree"], 2)
+        self.assertIn("linked-skill", document["report"]["self_loops"][0]["source"])
+
+    def test_a_self_loop_still_does_not_count_as_adoption(self):
+        """The two measures deliberately disagree: hub counts it, unreferenced does not."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "skills" / "solo-skill" / "SKILL.md").write_text(
+                f"---\nname: solo-skill\ndescription: Alone.\n---\n\nSee {PLUGIN}:solo-skill.\n",
+                encoding="utf-8",
+            )
+            report = _document(root)["report"]
+        rows = {row["member"]: row for row in report["hub_concentration"]}
+        self.assertEqual(rows["solo-skill"]["inbound_degree"], 1)
+        self.assertIn("solo-skill", report["unreferenced_components"])
+
     def test_hub_concentration_keeps_preload_inbound_in_its_own_column(self):
         """Adding preloads into inbound_degree would silently redefine the dated series."""
         with _tree() as name:
@@ -306,6 +334,32 @@ class UnreadableDefinitionTests(unittest.TestCase):
         self.assertNotIn("broken", document["nodes"]["agents"])
         self.assertIn("INCOMPLETE", document["report"]["host_authority_paths"]["note"])
 
+    def test_an_undecodable_definition_is_recorded_not_a_crash(self):
+        """An inspected tree is arbitrary bytes; invalid UTF-8 killed collection before the
+        damaged file could reach the list that exists to name it."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "binary.md").write_bytes(b"---\nname: x\n---\n\xff\xfe\x00bad\n")
+            document = _document(root)  # must not raise
+        self.assertIn("agents/binary.md", document["unreadable_definitions"])
+        self.assertIn("INCOMPLETE", document["report"]["host_authority_paths"]["note"])
+
+    def test_a_non_object_manifest_takes_the_refusal_path(self):
+        with _tree() as name, TemporaryDirectory() as out:
+            (Path(name) / "plugin.json").write_text("[]", encoding="utf-8")
+            self.assertEqual(
+                capability_graph.main(["--root", name, "--emit", str(Path(out) / "g.json")]), 1
+            )
+
+    def test_a_non_string_manifest_name_takes_the_refusal_path(self):
+        """A non-string name produced an impossible grammar and exited 0 with every namespaced edge
+        missing -- a confident blank topology."""
+        with _tree() as name, TemporaryDirectory() as out:
+            (Path(name) / "plugin.json").write_text('{"name": ["x"]}', encoding="utf-8")
+            self.assertEqual(
+                capability_graph.main(["--root", name, "--emit", str(Path(out) / "g.json")]), 1
+            )
+
     def test_a_clean_tree_reports_no_unreadable_definitions(self):
         with _tree() as name:
             document = _document(Path(name))
@@ -414,13 +468,88 @@ class MermaidSafetyTests(unittest.TestCase):
             self.assertTrue(line.startswith("  "), line)
             self.assertFalse(line.strip().startswith("click"), line)
         self.assertIn("#quot;", rendered)
-        self.assertIn("a__click_a__javascript_alert_1_[", rendered)
+        self.assertIn("a__click_a__javascript_alert_1_", rendered)
         for line in rendered.splitlines()[1:]:
             identifier = line.strip().split("[")[0].split("(")[0].split(" ")[0]
             self.assertRegex(identifier, r"^[A-Za-z0-9_]+$")
 
 
+class MermaidIdentityTests(unittest.TestCase):
+    def test_names_that_sanitize_alike_stay_distinct(self):
+        """`a;b` and `a?b` both reduce to `a_b`, which merged two JSON nodes into one visual node
+        and redirected their edges through it -- a view contradicting the identity it shows."""
+        first = capability_graph._mermaid_id("a;b")
+        second = capability_graph._mermaid_id("a?b")
+        self.assertNotEqual(first, second)
+        for identifier in (first, second):
+            self.assertRegex(identifier, r"^[A-Za-z0-9_]+$")
+
+    def test_a_conforming_name_is_left_alone(self):
+        self.assertEqual(capability_graph._mermaid_id("code_reviewer"), "code_reviewer")
+
+
+class PreloadResolutionTests(unittest.TestCase):
+    def test_an_unresolved_preload_target_is_named_not_emitted_as_an_edge(self):
+        """A typo'd or removed skill is a declaration, not adoption; emitting it invented a phantom
+        Mermaid node and let an invalid checkout read as internally consistent."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "builder.md").write_text(
+                _agent("builder", "Read, Write, Bash", body="Body.",
+                       skills=["preloaded-skill", "ghost-skill"]),
+                encoding="utf-8",
+            )
+            document = _document(root)
+        targets = {e["skill"] for e in document["preload_edges"]}
+        self.assertNotIn("ghost-skill", targets)
+        self.assertIn("preloaded-skill", targets)
+        self.assertEqual(document["preload_targets_unresolved"], ["builder -> ghost-skill"])
+
+
 class MeasurementOverlayTests(unittest.TestCase):
+    def test_negative_assertions_reach_the_overlay(self):
+        """66 negative cases carried evidence that never appeared, so a baseline/candidate diff
+        could lose a prohibition without the case-assertion layer showing it."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "evals" / "routing" / "core.json").write_text(
+                json.dumps({
+                    "cluster": "core",
+                    "members": ["builder", "reviewer"],
+                    "cases": [
+                        {"id": "pos", "polarity": "positive", "expect_fires": ["builder"]},
+                        {"id": "neg-explicit", "polarity": "negative",
+                         "expect_not_fires": ["reviewer"]},
+                        {"id": "neg-implicit", "polarity": "negative"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            overlay = _document(root)["measurement_overlay"]
+        negative = overlay["members_with_negative_assertions"]
+        self.assertIn("core:neg-explicit", negative["reviewer"])
+        # An omitted list means the whole cluster is prohibited for that prompt.
+        self.assertIn("core:neg-implicit", negative["builder"])
+        self.assertIn("core:neg-implicit", negative["reviewer"])
+
+    def test_duplicate_cluster_identities_are_reported(self):
+        with _tree() as name:
+            root = Path(name)
+            (root / "evals" / "routing" / "second.json").write_text(
+                json.dumps({"cluster": "core", "members": ["dispatcher"], "cases": []}),
+                encoding="utf-8",
+            )
+            overlay = _document(root)["measurement_overlay"]
+        self.assertEqual(overlay["duplicate_cluster_identities"], ["core"])
+
+    def test_an_ill_shaped_cluster_field_is_unreadable_not_a_crash(self):
+        for payload in ('{"cluster":"x","cases":null}', '{"cluster":"x","members":7}'):
+            with _tree() as name:
+                root = Path(name)
+                (root / "evals" / "routing" / "bad.json").write_text(payload, encoding="utf-8")
+                overlay = _document(root)["measurement_overlay"]  # must not raise
+            self.assertEqual(overlay["unreadable_clusters"], ["evals/routing/bad.json"])
+
     def test_co_membership_and_case_assertions_stay_separable(self):
         with _tree() as name:
             overlay = _document(Path(name))["measurement_overlay"]

@@ -85,6 +85,37 @@ class GuardCoverageTests(unittest.TestCase):
         with handle:
             self.assertIsNone(fleet_records.parse_guarded_agents(Path(handle.name)))
 
+    def test_the_last_module_level_assignment_is_the_effective_one(self):
+        """Python keeps the last binding; taking the first reported a roster the live guard never
+        uses -- a false host-authority claim from a file read correctly but interpreted wrongly."""
+        handle = _tree(
+            'GUARDED_AGENT_NAMES = frozenset({"everything"})\n'
+            'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})\n'
+        )
+        with handle:
+            self.assertEqual(
+                fleet_records.parse_guarded_agents(Path(handle.name)),
+                frozenset({"code-reviewer"}),
+            )
+
+    def test_a_nested_assignment_is_not_the_module_roster(self):
+        handle = _tree(
+            "def decoy():\n    GUARDED_AGENT_NAMES = frozenset({'everything'})\n"
+            'GUARDED_AGENT_NAMES = frozenset({"code-reviewer"})\n'
+        )
+        with handle:
+            self.assertEqual(
+                fleet_records.parse_guarded_agents(Path(handle.name)),
+                frozenset({"code-reviewer"}),
+            )
+
+    def test_only_a_nested_assignment_is_unknown(self):
+        """No module-level binding means the live guard has no roster here; that is unknown, not
+        whatever a function body happens to name."""
+        handle = _tree("def decoy():\n    GUARDED_AGENT_NAMES = frozenset({'everything'})\n")
+        with handle:
+            self.assertIsNone(fleet_records.parse_guarded_agents(Path(handle.name)))
+
     def test_bare_set_literal_roster_parses(self):
         handle = _tree('GUARDED_AGENT_NAMES = {"code-reviewer"}\n')
         with handle:

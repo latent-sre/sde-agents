@@ -37,6 +37,20 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def try_read_text(path: Path) -> str | None:
+    """Read a file, or return None when it cannot be decoded.
+
+    An inspected tree is arbitrary bytes: a definition containing invalid UTF-8 raised
+    UnicodeDecodeError mid-collection, so the CLI printed a traceback and the damaged file never
+    reached the unreadable list it exists to name. Returning None lets the caller record the path
+    and keep producing an explicitly incomplete artifact.
+    """
+    try:
+        return read_text(path)
+    except (UnicodeDecodeError, OSError):
+        return None
+
+
 def is_runtime_byproduct(path: Path) -> bool:
     """Return whether a path is Python execution residue, not distributable fleet source."""
 
@@ -255,6 +269,12 @@ class RoutingCase:
     case_id: str
     polarity: str  # "positive" | "negative"
     expect_fires: tuple[str, ...]
+    # A negative case asserts that a member must NOT fire. Keeping only expect_fires dropped that
+    # evidence entirely: 66 negative cases carry it, 44 with explicit targets, and the rest mean
+    # "nothing in this cluster fires" -- an assertion a baseline/candidate diff must be able to see
+    # change. An omitted list is normalized from cluster membership by the consumer, not invented
+    # here.
+    expect_not_fires: tuple[str, ...]
     tags: tuple[str, ...]
 
 
@@ -371,7 +391,10 @@ def collect_references(root: Path, plugin_name: str) -> tuple[Reference, ...]:
     found: list[Reference] = []
 
     for path in definition_markdown_files(root):
-        lines = read_text(path).splitlines()
+        text = try_read_text(path)
+        if text is None:
+            continue  # recorded as unreadable by collect(); no references can be read from it
+        lines = text.splitlines()
         end = frontmatter_span(lines)
         description_lines = _description_line_span(lines, end) if end is not None else set()
         source = _member_for_path(path, root)
@@ -421,13 +444,20 @@ def collect_routing_clusters(root: Path) -> tuple[tuple[RoutingCluster, ...], tu
     for path in sorted(directory.glob("*.json")):
         try:
             spec = json.loads(read_text(path))
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             # A malformed cluster is the validator's finding to raise, not this collector's --
             # refusing here would take the whole graph down over one unrelated file -- but it is
             # recorded rather than dropped, so a consumer can tell corruption from removal.
             unreadable.append(path)
             continue
-        if not isinstance(spec, dict):
+        # Syntactically valid JSON with an ill-shaped field is the same problem one level in:
+        # `"cases": null` or a scalar `members` crashed the iteration below, so the CLI died on a
+        # corrupt tree instead of recording it. Shape is checked before anything iterates.
+        if (
+            not isinstance(spec, dict)
+            or not isinstance(spec.get("members", []), list)
+            or not isinstance(spec.get("cases", []), list)
+        ):
             unreadable.append(path)
             continue
         cases = tuple(
@@ -436,6 +466,7 @@ def collect_routing_clusters(root: Path) -> tuple[tuple[RoutingCluster, ...], tu
                 case_id=str(case.get("id", "")),
                 polarity=str(case.get("polarity", "")),
                 expect_fires=tuple(case.get("expect_fires") or ()),
+                expect_not_fires=tuple(case.get("expect_not_fires") or ()),
                 tags=tuple(case.get("tags") or ()),
             )
             for case in spec.get("cases", [])
@@ -469,13 +500,19 @@ def parse_guarded_agents(root: Path) -> frozenset[str] | None:
         tree = ast.parse(read_text(source))
     except (SyntaxError, UnicodeDecodeError):
         return None
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
-            continue
-        if not any(
+    # Only MODULE-LEVEL assignments, and the LAST one, because that is what Python leaves bound.
+    # `ast.walk` returned the first match anywhere, so an earlier assignment -- or one nested in a
+    # function -- could name a roster the live guard never uses, producing a false host-authority
+    # claim from a file that was read correctly but interpreted wrongly.
+    effective = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == "GUARDED_AGENT_NAMES" for t in node.targets
         ):
-            continue
+            effective = node
+    if effective is None:
+        return None
+    for node in (effective,):
         value = node.value
         # `frozenset({...})` is a Call, not a literal, so unwrap the single set argument.
         if isinstance(value, ast.Call) and getattr(value.func, "id", "") == "frozenset":
@@ -498,7 +535,11 @@ def collect(root: Path, plugin_name: str = ""):
     agents_dir = root / "agents"
     if agents_dir.is_dir():
         for path in sorted(agents_dir.glob("*.md")):
-            fields, body, _ = _split_frontmatter(read_text(path))
+            text = try_read_text(path)
+            if text is None:
+                unparseable.append(path)
+                continue
+            fields, body, _ = _split_frontmatter(text)
             if fields is None:
                 unparseable.append(path)
                 continue
@@ -509,7 +550,11 @@ def collect(root: Path, plugin_name: str = ""):
     skills_dir = root / "skills"
     if skills_dir.is_dir():
         for path in sorted(skills_dir.glob("*/SKILL.md")):
-            fields, body, _ = _split_frontmatter(read_text(path))
+            text = try_read_text(path)
+            if text is None:
+                unparseable.append(path)
+                continue
+            fields, body, _ = _split_frontmatter(text)
             if fields is None:
                 unparseable.append(path)
                 continue

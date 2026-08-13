@@ -26,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -151,7 +152,18 @@ def build_document(records) -> dict:
         "preload_edges": [
             {"skill": skill, "source": source}
             for source, skill in sorted(fleet_records.preload_edges(records))
+            if skill in {m.name for m in records.skills}
         ],
+        # A typo'd or removed skill in an agent's `skills:` is a declaration, not adoption. Emitting
+        # it as a topology edge invented a phantom Mermaid node and let an invalid checkout read as
+        # internally consistent; unresolved declarations are named instead.
+        "preload_targets_unresolved": sorted(
+            {
+                f"{source} -> {skill}"
+                for source, skill in fleet_records.preload_edges(records)
+                if skill not in {m.name for m in records.skills}
+            }
+        ),
         "reference_edges": reference_edges,
         "report": _report(records, reference_edges, tool_grants, inherits_all),
         "schema_version": SCHEMA_VERSION,
@@ -301,11 +313,24 @@ def _measurement_overlay(records) -> dict:
     """
     co_membership: dict[str, list[str]] = {}
     asserted: dict[str, list[str]] = defaultdict(list)
+    prohibited: dict[str, list[str]] = defaultdict(list)
+    duplicates: set[str] = set()
     for cluster in sorted(records.clusters, key=lambda c: c.name):
+        if cluster.name in co_membership:
+            # Two files declaring one cluster string silently overwrote the first membership while
+            # the gap computation still used both records -- an internally inconsistent overlay from
+            # a tree the fleet validator passes, since it checks each file independently.
+            duplicates.add(cluster.name)
         co_membership[cluster.name] = sorted(cluster.members)
         for case in cluster.cases:
             for member in case.expect_fires:
                 asserted[member].append(f"{cluster.name}:{case.case_id}")
+            if case.polarity == "negative":
+                # An omitted expect_not_fires means the whole cluster is prohibited for that
+                # prompt, so the assertion is normalized from membership rather than lost.
+                targets = case.expect_not_fires or tuple(cluster.members)
+                for member in targets:
+                    prohibited[member].append(f"{cluster.name}:{case.case_id}")
     return {
         "cluster_co_membership": co_membership,
         "members_with_case_assertions": {
@@ -316,6 +341,10 @@ def _measurement_overlay(records) -> dict:
         "unreadable_clusters": sorted(
             _relative(path, records.root) for path in records.unreadable_clusters
         ),
+        "duplicate_cluster_identities": sorted(duplicates),
+        "members_with_negative_assertions": {
+            member: sorted(cases) for member, cases in sorted(prohibited.items())
+        },
     }
 
 
@@ -347,9 +376,9 @@ def _report(
 
     member_names = sorted(m.name for m in records.members)
     external = {(e["source"], e["target"]) for e in reference_edges if e["source"] != e["target"]}
-    inbound = defaultdict(int)
+    external_inbound = defaultdict(int)
     for _, target in external:
-        inbound[target] += 1
+        external_inbound[target] += 1
 
     # Preloads are inbound adoption too, and a STRONGER form than a reference: the skill is placed
     # in the agent's context rather than merely named. Counting references alone reported
@@ -365,12 +394,13 @@ def _report(
     unreferenced = [
         name
         for name in member_names
-        if inbound[name] == 0 and preload_inbound[name] == 0
+        if external_inbound[name] == 0 and preload_inbound[name] == 0
     ]
     # Surfaced separately so the distinction stays visible instead of being silently folded away:
     # these members ARE adopted, and only a reference-only measure would call them orphans.
     preload_only = [
-        name for name in member_names if inbound[name] == 0 and preload_inbound[name] > 0
+        name for name in member_names
+        if external_inbound[name] == 0 and preload_inbound[name] > 0
     ]
 
     clustered_pairs = set()
@@ -391,9 +421,17 @@ def _report(
         if edge["source"] == edge["target"]
     ]
 
-    total = len(external) or 1
+    # Hub degree is computed over the FULL stable identity, self-loops included, because that is
+    # the measure it claims to summarize; totalling only external edges gave rows summing to 153
+    # against an identity of 155. `external` stays the basis for adoption and gap checks, where a
+    # member naming itself is deliberately not evidence.
+    identity = {(e["source"], e["target"]) for e in reference_edges}
+    total = len(identity) or 1
+    inbound = defaultdict(int)
+    for _, target in identity:
+        inbound[target] += 1
     outbound = defaultdict(int)
-    for source, _ in external:
+    for source, _ in identity:
         outbound[source] += 1
     # Degree and share stay on the stable reference identity so they remain comparable to the dated
     # measure; preload inbound rides alongside as its own column rather than being added in, which
@@ -446,14 +484,22 @@ _MERMAID_SAFE_RE = re.compile(r"[^A-Za-z0-9_]")
 
 
 def _mermaid_id(name: str) -> str:
-    """A Mermaid-safe node id derived from a member name.
+    """A Mermaid-safe, COLLISION-FREE node id derived from a member name.
 
     Member names come from the INSPECTED tree, and this tool records without judging -- `NAME_RE`
     is enforced by validate_fleet.py, which has not necessarily run on a foreign or baseline
     checkout. Interpolating such a name raw let `;` and other Mermaid syntax reach the diagram as
     statements the graph never derived. The JSON path is unaffected because json.dumps escapes.
+
+    Sanitizing alone was not enough: `a;b` and `a?b` both reduce to `a_b`, which merged two distinct
+    JSON nodes into one visual node and redirected their edges through it -- a view that contradicts
+    the identity it claims to show. A short digest of the original name is appended whenever
+    sanitizing changed anything, so distinct members stay distinct.
     """
-    return _MERMAID_SAFE_RE.sub("_", name) or "_"
+    safe = _MERMAID_SAFE_RE.sub("_", name) or "_"
+    if safe == name:
+        return safe
+    return f"{safe}_{hashlib.sha256(name.encode('utf-8')).hexdigest()[:8]}"
 
 
 def _mermaid_label(name: str) -> str:
@@ -471,7 +517,14 @@ def _mermaid_label(name: str) -> str:
 
 
 def render_mermaid(document: dict) -> str:
-    """A VIEW of the same node/edge identity the JSON carries -- never a second calculation."""
+    """A VIEW of the MEMBER topology the JSON carries -- never a second calculation.
+
+    Members and their reference/preload edges only. `nodes.tools` is deliberately not rendered:
+    adding 29 tool nodes to a 31-member diagram costs the readability the diagram exists for, and
+    the JSON already carries tool authority in a form built to be read rather than looked at. The
+    docstring says "member topology" rather than "the same node identity" because the earlier
+    wording claimed a completeness this view does not have.
+    """
     lines = ["graph LR"]
     for name in document["nodes"]["agents"]:
         lines.append(f'  {_mermaid_id(name)}["{_mermaid_label(name)}"]')
@@ -505,9 +558,14 @@ def main(argv: list[str] | None = None) -> int:
     plugin_name = ""
     if manifest.is_file():
         try:
-            plugin_name = str(json.loads(fleet_records.read_text(manifest)).get("name", ""))
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            plugin_name = ""
+            parsed = json.loads(fleet_records.read_text(manifest))
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+            parsed = None
+        # An inspected checkout is arbitrary: a non-object manifest made `.get` raise, and a
+        # non-string `name` produced an impossible grammar that exited 0 with every namespaced edge
+        # missing -- a confident blank topology. Both take the refusal path below instead.
+        if isinstance(parsed, dict) and isinstance(parsed.get("name"), str):
+            plugin_name = parsed["name"].strip()
     if not plugin_name:
         # Without the plugin name there is no namespaced-reference grammar, so the graph would
         # report zero edges for a tree that has many. Refuse rather than emit a confident blank.
