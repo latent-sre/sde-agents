@@ -50,13 +50,17 @@ in `docs/archive/2026-08/prop-002-scan-findings-2026-08-13.md`; deep-review verd
 **Prerequisites:** none.
 **Acceptance:** H1–H5 plus review fixes merged with T1 green; paired behavioral evidence for
 every contract that grades edited text (stored-baseline match, or fresh before/after under
-pinned conditions); the MEDIUM backlog triaged — worked, deferred trigger-bound, or dropped
-with reason. The backlog's largest items: relocating `runbook`'s propose grammar to a
+pinned conditions); every finding the scan archive still marks `open` — MEDIUM **and** LOW —
+triaged as worked, deferred trigger-bound, or dropped with reason, since that archive is
+evidence and this item is the only place its remainder can be owned. A LOW cluster may be
+dispositioned as one batch under a shared reason; what it may not be is left unmentioned, which
+would retire the item while reading as completed work. The backlog's largest items: relocating `runbook`'s propose grammar to a
 references/ file loaded on the propose path (its consumers `packet_lint.py` and the behavioral
 contracts are live — relocate, never delete), the phantom-second-human owner/escalation slots
 in `runbook`, `onboarding-map`'s repeated authority restatement, `eng-ladder` Mode 3 and the
 consult protocol, and `ci-actions`' unconditioned SBOM/workflow-lint mandates.
-**Next action:** open the PR and hand the operator the review request; write the outcome record
+**Next action:** disposition the remaining PR #132 review comments on the current head and wait
+for a pass on those bytes, then triage the MEDIUM and LOW backlog above; write the outcome record
 at close and retire this item to it.
 
 #### LEARN-002 — close the Learning-contract compliance gap

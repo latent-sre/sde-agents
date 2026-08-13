@@ -153,10 +153,14 @@ promote it only when the applicable gates hold:
 2. **Regression and adverse proof** — relevant broad checks, held-out variants, negative cases, and
    failure paths do not regress. Reusing only the examples that tuned the candidate is not proof.
 3. **Fresh evaluator, comparable conditions** — a separate context or deterministic verifier
-   judges the candidate; the author is not its sole grader or approver. Record the conditions the
-   comparison depends on — model, artifact, grader, and seed or repetitions — by hand, or via the
-   repository's eval harness when one exists. Results are rates over runs, not booleans; a change
-   inside the measured noise is inconclusive.
+   judges the candidate; the author is not its sole grader or approver. Record every condition the
+   comparison depends on — model with the timeout pinned to it, runtime and version, exact
+   artifact, grader, seed or repetitions, budget, and the configuration state each run inherited
+   (clean-room or the ambient one) — by hand, or via the repository's eval harness when one
+   exists. These are not bookkeeping: a shorter timeout drops runs out of every rate, and
+   clean-room and ambient runs measure different competitions, so results differing on any of
+   them must not be diffed. Results are rates over runs, not booleans; a change inside the
+   measured noise is inconclusive.
 4. **Exact-artifact proof** — evaluate the bytes users will receive. For this fleet that includes
    regenerated host adapters and their parity check, not only the canonical source.
 

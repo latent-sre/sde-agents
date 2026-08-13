@@ -92,10 +92,16 @@ python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <r
 python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
 ```
 
-Ordering, repeat, and re-promotion-cycle rules are CLI-enforced and refused loudly, never silently
-overwritten; read the CLI help and errors for the exact semantics rather than this summary. The
-one behavior worth knowing in advance: `pass` and `fail` retests are settled, `inconclusive` stays
-retriable, and a `fail` is a loud pointer that the candidate's destination regressed in the field.
+Ordering and repeat rules are CLI-enforced and refused loudly, never silently overwritten — but the
+refusal arrives after you attempt the mutation, and the `--help` output lists only the arguments, so
+the semantics you need *before* touching the ledger stay here. `record-release` is legal only on a
+`promoted` candidate and stamps once per promotion cycle; a second call inside the same cycle is
+refused. A candidate may legally reject and re-promote on fresh evidence, and a release recorded
+after that later promotion is a genuinely new cycle — `record-release` archives the completed
+`{release, retest}` pair into `release_history` and starts a fresh one rather than refusing, which
+is the one legal repeat and produces no error to learn from. `record-retest` is legal only once a
+release exists: `pass` and `fail` are settled and single-shot, `inconclusive` stays retriable
+in place, and a `fail` is a loud pointer that the candidate's destination regressed in the field.
 
 Closure is fail-closed: a field-feedback item closes as successful only with an exact
 released-version retest recorded, or the owner's explicit reason that a retest is impossible or
