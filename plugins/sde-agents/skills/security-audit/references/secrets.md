@@ -31,8 +31,9 @@ reaches position X learn, and what does that credential then open?** Blast radiu
   is encrypted. An unencrypted off-site backup of a secrets directory is the same exposure as
   publishing it, delayed.
 - **Logs and telemetry**: grep the log paths and any log shipper's config for the token shapes
-  below — secrets in logs leak to everyone with read access to observability, which is usually
-  wider than the operator thinks.
+  below — secrets in logs leak to everyone with read access to observability, and that audience
+  includes every agent session that reads logs plus the transcripts and retained eval artifacts
+  those sessions leave behind: the same exposure the `git log -p` rule above exists to prevent.
 - **The vault or password manager as the intended record**: what should be in it, what isn't
   (a secret that exists only in a compose file has no rotation story), and whether its own unlock
   path survives losing a device.

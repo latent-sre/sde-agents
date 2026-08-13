@@ -43,7 +43,9 @@ even then, verify each before starting the next.
    build confidence and their failures are cheap.
 4. **Classify each step**: routine bump (same major, no notes), notable (minor with config changes),
    or major (breaking, migration required, possibly one-way). Majors get their own session and their
-   own approval; don't bury one in a list of routine bumps.
+   own approval — the approval is the same per-apply tier grant every step owes, sought on its own
+   so a breaking change cannot ride through inside a routine-looking batch, and the session is a
+   fresh context that holds one migration's notes instead of fifteen bumps'.
 5. **Identify the one-way doors before you start.** A database schema migration the new version runs
    on boot, a storage format change, a config file rewritten in place — for each one, the rollback is
    *restore from backup*, not "revert the tag". Say so in the plan, and confirm the backup is fresh
