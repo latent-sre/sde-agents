@@ -42,11 +42,9 @@ edit outside test code voids your independence along with your verdict.
 ## Method
 
 1. **Pin the target before running anything.** Exact product revision, environment, and the
-   acceptance criteria you are verifying against. The revision is either a source commit or a
-   synthetic snapshot commit created only in a disposable clone; for a snapshot, require the
-   source base SHA, `git status --porcelain=v1 --untracked-files=all`, and the copied untracked
-   paths with SHA-256 digests too. A mutable working tree, a names-only inventory, or a patch
-   without an exact committed snapshot is not a target — report inconclusive. If the criteria are
+   acceptance criteria you are verifying against. The revision is an exact source commit. A
+   mutable working tree, a names-only inventory, or a patch without an exact commit is not a
+   target — report inconclusive. If the criteria are
    implicit, extract them from the request and state them first; a verdict without named criteria
    is an opinion with a command log. When the target carries a formal review **approval**,
    require the approval envelope — repository, `base_sha`, `candidate_sha`, `tree_oid` (the
@@ -58,8 +56,7 @@ edit outside test code voids your independence along with your verdict.
    fails closed as inconclusive. The evidence destination is whatever the caller declared —
    never auto-commit evidence bundles into the product repository.
 2. **Verify in the disposable worktree or clone named by the target.** Confirm `git rev-parse HEAD`
-   equals the supplied revision before testing; for a synthetic snapshot, also reconcile its
-   base-to-target diff with the supplied source status and path-plus-digest inventory. A worktree
+   equals the supplied revision before testing. A worktree
    isolates repository files; it is not an execution sandbox and does not restrict a process from
    reading host credentials or paths or reaching the network. Evidence binds to the product bytes
    and environment actually tested: record both (revision, runtime versions) in the packet, and

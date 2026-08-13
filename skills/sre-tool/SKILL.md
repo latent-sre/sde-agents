@@ -13,16 +13,17 @@ For safety-critical work, name both consequences: the Phase-3 independent-review
 **blocked**, the Phase-4 verification verdict is **inconclusive**, and Phase 5 stays blocked. Execute
 the inline checks you can as non-independent evidence, but do not relabel them as either gate.
 
-For any multi-agent or safety-critical run, keep authoritative orchestration state with
-`${CLAUDE_PLUGIN_ROOT}/scripts/run_state.py`. Its SQLite database must live outside every worker's
-writable workspace under an operator-owned identity. The orchestrator creates runs and tasks,
-issues time-limited leases, propagates cancellation or supersession, and accepts completion only
-with a schema-valid evidence envelope bound to the same run, task, attempt, and target revision.
-Workers receive identifiers and lease tokens, not database write access; lease tokens travel on
-stdin and never enter prompts, argv, progress files, or evidence. If that trusted state boundary is
-unavailable, degrade to one attended worker at a time and say explicitly that cancellation,
-supersession, lease expiry, and completion are not durably enforced. Do not present progress shards
-or conversation memory as equivalent control-plane state.
+For a safety-critical or unattended multi-agent run, keep authoritative orchestration state with
+`${CLAUDE_PLUGIN_ROOT}/scripts/run_state.py`: an SQLite database outside every worker's writable
+workspace under an operator-owned identity, issuing time-limited leases and accepting completion
+only with a schema-valid evidence envelope bound to the same run, task, attempt, and target
+revision — a worker cannot claim a completion it did not earn. Lease tokens travel on stdin and
+never enter prompts, argv, progress files, or evidence. If that trusted state boundary is
+unavailable for such a run, degrade to one attended worker at a time and say explicitly that
+cancellation, supersession, lease expiry, and completion are not durably enforced. An ordinary
+attended build — including a small parallel batch — runs on progress files and checkpoint packets;
+that is the pipeline's normal mode, not a degraded one. Progress shards and conversation memory
+are cooperative worker output, never authoritative control-plane state.
 
 **Multi-component builds** (e.g. a web UI plus the backend API behind it): the contract, parallel-batch, and review-routing rules live in [`references/multi-component.md`](references/multi-component.md). Read it at Phase 1, the moment the design has more than one component — before spawning any builder. Single-component runs never need it.
 
@@ -37,10 +38,10 @@ Establish before designing. Infer from context and the codebase where possible; 
 - **Interface**: CLI, TUI, or web — the thinnest one that serves the operator, not the most impressive one.
 - **Success criterion**: the **mission transaction** — the one real-world exchange that proves the tool does its job (for a TLS proxy: a real HTTPS request to a managed route returns the backend). Boot, build-clean, and container-healthy are table stakes, never the criterion.
 - **Environment card**: instantiate [`assets/environment-card.md`](assets/environment-card.md) into the repository's project context — before spawning any builder, it records what every agent needs — toolchain paths, ports, run/test commands, module identity (from `git remote -v`), where credentials live, and the progress-file path. Record it in `CLAUDE.md` (what Claude Code loads and passes to builders) — or, if the repo keeps a portable `AGENTS.md`, in a root `CLAUDE.md` that `@AGENTS.md`-imports it; the progress file defaults to `.agents/PROGRESS.md`. Builders read it there; spawn prompts stay small and consistent. The card also carries the **mission block**: the tool's purpose, the mission transaction, the threat model, and what the verification pipeline can and cannot see — builders, reviewers, and every future maintenance session read the mission there.
-- **Cadence contract**: in the same question round, settle commit policy (e.g. "commit at every green batch boundary"), pause points, and which gates need the user's eyes (default: design approval and deploy artifacts). Anything not named a gate runs without a check-in; without an explicit grant, never create a commit or move a ref in the source repository — Phase 4's synthetic snapshot commit may exist only in its disposable clone. Instantiate the plan file from [`assets/plan-file.template.md`](assets/plan-file.template.md) — default `.agents/plan.md`, orchestrator-owned, never written by a builder — and write the settled contract into it immediately: conversation memory does not survive compaction. A waiting gate blocks only its own scope; independent non-gated work continues.
-  If the build may be safety-critical, record the Phase-4 target strategy here too: either the user
-  grants a source commit at a named green boundary, or the orchestrator will create the disposable
-  snapshot commit described in Phase 4 without writing a commit or ref into the source repository.
+- **Cadence contract**: in the same question round, settle commit policy (e.g. "commit at every green batch boundary"), pause points, and which gates need the user's eyes (default: design approval and deploy artifacts). Anything not named a gate runs without a check-in; without an explicit grant, never create a commit or move a ref in the source repository. Instantiate the plan file from [`assets/plan-file.template.md`](assets/plan-file.template.md) — default `.agents/plan.md`, orchestrator-owned, never written by a builder — and write the settled contract into it immediately: conversation memory does not survive compaction. A waiting gate blocks only its own scope; independent non-gated work continues.
+  If the build may be safety-critical, settle the Phase-4 target here too: the user grants a
+  source commit at a named green boundary, or the safety-critical verdict will be inconclusive —
+  say which was chosen.
 
 ## Phase 1 — Right-size the design
 
@@ -73,7 +74,7 @@ Building a **command-line** tool — the streams-and-exit-codes contract, `--jso
 3. **Reviews are read-only** — run them concurrently with the next build phase unless that phase builds on the reviewed code; only **safety-critical** code (anything that can corrupt production state, delete data, or breach the threat model) treats review as a gate.
 4. **Route fixes**: P0/P1 to whichever builder owns the files; report P2/P3 to the user rather than silently applying. A builder's evidence-based pushback on a finding is yours to reconcile — weigh the cited evidence, never the ranks; a finding on safety-critical code that stays contested goes back through review **once**, and if it returns still contested it escalates to the user with both sides' citations — never settled by assertion, never left to loop. Log the round in the plan file beside the other caps. Files a reviewer skipped as mid-edit are queued for the next review, never dropped. On **safety-critical** code, hand the builder the defect and the acceptance test the fix must satisfy — **not the implementation**. A fix you dictate is only as good as your own untested reasoning, and it collapses the builder into a typist whose verification is no longer independent of yours. Dictate only genuinely mechanical fixes.
 5. **The gate keys on the file, not the size of the diff**: any later edit to a safety-critical file — including a one-line "nit" you are tempted to apply directly — re-enters review before it ships. "Too small to review" is how an unreviewed change lands in exactly the code the gate exists to protect.
-6. For anything network-exposed or auth-bearing, add a **security review** before deploy artifacts ship — spawn `sde-agents:application-security-auditor` on the tool's repository: whole-surface source-to-sink threat modeling is that agent's remit, and a depth the diff-scoped reviewer pass cannot reach. Keep it independent of the correctness review. Only when that agent cannot be spawned, fall back to a second `sde-agents:code-reviewer` pass seeded with a security-only threat model (or the CLI's built-in `/security-review`), and say in the final report which gate actually ran. A **confirmed critical or high** auditor finding is blocking, equivalent to the reviewer's P0/P1 route: give the finding and acceptance test to the owning builder, then re-run the auditor on the affected source-to-sink path. Deploy artifacts do not ship while one remains open or contested; after one re-audit, a still-contested finding escalates to the user with both evidence sets. A probable or possible critical/high candidate leaves the security gate **inconclusive** and still blocks deploy until the auditor confirms or rejects it, or the user explicitly accepts the residual risk with both the uncertainty and evidence need recorded. Medium and low findings are reported rather than silently fixed.
+6. For anything network-exposed or auth-bearing, add a **security review** before deploy artifacts ship — spawn `sde-agents:application-security-auditor` on the tool's repository: whole-surface source-to-sink threat modeling is that agent's remit, and a depth the diff-scoped reviewer pass cannot reach. Keep it independent of the correctness review. Only when that agent cannot be spawned, fall back to a second `sde-agents:code-reviewer` pass seeded with a security-only threat model (or the CLI's built-in `/security-review`), and say in the final report which gate actually ran. A **confirmed critical or high** auditor finding is blocking, equivalent to the reviewer's P0/P1 route: give the finding and acceptance test to the owning builder, then re-run the auditor on the affected source-to-sink path. Deploy artifacts do not ship while one remains open or contested; after one re-audit, a still-contested finding escalates to the user with both evidence sets. A probable or possible critical/high candidate leaves the security gate **inconclusive** and still blocks deploy until the auditor confirms or rejects it, or the user explicitly accepts the risk — note that acceptance, and what evidence would settle it, in the final report. Medium and low findings are reported rather than silently fixed.
 
 ## Phase 4 — Verify and hand over
 
@@ -84,16 +85,11 @@ Building a **command-line** tool — the streams-and-exit-codes contract, `--jso
 - A clean committed target is the exact source commit SHA.
 - If the cadence contract grants a source commit, commit at the named green boundary and pass that
   SHA.
-- Without source-commit authority, first freeze all builder writes for the capture. Record
-  `git status --porcelain=v1 --untracked-files=all`, create a disposable local clone at the source
-  `HEAD`, apply the complete tracked delta with `git diff --binary --full-index HEAD`, copy every
-  explicitly inventoried in-scope untracked file, and commit **only inside that disposable clone**.
-  Record each copied untracked path with its SHA-256 digest; no builder resumes until the synthetic
-  commit and inventory are complete. Pass the synthetic snapshot SHA, original base SHA, source
-  status, and path-plus-digest inventory to the verifier. This must not write a commit, ref, stash,
-  or index change into the source repository. If ignored content, submodule dirt, concurrent writes,
-  or any other intended byte cannot be represented exactly and safely, the target is not
-  verifiable: report **inconclusive** and stop.
+- Without source-commit authority there is no immutable target, and a verdict bound to moving
+  bytes attests nothing. Ask for the commit grant — a branch commit is cheap and revertable — and
+  if the user declines, report the safety-critical verdict as **inconclusive** and say exactly
+  why. Do not reconstruct a synthetic snapshot of uncommitted state to have it both ways: commit,
+  or inconclusive.
 
 Spawn the verifier with that exact revision, the mission transaction, and the acceptance criteria as
 its named criteria, and cite its pass/fail/inconclusive verdict in the final report rather than your
