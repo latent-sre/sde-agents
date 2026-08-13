@@ -263,6 +263,45 @@ class BindingTests(unittest.TestCase):
                     node["binding"] = {"domain": domain, "ref": ref}
             self.assertTrue(any("accepts domain" in d for d in _check(document)), node_id)
 
+    def test_a_skill_node_binds_a_canonical_skill(self):
+        """The accepted decision requires a graph to reference canonical agent AND skill names.
+        Binding a skill step as the `Skill` tool would lose the identity, so a rename could not be
+        caught -- which is the point of naming canonical members."""
+        document = _mutate()
+        document["nodes"].append({
+            "id": "craft", "kind": "skill", "zone": "review",
+            "binding": {"domain": "skill", "ref": "backend-craft"},
+        })
+        # Thread the skill into the chain; branching to `done` would give it a second
+        # required-control predecessor and correctly demand a join.
+        document["edges"][0] = {"from": "start", "to": "craft", "kind": "control"}
+        document["edges"].append({"from": "craft", "to": "reviewer", "kind": "control"})
+        self.assertEqual(_check(document), [])
+
+    def test_a_stale_skill_name_is_rejected(self):
+        document = _mutate()
+        document["nodes"].append({
+            "id": "craft", "kind": "skill", "zone": "review",
+            "binding": {"domain": "skill", "ref": "backend-craft-v2"},
+        })
+        # Thread the skill into the chain; branching to `done` would give it a second
+        # required-control predecessor and correctly demand a join.
+        document["edges"][0] = {"from": "start", "to": "craft", "kind": "control"}
+        document["edges"].append({"from": "craft", "to": "reviewer", "kind": "control"})
+        self.assertTrue(any("not a canonical skill" in d for d in _check(document)))
+
+    def test_a_skill_node_rejects_an_agent_domain(self):
+        document = _mutate()
+        document["nodes"].append({
+            "id": "craft", "kind": "skill", "zone": "review",
+            "binding": {"domain": "agent", "ref": "code-reviewer"},
+        })
+        # Thread the skill into the chain; branching to `done` would give it a second
+        # required-control predecessor and correctly demand a join.
+        document["edges"][0] = {"from": "start", "to": "craft", "kind": "control"}
+        document["edges"].append({"from": "craft", "to": "reviewer", "kind": "control"})
+        self.assertTrue(any("accepts domain" in d for d in _check(document)))
+
     def test_agent_binding_must_name_a_canonical_agent(self):
         document = _mutate()
         for node in document["nodes"]:

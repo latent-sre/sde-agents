@@ -51,6 +51,8 @@ HOST_LIMITATIONS = {
         "Guard coverage is Claude-only: it rests on the PreToolUse payload's agent_type, which no "
         "other host supplies.",
         "A cooperative Write boundary stated in prose is not a tool-layer control.",
+        "A skill's disallowed-tools removes write tools while it is active, but Bash can still "
+        "mutate, so the read-only posture it declares is cooperative rather than enforced.",
     ],
     "copilot": [
         "Tool aliases are the host's vocabulary; an unknown alias is ignored rather than refused, "
@@ -246,11 +248,48 @@ def _host_authority(records) -> dict:
             "requested_sandbox_mode": "workspace-write" if writes else "read-only",
         }
 
+    # Skills carry their own control -- `disallowed-tools` -- and the adapter generator strips it
+    # for portable hosts. A report covering only agent tools would answer "what does each host
+    # withhold?" while omitting the only authority a directly-invoked skill surface declares.
+    declaring = {
+        skill.name: sorted(skill.disallowed_tools)
+        for skill in sorted(records.skills, key=lambda m: m.name)
+        if skill.disallowed_tools
+    }
+    claude_skills = {
+        name: {"disallowed_tools": tools, "enforcement": "declared_claude_side"}
+        for name, tools in declaring.items()
+    }
+    portable_skills = {
+        name: {
+            "disallowed_tools": None,
+            "enforcement": "not_projected",
+            "projection": "tool_deny_stripped_for_portable_host",
+        }
+        for name in declaring
+    }
+
     return {
-        "claude": {"agents": claude, "limitations": HOST_LIMITATIONS["claude"]},
-        "codex": {"agents": codex, "limitations": HOST_LIMITATIONS["codex"]},
-        "copilot": {"agents": copilot, "limitations": HOST_LIMITATIONS["copilot"]},
-        "vscode": {"agents": copilot, "limitations": HOST_LIMITATIONS["vscode"]},
+        "claude": {
+            "agents": claude,
+            "skills": claude_skills,
+            "limitations": HOST_LIMITATIONS["claude"],
+        },
+        "codex": {
+            "agents": codex,
+            "skills": portable_skills,
+            "limitations": HOST_LIMITATIONS["codex"],
+        },
+        "copilot": {
+            "agents": copilot,
+            "skills": portable_skills,
+            "limitations": HOST_LIMITATIONS["copilot"],
+        },
+        "vscode": {
+            "agents": copilot,
+            "skills": portable_skills,
+            "limitations": HOST_LIMITATIONS["vscode"],
+        },
     }
 
 

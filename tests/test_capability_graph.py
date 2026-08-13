@@ -207,6 +207,34 @@ class HostSeparationTests(unittest.TestCase):
             self.assertEqual(agent["effective_authority"], "unknown_or_inherited")
         self.assertTrue(codex["limitations"])
 
+    def test_skill_tool_denies_are_projected_per_host(self):
+        """Skills carry their own control, and the generator strips it for portable hosts. A report
+        covering only agent tools answers 'what does each host withhold?' while omitting the only
+        authority a directly-invoked skill surface declares."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "skills" / "solo-skill" / "SKILL.md").write_text(
+                "---\nname: solo-skill\ndescription: Read-only.\n"
+                "disallowed-tools: Write, Edit, NotebookEdit\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            hosts = _document(root)["host_authority"]
+        self.assertEqual(
+            hosts["claude"]["skills"]["solo-skill"]["disallowed_tools"],
+            ["Edit", "NotebookEdit", "Write"],
+        )
+        for host in ("copilot", "vscode", "codex"):
+            projected = hosts[host]["skills"]["solo-skill"]
+            self.assertIsNone(projected["disallowed_tools"], host)
+            self.assertEqual(
+                projected["projection"], "tool_deny_stripped_for_portable_host", host
+            )
+
+    def test_a_skill_declaring_no_deny_is_absent_from_the_skill_projection(self):
+        with _tree() as name:
+            hosts = _document(Path(name))["host_authority"]
+        self.assertEqual(hosts["claude"]["skills"], {})
+
     def test_every_host_states_its_limitations(self):
         with _tree() as name:
             hosts = _document(Path(name))["host_authority"]

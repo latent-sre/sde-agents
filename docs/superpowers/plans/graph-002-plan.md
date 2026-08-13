@@ -15,9 +15,12 @@ Record the baseline commit when the round activates. Before implementation:
 2. Reproduce the decision's topology measure using its original source-member→target-member edge
    identity. Record description/body occurrences as a separate `surface_occurrences` series. Do
    not compare a new surface-split count to the historical 140 and call the difference drift.
-3. Capture median-of-five standalone times for the future graph CLI and contract CLI on the same
-   quiet machine. No `validate_fleet.py` before/after timing is claimed because the new analyses do
-   not enter its T0 path.
+3. Capture median-of-five standalone times for the graph CLI and contract CLI on the same quiet
+   machine, **once those CLIs exist** — this item is the only one in this list that cannot run
+   before implementation, and there is no "before" side to capture: neither tool has a predecessor
+   whose runtime it replaces. No `validate_fleet.py` before/after timing is claimed either, because
+   the new analyses do not enter its T0 path, so a single post-implementation measurement is the
+   whole of the evidence this item owes.
 
 ### Activation record (2026-08-12)
 
@@ -97,6 +100,16 @@ same skill through a frontmatter `skills:` preload and therefore correctly use t
 concentration measure built on namespaced references alone would report 8 inbound and miss that all
 11 agents reach that skill — and it would rank the weaker relationship above the stronger one,
 since a preload puts the skill in context while a reference only names it.
+
+**Two review claims answered against the shipped tools, recorded so they are not re-raised.** The
+narrowing to acyclic graphs and `all`-only joins **is** authoritatively amended: the accepted
+decision's 2026-08-12 amendment states schema v1 is deliberately narrower than the retained contract
+design and that the retained envelope is reachable only through a schema-version change, so no
+accepted behavior is silently omitted. And approval coverage already traverses an unresolved
+`subgraph` as an opaque-but-traversable outer node — an `entry → subgraph → effect` path around a
+human gate is reported today, witness `'start' -> 'inner' -> 'deploy'`, and a regression test now
+pins that so the property is enforced rather than incidental. Only paths and effects *inside* an
+unresolved digest remain unverified, which is what the interiors list names.
 
 **One question for the operator's topology review, not settled here.** `self-improve-loop` dropped
 its references to `eng-ladder`, `sde-fullstack`, and `sre-tool` and gained `runbook` — the only
@@ -200,7 +213,11 @@ Top level, unknown keys rejected:
 Node fields, unknown keys rejected:
 
 - `id`, `kind`, `zone`;
-- optional `input_schema`, `output_schema`, and bounded budget fields;
+- optional `input_schema` and `output_schema` identifiers, plus the two bounded budget fields
+  `max_attempts` and `timeout_ms` — each a positive integer no greater than 86,400,000. They are
+  enumerated rather than described because node objects reject unknown keys: a placeholder phrase
+  leaves an author unable to tell whether `token_budget` is legal, and forces the implementer to
+  invent part of schema v1 after approval;
 - kind-specific `binding` where required;
 - optional `join` only on a node with multiple incoming required-control predecessors.
 

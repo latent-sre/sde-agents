@@ -46,7 +46,9 @@ EDGE_KEYS = {"from", "to", "kind", "schema", "state_field", "values", "effect", 
 ZONE_KEYS = {"id", "allows"}
 JOIN_KEYS = {"mode", "timeout_ms", "on_timeout", "on_failed_predecessor"}
 
-NODE_KINDS = {"agent", "tool", "verifier", "subgraph", "deterministic", "human", "effect"}
+NODE_KINDS = {
+    "agent", "tool", "skill", "verifier", "subgraph", "deterministic", "human", "effect",
+}
 EDGE_KINDS = {"control", "condition", "failure", "compensation", "data", "approval", "evidence"}
 
 # Which edge kinds move execution forward, and which merely make a node ready. Treating all edges
@@ -59,6 +61,10 @@ UNBOUND_KINDS = {"deterministic", "human", "effect"}
 BINDING_DOMAINS = {
     "agent": {"agent"},
     "tool": {"tool"},
+    # The accepted decision requires a graph to reference canonical agent AND skill names. Binding a
+    # skill step as the `Skill` tool would lose the selected skill's identity, so a rename could not
+    # be caught -- which is the whole point of naming canonical members.
+    "skill": {"skill"},
     "verifier": {"agent", "repo-script"},
     "subgraph": {"contract-digest"},
 }
@@ -234,7 +240,9 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
                 )
 
     nodes: dict[str, dict] = {}
-    agent_names = {m.name for m in fleet_records.collect(root).members if m.kind == "agent"}
+    _members = fleet_records.collect(root).members
+    agent_names = {m.name for m in _members if m.kind == "agent"}
+    skill_names = {m.name for m in _members if m.kind == "skill"}
     fleet_tools = _fleet_tool_identifiers()
 
     for index, node in enumerate(document["nodes"]):
@@ -262,7 +270,9 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
                 )
         for field in ("input_schema", "output_schema"):
             diagnostics += _identifier_defects(node.get(field), f"{label} ({node_id}).{field}")
-        diagnostics += _binding_defects(node, label, agent_names, fleet_tools, root)
+        diagnostics += _binding_defects(
+            node, label, agent_names, skill_names, fleet_tools, root
+        )
         diagnostics += _join_shape_defects(node, label)
         nodes[node_id] = node
 
@@ -330,7 +340,7 @@ def _fleet_tool_identifiers() -> set[str]:
     return set(validate_fleet.FLEET_TOOLS) | set(validate_fleet.FLEET_MCP_TOOLS)
 
 
-def _binding_defects(node, label, agent_names, fleet_tools, root: Path) -> list[str]:
+def _binding_defects(node, label, agent_names, skill_names, fleet_tools, root: Path) -> list[str]:
     kind, node_id = node.get("kind"), node.get("id")
     binding = node.get("binding")
     if kind in UNBOUND_KINDS:
@@ -361,6 +371,10 @@ def _binding_defects(node, label, agent_names, fleet_tools, root: Path) -> list[
     if domain == "agent" and ref not in agent_names:
         return [
             f"{label} ({node_id}): binding ref {ref!r} is not a canonical agent in this fleet"
+        ]
+    if domain == "skill" and ref not in skill_names:
+        return [
+            f"{label} ({node_id}): binding ref {ref!r} is not a canonical skill in this fleet"
         ]
     if domain == "tool" and ref not in fleet_tools:
         return [

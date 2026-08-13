@@ -214,6 +214,16 @@ class Member:
     def preloaded_skills(self) -> list[str]:
         return [s.strip() for s in self.fields.get("skills", "").split(",") if s.strip()]
 
+    @property
+    def disallowed_tools(self) -> list[str]:
+        """Tools a skill denies while active (`disallowed-tools`).
+
+        This is a Claude-side declaration. The adapter generator strips it for portable hosts, so a
+        report that showed only agent authority would answer "what does each host withhold?" while
+        omitting the one control skills actually carry.
+        """
+        return split_tools(self.fields.get("disallowed-tools", ""))
+
 
 @dataclass(frozen=True)
 class Reference:
