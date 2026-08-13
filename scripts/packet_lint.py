@@ -60,6 +60,14 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # finding). The third slot ensures every blocked criterion is named, so a packet that records
     # "Checks executed: none" without naming what could not run cannot pass as green.
     "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
+    # homelab-platform's Tier 2/3 approval request, presented BEFORE a live apply — the only shape
+    # here that is not an end-of-task packet, so it requires no Learning closeout. The floor holds
+    # what no honest approval request can omit; `change` and `exact command` are deliberately absent
+    # because the agent declares "exact command **or** diff" and requiring either heading would fail
+    # the legal other one.
+    "tier2-approval-request": (
+        "what you will see", "target", "blast radius", "verification", "rollback",
+    ),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),
     "reviewer-verdict": ("verdict",),
@@ -68,6 +76,17 @@ SHAPES: dict[str, tuple[str, ...]] = {
         "what went poorly", "where we got lucky", "actions", "runbook updated",
     ),
 }
+# Slots that must LEAD their shape, keyed by shape name. Every other rule in this file is
+# order-blind, which is right for a packet whose fields are a set the caller looks up. It is wrong
+# for an approval request. The field report that produced this rule (issue #126) is precise about
+# it: the agent DID state that the VM would restart -- fourth, inside "blast radius", in
+# infrastructure vocabulary -- so a presence-only check passes the exact packet the operator called
+# defective. Ordering is the contract here, because an operator who reads one line before approving
+# must read the one about what happens to them.
+SHAPE_LEAD_SLOT: dict[str, str] = {
+    "tier2-approval-request": "what you will see",
+}
+
 # Every slot above must match the START of a normalized line -- see _slot_present. Shapes are
 # therefore written as the heading text an agent actually emits ("where we got lucky", not
 # "lucky"). There is deliberately no shape for lab-incident: that skill declares no fixed packet,
@@ -129,10 +148,16 @@ _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTIL
 # "This has not been fully tested, but I verified the fix works" still fires; a missed exotic
 # negation is a silent non-fire, the safe direction. Only the bare-word pattern is exempted --
 # "tests pass" and its siblings are unaffected.
+# Decoration is read on BOTH sides of the delimiter. `**Verified**: nothing` was exempt but
+# `**Verified:** nothing` -- the same disclosure with the emphasis span closing after the colon --
+# was not, so an honest "nothing was run" packet was reported as an unevidenced verification claim
+# (observed on the first live run of homelab-right-size-native-tier2). Which side of a colon a
+# Markdown span happens to close on is a rendering difference, and rejecting one is the same false
+# RED this exemption exists to prevent.
 _CLAIM_NEGATION_RE = re.compile(
     r"(?:\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b)"
     r"[^\r\n]{0,24}\bverified\b"
-    r"|\bverified\b[*_`\s]*[:—-]\s*(?:nothing|none|n/?a)\b",
+    r"|\bverified\b[*_`\s]*[:—-][*_`\s]*(?:nothing|none|n/?a)\b",
     re.IGNORECASE,
 )
 
@@ -280,6 +305,42 @@ def _slot_present(slot: str, normalized_lines: list[str]) -> bool:
     which is the whole promise the packet contract makes to a caller.
     """
     return any(line.startswith(slot) for line in normalized_lines)
+
+
+def _slot_first_index(slot: str, normalized_lines: list[str]) -> int | None:
+    """Index of the first line that BEGINS with the slot, or None when the slot is absent."""
+    for index, line in enumerate(normalized_lines):
+        if line.startswith(slot):
+            return index
+    return None
+
+
+def _lint_lead_slot(shape: str, normalized_lines: list[str]) -> list[str]:
+    """Require the shape's lead slot to precede every other required slot.
+
+    Silent when the lead slot is missing: the required-slot loop already reports that, and a second
+    finding for the same absence would read as two defects. Only a slot that is present but placed
+    after another required field is an ordering defect.
+    """
+    lead = SHAPE_LEAD_SLOT.get(shape)
+    if lead is None:
+        return []
+    lead_index = _slot_first_index(lead, normalized_lines)
+    if lead_index is None:
+        return []
+    earlier = [
+        slot
+        for slot in SHAPES[shape]
+        if slot != lead
+        and (index := _slot_first_index(slot, normalized_lines)) is not None
+        and index < lead_index
+    ]
+    if not earlier:
+        return []
+    return [
+        f"{lead!r} must be the first field of a {shape!r}; it appears after: "
+        + ", ".join(repr(slot) for slot in earlier)
+    ]
 
 
 def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str]]:
@@ -620,6 +681,9 @@ def lint_packet(
     for slot in SHAPES[shape]:
         if not _slot_present(slot, normalized):
             findings.append(f"missing required packet slot: {slot!r}")
+
+    # 1b. Lead-slot ordering, for the shapes that declare one. See SHAPE_LEAD_SLOT.
+    findings.extend(_lint_lead_slot(shape, normalized))
 
     if "learning" in SHAPES[shape]:
         findings.extend(lint_learning_closeout(text, learning_mode))

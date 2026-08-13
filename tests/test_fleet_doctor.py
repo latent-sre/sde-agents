@@ -138,6 +138,31 @@ class FleetDoctorTests(unittest.TestCase):
         self.assertEqual(1, exit_code)
         self.assertIn('"fixture.failure"', output.getvalue())
 
+    def _exit_code_for(self, **counts: int) -> int:
+        report = {
+            "schema_version": 1,
+            "generated_at": "2026-08-13T00:00:00Z",
+            "root": str(REPO),
+            "summary": {status: counts.get(status, 0) for status in fleet_doctor.STATUSES},
+            "checks": [],
+        }
+        with mock.patch.object(fleet_doctor, "collect_report", return_value=report):
+            with redirect_stdout(io.StringIO()):
+                return fleet_doctor.main(["--json"])
+
+    def test_a_warning_alone_is_not_a_clean_exit(self) -> None:
+        # REGRESSION (issue #126): host.codex.custom-agents warned that a stale standalone Codex
+        # profile was shadowing the shipped one, and the doctor exited 0 anyway -- so every caller
+        # that reads a status saw a healthy fleet. Without this the drift check is advisory prose.
+        self.assertEqual(3, self._exit_code_for(warn=1, **{"pass": 12}))
+
+    def test_a_failure_outranks_a_warning(self) -> None:
+        self.assertEqual(1, self._exit_code_for(fail=1, warn=2))
+
+    def test_only_a_clean_report_exits_zero(self) -> None:
+        # skip and inconclusive are not attention states: an absent host cannot be drift.
+        self.assertEqual(0, self._exit_code_for(**{"pass": 9, "skip": 2, "inconclusive": 1}))
+
 
 if __name__ == "__main__":
     unittest.main()

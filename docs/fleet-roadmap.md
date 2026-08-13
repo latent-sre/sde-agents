@@ -314,6 +314,60 @@ consumer waits. (3) Agents writing packets to a well-known scratch file — **re
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
 
+#### PROP-001 — right-size homelab Tier-2 work and stop silent host drift
+
+**Status:** `active` — source edits, deterministic gates, contracts, and the paired behavioral run
+are landed and recorded. What remains is release and downstream retest, not measurement: the
+ordering rule measures 5/6 across two after-side captures, and the residual failure mode is
+recorded rather than closed.
+
+**Outcome:** (1) `homelab-platform` defaults a reversible one-setting live change to the native
+control-plane operation plus source reconciliation, and builds a role, manifest, compensating
+transaction, broker-packet extension, or contract-test suite only against a named risk. (2) A
+Tier 2/3 approval request opens with the operator-visible effect in plain language, enforced by a
+reader rather than asserted in prose. (3) Tier 3 ceremony is unchanged, and no right-sizing
+argument can lower a tier. (4) Host drift from the shipped fleet — a stale standalone Codex agent
+in particular — reaches an exit status instead of scrolling past as a warning.
+
+**Source:** GitHub issue [#126](https://github.com/latent-sre/sde-agents/issues/126)
+(`field-feedback`), a real Codex-host session in which a one-setting VM CPU-model change produced
+2,665 lines across two commits and did not lead with the VM restart. Its two named mechanisms are
+the agent's missing right-sizing predicate and an installed standalone Codex profile that was
+stale and materially stricter than the shipped 1.7.3 one.
+
+**Prerequisites:** None. The right-size rule is prose behavior, so it is bound by the
+convergence rule in `AGENTS.md`: at most two static deep-review rounds, then close with the
+instrument that measures behavior.
+
+**Acceptance:** Paired before/after runs of `homelab-right-size-native-tier2`,
+`homelab-right-size-does-not-lower-tier3`, and `homelab-visible-effect-survives-long-session`
+under recorded identical conditions, committed under `evals/baselines/`; the Tier-3 case holding
+at or above its before-rate, since the guard against a right-size downgrade matters more than the
+proportionality gain; deterministic gates green. The issue's fourth proposed eval — surfacing
+Codex agent drift — is deliberately **not** a behavioral contract: headless behavioral evals never
+auto-approve `Bash`, so a contract whose required action is a command is structurally unpassable.
+It is `tests/test_fleet_doctor.py::test_a_warning_alone_is_not_a_clean_exit` instead.
+
+**Measured** (`evals/baselines/2026-08-13-prop-001/`, sonnet clean-room, 3 runs, CLI 2.1.229):
+`homelab-right-size-native-tier2` 0/3 → 2/3, `homelab-visible-effect-survives-long-session`
+0/3 → 3/3, `homelab-right-size-does-not-lower-tier3` 3/3 → 3/3. An intermediate after-side capture
+at the same revision scored 3/3 and 2/3 on the two proportionality contracts, so they measure 5/6
+together. The Tier-3 control held, which was the acceptance condition that mattered most. Two
+grader amendments are recorded with rationale in that baseline's README and in the cases' own
+`expected` fields; neither was a loosening, both corrected a false RED, and the before side
+re-grades to 0/3 under the final grammar, so discrimination is intact.
+
+**Known residual, deliberately not closed:** every ordering failure emits a `Rollback plan`
+section or `Classification` line ahead of `What you will see`, one run citing prime directive 1 by
+name. Rewording that directive moved the ordering contracts from 0/6 to 5/6; the remainder is the
+honest ceiling of a prose ordering rule. `AGENTS.md`'s convergence bound applies — a third
+prose round is an operator ruling, not a default. The durable control is
+`scripts/packet_lint.py`'s `tier2-approval-request` shape, which is an **eval-time** reader by
+design and not a session-time guarantee.
+
+**Next action:** Release 0.7.4 and record the released retest on issue #126, then retire this
+item. Retirement needs the release evidence, not another measurement round.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they

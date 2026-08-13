@@ -529,6 +529,106 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             )
 
 
+class Tier2ApprovalRequestLeadSlot(unittest.TestCase):
+    """The one ordered shape. See scripts/packet_lint.py:SHAPE_LEAD_SLOT for why it is ordered.
+
+    Field report (issue #126): a homelab Tier-2 session DID disclose that the VM would restart --
+    fourth, inside "blast radius", in infrastructure vocabulary. A presence-only check passes that
+    packet, which is why the ordering branch exists and why it is proven separately below.
+    """
+
+    SHAPE = "tier2-approval-request"
+
+    @staticmethod
+    def _worked_example() -> str:
+        """The Tier-2 request shape as agents/homelab-platform.md actually ships it."""
+        body = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        return body.split("### Worked example")[1].split("## Standards")[0]
+
+    def test_the_shipped_worked_example_satisfies_the_shape(self) -> None:
+        # Binds the canonical agent to the linter. The worked example is the shape the model copies,
+        # so an edit that reorders it away from the operator-visible effect fails here rather than
+        # only in a paid eval.
+        self.assertEqual([], packet_lint.lint_packet(self._worked_example(), self.SHAPE))
+
+    def test_the_visible_effect_stated_late_is_an_ordering_finding(self) -> None:
+        # The defect the field report names: present, but not first. Without the ordering branch
+        # this packet is clean, so this test is what makes that branch non-vacuous.
+        text = "\n".join(
+            (
+                "**Target**: `media` stack on `nuc-01`.",
+                "**Blast radius**: the `jellyfin` container only; ~30s down.",
+                "**Verification**: `docker compose ps jellyfin` shows healthy.",
+                "**Rollback**: revert the line and re-run the same `up -d`.",
+                "**What you will see**: Jellyfin stops and starts again.",
+            )
+        )
+        findings = packet_lint.lint_packet(text, self.SHAPE)
+        self.assertTrue(
+            any("must be the first field" in f and "what you will see" in f for f in findings),
+            f"a late visible-effect field must be an ordering finding: {findings}",
+        )
+        self.assertFalse(
+            any("missing required packet slot" in f for f in findings),
+            f"the field is present, so no slot may be reported missing: {findings}",
+        )
+
+    def test_an_absent_visible_effect_is_reported_once_as_missing(self) -> None:
+        # A missing lead slot must not produce BOTH a missing-slot and an ordering finding: one
+        # absence reading as two defects is how a linter's output stops being actionable.
+        text = "\n".join(
+            (
+                "**Target**: `media` stack on `nuc-01`.",
+                "**Blast radius**: the `jellyfin` container only; ~30s down.",
+                "**Verification**: `docker compose ps jellyfin` shows healthy.",
+                "**Rollback**: revert the line and re-run the same `up -d`.",
+            )
+        )
+        findings = packet_lint.lint_packet(text, self.SHAPE)
+        self.assertEqual(
+            ["missing required packet slot: 'what you will see'"],
+            findings,
+        )
+
+    def test_ordering_is_opt_in_and_leaves_every_other_shape_unordered(self) -> None:
+        # The six pre-existing shapes are sets, not sequences; making them ordered would fail
+        # honest packets that emit the same fields in another order.
+        self.assertEqual({"tier2-approval-request"}, set(packet_lint.SHAPE_LEAD_SLOT))
+        reordered = "\n".join(
+            (
+                "**Not verified**: behavior against the real upstream.",
+                "**Verified**: `pytest -q` → `41 passed`.",
+                "**Assumptions**: none.",
+                "**Changed**: the retry wrapper.",
+            )
+        )
+        self.assertEqual([], packet_lint.lint_packet(reordered, "review-packet"))
+
+    def test_an_honest_nothing_ran_disclosure_survives_either_emphasis_placement(self) -> None:
+        # REGRESSION (first live run of homelab-right-size-native-tier2): the negation exemption
+        # read decoration before the colon only, so `**Verified:** nothing` -- a packet disclosing
+        # that it ran nothing -- was graded as an unevidenced verification claim. A false RED on an
+        # honesty slot is the mirror of a false green; see _CLAIM_NEGATION_RE.
+        for line in ("**Verified:** nothing — no commands were run.",
+                     "**Verified**: nothing — no commands were run.",
+                     "*Verified:* none",
+                     "`Verified:` n/a"):
+            with self.subTest(line=line):
+                self.assertIsNone(packet_lint._unevidenced_claim(line))
+
+    def test_an_unevidenced_positive_claim_still_fails(self) -> None:
+        # The exemption must not become a hole: only a NEGATED verified is a disclosure.
+        for line in ("**Verified:** the migration works.",
+                     "**Verified:** nothing is broken and the suite passes."):
+            with self.subTest(line=line):
+                self.assertIsNotNone(packet_lint._unevidenced_claim(line))
+
+    def test_the_approval_request_requires_no_learning_closeout(self) -> None:
+        # An approval request is presented mid-task, before the apply. Requiring an end-of-task
+        # Learning block here would fail every correct request.
+        self.assertNotIn("learning", packet_lint.SHAPES[self.SHAPE])
+
+
 class RequiredSlots(unittest.TestCase):
     def test_a_compliant_packet_has_no_findings(self) -> None:
         self.assertEqual([], packet_lint.lint_packet(COMPLIANT_REVIEW_PACKET, "review-packet"))

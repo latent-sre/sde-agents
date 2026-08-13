@@ -435,7 +435,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "handoff-builder-applies-work-order",
         }
         hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
-        self.assertEqual(64, len(self.document["cases"]))
+        self.assertEqual(67, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
