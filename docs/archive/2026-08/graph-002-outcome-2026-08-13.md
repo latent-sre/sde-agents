@@ -63,24 +63,47 @@ before/after timing is claimed and none is owed.
 **Accepted by the operator on 2026-08-13.** Payload 4 is satisfied and GRAPH-002 is closed.
 
 - **Real-tree capability JSON and Mermaid reviewed:** yes. Emitted from `main`, first at `10246d8`
-  and re-emitted at `24f8711` after PRs #127 and #128 landed; both runs are identical on every
-  reported series (155 edges, 85 grants, 7 preloads, the same unreferenced and preload-only
-  members, 54 relationship gaps, 10 clusters), so the acceptance is not bound to a single transient
-  head.
+  and re-emitted at `24f8711` after PRs #127 and #128 landed. The **aggregate topology series are
+  unchanged** across both heads — 155 edges, 85 grants, 7 preloads, the same unreferenced and
+  preload-only members, 54 relationship gaps, 10 clusters — so the accepted findings do not depend
+  on a single transient head. The two documents are **not** byte-identical (140,991 vs 140,995
+  bytes): PR #128 edited `agents/homelab-platform.md`, moving one occurrence from line 163 to 198,
+  and `reference_edges` carries per-occurrence line numbers. That is worth knowing before using
+  this artifact for baseline-versus-candidate diffing — occurrence records shift with any edit to a
+  referring file, while the edge identity does not, which is exactly why the two are separate
+  series.
 - **Workflow design supplied to the CLI:** yes — one non-authoritative six-node design
   (`review-then-apply`: deterministic entry, agent, repo-script verifier, human gate, effect,
   terminal). Result `design-consistent (NOT runtime-enforced)`, `design_digest`
   `bfdcaf3501395783bf7b47cb9a68b219181e66fb66527b83e45f8db31c12624d`. The file was **not** promoted
   into a committed contract, and no digest was resolved: that remains GRAPH-004's.
-- **Did each output answer its stated operator question:** yes for all five. The answers are the
-  table above, produced by the tool rather than assembled by hand.
+- **Did each output answer its stated operator question:** yes, for both outputs. The capability
+  graph answered all five frozen questions; the table above is those answers. One attribution
+  matters: questions 1 and 3–5 are emitted wholly by the tool, while question 2's `140 → 155` pairs
+  an emitted candidate value with the historical 140 recorded in the decision. `capability_graph.py`
+  takes a single `--root` and has no baseline or comparison mode, so a rerun reproduces the
+  candidate side only — the comparison is this record's, not the tool's. The workflow validator
+  answered its own question, which was whether a prospective design is internally consistent before
+  any runtime exists: it returned `design-consistent (NOT runtime-enforced)` with a stable digest,
+  and the verdict's wording is itself the answer — it establishes a document property and declines
+  to claim an execution one.
 - **Limitations recorded:** the "Deliberately not done" section below is the accepted limitation
   set. Two are worth carrying forward as live reading caveats rather than defects: 54 relationship
   gaps rest on **cluster co-membership only** and are not behavioral coverage, and every Codex
-  authority projection is `unknown_or_inherited` — the report states what each host *requests*, and
-  only Claude's guard coverage is a control it can evidence.
+  authority projection is `unknown_or_inherited` — for Codex the report states what the profile
+  *requests*, not what the host granted. Two host controls **are** evidenced and must not be read
+  as unknown alongside it: Claude's guard coverage, and Copilot/VS Code's omission of `execute` from
+  guarded roles, which the report derives through the same generator function that renders those
+  adapters rather than by reparsing them.
 - **Rejected designs:** none. No design was refused during acceptance; the validator's refusal
   paths are covered by tests rather than by a rejected operator submission.
+- **T1 on the exact accepted bytes:** the plan's final sequence step requires `run_tests.py` and
+  `claude plugin validate . --strict` on the candidate, and the acceptance edit is itself the last
+  bytes. GitHub Actions run `31668922932` on `ec27c44` is that evidence: `validate
+  (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift` all pass. It is stronger
+  than the local run it replaces — Linux rather than the Windows development host, which matters on
+  this round specifically, since the only defect CI ever caught here was a test that passed
+  vacuously on Windows and failed on POSIX.
 
 ## Review history, and what it cost
 
