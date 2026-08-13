@@ -277,10 +277,15 @@ requires `--output-dir`, and it supersedes the separate file rather than duplica
 evidence for separating a grader defect from a prompt defect, not a different scoring path.
 
 The conditions block always names which form is present (`failing_run_evidence`), so a run with no
-evidence file is readable as "every run passed" rather than "the text was dropped". Treat any
-retained text as potentially sensitive model output: inspect it before committing or sharing it.
-`failing-run-evidence.json` is deliberately a separate file so it can be deleted or ignored without
-touching the comparison-grade artifact `eval_baseline.py` reads.
+evidence file is readable as "every run passed" rather than "the text was dropped".
+
+Treat any retained text as potentially sensitive model output. `failing-run-evidence.json` under
+`evals/baselines/` is **gitignored**, on the same rule as the probe and pilot run logs: it is a
+local diagnosis of a batch that already ran, not a committed measurement, and a round's conclusions
+reach the tree as reviewed quotes in its decisions note rather than as a raw dump. Being separable
+from `benchmark.json` is what makes that possible — the benchmark cannot be ignored the same way
+because it *is* the artifact, which is why `--retain-run-evidence`, whose text lands inside it,
+stays opt-in and requires inspecting the result before you commit or share it.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or

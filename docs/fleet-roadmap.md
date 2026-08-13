@@ -90,9 +90,12 @@ repairs) — their first-contact single runs remain diagnostic only.
 
 **Rides this item (PROP-002 deferrals, 2026-08-13).** Three proportionality trims sit in files
 this item is already paying to re-measure, so they ride its runs rather than buying their own:
-`runbook`'s owner/escalation slots (`SKILL.md:100,112`) and `references/example.md`'s two-role
-framing, and `self-improve-loop`'s candidate block (`SKILL.md:209-217` plus
-`references/discovery-routing.md:98-109`) and five retro types (`references/retro-protocol.md:7-90`).
+`runbook`'s owner and escalation/stop slots and `references/example.md`'s two-role framing, and
+`self-improve-loop`'s canonical candidate block (in SKILL.md and
+`references/discovery-routing.md`) and the five retro types in `references/retro-protocol.md`.
+Line numbers are deliberately omitted here: the scan record's citations bind commit `c38592c` and
+say so, while this file is the live tracker, where a line number rots silently as the file moves —
+`self-improve-loop/SKILL.md` has already shifted 37 lines since that scan.
 They are optional to this item's acceptance — closing LEARN-002 does not require making them — but
 they must not be made *without* its measurement. The disposition and reasoning are in
 [`prop-002-scan-findings-2026-08-13.md`](archive/2026-08/prop-002-scan-findings-2026-08-13.md).
@@ -189,10 +192,11 @@ small receipts. The paired evaluator change keeps six cases by replacing the rev
 with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
 byte-checked, grades captured regular-file bytes, and records artifact hashes/results. The
 digest-negative oracle now requires one exact hash command and correlated result plus an unchanged
-seeded workspace, closing the prior receipt-only false green. Red-before-green controls,
-T0, all 107 behavioral-evaluator tests, all 666 tests across 30 modules, and
-`claude plugin validate . --strict` pass. No Claude model session has run, so HANDOFF-001 remains
-unaccepted.
+seeded workspace, closing the prior receipt-only false green. Red-before-green controls, T0, the
+behavioral-evaluator module, the full suite, and `claude plugin validate . --strict` all passed at
+`dc02bed` (107 evaluator tests, 666 across 30 modules **at that commit** — GRAPH-002 and this
+round's additions have since moved the suite to 837 across 33 modules, so re-run rather than
+compare against those figures). No Claude model session has run, so HANDOFF-001 remains unaccepted.
 
 **Next action:** Freeze the candidate and request separate operator approval for the exact Claude
 model and the smallest three-session diagnostic: producer, functional builder, and digest-mismatch
@@ -294,11 +298,11 @@ description — and the repair goes to the skill, never to the grader.
 **Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
 
 **Rides this item (PROP-002 deferral, 2026-08-13).** Two `eng-ladder` proportionality trims —
-Mode 3's growth-feedback machinery (`SKILL.md:33-35`) and the formal consult-and-decision-record
-protocol (`SKILL.md:21`) — wait for this measurement rather than preceding it. Editing the skill
-first would move the bytes out from under the capture this item exists to buy, and `SKILL.md:21` is
-Mode 1 text adjacent to what `ladder-report-not-absorb` grades. Optional to acceptance; not to be
-made without the run.
+Mode 3's growth-feedback machinery and the formal consult-and-decision-record protocol in Mode 1 —
+wait for this measurement rather than preceding it. Editing the skill first would move the bytes
+out from under the capture this item exists to buy, and the consult protocol is Mode 1 text
+adjacent to what `ladder-report-not-absorb` grades. The scan record carries the exact line
+citations against commit `c38592c`. Optional to acceptance; not to be made without the run.
 
 #### ACK-001 — make a dropped Learning handoff visible
 
