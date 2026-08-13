@@ -413,7 +413,7 @@ parked, below.
   finding is that advertising them over-invites a pattern most lab services skip. That is a routing
   *precision* claim with no observed miss behind it, and buying a paired routing run to test a
   speculative improvement inverts the eval discipline. Reopen on an actual observed routing miss.
-- **Every remaining LOW, as one batch** — all 40 LOW findings across `lab-audit`,
+- **Every remaining LOW, as one batch** — the ~30 LOW findings across `lab-audit`,
   `lab-incident`, `security-audit`, `upgrade-campaign`, `restore-drill`, `onboarding-map`,
   `host-onboard`, `runbook`, `postmortem`, `backend-craft`, `frontend-craft`, `code-craft`,
   `ci-actions`, `observability`, `sre-tool`, `eng-ladder`, and `self-improve-loop`. The scan
