@@ -186,6 +186,15 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
     for required in ("name", "entry", "terminals", "zones", "nodes", "edges"):
         if required not in document:
             raise Defect(f"document: missing required key {required!r}")
+    # Container shape is checked before anything iterates. Without this, a scalar or null where a
+    # list belongs raised an uncaught TypeError and the CLI printed a Python traceback instead of
+    # the ordered diagnostics its exit-1 contract promises -- a malformed document looked like a
+    # crashed tool.
+    for key in ("terminals", "zones", "nodes", "edges"):
+        if not isinstance(document[key], list):
+            raise Defect(
+                f"document: {key!r} must be a list, not {type(document[key]).__name__}"
+            )
 
     zones: dict[str, list[str]] = {}
     for index, zone in enumerate(document["zones"]):
@@ -199,7 +208,13 @@ def _validate_structure(document, root: Path) -> tuple[list[str], dict, dict]:
             raise Defect(f"{label}: id must be a non-empty string")
         if zone_id in zones:
             diagnostics.append(f"{label}: duplicate zone id {zone_id!r}")
-        if not isinstance(allows, list) or allows != sorted(allows):
+        if not isinstance(allows, list) or not all(isinstance(a, str) for a in allows):
+            # Refuse before sorting or copying: `sorted(["b", 1])` and `list(None)` both raise, and
+            # a diagnostic already appended does not help if the next line crashes the process.
+            diagnostics.append(f"{label}: allows must be a list of zone-id strings")
+            zones[zone_id] = []
+            continue
+        if allows != sorted(allows):
             diagnostics.append(
                 f"{label}: allows must be a sorted list so two equivalent documents cannot "
                 f"differ only by ordering"
@@ -418,6 +433,12 @@ def _edge_field_defects(edge, label, nodes) -> list[str]:
 
     if kind != "data" and "schema" in edge:
         defects.append(f"{label}: 'schema' is only meaningful on a data edge")
+    if kind not in ("data", "evidence") and "classification" in edge:
+        # Every other kind-specific field says where it applies; without this one, a classification
+        # on a control edge validated clean while configuring nothing.
+        defects.append(
+            f"{label}: 'classification' is only meaningful on a data or evidence edge"
+        )
     return defects
 
 
@@ -444,7 +465,8 @@ def _validate_semantics(document, nodes, context) -> list[str]:
         cycle = _find_cycle(graph, sorted(nodes))
         if cycle:
             diagnostics.append(
-                f"{name} graph: cycle rejected in schema v1; witness: {' -> '.join(cycle)}"
+                f"{name} graph: cycle rejected in schema v1; witness: "
+                f"{' -> '.join(repr(n) for n in cycle)}"
             )
 
     reachable = _reachable(transition, entry)
@@ -468,7 +490,8 @@ def _validate_semantics(document, nodes, context) -> list[str]:
         if source_zone != target_zone and target_zone not in zones.get(source_zone, []):
             diagnostics.append(
                 f"edges[{index}]: zone {source_zone!r} does not allow {target_zone!r}; witness: "
-                f"{edge['from']} -> {edge['to']} ({edge.get('kind')}). This proves the declared "
+                f"{edge['from']!r} -> {edge['to']!r} ({edge.get('kind')!r}). This proves the "
+                f"declared "
                 f"topology relation only, not a runtime boundary."
             )
         if edge.get("kind") == "data":
@@ -559,7 +582,7 @@ def _approval_coverage_defects(nodes, edges, transition, entry) -> list[str]:
         if bypass:
             defects.append(
                 f"nodes[{node_id}]: effect reachable without passing an approving human gate "
-                f"{sorted(gates)}; witness: {' -> '.join(bypass)}"
+                f"{sorted(gates)}; witness: {' -> '.join(repr(n) for n in bypass)}"
             )
     return defects
 
@@ -611,7 +634,7 @@ def main(argv: list[str] | None = None) -> int:
 
     interiors = _unverified_interiors(nodes)
     print("design-consistent (NOT runtime-enforced)")
-    print(f"  name:          {document['name']}")
+    print(f"  name:          {document['name']!r}")
     print(f"  design_digest: {_digest(raw)}")
     print(f"  nodes:         {len(nodes)}")
     print(f"  edges:         {len(context['edges'])}")

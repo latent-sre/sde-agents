@@ -168,6 +168,19 @@ class HostSeparationTests(unittest.TestCase):
         self.assertIsNone(claude["agents"]["reviewer"]["guarded"])
         self.assertEqual(claude["agents"]["reviewer"]["guard_evidence"], "unknown")
 
+    def test_unknown_guard_roster_refuses_the_copilot_projection(self):
+        """`bool(None)` is False, so an unreadable roster silently answered 'not guarded' and the
+        artifact asserted execute_available for every Bash-holding agent -- a security claim made
+        on the strength of a file never opened, contradicting the Claude section beside it."""
+        with _tree(guarded=None) as name:
+            hosts = _document(Path(name))["host_authority"]
+        copilot = hosts["copilot"]["agents"]["reviewer"]
+        self.assertIsNone(copilot["execute_available"])
+        self.assertIsNone(copilot["execute_withheld_by_guard"])
+        self.assertIsNone(copilot["tool_aliases"])
+        self.assertEqual(copilot["projection"], "unavailable_unknown_guard_roster")
+        self.assertIsNone(hosts["claude"]["agents"]["reviewer"]["guarded"])
+
     def test_guarded_agent_loses_execute_on_copilot(self):
         with _tree(guarded=["reviewer"]) as name:
             copilot = _document(Path(name))["host_authority"]["copilot"]["agents"]
@@ -249,6 +262,50 @@ class UndeclaredAuthorityTests(unittest.TestCase):
             paths = _document(Path(name))["report"]["host_authority_paths"]
         self.assertEqual(paths["inherits_all_tools"], [])
         self.assertNotIn("INCOMPLETE", paths["note"])
+
+
+class UnreadableDefinitionTests(unittest.TestCase):
+    def test_an_unparseable_definition_is_surfaced_not_silently_dropped(self):
+        """It contributes no node, so omitting it entirely lets an operator diffing a baseline
+        read a broken file as a deleted member."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "broken.md").write_text(
+                "---\nname: broken\ntools Read, Write\n---\n\nBody.\n", encoding="utf-8"
+            )
+            document = _document(root)
+        self.assertEqual(document["unreadable_definitions"], ["agents/broken.md"])
+        self.assertNotIn("broken", document["nodes"]["agents"])
+        self.assertIn("INCOMPLETE", document["report"]["host_authority_paths"]["note"])
+
+    def test_a_clean_tree_reports_no_unreadable_definitions(self):
+        with _tree() as name:
+            document = _document(Path(name))
+        self.assertEqual(document["unreadable_definitions"], [])
+
+
+class MermaidSafetyTests(unittest.TestCase):
+    def test_member_names_cannot_inject_mermaid_statements(self):
+        """This tool records without judging, and NAME_RE is enforced only by validate_fleet.py,
+        which has not necessarily run on an inspected foreign tree."""
+        with _tree() as name:
+            root = Path(name)
+            (root / "agents" / "demo-agent.md").write_text(
+                '---\nname: a; click a "javascript:alert(1)"\ndescription: Hostile.\n'
+                "tools: Read\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            rendered = capability_graph.render_mermaid(_document(root))
+        # No line may begin with a Mermaid keyword the graph never derived, and no label may carry
+        # a raw quote that could terminate its own string.
+        for line in rendered.splitlines()[1:]:
+            self.assertTrue(line.startswith("  "), line)
+            self.assertFalse(line.strip().startswith("click"), line)
+        self.assertIn("#quot;", rendered)
+        self.assertIn("a__click_a__javascript_alert_1_[", rendered)
+        for line in rendered.splitlines()[1:]:
+            identifier = line.strip().split("[")[0].split("(")[0].split(" ")[0]
+            self.assertRegex(identifier, r"^[A-Za-z0-9_]+$")
 
 
 class MeasurementOverlayTests(unittest.TestCase):
@@ -341,15 +398,42 @@ class SafetyTests(unittest.TestCase):
 
 
 class RealTreeTests(unittest.TestCase):
-    def test_this_repository_reproduces_the_recorded_stable_measure(self):
-        """The dated identity, bound to the reproduction recorded in the GRAPH-002 plan."""
+    """Real-tree SMOKE emission, which is all the plan's Payload-4 list asks for.
+
+    An earlier version pinned the live counts (155 edges, 7 preloads, 85 grants). That turned an
+    explicitly advisory report into a merge blocker: adding one namespaced cross-reference -- the
+    form AGENTS.md mandates -- failed the suite with `156 != 155` and no guidance, which is exactly
+    what this tool's own docstring says the design refuses. The dated 140-edge reproduction belongs
+    in the GRAPH-002 plan's record, not in a gate. What is asserted here instead is internal
+    consistency, which no ordinary content edit can break.
+    """
+
+    def _document(self):
         plugin = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))["name"]
-        document = capability_graph.build_document(fleet_records.collect(REPO, plugin))
-        self.assertEqual(len(document["reference_edges"]), 155)
-        self.assertEqual(len(document["preload_edges"]), 7)
-        self.assertEqual(
-            sum(len(t) for t in document["tool_grants"].values()), 85
-        )
+        return fleet_records.collect(REPO, plugin)
+
+    def test_the_real_tree_emits_a_well_formed_report(self):
+        document = capability_graph.build_document(self._document())
+        self.assertTrue(document["reference_edges"])
+        self.assertTrue(document["tool_grants"])
+        self.assertEqual(document["schema_version"], capability_graph.SCHEMA_VERSION)
+
+    def test_emitted_edges_match_the_collector_identity_exactly(self):
+        """One rule, one owner. If the graph and the collector ever disagree about which pairs are
+        edges, that is the duplicate-derivation failure, and it shows up here regardless of how
+        many edges the tree happens to have."""
+        records = self._document()
+        document = capability_graph.build_document(records)
+        emitted = {(e["source"], e["target"]) for e in document["reference_edges"]}
+        self.assertEqual(emitted, fleet_records.stable_edges(records))
+
+    def test_every_edge_endpoint_is_a_declared_member(self):
+        records = self._document()
+        document = capability_graph.build_document(records)
+        members = {m.name for m in records.members}
+        for edge in document["reference_edges"]:
+            self.assertIn(edge["source"], members)
+            self.assertIn(edge["target"], members)
 
 
 if __name__ == "__main__":

@@ -228,7 +228,10 @@ class Reference:
     target: str
     path: Path
     line: int  # 1-indexed
-    surface: str  # "description" | "body"
+    # "description" | "body" | "frontmatter". The third is a reference in some OTHER frontmatter
+    # field: rare, but it must not be folded into either of the first two, because a consumer
+    # counting description-vs-body surfaces would then count something a reader never sees there.
+    surface: str
     in_core_definition: bool  # agents/*.md or skills/*/SKILL.md, vs a bundled references/ file
     is_slash_command: bool
     raw: str  # exact reference form as written
@@ -264,7 +267,10 @@ class FleetRecords:
     # empty set, which means "read it, nothing is guarded". Collapsing the two would let a report
     # state that no agent is guarded on the strength of a file it failed to open.
     guarded_agents: frozenset[str] | None = None
-    unparseable: tuple[Path, ...] = ()  # frontmatter the parser refused; the validator reports it
+    # Definitions whose frontmatter the parser refused. These are NOT members -- they carry no
+    # usable identity -- but dropping them without a trace makes a broken file indistinguishable
+    # from a deleted one to anyone diffing two trees, so every consumer must surface them.
+    unparseable: tuple[Path, ...] = ()
 
     @property
     def agents(self) -> tuple[Member, ...]:
@@ -535,7 +541,10 @@ def surface_occurrences(records: FleetRecords) -> dict[str, int]:
     deliberate edit rather than a careless one.
     """
     names = {m.name for m in records.members}
-    counts = {"description": 0, "body": 0}
+    # All three surfaces are seeded so the map's shape does not depend on where references happen
+    # to sit; a key that appears only sometimes makes two artifacts differ structurally rather than
+    # numerically.
+    counts = {"description": 0, "body": 0, "frontmatter": 0}
     for r in records.references:
         if r.target in names:
             counts[r.surface] = counts.get(r.surface, 0) + 1

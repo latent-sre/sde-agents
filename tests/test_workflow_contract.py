@@ -94,7 +94,8 @@ class ApprovalCoverageTests(unittest.TestCase):
         diagnostics = _check(document)
         self.assertEqual(len(diagnostics), 1)
         self.assertIn("without passing an approving human gate", diagnostics[0])
-        self.assertIn("start -> deploy", diagnostics[0])
+        # Node ids are repr'd in witnesses so a crafted id cannot forge output structure.
+        self.assertIn("'start' -> 'deploy'", diagnostics[0])
 
     def test_effect_with_no_human_approval_edge_is_rejected(self):
         document = _mutate()
@@ -434,6 +435,47 @@ class SchemaStrictnessTests(unittest.TestCase):
         document = _mutate()
         document["nodes"][1]["max_attempts"] = 0
         self.assertTrue(any("positive integer" in d for d in _check(document)))
+
+    def test_ill_typed_containers_produce_diagnostics_not_a_traceback(self):
+        """`list(None)` and `sorted(["b", 1])` raised uncaught, so the CLI printed a Python
+        traceback instead of the ordered diagnostics its exit-1 contract promises -- a malformed
+        document was indistinguishable from a crashed tool."""
+        for patch in (
+            lambda d: d["zones"].__setitem__(0, {"id": "review", "allows": None}),
+            lambda d: d["zones"].__setitem__(0, {"id": "review", "allows": ["b", 1]}),
+            lambda d: d.__setitem__("nodes", "not-a-list"),
+            lambda d: d.__setitem__("edges", 7),
+            lambda d: d.__setitem__("terminals", None),
+            lambda d: d.__setitem__("zones", {}),
+        ):
+            document = _mutate()
+            patch(document)
+            diagnostics = _check(document)  # must not raise
+            self.assertTrue(diagnostics)
+
+    def test_ill_typed_containers_exit_one_through_the_cli(self):
+        with TemporaryDirectory() as out:
+            document = _mutate()
+            document["zones"][0] = {"id": "review", "allows": None}
+            path = Path(out) / "illtyped.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            self.assertEqual(wc.main([str(path), "--root", str(REPO)]), 1)
+
+    def test_classification_is_scoped_to_data_and_evidence_edges(self):
+        document = _mutate()
+        document["edges"][0]["classification"] = "secret"  # a control edge
+        self.assertTrue(
+            any("only meaningful on a data or evidence edge" in d for d in _check(document))
+        )
+
+    def test_classification_is_accepted_on_an_evidence_edge(self):
+        document = _mutate()
+        document["edges"].append({
+            "from": "verify", "to": "approve", "kind": "evidence", "classification": "internal",
+        })
+        self.assertEqual(
+            [d for d in _check(document) if "classification" in d], []
+        )
 
     def test_duplicate_node_ids_are_rejected(self):
         document = _mutate()

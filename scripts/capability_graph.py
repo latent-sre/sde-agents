@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -102,13 +103,17 @@ def build_document(records) -> dict:
     """Assemble the deterministic report document from already-collected records."""
 
     member_names = {m.name for m in records.members}
-    core_references = [
-        r for r in records.references if r.in_core_definition and r.target in member_names
-    ]
+    # The edge identity comes from fleet_records, never from a second filter here. Re-deriving it
+    # inline meant two places encoded the same rule, so a future change applied to one and not the
+    # other would reproduce exactly the two-reports-disagreeing failure that module exists to
+    # prevent.
+    identity = fleet_records.stable_edges(records)
 
     grouped: dict[tuple[str, str], list] = defaultdict(list)
-    for reference in core_references:
-        grouped[(reference.source, reference.target)].append(reference)
+    for reference in records.references:
+        key = (reference.source, reference.target)
+        if reference.in_core_definition and key in identity:
+            grouped[key].append(reference)
 
     reference_edges = [
         {
@@ -150,6 +155,12 @@ def build_document(records) -> dict:
         "schema_version": SCHEMA_VERSION,
         "tool_grants": tool_grants,
         "tool_authority_undeclared": inherits_all,
+        # A definition the parser refused contributes no node but may still contribute reference
+        # occurrences, so omitting it entirely lets an operator diffing a baseline read a broken
+        # file as a deleted member.
+        "unreadable_definitions": sorted(
+            _relative(path, records.root) for path in records.unparseable
+        ),
     }
 
 
@@ -188,15 +199,28 @@ def _host_authority(records) -> dict:
             continue
         # Derived through the generator's own mapping rather than by reparsing generated files, so
         # one alias table governs both the adapters and this report.
-        aliases = adapters._copilot_tools(agent.fields, guarded=bool(is_guarded))
-        # "Never held Bash" and "the guard removed execute" are different facts about a role. One
-        # flag for both would report `researcher` -- which has no shell tool at all -- as having had
-        # execute taken away, describing a control that was never applied to it.
-        copilot[agent.name] = {
-            "execute_available": "execute" in aliases,
-            "execute_withheld_by_guard": bool(is_guarded) and "Bash" in agent.tools,
-            "tool_aliases": aliases,
-        }
+        if is_guarded is None:
+            # The Copilot alias set depends on guard membership, so an unreadable roster makes it
+            # underivable. `bool(None)` is False, which silently answered "not guarded" and emitted
+            # a definite `execute_available: true` for every Bash-holding agent -- a security claim
+            # made on the strength of a file that was never opened, contradicting the Claude
+            # projection in the same document.
+            copilot[agent.name] = {
+                "execute_available": None,
+                "execute_withheld_by_guard": None,
+                "tool_aliases": None,
+                "projection": "unavailable_unknown_guard_roster",
+            }
+        else:
+            aliases = adapters._copilot_tools(agent.fields, guarded=is_guarded)
+            # "Never held Bash" and "the guard removed execute" are different facts about a role.
+            # One flag for both would report `researcher` -- which has no shell tool at all -- as
+            # having had execute taken away, describing a control never applied to it.
+            copilot[agent.name] = {
+                "execute_available": "execute" in aliases,
+                "execute_withheld_by_guard": is_guarded and "Bash" in agent.tools,
+                "tool_aliases": aliases,
+            }
         writes = set(agent.tools) & set(adapters._validator_module().WRITE_TOOLS)
         codex[agent.name] = {
             "effective_authority": "unknown_or_inherited",
@@ -230,6 +254,22 @@ def _measurement_overlay(records) -> dict:
             member: sorted(cases) for member, cases in sorted(asserted.items())
         },
     }
+
+
+def _incomplete_note(inherits_all: list[str], unreadable: tuple) -> str:
+    """Say what the report could not establish, in the report itself."""
+    notes = []
+    if inherits_all:
+        notes.append(
+            " INCOMPLETE: one or more agents declare no tools and therefore inherit every tool; "
+            "their host projections are unavailable, not least-privileged."
+        )
+    if unreadable:
+        notes.append(
+            f" INCOMPLETE: {len(unreadable)} definition(s) could not be parsed and contribute no "
+            f"node; see unreadable_definitions before reading an absence as a removal."
+        )
+    return "".join(notes)
 
 
 def _report(
@@ -321,13 +361,7 @@ def _report(
             # operator has to go looking for would defeat reading the report at all.
             "inherits_all_tools": inherits_all,
             "note": "Prose cross-references and skill preloads are influence edges and are not "
-            "traversed as authority."
-            + (
-                " INCOMPLETE: one or more agents declare no tools and therefore inherit every "
-                "tool; their host projections are unavailable, not least-privileged."
-                if inherits_all
-                else ""
-            ),
+            "traversed as authority." + _incomplete_note(inherits_all, records.unparseable),
         },
         "hub_concentration": hub,
         "reached_only_by_preload": preload_only,
@@ -337,20 +371,46 @@ def _report(
     }
 
 
+_MERMAID_SAFE_RE = re.compile(r"[^A-Za-z0-9_]")
+
+
+def _mermaid_id(name: str) -> str:
+    """A Mermaid-safe node id derived from a member name.
+
+    Member names come from the INSPECTED tree, and this tool records without judging -- `NAME_RE`
+    is enforced by validate_fleet.py, which has not necessarily run on a foreign or baseline
+    checkout. Interpolating such a name raw let `;` and other Mermaid syntax reach the diagram as
+    statements the graph never derived. The JSON path is unaffected because json.dumps escapes.
+    """
+    return _MERMAID_SAFE_RE.sub("_", name) or "_"
+
+
+def _mermaid_label(name: str) -> str:
+    """Neutralize a label so it cannot terminate its own quoted string.
+
+    Mermaid does not honor backslash escapes inside a quoted label -- `\\"` still ends the string --
+    so the quote is replaced with the `#quot;` entity Mermaid does document. Newlines are flattened
+    because a line break would end the statement regardless of quoting.
+    """
+    return (
+        name.replace('"', "#quot;")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+
+
 def render_mermaid(document: dict) -> str:
     """A VIEW of the same node/edge identity the JSON carries -- never a second calculation."""
     lines = ["graph LR"]
     for name in document["nodes"]["agents"]:
-        lines.append(f'  {name.replace("-", "_")}["{name}"]')
+        lines.append(f'  {_mermaid_id(name)}["{_mermaid_label(name)}"]')
     for name in document["nodes"]["skills"]:
-        lines.append(f'  {name.replace("-", "_")}(["{name}"])')
+        lines.append(f'  {_mermaid_id(name)}(["{_mermaid_label(name)}"])')
     for edge in document["reference_edges"]:
-        lines.append(
-            f'  {edge["source"].replace("-", "_")} --> {edge["target"].replace("-", "_")}'
-        )
+        lines.append(f'  {_mermaid_id(edge["source"])} --> {_mermaid_id(edge["target"])}')
     for edge in document["preload_edges"]:
         lines.append(
-            f'  {edge["source"].replace("-", "_")} -.preload.-> {edge["skill"].replace("-", "_")}'
+            f'  {_mermaid_id(edge["source"])} -.preload.-> {_mermaid_id(edge["skill"])}'
         )
     return "\n".join(lines) + "\n"
 

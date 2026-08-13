@@ -130,6 +130,32 @@ class ReferenceRecordTests(unittest.TestCase):
             for reference in records.references:
                 self.assertIn(reference.raw, lines[reference.line - 1])
 
+    def test_a_reference_in_another_frontmatter_field_gets_its_own_surface(self):
+        """The third surface value, which previously had no firing test at all. Folding it into
+        description or body would count a reference where no reader sees one."""
+        handle = _tree(None)
+        with handle:
+            root = Path(handle.name)
+            skill = root / "skills" / "demo-skill" / "SKILL.md"
+            skill.write_text(
+                "---\nname: demo-skill\ndescription: A demo skill.\n"
+                f"argument-hint: pass {PLUGIN}:demo-agent\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            records = fleet_records.collect(root, PLUGIN)
+        surfaces = {r.surface for r in records.references if r.path == skill}
+        self.assertEqual(surfaces, {"frontmatter"})
+        self.assertEqual(fleet_records.surface_occurrences(records)["frontmatter"], 1)
+
+    def test_surface_occurrences_always_carries_all_three_keys(self):
+        handle = _tree(None)
+        with handle:
+            records = fleet_records.collect(Path(handle.name), PLUGIN)
+        self.assertEqual(
+            sorted(fleet_records.surface_occurrences(records)),
+            ["body", "description", "frontmatter"],
+        )
+
     def test_bundled_reference_files_are_attributed_to_their_skill(self):
         handle = _tree(None)
         with handle:
