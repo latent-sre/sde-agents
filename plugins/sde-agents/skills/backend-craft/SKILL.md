@@ -70,7 +70,7 @@ These are the system-wide principles. The client-side mechanics for *calling oth
   not a second effect. Uploads verify magic bytes, never the extension or declared Content-Type.
   Drop the rows the route doesn't have: a deliberately public `/healthz` has no auth or 404 case,
   and inventing one to complete the matrix changes the contract instead of testing it.
-- **Contract-test** against the OpenAPI spec so served shapes can't drift from what the frontend builds on.
+- **Contract-test** against the OpenAPI spec once something you don't deploy in the same commit builds on it — a separately released frontend, a generated client, another team. When both sides move together, the route's own tests already catch the drift, and the contract layer is a second copy of them.
 - Before "done": the service starts clean, tests pass, and the primary endpoints were exercised with **real requests** (curl/httpie) — request and response pasted in the review packet. An API that was never called is written, not verified.
 
 The **review packet** is the end-of-task report defined by the calling agent (`sde-fullstack`, which requires this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.

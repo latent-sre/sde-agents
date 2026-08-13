@@ -32,9 +32,13 @@ that reach outside the database** may have already acted. Neither is reversible 
 
 ## Migrations on a live database
 
-- **Every migration is expand → migrate → contract**, and each phase ships separately: add the new
-  nullable column or table, backfill and dual-write, then remove the old form once nothing reads it.
-  The sequencing at design altitude is owned by `eng-ladder`'s principal reference; this is
+- **A migration that cannot stop the readers is expand → migrate → contract**, and each phase ships
+  separately: add the new nullable column or table, backfill and dual-write, then remove the old
+  form once nothing reads it. What earns the three phases is old and new code running at the same
+  time — a rolling deploy, a second consumer, a client you cannot restart. A single service you can
+  stop for twenty seconds can take the brief downtime and migrate in one step; paying for a
+  dual-write window to avoid a restart nobody would notice is the expensive way to do it. The
+  sequencing at design altitude is owned by `eng-ladder`'s principal reference; this is
   the database mechanics.
 - **A `NOT NULL` column added with a default rewrites the table** on older engines and takes an
   exclusive lock for the duration. The lock-light path in Postgres:

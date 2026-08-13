@@ -7,8 +7,11 @@ to its phases. On any conflict, SKILL.md wins.
 ## Design additions (Phase 1)
 
 - **Interface contract as a repo artifact** with concrete example payloads — endpoints,
-  request/response JSON, error cases — instantiated from `assets/contract.template.md`. It cannot
-  be skipped, and it is **living**: a builder whose implementation diverges updates it (and its
+  request/response JSON, error cases — instantiated from `assets/contract.template.md`. Required
+  once more than one builder writes against the interface — inferring it from each other's code is
+  exactly what the artifact prevents; a single builder working the components in sequence has the
+  interface in front of it and owes only the finished spec. Where it is required it is
+  **living**: a builder whose implementation diverges updates it (and its
   version line) in the same change, and parallel builders cite the artifact and the version they
   built against — never each other's code.
 - During a parallel batch the contract has **one named owner**; every other builder is read-only on

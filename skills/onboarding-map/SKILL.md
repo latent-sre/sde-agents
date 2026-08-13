@@ -32,8 +32,7 @@ supplies an approval.
 Discovery and recommendation are free; activation and execution are not. Collapsing them fails in
 both directions — a user who never learns the workflow exists, and a workflow that reads as
 running because something named it. A pause during activation or execution belongs to a gate, and
-`sde-agents:homelab-platform` names which one; nothing here removes a gate or stands in for an
-approval.
+`sde-agents:homelab-platform` names which one.
 
 ## Reaching one from here
 

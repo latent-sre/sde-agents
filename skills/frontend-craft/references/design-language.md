@@ -61,9 +61,10 @@ building.
 - **Designed states.** Skeleton shimmer instead of spinners for content areas; empty states get an
   icon and a call to action; icons anchor navigation, actions, and stats.
 - **Every view is a composition.** If the primary content fills only a fraction of the viewport,
-  that's a design defect: either enrich the view (supporting detail, recent activity, a trend over
-  time — whatever the data honestly supports) or constrain the canvas to fit the content. Never
-  ship a screen that is mostly empty page.
+  constrain the canvas to fit the content — that is the fix that needs no permission. Enriching the
+  view instead (supporting detail, recent activity, a trend over time) means building features
+  nobody asked for, so it is a proposal to the person who asked for the screen, never something you
+  ship because the page looked empty.
 
 ## One language, many apps
 

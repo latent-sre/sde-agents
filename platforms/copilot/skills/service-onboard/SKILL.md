@@ -54,5 +54,7 @@ variable map into output — field-proven during a real onboarding, not hypothet
 
 Finish with the review packet: what was deployed; the service rollback (how to remove it cleanly);
 the runbook disposition and canonical path; the version/config identity tested; exact evidence
-from step 8; separate lists of verified, unverified, and `n/a` items; and each gap's named owner and
-handoff. A full template with unverified headings is not completion evidence.
+from step 8; and every item you could not verify, kept distinct from the ones that did not apply —
+with a handoff owner named only where that owner is someone other than you. The unverified items
+are the load-bearing part: they are what stops a partly applied checklist from reading as a
+finished one. A full template with unverified headings is not completion evidence.
