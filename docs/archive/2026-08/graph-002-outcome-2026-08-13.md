@@ -1,8 +1,9 @@
 # GRAPH-002 outcome — operator capability graph and workflow-design validator
 
-**Status: landed 2026-08-13** (PR #125, merge `10246d8`). This record retires the round's spec and
-plan, which were deleted at closeout per the convention that their absence means no round is
-running. Both are preserved in Git history at `60ba49e` as
+**Status: closed 2026-08-13** — implementation merged (PR #125, merge `10246d8`), retired to this
+record (PR #127, merge `92f0611`), and accepted by the operator the same day. This record retires
+the round's spec and plan, which were deleted at closeout per the convention that their absence
+means no round is running. Both are preserved in Git history at `60ba49e` as
 `docs/superpowers/specs/graph-002-descriptive-capability-graph.md` and
 `docs/superpowers/plans/graph-002-plan.md`; read them with `git show`. Governed by the accepted
 [AI graph engineering decision](../../decisions/2026-07-31-ai-graph-engineering.md) as amended
@@ -45,10 +46,35 @@ only, self-loops included, with surface and slash form as metadata. No other swe
 | Question | Answer |
 |---|---|
 | 1 — isolated / concentrated | Unreferenced: `code-craft`, `onboarding-map`; `code-craft` is reached only by preload. Top hubs: `homelab-platform` 18, `sde-fullstack` 12, `principal-engineer` 10, `code-reviewer` 9 |
-| 2 — changed vs the dated measure | Edges 140 → 155; tool grants 85 → 85 with no per-agent change; preloads 4 → 7 |
+| 2 — changed vs the dated measure | Edges 140 → 155 (**18 added, 3 removed**); tool grants 85 → 85 with no per-agent change; preloads 4 → 7. The relationship-level list is below — the frozen question asks *which* relationships changed, and an aggregate does not answer it |
 | 3 — host request / withhold | Claude guards 3 roles; Copilot withholds `execute` from those same 3 by guard; Codex requests `workspace-write` for 7 of 11; `lab-audit` and `security-audit` declare skill-level denies that portable hosts strip |
 | 4 — where authority is unknown | Every Codex role `unknown_or_inherited`; `prompt-engineer` the sole dynamic-delegation principal switch |
-| 5 — behavioral evidence | 30 members carry positive case assertions, 31 carry negative ones; 54 reference relationships rest on co-membership only |
+| 5 — behavioral evidence | **Partly answered, and the limit matters.** 30 members carry positive case assertions and 31 carry negative ones — but assertions are *per member*, not per relationship, so they do not establish which **relationships** have behavioral evidence. What the overlay does establish is the co-membership half: 54 reference relationships have endpoints that share **no** routing cluster at all |
+
+**Question 2 in full — which relationships changed.** Reproduced under the stable identity against
+the decision's own snapshot `c02d8e12`, not against a second post-implementation head:
+
+- **Added (18) = 8 + 7 + 3.** Eight agents gained a `/sde-agents:self-improve-loop` routing edge
+  (`application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`,
+  `multi-agent-architect`, `principal-engineer`, `repository-investigator`, `researcher`); the new
+  `onboarding-map` skill contributed seven outbound edges (`eng-ladder`, `homelab-platform`,
+  `host-onboard`, `lab-audit`, `sde-fullstack`, `security-audit`, `service-onboard`); and three
+  others landed — `code-reviewer → homelab-platform`, `sde-fullstack → homelab-platform`, and
+  `self-improve-loop → runbook`.
+- **Removed (3).** `self-improve-loop` dropped its references to `eng-ladder`, `sde-fullstack`, and
+  `sre-tool`. This was the one substantive question the artifact raised about the fleet rather than
+  about itself, and it is **disposed here rather than archived unowned**: the narrowing was
+  intentional. All three disappeared in `d027755` (the LEARN-001 round), which rewrote the skill
+  around a discovery-routing table; the removed lines were a worked example (`sde-fullstack`
+  generates → `code-reviewer` evaluates, with the `sre-tool` review phase as checkpoint) and an
+  analogy to `eng-ladder` growth feedback, not routing declarations. `code-reviewer` survived the
+  rewrite and is still referenced. No routing capability was lost, so no roadmap item or ledger
+  candidate is owed — the concern is dropped with this as its stated reason.
+
+  Worth keeping as a reading note: the graph reports a **reference** disappearing, which is not the
+  same as a **capability** disappearing. Prose examples and routing paths are the same edge kind to
+  this tool, and only the source text distinguishes them.
+- **Members:** 30 → 31, the addition being `onboarding-map`.
 
 Integrity fields all clean on the real tree: no unreadable definitions, no unadopted tool
 identifiers, no unresolved preload targets, no duplicate cluster identities.
@@ -59,15 +85,70 @@ before/after timing is claimed and none is owed.
 
 ## Operator acceptance
 
-*To be completed by the operator. The plan's Payload 4 requires reviewing one real-tree artifact
-and supplying one non-authoritative workflow design, recording whether each output answered its
-stated question, plus any limitation or rejected design — without promoting the design file into
-an executable contract.*
+**Accepted by the operator on 2026-08-13.** Payload 4 is satisfied and GRAPH-002 is closed.
 
-- **Real-tree capability JSON and Mermaid reviewed:** _pending_
-- **Workflow design supplied to the CLI:** _pending_
-- **Did each output answer its stated operator question:** _pending_
-- **Limitations or rejected designs recorded:** _pending_
+- **Real-tree capability JSON and Mermaid reviewed:** yes. Emitted from `main`, first at `10246d8`
+  and re-emitted at `24f8711` after PRs #127 and #128 landed. The **aggregate topology series are
+  unchanged** across both heads — 155 edges, 85 grants, 7 preloads, the same unreferenced and
+  preload-only members, 54 relationship gaps, 10 clusters — so the accepted findings do not depend
+  on a single transient head. The two documents are **not** byte-identical (140,991 vs 140,995
+  bytes). PR #128 edited `agents/homelab-platform.md`, and because `reference_edges` carries
+  per-occurrence line numbers, **16 edge records changed** across six distinct shifts (89→124,
+  90→125, 97→132, 157→192, 163→198, 165→200), all within that one file. The **edge identity set is
+  unchanged** — same pairs, same count. That contrast is the thing to carry into any
+  baseline-versus-candidate diff: a single edit to one referring file rewrites occurrence records
+  in bulk while the topology it describes stays put, so diffing whole artifacts reports churn that
+  diffing the identity does not. It is why the two are separate series, and why a reviewer comparing
+  snapshots should compare the identity first and treat occurrence movement as location metadata.
+- **Workflow design supplied to the CLI:** yes — one non-authoritative six-node design
+  (`review-then-apply`: deterministic entry, agent, repo-script verifier, human gate, effect,
+  terminal). Result `design-consistent (NOT runtime-enforced)`, `design_digest`
+  `bfdcaf3501395783bf7b47cb9a68b219181e66fb66527b83e45f8db31c12624d`. The file was **not** promoted
+  into a committed contract, and no digest was resolved: that remains GRAPH-004's.
+- **Did each output answer its stated operator question:** yes, for both outputs. The capability
+  graph answered all five frozen questions; the table above is those answers. One attribution
+  matters: questions 1 and 3–5 are emitted wholly by the tool, while question 2's `140 → 155` pairs
+  an emitted candidate value with the historical 140 recorded in the decision. `capability_graph.py`
+  takes a single `--root` and has no baseline or comparison mode, so a rerun reproduces the
+  candidate side only — the comparison is this record's, not the tool's. The workflow validator
+  answered its own question, which was whether a prospective design is internally consistent before
+  any runtime exists: it returned `design-consistent (NOT runtime-enforced)` with a stable digest,
+  and the verdict's wording is itself the answer — it establishes a document property and declines
+  to claim an execution one.
+- **Limitations recorded:** the "Deliberately not done" section below is the accepted limitation
+  set. Two are worth carrying forward as live reading caveats rather than defects. First, the 54
+  `routing_cluster_relationship_gaps` are relationships whose endpoints appear in **no shared
+  routing cluster** — `_report` selects an edge precisely when its endpoints are absent from every
+  cluster pairing. An earlier draft of this record described them as resting "on co-membership
+  only", which is the inverse of what the section computes; they have *less* evidence than a
+  co-listed pair, not more. Relationship-level behavioral evidence is not derived at all, because
+  routing cases assert that a member fires, not that a pair is exercised. Second, every Codex
+  authority projection is `unknown_or_inherited` — for Codex the report states what the profile
+  *requests*, not what the host granted. Two host controls **are** evidenced and must not be read
+  as unknown alongside it: Claude's guard coverage, and Copilot/VS Code's omission of `execute` from
+  guarded roles, which the report derives through the same generator function that renders those
+  adapters rather than by reparsing them.
+- **Rejected designs:** none. No design was refused during acceptance; the validator's refusal
+  paths are covered by tests rather than by a rejected operator submission.
+- **T1 on the exact accepted bytes:** T1 has three parts and they are not all establishable the
+  same way. The **suite and the plugin contract** are guaranteed structurally rather than by citing
+  a run, because a cited SHA goes stale the moment a review correction adds bytes — which happened
+  here twice. `validate (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift` are
+  **required status checks on `main`**, so no head reaches `main` without them green *on that
+  head*. That is narrower than it first reads: protection is **not `strict`**, so the checks run on
+  this branch's head and not on a merge preview. If `main` advances after they pass, the merge
+  combines a tested branch with an untested base, and no run has seen the resulting tree. The claim
+  is therefore about the branch bytes, not the merged bytes. The **doctor check is local-only and CI can never substitute for it**, because the drift it
+  finds lives in the host installation rather than in the checkout every other tier reads: run
+  during acceptance, `scripts/fleet_doctor.py` reported **pass=14, warn=0, fail=0, exit 0** —
+  repository worktree, generated adapters, platform contracts, and canonical line endings clean, all
+  four host CLIs present, `sde-agents` **present in** both the Claude and Codex plugin inventories,
+  and Codex's **standalone agents** matching the generated roles. The two plugin checks test
+  presence in `plugin list`, not plugin-content parity; the only generated-role comparison in that
+  count is the standalone Codex one.
+  Two further limits: CI is Linux while the artifact figures above came from a Windows run, and the
+  doctor result binds the host and the clean worktree it ran on, not the merged bytes. The Linux/Windows split is not cosmetic on this round — the only defect CI ever
+  caught here was a test that passed vacuously on Windows and failed on POSIX.
 
 ## Review history, and what it cost
 
