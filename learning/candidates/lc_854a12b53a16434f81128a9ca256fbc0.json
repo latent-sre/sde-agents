@@ -1,0 +1,52 @@
+{
+  "applicability": "Every future external-research dispatch from this environment",
+  "candidate_id": "lc_854a12b53a16434f81128a9ca256fbc0",
+  "created_at": "2026-08-13T17:42:59.391397Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "Claude Code remote container, agent-proxy egress per /root/.ccr README",
+    "provenance": "verified",
+    "revision": "fabd328",
+    "source_kind": "session-retro",
+    "source_reference": "Researcher session 2026-08-13 (PROP-002 Group 1 literature sweep): four EGRESS_BLOCKED errors on direct WebFetch; WebSearch excerpts of the same pages still returned"
+  },
+  "expected_behavior": "Researcher briefs in this environment state up front that primary pages on these domains are excerpt-mediated, and callers weight such quotes as [sourced] rather than [verified]",
+  "fingerprint": "dad092d141d5f8761c639328ee4b62ad8cf1fb612b38a6b4fe0505816c1d970c",
+  "freshness": {
+    "as_of": "2026-08-13T17:42:59.391397Z",
+    "review_at": "2026-09-12T17:42:59.391397Z"
+  },
+  "observation": "Direct WebFetch of arxiv.org, anthropic.com, cognition.com, and simonwillison.net is egress-blocked behind the agent proxy, so researcher packets citing those domains carry search-excerpt-mediated quotes rather than deterministic page reads",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Claude Code remote container, agent-proxy egress per /root/.ccr README",
+        "observed_at": "2026-08-13T17:42:59.391397Z",
+        "provenance": "verified",
+        "revision": "fabd328",
+        "source_kind": "session-retro",
+        "source_reference": "Researcher session 2026-08-13 (PROP-002 Group 1 literature sweep): four EGRESS_BLOCKED errors on direct WebFetch; WebSearch excerpts of the same pages still returned"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-13T17:42:59.391397Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "applies: researcher sessions behind this agent proxy; excludes: environments without the proxy",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-13T17:42:59.391397Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-13T17:42:59.391397Z"
+}
