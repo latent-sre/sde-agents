@@ -46,10 +46,25 @@ only, self-loops included, with surface and slash form as metadata. No other swe
 | Question | Answer |
 |---|---|
 | 1 — isolated / concentrated | Unreferenced: `code-craft`, `onboarding-map`; `code-craft` is reached only by preload. Top hubs: `homelab-platform` 18, `sde-fullstack` 12, `principal-engineer` 10, `code-reviewer` 9 |
-| 2 — changed vs the dated measure | Edges 140 → 155; tool grants 85 → 85 with no per-agent change; preloads 4 → 7 |
+| 2 — changed vs the dated measure | Edges 140 → 155 (**18 added, 3 removed**); tool grants 85 → 85 with no per-agent change; preloads 4 → 7. The relationship-level list is below — the frozen question asks *which* relationships changed, and an aggregate does not answer it |
 | 3 — host request / withhold | Claude guards 3 roles; Copilot withholds `execute` from those same 3 by guard; Codex requests `workspace-write` for 7 of 11; `lab-audit` and `security-audit` declare skill-level denies that portable hosts strip |
 | 4 — where authority is unknown | Every Codex role `unknown_or_inherited`; `prompt-engineer` the sole dynamic-delegation principal switch |
 | 5 — behavioral evidence | 30 members carry positive case assertions, 31 carry negative ones; 54 reference relationships rest on co-membership only |
+
+**Question 2 in full — which relationships changed.** Reproduced under the stable identity against
+the decision's own snapshot `c02d8e12`, not against a second post-implementation head:
+
+- **Added (18) = 8 + 7 + 3.** Eight agents gained a `/sde-agents:self-improve-loop` routing edge
+  (`application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-platform`,
+  `multi-agent-architect`, `principal-engineer`, `repository-investigator`, `researcher`); the new
+  `onboarding-map` skill contributed seven outbound edges (`eng-ladder`, `homelab-platform`,
+  `host-onboard`, `lab-audit`, `sde-fullstack`, `security-audit`, `service-onboard`); and three
+  others landed — `code-reviewer → homelab-platform`, `sde-fullstack → homelab-platform`, and
+  `self-improve-loop → runbook`.
+- **Removed (3).** `self-improve-loop` dropped its references to `eng-ladder`, `sde-fullstack`, and
+  `sre-tool`. Whether that narrowing was intended was flagged for the topology review and is the one
+  substantive question this artifact raised about the fleet rather than about itself.
+- **Members:** 30 → 31, the addition being `onboarding-map`.
 
 Integrity fields all clean on the real tree: no unreadable definitions, no unadopted tool
 identifiers, no unresolved preload targets, no duplicate cluster identities.
@@ -100,17 +115,21 @@ before/after timing is claimed and none is owed.
   adapters rather than by reparsing them.
 - **Rejected designs:** none. No design was refused during acceptance; the validator's refusal
   paths are covered by tests rather than by a rejected operator submission.
-- **T1 on the exact accepted bytes:** guaranteed structurally rather than by citing a run, because
-  a cited SHA goes stale the moment a review correction adds bytes — which is what happened here
-  once already. `validate (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift`
-  are **required status checks on `main`**, so the bytes that merge are necessarily bytes on which
-  the suite and the plugin contract passed; no head reaches `main` without them green on that head.
-  Observed while this record was written: run `31668922932` green on `ec27c44` and run `31669715039`
-  green on `0b7bd03`. Two limits worth stating: protection is not `strict`, so the checks run on
-  this branch's head rather than on a merge preview against a newer `main`; and CI is Linux, while
-  the artifact figures above came from a Windows run. That distinction is not cosmetic on this
-  round — the only defect CI ever caught here was a test that passed vacuously on Windows and
-  failed on POSIX.
+- **T1 on the exact accepted bytes:** T1 has three parts and they are not all establishable the
+  same way. The **suite and the plugin contract** are guaranteed structurally rather than by citing
+  a run, because a cited SHA goes stale the moment a review correction adds bytes — which happened
+  here twice. `validate (ubuntu-latest, python3)`, `claude-plugin-contract`, and `ledger-drift` are
+  **required status checks on `main`**, so the bytes that merge are necessarily bytes those passed
+  on. The **doctor check is local-only and CI can never substitute for it**, because the drift it
+  finds lives in the host installation rather than in the checkout every other tier reads: run
+  during acceptance, `scripts/fleet_doctor.py` reported **pass=14, warn=0, fail=0, exit 0** —
+  repository worktree, generated adapters, platform contracts, and canonical line endings clean, all
+  four host CLIs present, and the Claude and Codex plugin inventories matching the generated roles.
+  Three limits stated rather than implied: protection is not `strict`, so checks run on this
+  branch's head and not on a merge preview against a newer `main`; CI is Linux while the artifact
+  figures above came from a Windows run; and the doctor result binds the host it ran on, not the
+  merged bytes. The Linux/Windows split is not cosmetic on this round — the only defect CI ever
+  caught here was a test that passed vacuously on Windows and failed on POSIX.
 
 ## Review history, and what it cost
 
