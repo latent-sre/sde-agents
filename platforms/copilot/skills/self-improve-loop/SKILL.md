@@ -153,28 +153,33 @@ This is how recurrence survives without turning retained prose into an instructi
 ## Promotion gate
 
 Define success and freeze the baseline **before** editing. Make one bounded candidate change, then
-promote it only when all applicable gates hold:
+promote it only when the applicable gates hold:
 
-1. **Traceable delta** — the evidence record, one disposition, destination, owner, and exact changed
-   artifact are named.
-2. **Targeted proof** — the reproducer or acceptance case improves for the expected reason.
-3. **Regression and adverse proof** — relevant broad checks, held-out variants, negative cases, and
+1. **Targeted proof** — the reproducer or acceptance case improves for the expected reason.
+2. **Regression and adverse proof** — relevant broad checks, held-out variants, negative cases, and
    failure paths do not regress. Reusing only the examples that tuned the candidate is not proof.
-4. **Fresh evaluator** — a separate context or deterministic verifier judges the candidate. The
-   author is not its sole grader or approver.
-5. **Comparable conditions** — model, version, seed or repetitions, budget, timeout, environment,
-   and grader conditions are recorded. Treat changes inside the measured noise as inconclusive.
-6. **Exact-artifact proof** — evaluate the bytes users will receive. For this fleet that includes
+3. **Fresh evaluator, comparable conditions** — a separate context or deterministic verifier
+   judges the candidate; the author is not its sole grader or approver. Record every condition the
+   comparison depends on — model with the timeout pinned to it, runtime and version, exact
+   artifact, grader, seed or repetitions, budget, and the configuration state each run inherited
+   (clean-room or the ambient one) — by hand, or via the repository's eval harness when one
+   exists. These are not bookkeeping: a shorter timeout drops runs out of every rate, and
+   clean-room and ambient runs measure different competitions, so results differing on any of
+   them must not be diffed. Results are rates over runs, not booleans; a change inside the
+   measured noise is inconclusive.
+4. **Exact-artifact proof** — evaluate the bytes users will receive. For this fleet that includes
    regenerated host adapters and their parity check, not only the canonical source.
-7. **Rollback and freshness** — say how to revert, what would trigger rollback, where the rejected
-   candidate is recorded, and when version-dependent guidance must be checked again.
 
-If a gate fails, do not promote. Keep the rejection evidence so a later loop does not rediscover the
-same dead end. Use a small iteration budget, usually two or three candidate deltas; a failure whose
+The candidate block above already names the evidence, disposition, destination, and owner — that is
+the traceability record; do not restate it as a separate gate. Close by saying how to revert and
+when version-dependent guidance must be rechecked.
+
+If a gate fails — or was never run — do not promote, and do not merge or ship the artifact change
+either: an unrun gate does not hold. Keep the rejection evidence so a later loop does not rediscover
+the same dead end. Use a small iteration budget, usually two or three candidate deltas; a failure whose
 cause is unclear exits to `root-cause` rather than consuming another turn.
 
-Do not promote a candidate or merge or ship its artifact change while any applicable promotion gate
-is missing. And promotion is not the end of the lifecycle for plugin-shipped destinations: a
+Promotion is not the end of the lifecycle for plugin-shipped destinations: a
 field-feedback item closes as successful only with an exact released-version retest recorded
 (the ledger's `record-release`/`record-retest` blocks), or the owner's explicit reason retest is
 impossible — source-eval PASS is never reportable as released-artifact PASS. The full

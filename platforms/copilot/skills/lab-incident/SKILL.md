@@ -82,8 +82,9 @@ An outage is over when service is restored *and* the work it created has an owne
 
 - Cause still unknown → `root-cause` now, with the outage evidence and your notes. This
   is the moment the diagnose-first loop becomes correct again.
-- Every incident, including near-misses → `postmortem` for the write-up, which turns
-  your timestamped notes into actions and updates the service's runbook.
+- Recovery wasn't obvious, the incident recurred, or it exposed a gap worth fixing →
+  `postmortem` for the write-up, which turns your timestamped notes into actions. A
+  wedged container restarted once, with an obvious cause, owes the runbook a line — not a document.
 - A mitigation you had to invent because the runbook lacked it → that's a `runbook`
   edit, and it's part of finishing, not optional cleanup.
 

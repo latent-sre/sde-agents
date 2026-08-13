@@ -34,6 +34,35 @@ single tracker instead of leaking into memory or issue lists.
 
 ### Ready
 
+#### PROP-002 — right-size skill-level enterprise ceremony
+
+**Status:** `ready` — the five HIGH clusters from the 2026-08-13 four-scanner proportionality
+sweep are fixed and under review in PR #132; the MEDIUM backlog and the close-out are the open
+remainder. Deliberately not a spec/plan round: the HIGH fixes shipped as reviewed, evidence-bound
+commits, and a retroactive spec for landed work would be the ceremony this item exists to remove.
+The backlog runs the same way, or opens a proper round if it grows one.
+**Outcome:** skill prose proportionate to a single-operator lab — mandates conditioned on the
+scale that pays for them, sibling contracts delegated to their owner, live mechanisms
+(learning ledger, run-state control plane, release-retest lifecycle) untouched.
+**Source:** the four-scanner sweep — full findings, KEEP lists, and the overturned-claims record
+in `docs/archive/2026-08/prop-002-scan-findings-2026-08-13.md`; deep-review verdict
+`merge-with-nits`, zero confirmed criticals, on `70747b8`.
+**Prerequisites:** none.
+**Acceptance:** H1–H5 plus review fixes merged with T1 green; paired behavioral evidence for
+every contract that grades edited text (stored-baseline match, or fresh before/after under
+pinned conditions); every finding the scan archive still marks `open` — MEDIUM **and** LOW —
+triaged as worked, deferred trigger-bound, or dropped with reason, since that archive is
+evidence and this item is the only place its remainder can be owned. A LOW cluster may be
+dispositioned as one batch under a shared reason; what it may not be is left unmentioned, which
+would retire the item while reading as completed work. The backlog's largest items: relocating `runbook`'s propose grammar to a
+references/ file loaded on the propose path (its consumers `packet_lint.py` and the behavioral
+contracts are live — relocate, never delete), the phantom-second-human owner/escalation slots
+in `runbook`, `onboarding-map`'s repeated authority restatement, `eng-ladder` Mode 3 and the
+consult protocol, and `ci-actions`' unconditioned SBOM/workflow-lint mandates.
+**Next action:** disposition the remaining PR #132 review comments on the current head and wait
+for a pass on those bytes, then triage the MEDIUM and LOW backlog above; write the outcome record
+at close and retire this item to it.
+
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six

@@ -63,20 +63,12 @@ anchor.
 `inconclusive`, or `retired`. The ledger enforces valid state/disposition combinations and retains
 transition history.
 
-Returning `inconclusive`, `rejected`, or `retired` to `proposed` requires a distinct observation
-whose timestamp is later than the transition into that adverse state. A changed provenance label on
-the same source does not increment recurrence and cannot reopen the candidate. Candidate recurrence
-identity includes observation, expected behavior, scope, and applicability so unlike boundaries do
-not collapse into one record.
-
-An explicit `review` records reviewer, rationale, and old/new deadlines, moves `review_at` forward,
-and cannot cross `retention.expires_at`. It does not change the evidence `as_of` timestamp or
-recurrence count. Retention extension remains outside the CLI.
-
-Advancing to `proposed`, `approved`, or `promoted` requires a current review date and unexpired
-retention. Review a stale candidate explicitly before a positive transition; an expired candidate
-cannot advance. Rejection and subtraction remain possible so old evidence can be invalidated or
-retired without first pretending it is current.
+Reopening an adverse state, recurrence identity, and the review/retention clock are CLI-enforced;
+read its errors rather than memorizing the rules. The operational core: a positive transition
+(`proposed`, `approved`, `promoted`) requires fresh-enough evidence — review a stale candidate
+first, and an expired one cannot advance — while rejection and subtraction stay possible so old
+evidence can be invalidated without pretending it is current. `review` renews the clock and nothing
+else: no new evidence, no recurrence, and no retention extension, which stays outside the CLI.
 
 No state authorizes the CLI to edit an agent, skill, test, runbook, or provider memory. `approved`
 records owner approval; `promoted` records that a separately reviewed change landed. `retired` is
@@ -100,35 +92,26 @@ python scripts/learning_ledger.py --root <repo> record-release <candidate-id> <r
 python scripts/learning_ledger.py --root <repo> record-retest <candidate-id> <retest fields>
 ```
 
-`record-release` is legal only on a `promoted` candidate and stamps version, reference, and
-timestamp once per promotion cycle; a second call within the same cycle is refused, not a silent
-overwrite. A candidate may legally reject and re-promote (fresh evidence required); a release
-recorded after that later promotion is a genuinely new cycle, so `record-release` archives the
-completed `{release, retest}` pair into `release_history` and starts a fresh current pair, rather
-than refusing the second cycle outright. `record-retest` is legal only once a release is recorded
-and stamps its own fields: `pass` and `fail` are settled and single-shot, but `inconclusive` may
-be re-recorded in place -- it means the retest could not reach a verdict, not that it passed or
-failed, so it must stay retriable. A `fail` result is a loud pointer that the candidate's
-destination regressed in the field, not a silent write, and the same signal is returned to a
-programmatic caller (a transient `regression` key on the returned record, never persisted), not
-only printed to the CLI's stderr. All three blocks are additive: a candidate written before this
-lifecycle existed stays valid carrying none of them, with no migration and no schema version
-bump. Neither `record-release` nor `record-retest` checks `freshness.review_at` or
-`retention.expires_at` -- each records a fact about what already happened, not a new promotion
-judgment.
+Ordering and repeat rules are CLI-enforced and refused loudly, never silently overwritten — but the
+refusal arrives after you attempt the mutation, and the `--help` output lists only the arguments, so
+the semantics you need *before* touching the ledger stay here. `record-release` is legal only on a
+`promoted` candidate and stamps once per promotion cycle; a second call inside the same cycle is
+refused. A candidate may legally reject and re-promote on fresh evidence, and a release recorded
+after that later promotion is a genuinely new cycle — `record-release` archives the completed
+`{release, retest}` pair into `release_history` and starts a fresh one rather than refusing, which
+is the one legal repeat and produces no error to learn from. `record-retest` is legal only once a
+release exists: `pass` and `fail` are settled and single-shot, `inconclusive` stays retriable
+in place, and a `fail` is a loud pointer that the candidate's destination regressed in the field.
 
 Closure is fail-closed: a field-feedback item closes as successful only with an exact
 released-version retest recorded, or the owner's explicit reason that a retest is impossible or
 no longer applicable. Source-eval PASS from a `promoted` candidate is never reportable as
-released-artifact PASS -- the two remain distinct result classes, the same discipline REV-001
-applies to caller-reported versus independently executed evidence. Three views make the lifecycle
-pull-based, never scheduled: `awaiting-retest` surfaces every promoted candidate carrying a
-release but no settled retest (none yet, or an `inconclusive` one); `regressed` surfaces promoted
-candidates whose retest `result` is `fail`, staying listed until an owner transitions the
-candidate away from `promoted`, so a settled fail cannot vanish from every actionable view;
-`awaiting-release` surfaces promoted candidates with no release block at all -- the
-merged-but-unreleased backlog. A release or upgrade retro reads these; nothing here schedules or
-runs anything itself.
+released-artifact PASS -- caller-reported and independently executed evidence stay distinct result
+classes. Three views make the lifecycle pull-based, never scheduled: `awaiting-retest` (a release
+but no settled retest), `regressed` (retest failed; listed until an owner moves the candidate off
+`promoted`, so a settled fail cannot vanish from every actionable view), and `awaiting-release`
+(promoted with no release block -- the merged-but-unreleased backlog). A release or upgrade retro
+reads these; nothing here schedules or runs anything itself.
 
 ## Cross-task and maintenance use
 

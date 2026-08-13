@@ -39,28 +39,12 @@ variable map into output — field-proven during a real onboarding, not hypothet
 5. **Security** — auth in front (SSO, basic auth, or app-native); default credentials changed; not WAN-reachable unless genuinely required.
 6. **Observability** — health or metrics endpoint scraped or probed; an alert exists if the household would notice this service being down, and it links to the runbook from step 7. Designing the query, alert threshold, or dashboard is the `observability` skill's job — use it rather than inventing a rule here.
 7. **Runbook contract** — inventory the lab repository for the canonical runbook and its owner,
-   then work the `runbook` skill. Update the owned runbook when one exists; create one
+   then work the `runbook` skill: update the owned runbook when one exists; create one
    only when none exists and this service's operation is repeatable, bounded, source-backed, and
-   assigned to an owner; otherwise propose the exact gap. The runbook must fill or honestly mark
-   `n/a — why` / `unverified — exact gap and owner` for every item:
-   - owner and escalation route;
-   - purpose and impact;
-   - environment, deployed version/image digest, config identity, and exclusions;
-   - host, canonical config, data paths, and URLs;
-   - prerequisites, required authority/approvals, and stop conditions;
-   - exact Health check with expected result and timeout;
-   - ordered Restart, wait, and post-restart verification;
-   - Rollback for the routine change, distinct from destructive/data Recovery;
-   - evidenced common failures and safe responses;
-   - Recovery/restore steps, validation, and repair-to-recovery threshold;
-   - upstream/downstream dependencies;
-   - alert identity, notification route, and investigation location;
-   - escalation/stop conditions;
-   - authoritative local/runtime and exact-version documentation sources; and
-   - Last verified date bound to the environment, version/config identity, and exact steps run.
-   The caller's authority remains the ceiling. A runbook grants no authority to execute its steps,
-   and `unverified` is not permission to invent a plausible command. If an exact command lacks an
-   authoritative source, record the missing source and owner instead of guessing.
+   assigned to an owner; otherwise propose the exact gap. The required structure and its
+   fill-or-honestly-mark rule are owned by `runbook` — on any conflict that skill wins,
+   and its slots are not restated here. The caller's authority remains the ceiling: a runbook
+   grants no authority to execute its steps.
 8. **End-to-end verify** — within the approved change tier, reach the final URL as a normal user,
    restart the service once, wait for the documented Health criteria, and confirm automatic
    recovery. Bind the evidence to the deployed version and config identity. If access or approval
