@@ -53,6 +53,12 @@ Pick these once and hold them across every endpoint — consistency is the featu
 
 ## Evolving a published surface
 
+A surface is **published** when a consumer you cannot coordinate with builds on it. An API whose
+only consumer lives in the same repository — the operator's own frontend, edited in the same
+commit — is not published: change both sides at once, and use the breaking-change taxonomy below
+to notice what *would* break, not to run a versioning protocol. Everything in this section earns
+its cost from the first consumer you cannot reach.
+
 - **Everything observable becomes a dependency** (Hyrum's Law) — undocumented field order, error
   message text, quirks included. Expose deliberately; what clients can see, they will build on.
 - **Extend, don't mutate**: new fields optional, new params optional, new endpoints freely.
