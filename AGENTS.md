@@ -274,7 +274,13 @@ disposition.
   roughly **ten minutes after that request** rather than after `gh pr create` — PR #124 was
   requested at 07:07:07 and reviewed at 07:17:28 and 07:17:44. Request Copilot explicitly; the
   Codex connector has followed that request without needing one of its own. Requesting is a step
-  you take, not a wait you serve. Then wait for both passes **on the current head**, and
+  you take, not a wait you serve — **and on this repository it is an operator step, not an agent
+  one**: the reviewer is `copilot-pull-request-reviewer[bot]`, which `suggestedActors` does not
+  list, so `gh pr edit --add-reviewer Copilot` fails to resolve the login and a REST
+  `requested_reviewers` post silently leaves `reviewRequests` empty. Use the PR page's Reviewers
+  box. An agent opening a PR here must therefore hand the request to its operator and say so,
+  rather than reporting the PR as awaiting review. Then wait for both passes **on the current
+  head**, and
   disposition every comment — applied,
   or declined with the reason. Applying one writes new bytes, and the passes that cleared the
   previous head never saw them: the last review-driven edit owes another wait, or the gate is
