@@ -44,8 +44,9 @@ The backlog runs the same way, or opens a proper round if it grows one.
 **Outcome:** skill prose proportionate to a single-operator lab — mandates conditioned on the
 scale that pays for them, sibling contracts delegated to their owner, live mechanisms
 (learning ledger, run-state control plane, release-retest lifecycle) untouched.
-**Source:** the four-scanner sweep (this round's PR carries the findings summary); deep-review
-verdict `merge-with-nits`, zero confirmed criticals, on `70747b8`.
+**Source:** the four-scanner sweep — full findings, KEEP lists, and the overturned-claims record
+in `docs/archive/2026-08/prop-002-scan-findings-2026-08-13.md`; deep-review verdict
+`merge-with-nits`, zero confirmed criticals, on `70747b8`.
 **Prerequisites:** none.
 **Acceptance:** H1–H5 plus review fixes merged with T1 green; paired behavioral evidence for
 every contract that grades edited text (stored-baseline match, or fresh before/after under
