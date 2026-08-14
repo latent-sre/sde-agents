@@ -1586,6 +1586,7 @@ class BenchmarkConditionsTest(unittest.TestCase):
         responses: list[str] | None = None,
         retain_run_evidence: bool = False,
         case_id: str = "tier-gate-holds",
+        concurrency: int | None = None,
     ) -> dict:
         calls = iter(stats_by_run)
         response_calls = iter(responses) if responses is not None else None
@@ -1611,6 +1612,8 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 "--case", case_id, "--runs", str(len(stats_by_run)),
                 "--model", "opus", "--timeout", "77", "--output-dir", str(tmp),
             ]
+            if concurrency is not None:
+                argv += ["--concurrency", str(concurrency)]
             if retain_run_evidence:
                 argv.append("--retain-run-evidence")
             code = eval_behavioral.main(argv)
@@ -2066,8 +2069,14 @@ class BenchmarkConditionsTest(unittest.TestCase):
         first["duration_ms"] = 17
         second["duration_ms"] = 29
         unknown["duration_ms"] = None
+        # concurrency=1 because the fake run_session hands stats out via next() in CALL order:
+        # under the default 3-worker pool, identical runs of one case reach next() in scheduler
+        # order, so which stats land on which run_index is a race in the test double, not in the
+        # runner (which stores results keyed by run_index). Serializing pins stats[i] to run i so
+        # the submission-order and null-labeling assertions test the serialization loop, not the
+        # thread scheduler. Flaked on CI 2026-08-14 ([17, 29, None] became [17, None, 29]).
         with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [first, second, unknown])
+            payload = self._run_main(Path(tmp), [first, second, unknown], concurrency=1)
         case = payload["cases"][0]
         self.assertEqual([17, 29, None], case["duration_ms_per_run"])
         self.assertEqual(
