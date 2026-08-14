@@ -294,7 +294,11 @@ any paired comparison.
 **Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
 description **plus** body: remove the growth-feedback clause from the description and the body's
 Mode 3 section in the same delta (a description-only trim would close this item while the
-duplicate stateless remit survives in the body), measured by a fresh
+duplicate stateless remit survives in the body). Electing this half is a values call, not a
+dead-code removal: review named the candidate reader the upheld finding does not cover — the
+human operator, whose own diffs Mode 3 could assess at a ladder bar, a consumer neither
+`self-improve-loop` nor `prompt-engineer` serves — so the ruling weighs that route's worth
+against its per-session description surface. Measured by a fresh
 `--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
 negatives hold their forbidden sets at 0% fire, **and the surviving positive modes show no
 unexplained regression against the paired baseline** — the suite's own protocol treats a
