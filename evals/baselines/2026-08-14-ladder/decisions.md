@@ -32,7 +32,8 @@ description's scoped-work narrowing are **not indicted**.
 **The positive half under-fires, in exactly the shape the suite documents.** 2/9 positives passed
 (`pos-distinguished-adr` 2/3, `pos-engladder-altitude` 3/3). The 2026-07 stored anchor — not
 comparison-grade (no conditions/provenance), but a shape check — shows the *identical* pass/fail
-pattern on its twelve shared cases: same two positives passing, same seven failing, all negatives
+pattern on its twelve shared cases: same two positives passing, the six shared positives failing
+identically (the consult-fork positive postdates the anchor and has no historical rate), all negatives
 clean. So this is a reproduction of the known headless-mode property (`evals/README.md`: agent
 positives systematically under-fire because a one-shot session does the work instead of
 delegating), not a regression introduced since.

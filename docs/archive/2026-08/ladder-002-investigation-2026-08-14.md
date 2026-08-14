@@ -5,10 +5,21 @@
 consult-fork shape). Is the cause the schema, the description phrasing, or the handoff?
 
 **Method.** Local evidence (raw frontmatter, runner detection internals, cluster comparison,
-description git history, listing-budget arithmetic), four single-session diagnostic probes
-(sonnet, `--plugin-dir .`, transcripts retained — one run each, ambient rather than clean-room:
-directional evidence, deliberately not comparison-grade and not diffable against the stored
-baseline), and an external research pass on 2025–2026 skill-triggering findings
+description git history, listing-budget arithmetic), four single-session diagnostic probes — one
+run each, ambient rather than clean-room: directional evidence, deliberately not
+comparison-grade and not diffable against the stored baseline. Probe transcripts were
+session-local and are deliberately **not** committed — the same rule that gitignores the probe
+and pilot run logs: raw model text stays out of the tree, and a round's conclusions land as the
+reviewed quotes this record carries. The probes are instead replayable exactly; each is
+`claude -p "<prompt>" --model sonnet --plugin-dir <repo> --output-format stream-json --verbose`
+with: (1) the `pos-engladder-assess` prompt verbatim, cwd = the repo checkout; (2) the
+`pos-embedded-principal-fork-consult-required` prompt verbatim, cwd = the repo checkout; (3) the
+assess prompt verbatim, cwd = an empty temp directory (the eval's condition); (4) a listing dump
+("quote the eng-ladder entry exactly as it appears; does it include the phrase 'Also use to
+assess code or a design at a named level'?"), cwd = the repo. Prompts (1)–(3) are the case bytes
+in `evals/routing/ladder.json` at `7605e22`. Expect run-to-run variance: these are one-sample
+observations of a probabilistic router, and a replay tests the mechanism, not the exact
+transcript. The external research pass covers 2025–2026 skill-triggering findings
 (egress-constrained: Anthropic docs and GitHub read directly; arXiv/practitioner sources
 excerpt-mediated — weight accordingly, and the recurrence is recorded on ledger candidate
 `lc_854a12b5`).

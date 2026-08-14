@@ -295,7 +295,11 @@ description **plus** body: remove the growth-feedback clause from the descriptio
 Mode 3 section in the same delta (a description-only trim would close this item while the
 duplicate stateless remit survives in the body), measured by a fresh
 `--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
-negatives hold at 0% fire. (b) **Instrument repairs** —
+negatives hold at 0% fire. **Ordering is load-bearing when both halves are elected:** half (b)
+edits `evals/routing/ladder.json`, whose exact `eval_sources` identity `eval_baseline.py`
+compares, so the case edit stales the stored benchmark — capture half (a)'s paired run **before**
+any case byte changes, or take a fresh baseline on the revised cases before the description edit;
+an unordered session can spend the full T3 capture and produce no valid Mode 3 comparison. (b) **Instrument repairs** —
 rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
 content (builder-owned + named consult, no wholesale re-owning), retiring or annotating the

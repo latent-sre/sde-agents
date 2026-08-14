@@ -24,7 +24,9 @@ timeout-partial transcripts. Capture at
   under measurement.
 - **`pos-embedded-principal-fork-consult-required`: 0/3 — FAIL.** The consult-required shape never
   drew `eng-ladder`. Read against the suite's documented headless property and the 2026-07
-  anchor's identical pass/fail shape (same two positives passing, same seven failing), the
+  anchor's matching pass/fail shape (same two positives passing, the six shared positives failing
+  identically — this consult-fork positive itself postdates the anchor and has no historical
+  rate), the
   positive half of the split is under-measured in headless capture rather than newly broken —
   but the skill-member split is a real signal, recorded below.
 - **Positives overall 2/9** (`pos-distinguished-adr` 2/3, `pos-engladder-altitude` 3/3): a
