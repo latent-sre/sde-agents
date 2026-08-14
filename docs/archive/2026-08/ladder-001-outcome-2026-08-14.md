@@ -11,10 +11,13 @@ escalation", the accurate call was builder-owned with a required consult) with a
 timeout-partial transcripts. Capture at
 [`evals/baselines/2026-08-14-ladder/`](../../../evals/baselines/2026-08-14-ladder/decisions.md)
 (benchmark + decisions note); `eval_baseline.py --model sonnet --clean-room` resolves it
-`REUSABLE` on the capture host, so it stands as the cluster's stored 'before' for any future
-description edit — identity-bound, not unconditional: the evaluator identity pins the runtime
-(CPython 3.11.15 recorded), so a host on another Python reports `STALE: diverged on evaluator`
-and owes that runtime or a fresh capture.
+`REUSABLE` on the capture host, so it stands as the cluster's stored 'before' for a future
+description edit **whose case bytes are unchanged** — it is not the Mode 3 trim's before-side,
+which requires a targeted Mode 3 case authored first and a fresh capture including it (the case
+edit changes the exact `eval_sources` identity; LADDER-002 carries the protocol). The reuse is
+also identity-bound, not unconditional: the evaluator identity pins the runtime (CPython 3.11.15
+recorded), so a host on another Python reports `STALE: diverged on evaluator` and owes that
+runtime or a fresh capture.
 
 ## The result
 
@@ -37,8 +40,10 @@ and owes that runtime or a fresh capture.
   rate), the
   positive half of the split is under-measured in headless capture rather than newly broken —
   but the skill-member split is a real signal, recorded below.
-- **Positives overall 2/9** (`pos-distinguished-adr` 2/3, `pos-engladder-altitude` 3/3): a
-  reproduction of the historical shape, not a regression.
+- **Positives overall 2/9** (`pos-distinguished-adr` 2/3, `pos-engladder-altitude` 3/3):
+  consistent with the historical shape on the six shared positives. Per lesson 2 below, the
+  provenance-free anchor cannot *rule out* a regression — this reading is the cheaper prior, not
+  a cleared gate.
 
 ## The discovery this run surfaced (routed, per the closeout rule)
 
