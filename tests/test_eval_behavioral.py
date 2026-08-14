@@ -1891,6 +1891,9 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 Path(tmp), [self._stats()], responses=[self._FAILING],
             )
             evidence = self._evidence(Path(tmp))
+            sidecar_bytes = (
+                Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
+            ).read_bytes()
         self.assertIsNotNone(evidence)
         case = next(
             case
@@ -1917,6 +1920,13 @@ class BenchmarkConditionsTest(unittest.TestCase):
         # copy stays attributable to the exact evaluated bytes (PR #133 finding).
         self.assertEqual(payload["provenance"], evidence["provenance"])
         self.assertIn("plugin", evidence["provenance"])
+        # And execution, not just inputs: two batches at the same commit share provenance
+        # byte-for-byte, so the benchmark records the digest of the exact sidecar written with
+        # it — a detached pairing is verifiable in one hash (PR #134 finding).
+        self.assertEqual(
+            hashlib.sha256(sidecar_bytes).hexdigest(),
+            payload["failing_run_evidence_sha256"],
+        )
         self.assertIn(
             eval_behavioral.FAILING_EVIDENCE_FILENAME,
             payload["failing_run_evidence"],
@@ -1935,6 +1945,8 @@ class BenchmarkConditionsTest(unittest.TestCase):
         self.assertEqual(
             "none (every run passed)", payload["failing_run_evidence"]
         )
+        # No sidecar, no digest — a labeled null, never a stale or fabricated hash.
+        self.assertIsNone(payload["failing_run_evidence_sha256"])
 
     def test_a_passing_run_beside_a_failing_one_is_not_retained(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

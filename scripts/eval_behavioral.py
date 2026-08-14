@@ -1775,6 +1775,7 @@ def main(argv: list[str] | None = None) -> int:
         # together. An orphaned sidecar from a benchmark-write failure is the benign residue:
         # it embeds its own conditions, and the reuse cleanup below reclaims it next run.
         evidence_path = args.output_dir / FAILING_EVIDENCE_FILENAME
+        sidecar_sha256 = None
         try:
             if failing_payload and not args.retain_run_evidence:
                 if evidence_path.is_file():
@@ -1791,20 +1792,29 @@ def main(argv: list[str] | None = None) -> int:
                 descriptor = os.open(
                     evidence_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
                 )
+                sidecar_text = json.dumps({
+                    "kind": "behavioral-failing-run-evidence",
+                    "benchmark": "benchmark.json",
+                    # Identity, not just conditions: conditions can be byte-identical across
+                    # two plugin versions, so a sidecar detached from its sibling could not
+                    # say WHICH skill-text bytes produced its responses — an unattributable
+                    # measurement, the class the one-writer rule exists to prevent. The same
+                    # provenance the benchmark carries binds this file on its own
+                    # (PR #133 finding).
+                    "provenance": provenance,
+                    "conditions": conditions,
+                    "cases": failing_payload,
+                }, indent=2) + "\n"
                 with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                    handle.write(json.dumps({
-                        "kind": "behavioral-failing-run-evidence",
-                        "benchmark": "benchmark.json",
-                        # Identity, not just conditions: conditions can be byte-identical across
-                        # two plugin versions, so a sidecar detached from its sibling could not
-                        # say WHICH skill-text bytes produced its responses — an unattributable
-                        # measurement, the class the one-writer rule exists to prevent. The same
-                        # provenance the benchmark carries binds this file on its own
-                        # (PR #133 finding).
-                        "provenance": provenance,
-                        "conditions": conditions,
-                        "cases": failing_payload,
-                    }, indent=2) + "\n")
+                    handle.write(sidecar_text)
+                # Provenance identifies the evaluated INPUTS; two batches at the same commit with
+                # identical arguments share it byte-for-byte, so it cannot tell batch A's sidecar
+                # from batch B's. The benchmark therefore records the digest of the exact sidecar
+                # written with it — deterministic (no clock, no nonce), and a detached pairing is
+                # verifiable in one hash (PR #134 finding).
+                sidecar_sha256 = hashlib.sha256(
+                    sidecar_text.encode("utf-8")
+                ).hexdigest()
             else:
                 # A reused --output-dir keeps whatever the current batch does not overwrite. A
                 # sidecar from a previous failing batch must not survive beside a fresh
@@ -1829,6 +1839,10 @@ def main(argv: list[str] | None = None) -> int:
                 # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
                 # able to tell "nothing failed" from "the text was dropped".
                 "failing_run_evidence": failing_run_evidence,
+                # The digest of the exact sidecar this batch wrote (null when none was written):
+                # provenance and conditions are shared by identical batches, so only this binds a
+                # sidecar to its own benchmark rather than to any same-input run.
+                "failing_run_evidence_sha256": sidecar_sha256,
                 "provenance": provenance,
                 "cases": payload,
             }, indent=2) + "\n",

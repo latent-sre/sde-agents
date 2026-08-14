@@ -284,7 +284,10 @@ inputs; artifacts written before 2026-08-14 carry the field inside `conditions`,
 evidence file is readable as "every run passed" rather than "the text was dropped". The sidecar is
 created owner-read/write only and is written **before** `benchmark.json`, so a failed evidence
 write withholds the benchmark rather than publishing one that claims text that was never produced;
-a rerun into the same `--output-dir` removes a sidecar the new batch did not write.
+a rerun into the same `--output-dir` removes a sidecar the new batch did not write. Because two
+batches at the same commit with identical arguments share provenance and conditions byte-for-byte,
+the benchmark also records `failing_run_evidence_sha256` — the digest of the exact sidecar written
+with it (null when none was) — so a detached sidecar's claimed pairing is verifiable in one hash.
 
 Treat any retained text as potentially sensitive model output. `failing-run-evidence.json` under
 `evals/baselines/` is **gitignored**, on the same rule as the probe and pilot run logs: it is a
