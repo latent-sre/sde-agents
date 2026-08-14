@@ -327,7 +327,8 @@ consult wording fails the case: "optional escalation" is the exact issue #66 mis
 contract exists to reject), and no wholesale re-owning — retiring or annotating the
 routing positive; case authoring is offline, the re-measure is T3 and starts a new case-bytes
 lineage. Success is defined per instrument, not by having run the sessions: the rewritten assess
-case fires at a nonzero rate, and the new behavioral contract holds across its runs — or the
+case passes at the recorded threshold (0.5 — at three runs, 2/3 or better; a 1/3 "nonzero" is
+still a failing positive), and the new behavioral contract holds across its runs — or the
 experiment that falsified the proposed repair is recorded as its explicit disposition. A repeat
 0/3 or a red contract closed silently would satisfy the letter of a run-only acceptance while
 delivering none of this item's promised outcome. A description rewrite for the assess mode is explicitly **not** indicated — the

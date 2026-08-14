@@ -10,7 +10,7 @@ escalation", the accurate call was builder-owned with a required consult) with a
 `claude-sonnet-5` observed, clean-room, one run excluded on a structured error, four graded on
 timeout-partial transcripts. Capture at
 [`evals/baselines/2026-08-14-ladder/`](../../../evals/baselines/2026-08-14-ladder/decisions.md)
-(benchmark + decisions note); `eval_baseline.py --model sonnet --clean-room` resolves it
+(benchmark + decisions note); `eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` resolves it
 `REUSABLE` on the capture host, so it stands as the cluster's stored 'before' for a future
 description edit **whose case bytes are unchanged** — it is not the Mode 3 trim's before-side,
 which requires a targeted Mode 3 case authored first and a fresh capture including it (the case
@@ -21,9 +21,13 @@ runtime or a fresh capture.
 
 ## The result
 
-- **`neg-embedded-decision-not-principal-owned`: 0/3 fired — PASS.** The issue #66 miscalibration
-  does not reproduce: builder-owned work carrying one embedded, builder-recordable decision drew
-  no principal, no distinguished, no eng-ladder in any run.
+- **`neg-embedded-decision-not-principal-owned`: 0/3 fired — PASS.** The **ownership half** of
+  the issue #66 miscalibration does not reproduce: builder-owned work carrying one embedded,
+  builder-recordable decision drew no principal, no distinguished, no eng-ladder in any run.
+  This case's decision is deliberately reversible with no standing authority, so it tests only
+  the no-over-ownership boundary — the required-consult half (whether a verdict rejects
+  "optional escalation") is not measured by this run; the consult-required positive fired 0/3
+  and that half awaits LADDER-002's behavioral contract.
 - **All seven negatives passed with their forbidden sets at 0% fire.** No forbidden agent fired
   anywhere in the batch. Stated precisely: the five cluster-wide negatives saw zero cluster
   members fire; the two narrowed disambiguation negatives saw their forbidden targets fire 0/3,
@@ -38,7 +42,8 @@ runtime or a fresh capture.
   anchor's matching pass/fail shape (same two positives passing, the six shared positives failing
   identically — this consult-fork positive itself postdates the anchor and has no historical
   rate), the
-  positive half of the split is under-measured in headless capture rather than newly broken —
+  positive half of the split reads as under-measured in headless capture, consistent with the
+  historical shape (per lesson 2, the anchor cannot rule out a regression) —
   but the skill-member split is a real signal, recorded below.
 - **Positives overall 2/9** (`pos-distinguished-adr` 2/3, `pos-engladder-altitude` 3/3):
   consistent with the historical shape on the six shared positives. Per lesson 2 below, the
@@ -70,8 +75,10 @@ Two PROP-002 deferrals rode this item; neither is silently stranded:
 - **Mode 3 growth-feedback trim — re-homed to LADDER-002.** The Group 4 rescan upheld the finding
   (the only PROP-002 finding whose severity survived all four group rescans: agents do not
   practice, and the nearest real consumer is owned by `self-improve-loop`/`prompt-engineer`). The
-  freeze this item imposed is now lifted and the stored capture makes the trim cheaply measurable;
-  whether to buy the 'after' run is the operator's call, recorded as LADDER-002's decision.
+  freeze this item imposed is now lifted; the trim's measurement follows LADDER-002's fresh
+  paired protocol (a targeted Mode 3 case authored first, then a fresh 'before' including it —
+  this capture carries no Mode 3 case and cannot serve as that half's before-side), and whether
+  to buy it is the operator's call, recorded as LADDER-002's decision.
 
 ## Lessons
 

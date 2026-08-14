@@ -11,7 +11,7 @@ Conditions: CLI 2.1.231, `model_requested: sonnet` (`claude-sonnet-5` observed i
 run), timeout 180s, threshold 0.5, concurrency 4, clean-room. 16 cases × 3 runs = 48 sessions;
 one run excluded (structured error result on `pos-principal-migration`), four runs graded on
 partial transcripts after the 180s timeout — each noted in `benchmark.json`.
-`eval_baseline.py --model sonnet --clean-room` resolves this capture `REUSABLE` on the capture
+`eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` resolves this capture `REUSABLE` on the capture
 host; the evaluator identity pins the runtime (CPython 3.11.15), so another Python reports
 `STALE: diverged on evaluator` and owes that runtime or a fresh capture.
 
@@ -42,7 +42,9 @@ pattern on its twelve shared cases: same two positives passing, the six shared p
 identically (the consult-fork positive postdates the anchor and has no historical rate), all negatives
 clean. So this is a reproduction of the known headless-mode property (`evals/README.md`: agent
 positives systematically under-fire because a one-shot session does the work instead of
-delegating), not a regression introduced since.
+delegating), consistent with the historical shape — which, per the outcome record's lesson 2,
+is a prior that guided the diagnosis, not proof that no regression occurred (the anchor records
+no comparable conditions).
 
 **The one genuinely new signal is the skill-member split.** `eng-ladder` is a skill, which the
 under-fire caveat does not excuse, and its three advertised modes fired very differently: the
