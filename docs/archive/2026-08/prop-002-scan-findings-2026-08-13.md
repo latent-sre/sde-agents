@@ -293,6 +293,16 @@ table `:19-24`.)
     bot passes and future sessions); and ci-actions' "executes code from anyone who can open a
     pull request" (the correct threat model for an agent-authored PR population). Per-finding
     evidence in [`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md).
+17. *(Added 2026-08-14, the Group 4 rescan.)* Group 4's program scaffolding: sre-tool's
+    environment card and orchestrator-owned plan file (the canonical spawn handoff and the loop's
+    durable state — counters, gate evidence, safe resume point), its one-owner versioned interface
+    contract ("cite the version built against" — provenance binding in prose form); eng-ladder's
+    ownership-vs-consult typed edge (a scoped consult request returning one decision record across
+    separate agent contexts), the debt-with-payback-trigger rule, and "act from your framing
+    without re-deriving it" (the handoff-completeness criterion); and self-improve-loop's
+    candidate block and retro output block (the quarantine boundary's contract-graded wire
+    formats). Per-finding evidence in
+    [`group4-rescan-2026-08-14.md`](group4-rescan-2026-08-14.md).
 
 ## Corrections — scan claims the round's evidence overturned
 
@@ -350,11 +360,12 @@ A later session must not re-apply these as findings:
    most-consumed artifact contract. Group 3 followed on 2026-08-14
    ([`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md)) — six flips, two one-phrase
    edits, and the group's own pattern: vocabulary findings resolving into halves of typed
-   producer/consumer contracts whose consuming half sat in a neighboring file. **Group 4 stands
-   unrescanned**; the Group 2 record enumerates its standing findings and the freezes its
-   rescanner must respect (sre-tool contract-graded and edit-sensitive, eng-ladder frozen by
-   LADDER-001, self-improve-loop riding LEARN-002). Re-judging it takes the same per-finding
-   read, not this correction alone.
+   producer/consumer contracts whose consuming half sat in a neighboring file. Group 4 closed the
+   set on 2026-08-14 ([`group4-rescan-2026-08-14.md`](group4-rescan-2026-08-14.md)) — ten flips
+   under the freezes its rescanner had to respect (sre-tool contract-graded and edit-sensitive,
+   eng-ladder frozen by LADDER-001, self-improve-loop riding LEARN-002), zero edits by design,
+   and the one finding whose original severity survives all four rescans: eng-ladder's Mode 3.
+   No finding now remains under the lens this correction records.
 
 ## Round disposition as of this record
 
@@ -472,10 +483,10 @@ parked, below.
   recorded here as observed, and a LOW is available as free evidence if a future round edits one of
   these files for a substantive reason anyway.
 
-### 2026-08-13/14 addendum — Groups 1–3 re-dispositioned by rescan
+### 2026-08-13/14 addendum — Groups 1–4 re-dispositioned by rescan
 
-The batch drop above now governs only **Group 4's** LOWs. Groups 1–3 were re-scanned under the
-engineering-program reading rule and carry **individual** dispositions that supersede their
+The batch drop above is now **fully superseded**: every group was re-scanned under the
+engineering-program reading rule and carries **individual** dispositions that replace its
 membership in the batch. Group 1: six kept as coordination mechanisms (KEEP 14), three drops
 confirmed, one partial, four sharpening edits landed (one with paired behavioral evidence), one
 gap deferred trigger-bound — [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md).
@@ -486,7 +497,10 @@ contract — [`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md), whose
 enumerates the remaining groups' standing findings and rescanner constraints. Group 3: six flips
 (KEEP 16), two one-phrase edits in ungraded text, eight drops confirmed, zero gaps — the craft
 group's findings kept resolving into halves of typed producer/consumer contracts —
-[`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md). Correction 9 owns the lens error
+[`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md). Group 4: ten flips (KEEP 17), one
+finding upheld (eng-ladder Mode 3, parked as a measured trim candidate on LADDER-001), four drops
+standing, zero edits — every candidate edit sits under a named freeze —
+[`group4-rescan-2026-08-14.md`](group4-rescan-2026-08-14.md). Correction 9 owns the lens error
 that made the rescans necessary.
 
 ### What closing this item does not claim
