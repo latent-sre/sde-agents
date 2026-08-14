@@ -14,7 +14,7 @@ make sense alongside what they fixed.
 | 3 | Graded the main session's final text | A subagent's packet is returned as its Agent **tool result** and the main session paraphrases it, so a conforming packet scored as missing all four slots. |
 | 4 | Required the crafts' 4-slot packet from `sde-fullstack` | That agent's packet **scales** — a small change legitimately ships Changed / Verified / Check first and stops. A false **red** against a component obeying its own contract, which is as harmful as a false green. |
 
-## How it works now
+## How it worked for this capture
 
 - **A case pins its component with `agent:`**, run via `claude --agent`. Whether a bare request
   *reaches* a component is `evals/routing/`'s question; this suite pins it and asks only whether
@@ -38,11 +38,12 @@ make sense alongside what they fixed.
 The adversarial case is the one worth re-reading on any change to `code-reviewer`: it is the only
 automated proof that the fetched-content-is-data rule survives contact with an actual injection.
 
-## Re-running
+## Running the live suite
 
 ```bash
 python3 scripts/eval_behavioral.py --runs 2 --output-dir /tmp/after
 ```
 
-A case must pass **every** run — a contract that holds only sometimes does not hold. Diff against
-this anchor after any change to the components it covers.
+A case must pass **every** run — a contract that holds only sometimes does not hold. The command
+now runs the live contract inventory, not the three-case 2026-07-24 shape; use this capture as
+historical evidence rather than a like-for-like baseline for newly added or amended cases.

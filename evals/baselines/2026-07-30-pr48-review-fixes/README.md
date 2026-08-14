@@ -28,8 +28,10 @@ The first after attempt is deliberately not stored as a benchmark. Every session
 the runner then graded those error results as ordinary empty firings. Treating that output as four
 clean negatives would be false evidence, so the artifact was removed.
 
-The description change still owes a like-for-like after capture once Claude authentication is
-refreshed. Even a valid 0/3 → 0/3 positive pair would show only that no negative regressed; it would
-not demonstrate improved positive routing. A forced-choice or native plugin eval is needed to
-measure the current-impact predicate directly. The new narrowed `homelab-ops` negative also owes
-its before/after run; it was added after authentication failed and has not been measured.
+At this snapshot, the description change still owed a like-for-like after capture once Claude
+authentication was refreshed. Even a valid 0/3 → 0/3 positive pair would have shown only that no
+negative regressed; it would not have demonstrated improved positive routing. A forced-choice or
+native plugin eval was needed to measure the current-impact predicate directly. The new narrowed
+`homelab-ops` negative likewise had no before/after run in this snapshot because it was added after
+authentication failed. Current work and evidence are owned by the roadmap and later artifacts,
+not by this dated note.

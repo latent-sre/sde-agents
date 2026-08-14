@@ -16,7 +16,8 @@ or `upgrade-campaign` skills land.
   24/40 either. The headline conclusion is unchanged and slightly stronger.
 - The `homelab-ops` numbers here are **superseded**: `postmortem` joined that cluster on
   2026-07-24 (4 members / 15 cases here → 5 / 18), so this capture is a historical anchor, not a
-  like-for-like diff target. The current capture is `../2026-07-24/`.
+  like-for-like diff target. The replacement capture at that time was `../2026-07-24/`; it too is
+  now historical because the live cluster has expanded again.
 
 ## Headline
 
