@@ -275,6 +275,17 @@ or "enforced" lands with the reader check and its firing test, or it is reworded
 behavior — a prose claim of enforcement with no guard behind it survives every check for the
 same reason an untested guard does (executed-verification finding, 2026-08-10).
 
+**Retiring a tripwire whose risk is structurally gone** — the symmetric half of the
+defensive-branch rule above. A tripwire test names the silent failure it watches for (its
+docstring's risk hypothesis); a change that makes that failure impossible *by construction* —
+consolidating the second parser a drift test watched, removing the config surface a guard
+checked — retires the test in the same change, with the elimination stated in the commit. The
+suite is evidence, not a ledger of past fears: a test whose hypothesis can no longer occur
+re-proves nothing (the proportionality rule already bans that) while still taxing every edit
+that touches its fixtures. The bar is structural impossibility, not "hasn't fired lately" — a
+quiet tripwire watching a still-possible failure stays, and when the two readings are arguable
+the test stays and the doubt is recorded where the retirement would have been.
+
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
 before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
