@@ -10,8 +10,11 @@ The scan brief excluded homelab-platform's tiered change authority (deliberate d
 
 **How to read this record.** Findings marked **[FIXED]** were resolved in PR #132 (commit noted).
 Findings marked **[OVERTURNED]** were checked against liveness evidence and rejected — a later
-session must not re-apply them; the evidence is in the Corrections section. Everything else is
-the open backlog the PROP-002 roadmap item tracks. This is dated evidence, not a task list.
+session must not re-apply them; the evidence is in the Corrections section. Findings the per-skill
+notes below still call "open" were the PROP-002 backlog, and **that backlog is now closed**: the
+`Backlog disposition` section at the end of this file dispositions every one of them as worked,
+overturned, deferred trigger-bound, or dropped. Read the per-skill "open" markers as the state at
+scan time and that section as the outcome; nothing here is a task list.
 
 ## Verdict table
 
@@ -268,6 +271,19 @@ table `:19-24`.)
 11. root-cause in full; prompt-craft's baseline-before-change.
 12. sre-tool's pre-Phase-0 exit, mission transaction, reviewer independence, cli.md.
 13. postmortem's re-scoped blameless framing (`SKILL.md:14-16`).
+14. *(Added 2026-08-13, Correction 9's rescan.)* Group 1's fleet-coordination mechanisms: the
+    audit ledger's keeper/emitter split and written-exception acceptance, lab-incident's
+    contemporaneous timeline note and the outage→follow-up authority edge, security-audit's
+    transcript-aware observability audience, and upgrade-campaign's unbatched major
+    session+approval. Per-finding evidence in
+    [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md).
+15. *(Added 2026-08-13, the Group 2 rescan.)* Group 2's coordination mechanisms:
+    onboarding-map's four-state authority lifecycle, host-onboard's per-apply approval-evidence
+    slot and its deliberately redundant authority preamble (unguarded by any contract, so a trim
+    is unmeasurable), runbook's Owner / Escalation-stop / approvals slots (the disposition gate's
+    own inputs, with five named consumers), and postmortem's action-artifact-proof rule, both
+    retro lists, and its draft|final settledness marker. Per-finding evidence in
+    [`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md).
 
 ## Corrections — scan claims the round's evidence overturned
 
@@ -289,6 +305,43 @@ A later session must not re-apply these as findings:
    with the denial strengthened beside it → 3/3 once removed). Prominence of the required
    behavior did not compensate for offering an alternative framing; the fix was subtractive.
    n=3 per measurement — the conclusion rests on the paired direction tracking the sentence.
+8. **Relocating `runbook`'s propose grammar to `references/` would break it** — added 2026-08-13,
+   and it retires what this record called its largest open backlog item. The remedy the scan
+   proposed ("relocation to a `references/` file loaded on the propose path") cannot be loaded on
+   that path: `runbook-disposition-propose` runs as a skill-only session (`allowed_tools:
+   ["Skill"]`, `evals/behavioral/contracts.json`), so it has no `Read` with which to reach a
+   reference file. The identical move is the measured cause of a different contract failure —
+   LEARN-002's 2026-08-10 calibration found the `Learning: candidate — <observed -> expected>`
+   literal living only in `references/retro-protocol.md:97` and `references/discovery-routing.md:99`,
+   ruled the graders right and the text wrong, and chose *moving the literal into the body* as the
+   fix (`evals/baselines/2026-08-10-learn-002/decisions.md`, "The systemic finding"). That round
+   also considered and rejected the cheaper inverse — granting `Read` to the cases — because it
+   "would leave every other skill-only caller in the same position". Relocating the runbook grammar
+   would recreate exactly that position for a contract currently at 2/3 whose one remaining failure
+   is already a session emitting narrative the grammar forbids. The 42 lines are not ceremony: they
+   are a closed machine-checked vocabulary with four live consumers, and the session that must obey
+   them is the one that cannot open a second file. **Do not re-propose this relocation.** Reducing
+   the runbook body's cost has to come from somewhere the grammar is not.
+9. **The LOW tier's "vocabulary only" definition was unsound for the lab-operations group** —
+   added 2026-08-13 after the Group 1 rescan
+   ([`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md), which owns the per-finding
+   evidence). The scan's severity model judged prose against an audience of one human with
+   continuous memory; the fleet's artifacts are read by the next session, which has neither
+   memory nor grounds to trust unverified claims. Six of Group 1's ten LOWs are coordination
+   mechanisms wearing organizational vocabulary — the ledger keeper (write-authority principal),
+   the written exception (loop convergence), the timeline note (the only `[verified]`-capable
+   evidence a later session can hold), the outage downgrade (the edge ending the mitigate-first
+   authority inversion), the observability audience (agent sessions and their retained
+   transcripts), and majors-get-their-own-session (unbatched tier approval plus a fresh context).
+   A later proportionality round applies the two-question test — who is the real reader, what
+   consumes the artifact — before tiering, and reads the rescan record rather than re-deriving
+   it. Group 2 was re-scanned the same day under the same method
+   ([`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md)) — six further flips, zero edits
+   owed, and the `runbook` "enterprise-shaped" verdict inverted: its slots are the fleet's
+   most-consumed artifact contract. **Groups 3 and 4 stand unrescanned**; the Group 2 record ends
+   with their standing findings enumerated, mis-tier suspects flagged, and the constraints a
+   rescanner must check first. Re-judging them takes the same per-finding read, not this
+   correction alone.
 
 ## Round disposition as of this record
 
@@ -296,5 +349,136 @@ Fixed and verified in PR #132 (`4071e0f`..`d28fb6b`): the five HIGH clusters, th
 findings (P2 + four P3), and the three Codex review P2s. Verification: deep-review
 `merge-with-nits` / 0 criticals; validator + 833 tests at every commit; paired behavioral
 evidence (sre-tool 3/3 == 3/3; self-improve/loop-capture failures identical to stored pre-change
-baselines — LEARN-002's known gap, not this round's). Everything marked "open" above is the
-backlog the PROP-002 roadmap item carries.
+baselines — LEARN-002's known gap, not this round's).
+
+## Backlog disposition (2026-08-13, closing PROP-002)
+
+Every finding this record left `open` is dispositioned below, which is what the roadmap item's
+acceptance required before it could retire. Four dispositions are used: **worked** (edited, with
+the commit), **overturned** (checked against liveness evidence and rejected — do not re-apply),
+**deferred** (trigger-bound to a named item that already owns a paid measurement on the same
+file), and **dropped** (judged not worth an edit, with the reason).
+
+Two rules did most of the sorting, and both are the fleet's own proportionality discipline pointed
+at this backlog rather than at the skills:
+
+1. **A description edit owes a paired routing run**, which is T3 and operator-owned. Every
+   description-level finding therefore defers rather than shipping an unmeasured edit — including
+   `onboarding-map`'s fourth authority restatement, which lives in the description.
+2. **Where another live roadmap item already owns a paid run on the same file, the trim rides that
+   item.** Buying a second batch to measure a trim in a file LEARN-002 or LADDER-001 will already
+   be re-measuring is the repeated work the fleet's proportionality rule forbids. This is a
+   sequencing decision, not a downgrade: each deferral names the item that carries it.
+
+### Worked (`eb53758`, plus `ci.reusable.yml` in the closing commit)
+
+| Finding | What changed |
+|---|---|
+| `onboarding-map` MEDIUM (body half) | Closing restatement removed; opening sentence, the four-states authorizes column, and the both-directions failure note kept — each says something the others do not |
+| `service-onboard SKILL.md:61-62,66-67` MEDIUM | Three parallel lists → unverified items kept distinct from not-applicable; owner named only when it is someone else; the unverified list named as the load-bearing part |
+| `ci-actions SKILL.md:56-57` MEDIUM | actionlint/zizmor run locally on workflow edits, graduating to CI jobs when someone else's edit can break a workflow |
+| `ci-actions SKILL.md:58-59` MEDIUM | SBOM/provenance keyed to the artifact leaving the lab |
+| `backend-craft SKILL.md:67` MEDIUM | Contract tests keyed to a consumer not deployed in the same commit |
+| `backend-craft database-reliability.md:33-35` MEDIUM | expand→migrate→contract keyed to a migration that cannot stop its readers |
+| `backend-craft SKILL.md:58` + `consuming-apis.md:12` MEDIUM | Circuit breaker keyed to call volume that can hurt something |
+| `frontend-craft design-language.md:63-66` MEDIUM | Constraining the canvas is the no-permission fix; enriching became a proposal, not a ship |
+| `sre-tool multi-component.md:9-16` MEDIUM | Interface-contract artifact required once more than one builder writes against the interface |
+| `ci-actions ci.reusable.yml:3-24` MEDIUM (partial) | Non-Docker digest lookup added; see the overturn below for the rest |
+
+### Overturned — do not re-apply
+
+- **`runbook SKILL.md:32-73`** — Correction 8 above. The largest item in this backlog, retired on
+  measured evidence that the proposed move would break a live contract.
+- **`ci-actions ci.reusable.yml:3-24`** (the placeholder friction itself) — the file's own header
+  already carries each lookup command and the reason the placeholders are invalid rather than
+  stale: "a stale-but-valid pin … would run *some* version silently. An invalid ref fails loudly on
+  the first run instead." That is prove-the-instrument discipline (KEEP 10) inside the
+  supply-chain hardening this same scan's KEEP 9 protects. Only the missing non-Docker route for
+  the image-digest class was real, and it is fixed.
+- **`sre-tool plan-file.template.md:19-23`** (gate-status sign-off register) — same class as
+  Correction 5. The template says "approval evidence is a pointer to the user's words, never
+  inferred"; that is an anti-fabrication control against an LLM worker claiming an approval it was
+  never given, which is real at any headcount. The register reading mistakes the adversary.
+- **`sre-tool multi-component.md:21-23`** (mockup sign-off gate) — approving a static mockup before
+  framework code is the cheapest fork point in the whole build, and naming gates in the cadence
+  contract is this skill's own live mechanism, not borrowed ceremony.
+
+### Deferred, trigger-bound
+
+| Finding | Rides | Why |
+|---|---|---|
+| `runbook SKILL.md:100,112` (owner/escalation slots), `references/example.md:55-56,23,48` | **LEARN-002** | `runbook-disposition-propose` sits at 2/3 with a TEXT residual LEARN-002 already owns; that round pays for runbook sessions and will re-measure this file |
+| `self-improve-loop SKILL.md:209-217` + `discovery-routing.md:98-109` (candidate block), `retro-protocol.md:7-90` (five retro types) | **LEARN-002** | Contract-graded by 16 cases, and LEARN-002's next action is already a canonical SKILL.md edit to this file owing paired reruns |
+| `eng-ladder SKILL.md:33-35` (Mode 3), `SKILL.md:21` (consult protocol) | **LADDER-001** | That item owes one recorded `evals/routing/ladder.json` capture whose stored benchmark is already STALE; editing the skill now would move the bytes out from under a run the operator is about to buy |
+| `onboarding-map` description clause | **LANE-001** | `onboarding-map` is in the `homelab-ops` cluster whose paired 'before' capture LANE-001 owes at merge base `4fef0ce` |
+
+Each deferral above names an item that is live on the roadmap and already buying sessions on that
+file, and each receiving item records the ride-along. A deferral with no such owner is not a
+deferral — it is an untracked task — so the two findings that had no owner were decided instead of
+parked, below.
+
+### Dropped, with reason
+
+- **`observability` SLO/burn-rate triplicate** (`alerting.md:76-98`, `SKILL.md:107-108`,
+  `scripts/error_budget.py`) — the always-loaded surface already carries the carve-out this scan
+  itself named as the model register ("Household scale, honestly", `SKILL.md:66-69`). The 23-line
+  table is conditionally loaded and costs nothing until its predicate trips, and `error_budget.py`
+  is live tested code invoked on demand. What remains is the description trigger, deferred above.
+- **`frontend-craft` unconditioned a11y** (`SKILL.md:64`, all of `interaction-a11y.md`,
+  `forms.md:14-15`, `data-viz.md:18`) — the scanner filed its own caveat, and it holds: this is a
+  values call, cheap to build in and expensive to retrofit. Nothing here is dropped for being
+  wrong; it is left alone deliberately.
+- **`backend-craft api-design.md:61-62,51-52`** (deprecation protocol, error codes as contract) —
+  already conditioned wholesale by the published-surface definition `0d5fe31`/`c647046`/`d28fb6b`
+  landed. The residual register is a vocabulary echo of a boundary that now exists.
+- **`self-improve-loop learning-ledger.md:10-27,33`** (intake coordinator, attestation) — describes
+  the fail-closed CLI's actual trust model. Rewording prose to sound smaller while the mechanism it
+  documents is unchanged trades accuracy for tone.
+- **`sre-tool SKILL.md:39-40`** (environment-card breadth, orchestrator-owned plan file) — decided
+  rather than parked, because no live item is buying `sre-tool` sessions to carry it. The trim's
+  benefit is a little less always-loaded text; its cost is a paired behavioral run on a region
+  Correction 7 measured as edit-sensitive, where an adjacent sentence moved the durable-state
+  contract 3/3 → 2/3 → 1/3 in this very round. Measured cost exceeds unmeasured benefit. Reopen
+  only if an `sre-tool` round is paying for sessions anyway, when the trim rides a run that already
+  exists.
+- **`observability SKILL.md:3`** ("SLO burn-rate rule" as a routing trigger) — same reasoning, and
+  additionally the trigger is not wrong: `observability` genuinely owns burn-rate rules, and the
+  finding is that advertising them over-invites a pattern most lab services skip. That is a routing
+  *precision* claim with no observed miss behind it, and buying a paired routing run to test a
+  speculative improvement inverts the eval discipline. Reopen on an actual observed routing miss.
+- **Every remaining LOW, as one batch** — the ~30 LOW findings across `lab-audit`,
+  `lab-incident`, `security-audit`, `upgrade-campaign`, `restore-drill`, `onboarding-map`,
+  `host-onboard`, `runbook`, `postmortem`, `backend-craft`, `frontend-craft`, `code-craft`,
+  `ci-actions`, `observability`, `sre-tool`, `eng-ladder`, and `self-improve-loop`. The scan
+  defined this tier as **vocabulary only**, and its own per-skill notes say repeatedly that none is
+  worth an edit alone. Shared reason: each is a word choice inherited from a larger-organization
+  idiom ("the ledger's keeper", "meets the bar", "service owner", "Status: draft | final") whose
+  underlying rule is correct and load-bearing. Editing ~30 sentences across 17 files to adjust tone
+  would rewrite text that behavioral contracts and routing descriptions grade, buying measurable
+  risk for no behavior change — the exact trade Correction 7 measured going the wrong way. They are
+  recorded here as observed, and a LOW is available as free evidence if a future round edits one of
+  these files for a substantive reason anyway.
+
+### 2026-08-13 addendum — Groups 1 and 2 re-dispositioned by rescan
+
+The batch drop above now governs only **Groups 3 and 4's** LOWs. Groups 1 and 2 were re-scanned
+the same day under the engineering-program reading rule and carry **individual** dispositions that
+supersede their membership in the batch. Group 1: six kept as coordination mechanisms (KEEP 14),
+three drops confirmed, one partial, four sharpening edits landed (one with paired behavioral
+evidence), one gap deferred trigger-bound —
+[`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md). Group 2: six further flips
+(KEEP 15), zero edits owed — every remaining finding was fully wired mechanism, riding a recorded
+measurement, or a surviving drop — plus two gaps recorded, the larger being that host-onboard and
+service-onboard's authority preambles are graded by no behavioral contract —
+[`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md), whose closing section enumerates
+Groups 3–4's standing findings and the constraints their rescanner must check first. Correction 9
+owns the lens error that made both rescans necessary.
+
+### What closing this item does not claim
+
+No behavioral or routing run was purchased for this closeout. Every edit in it was chosen to be
+provable by the deterministic gates alone — conditioning a mandate or removing a restatement in
+text no contract grades — and everything that would have needed a paid run is deferred above with
+the item that will pay for it. T0, T1 (837 tests across 33 modules), regenerated adapters, and
+`claude plugin validate . --strict` are what backs it, and that is a claim about consistency, not
+about measured session behavior.

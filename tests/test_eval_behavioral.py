@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import tempfile
 import unittest
@@ -1863,6 +1864,167 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 {"response": failing, "failures": expected_failures},
             ],
             payload["cases"][0]["run_evidence_per_run"],
+        )
+
+    # --- failing-run retention (lc_2e549c0b) ---------------------------------------------------
+    # The runner used to read a failing session's text, grade it, and drop it, so deciding whether
+    # a red contract was a grader defect or a text defect meant paying for the session a second
+    # time -- 22 of the 76 sessions in the 2026-08-10 calibration round were that re-buy. These
+    # tests pin the narrow retention that makes the call offline, and the two boundaries that keep
+    # it from becoming a second copy of --retain-run-evidence.
+
+    _PASSING = (
+        "Approval is required before I apply. I will prepare an effect-bound request "
+        "for the operator-owned mediator."
+    )
+    _FAILING = "I will proceed."
+
+    def _evidence(self, tmp: Path) -> dict | None:
+        path = tmp / eval_behavioral.FAILING_EVIDENCE_FILENAME
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_failing_run_text_is_retained_beside_the_benchmark(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self._run_main(
+                Path(tmp), [self._stats()], responses=[self._FAILING],
+            )
+            evidence = self._evidence(Path(tmp))
+        self.assertIsNotNone(evidence)
+        case = next(
+            case
+            for case in eval_behavioral.load_cases("tier-gate-holds")
+            if case["id"] == "tier-gate-holds"
+        )
+        expected_failures = eval_behavioral.assert_case(
+            self._FAILING, case, {"homelab-platform"}
+        )
+        self.assertTrue(expected_failures)
+        self.assertEqual(
+            [{
+                "run_index": 0,
+                "failures": expected_failures,
+                "response": self._FAILING,
+            }],
+            evidence["cases"][0]["failing_runs"],
+        )
+        # It must be able to say what it measured on its own; an evidence file whose conditions
+        # are only in a sibling file is one copy away from being read against the wrong batch.
+        self.assertEqual("opus", evidence["conditions"]["model_requested"])
+        self.assertIn(
+            eval_behavioral.FAILING_EVIDENCE_FILENAME,
+            payload["failing_run_evidence"],
+        )
+        # Placement is the point: the compared artifact does not grow diagnostic prose.
+        self.assertNotIn("run_evidence_per_run", payload["cases"][0])
+
+    def test_a_batch_with_no_failures_writes_no_evidence_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self._run_main(
+                Path(tmp), [self._stats()], responses=[self._PASSING],
+            )
+            self.assertIsNone(self._evidence(Path(tmp)))
+        # Stated, not merely absent: "every run passed" and "the text was dropped" are different
+        # facts, and only the first one makes a missing file safe to read as nothing-to-see.
+        self.assertEqual(
+            "none (every run passed)", payload["failing_run_evidence"]
+        )
+
+    def test_a_passing_run_beside_a_failing_one_is_not_retained(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(
+                Path(tmp),
+                [self._stats(), self._stats()],
+                responses=[self._PASSING, self._FAILING],
+            )
+            evidence = self._evidence(Path(tmp))
+        retained = evidence["cases"][0]["failing_runs"]
+        self.assertEqual([1], [run["run_index"] for run in retained])
+        self.assertNotIn(
+            self._PASSING, json.dumps(evidence),
+            msg="a passing run's text has no diagnostic consumer; retaining it only widens "
+                "the sensitive-output surface",
+        )
+
+    def test_a_failed_sidecar_write_withholds_the_benchmark(self) -> None:
+        # PR #133 P2: sidecar before benchmark. If the evidence file cannot be written, no
+        # benchmark may exist whose failing_run_evidence field claims text this batch never
+        # produced -- stage the failure by occupying the sidecar path with a directory.
+        def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            return self._FAILING, {"homelab-platform"}, None, self._stats()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            blocker = Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
+            blocker.mkdir()
+            with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
+                    mock.patch.object(eval_behavioral, "CLAUDE", "claude"):
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "1",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+            benchmark_exists = (Path(tmp) / "benchmark.json").exists()
+            # The runner tightens the blocker's mode before failing on it; restore so the
+            # TemporaryDirectory cleanup can list and remove it.
+            blocker.chmod(0o755)
+        self.assertEqual(2, code)
+        self.assertFalse(benchmark_exists)
+
+    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    def test_failing_evidence_file_is_owner_only(self) -> None:
+        # PR #133 P2: the sidecar is raw model text -- the retained-artifact class the fleet's
+        # own secrets doctrine names as a leak surface -- so a 022 umask must not make it
+        # world-readable.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
+            mode = (
+                Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
+            ).stat().st_mode
+        self.assertEqual(0o600, mode & 0o777)
+
+    def test_a_reused_output_dir_does_not_keep_a_stale_evidence_file(self) -> None:
+        # PR #133 P1: benchmark.json is overwritten on --output-dir reuse, but a sidecar from a
+        # previous failing batch would survive beside it -- another run's raw model text sitting
+        # under this run's provenance, while the fresh conditions say the text is absent.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
+            self.assertIsNotNone(self._evidence(Path(tmp)))
+            payload = self._run_main(Path(tmp), [self._stats()], responses=[self._PASSING])
+            self.assertIsNone(self._evidence(Path(tmp)))
+        self.assertEqual(
+            "none (every run passed)", payload["failing_run_evidence"]
+        )
+
+    def test_a_retain_rerun_also_clears_the_stale_evidence_file(self) -> None:
+        # Same reuse hazard, other exit: a --retain-run-evidence rerun embeds the failing text in
+        # benchmark.json, so a surviving sidecar would be a second, stale copy.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
+            self.assertIsNotNone(self._evidence(Path(tmp)))
+            self._run_main(
+                Path(tmp), [self._stats()], responses=[self._FAILING],
+                retain_run_evidence=True,
+            )
+            self.assertIsNone(self._evidence(Path(tmp)))
+
+    def test_retain_run_evidence_supersedes_the_separate_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self._run_main(
+                Path(tmp),
+                [self._stats()],
+                responses=[self._FAILING],
+                retain_run_evidence=True,
+            )
+            self.assertIsNone(
+                self._evidence(Path(tmp)),
+                msg="--retain-run-evidence already stores every failing response in "
+                    "benchmark.json; a second on-disk copy is drift waiting to happen",
+            )
+        self.assertIn("benchmark.json", payload["failing_run_evidence"])
+        self.assertEqual(
+            self._FAILING, payload["cases"][0]["run_evidence_per_run"][0]["response"]
         )
 
     def test_run_evidence_retention_requires_an_output_directory(self) -> None:

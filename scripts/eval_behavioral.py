@@ -38,6 +38,7 @@ import fnmatch
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -48,6 +49,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 CASES_DIR = REPO / "evals" / "behavioral"
 CLAUDE = shutil.which("claude")
+
+# Written beside benchmark.json, never inside it. benchmark.json is the comparison-grade artifact
+# eval_baseline.py reads across every stored baseline; growing it by default with diagnostic model
+# text would put prose nobody compares inside the file whose whole job is comparison. Separate also
+# means an operator can delete or ignore this file without touching the measurement.
+FAILING_EVIDENCE_FILENAME = "failing-run-evidence.json"
 
 # NOT under tempfile.gettempdir(), deliberately. The CLI's sandbox write-blocks the %TEMP% tree,
 # and a behavioral session launched with its cwd there cannot Write even under acceptEdits —
@@ -1401,6 +1408,7 @@ def main(argv: list[str] | None = None) -> int:
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
     run_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
+    failing_evidence: dict[str, list[dict]] = {case["id"]: [] for case in cases}
     semantic_evidence: dict[str, list[dict | None]] = {
         case["id"]: [] for case in cases
     }
@@ -1408,7 +1416,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def execute(
         job: tuple[dict, int],
-    ) -> tuple[int, str, list[str], str | None, dict, str | None]:
+    ) -> tuple[int, str, list[str], str | None, dict, str]:
         case, run_index = job
         if args.runtime == "claude":
             text, fired, note, stats = run_session(
@@ -1439,8 +1447,14 @@ def main(argv: list[str] | None = None) -> int:
             failures = assert_case(
                 text, case, fired, stats.get("semantic_findings")
             )
-        retained_response = text if args.retain_run_evidence else None
-        return run_index, case["id"], failures, note, stats, retained_response
+        # The response is carried only while a consumer exists for it — a failing run (the
+        # evidence sidecar) or --retain-run-evidence (benchmark.json embeds every run). Dropping
+        # failing text was the original defect (22 of 76 sessions in the 2026-08-10 calibration
+        # round were re-buys of text the runner had already read); holding every PASSING response
+        # for the whole batch was the over-correction — total-output-sized memory for text
+        # nothing writes (PR #133 finding).
+        retained = text if (failures or args.retain_run_evidence) else ""
+        return run_index, case["id"], failures, note, stats, retained
 
     done = 0
     auth_mode = None
@@ -1597,6 +1611,16 @@ def main(argv: list[str] | None = None) -> int:
                         "response": response,
                         "failures": failures,
                     })
+                # A failing run is the only run whose text has a diagnostic consumer, so it is the
+                # only one retained by default. Passing runs stay opt-in under
+                # --retain-run-evidence: retaining them costs the same sensitive-output exposure
+                # for text nobody is going to read.
+                if failures:
+                    failing_evidence[case["id"]].append({
+                        "run_index": run_index,
+                        "failures": failures,
+                        "response": response,
+                    })
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")
@@ -1634,6 +1658,29 @@ def main(argv: list[str] | None = None) -> int:
 
     print("-" * 100)
     print(f"{passed_cases}/{len(cases)} cases passed every run")
+
+    failing_payload = [
+        {
+            "id": case["id"],
+            "suite": case["suite"],
+            "failing_runs": failing_evidence[case["id"]],
+        }
+        for case in cases
+        if failing_evidence[case["id"]]
+    ]
+    # An artifact must be able to say what text it holds. Three states, never a bare bool: a
+    # reader of a run with no failures must be able to tell "nothing failed" from "the text was
+    # dropped", which is the ambiguity that made the re-buy look necessary. This is an OUTCOME —
+    # it lands at the benchmark's top level, never in conditions, so paired runs with identical
+    # inputs stay comparable when only their results differ.
+    failing_run_evidence = (
+        f"benchmark.json ({len(failing_payload)} case(s); --retain-run-evidence "
+        "retains every run)"
+        if args.retain_run_evidence
+        else f"{FAILING_EVIDENCE_FILENAME} ({len(failing_payload)} case(s))"
+        if failing_payload
+        else "none (every run passed)"
+    )
 
     if args.output_dir:
         # The same contract the routing artifacts carry: a benchmark without its conditions cannot
@@ -1720,16 +1767,68 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         args.output_dir.mkdir(parents=True, exist_ok=True)
+        # Sidecar before benchmark, deliberately: if the evidence file cannot be written (its
+        # path is occupied by a directory, the disk is full), the batch aborts BEFORE a
+        # benchmark exists whose failing_run_evidence field claims text that was never produced.
+        # The reverse order published exactly that lie (PR #133 finding). Failing closed here
+        # loses no verdicts — they are already printed above; only the artifacts are withheld,
+        # together. An orphaned sidecar from a benchmark-write failure is the benign residue:
+        # it embeds its own conditions, and the reuse cleanup below reclaims it next run.
+        evidence_path = args.output_dir / FAILING_EVIDENCE_FILENAME
+        try:
+            if failing_payload and not args.retain_run_evidence:
+                if evidence_path.exists():
+                    # A pre-existing file may carry wider permissions from an older runner;
+                    # tighten before rewriting, not after (best-effort on non-POSIX hosts).
+                    os.chmod(evidence_path, 0o600)
+                # Owner-only from the first byte: this file is raw model text, which the fleet's
+                # own secrets doctrine treats as a retained-artifact leak surface. write_text
+                # would create it world-readable under the common 022 umask.
+                descriptor = os.open(
+                    evidence_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
+                )
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(json.dumps({
+                        "kind": "behavioral-failing-run-evidence",
+                        "benchmark": "benchmark.json",
+                        "conditions": conditions,
+                        "cases": failing_payload,
+                    }, indent=2) + "\n")
+            else:
+                # A reused --output-dir keeps whatever the current batch does not overwrite. A
+                # sidecar from a previous failing batch must not survive beside a fresh
+                # benchmark — that is another run's raw model text sitting under this run's
+                # provenance, while the new artifact says the text is absent or embedded
+                # (PR #133 finding).
+                evidence_path.unlink(missing_ok=True)
+        except OSError as exc:
+            print(
+                f"error: could not write or clear {evidence_path}: {exc}; benchmark.json was "
+                "not written so the artifacts stay same-batch-or-neither",
+                file=sys.stderr,
+            )
+            return 2
         (args.output_dir / "benchmark.json").write_text(
             json.dumps({
                 "runs_per_case": args.runs,
                 "conditions": conditions,
+                # An outcome, deliberately OUTSIDE conditions: two paired runs under identical
+                # inputs must not read as condition-divergent merely because one failed and one
+                # passed — that would corrupt the comparability contract exactly when a repair
+                # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
+                # able to tell "nothing failed" from "the text was dropped".
+                "failing_run_evidence": failing_run_evidence,
                 "provenance": provenance,
                 "cases": payload,
             }, indent=2) + "\n",
             encoding="utf-8",
         )
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
+        if failing_payload and not args.retain_run_evidence:
+            print(
+                f"wrote {evidence_path} (raw model text from failing runs; inspect before "
+                "committing or sharing)"
+            )
 
     return 0 if passed_cases == len(cases) else 1
 

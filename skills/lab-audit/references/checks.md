@@ -98,6 +98,8 @@ the agent they hand it to.
 |---|---|---|---|---|---|
 | 2026-07-27 | backups | P0 | wiki-db volume not in backup set | `restic snapshots` empty for path | open |
 
-`status` is `open` when emitted; the ledger's keeper flips it to `fixed` or `accepted`. A finding
-re-observed next audit updates its existing row rather than adding a twin — the ledger reads as
-current state; git history is the history.
+`status` is `open` when emitted; the ledger's keeper flips it to `fixed` or `accepted`. An
+`accepted` row carries or points at its written justification — the exception check 1 asks for in
+writing — because the reader of that row is the next audit session, which otherwise cannot tell a
+considered exception from a silence. A finding re-observed next audit updates its existing row
+rather than adding a twin — the ledger reads as current state; git history is the history.

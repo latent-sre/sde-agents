@@ -261,12 +261,38 @@ prints the
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
 
-By default, a behavioral artifact does not retain raw model text. For diagnosis only,
-`--retain-run-evidence` adds an ordered `run_evidence_per_run` list containing each final response
-and that run's assertion failures; it requires `--output-dir`, and the conditions block records
-that retention was enabled. Treat the resulting `benchmark.json` as potentially sensitive model
-output: inspect it before committing or sharing it. The flag is evidence for separating a grader
-defect from a prompt defect, not a different scoring path.
+**Retained text.** `benchmark.json` itself never holds raw model text by default. But a run under
+`--output-dir` whose assertions failed writes its final response to `failing-run-evidence.json`
+beside the benchmark — the failing run's text, its `run_index`, its assertion failures, and a copy
+of the conditions so the file can state what it measured on its own. Passing runs are never in it,
+and a batch with no failures does not create it. This is not optional, because the thing it
+prevents is: the runner reads a failing session's text, grades it, drops it, and the
+grammar-versus-text call then costs a second paid session — 22 of the 76 sessions in the
+2026-08-10 calibration round were that re-buy, and a grader repaired without the sentence it
+misread is a grader tuned into agreeing with itself.
+
+For the wider case, `--retain-run-evidence` adds an ordered `run_evidence_per_run` list to
+`benchmark.json` containing **every** run's final response and failures, passing runs included; it
+requires `--output-dir`, and it supersedes the separate file rather than duplicating it. Both are
+evidence for separating a grader defect from a prompt defect, not a different scoring path.
+
+`benchmark.json` names which form is present in a top-level `failing_run_evidence` field — an
+**outcome**, deliberately outside the conditions block, so two paired runs under identical inputs
+do not read as condition-divergent merely because one failed and one passed (conditions are
+inputs; artifacts written before 2026-08-14 carry the field inside `conditions`, and
+`eval_baseline.py`'s exact-key comparison ignores it in either place). Either way, a run with no
+evidence file is readable as "every run passed" rather than "the text was dropped". The sidecar is
+created owner-read/write only and is written **before** `benchmark.json`, so a failed evidence
+write withholds the benchmark rather than publishing one that claims text that was never produced;
+a rerun into the same `--output-dir` removes a sidecar the new batch did not write.
+
+Treat any retained text as potentially sensitive model output. `failing-run-evidence.json` under
+`evals/baselines/` is **gitignored**, on the same rule as the probe and pilot run logs: it is a
+local diagnosis of a batch that already ran, not a committed measurement, and a round's conclusions
+reach the tree as reviewed quotes in its decisions note rather than as a raw dump. Being separable
+from `benchmark.json` is what makes that possible — the benchmark cannot be ignored the same way
+because it *is* the artifact, which is why `--retain-run-evidence`, whose text lands inside it,
+stays opt-in and requires inspecting the result before you commit or share it.
 
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or

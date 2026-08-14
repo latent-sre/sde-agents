@@ -12,6 +12,29 @@ on conflict — fix the paraphrase here, never the source. The validator holds t
 rule: the `@AGENTS.md` bridge in `CLAUDE.md`, every concrete multi-segment repo path named here,
 and the model-alias list are checked against the source and fail on drift.
 
+## The engineering program
+
+This is not a prompt library. It is one program with four strands: **handoff engineering** —
+stateless sessions coordinate only through artifacts (packets, ledger rows, digest-bound work
+orders with receipt-only returns), so a handoff is complete only when the receiver can act on the
+artifact alone; **loop engineering** — audits, incidents, campaigns, and eval rounds must converge
+across memoryless sessions, which is what written exceptions, recurrence-merged ledger rows, and
+literal status transitions are for; **graph engineering** — authority is typed edges with
+host-specific enforcement, owned by `docs/decisions/2026-07-31-ai-graph-engineering.md`; and
+**self-learning** — `scripts/learning_ledger.py` gates lessons behind evidence-bound quarantine
+because a session replays a stored lesson uncritically. `docs/engineering-program.md` maps each
+strand to its implementing mechanisms and the checks that keep them honest, and is held to the
+same stale-path tripwire as this file.
+
+The reading rule to apply in any review of fleet prose: **the reader is the next session, not the
+operator's memory.** A fleet of stateless workers re-creates the conditions organizations invented
+ceremony for — no shared memory, artifact-only communication, claims that cannot be trusted
+unverified — so owner slots, status lifecycles, contemporaneous capture, and written
+justifications are often coordination mechanisms wearing organizational vocabulary. Identify the
+real reader and what consumes an artifact before trimming it. The counterweight binds equally:
+coordination is not free — prefer fewer handoffs over richer ones, one writer per artifact,
+structure only at the boundaries that remain.
+
 ## Map
 
 | Path | What it is |

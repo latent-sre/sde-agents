@@ -305,6 +305,11 @@ PERISHABLE_TOKENS = {
 # teaching a stale policy. Same doctrine as EVIDENCE_LABEL_STEMS — pin the paraphrase to its source
 # and fail loudly when they part.
 GUIDE_IMPORT = "@AGENTS.md"
+# The program map exists specifically so the engineering program's documentation cannot go stale,
+# which makes it the one document least entitled to stale paths of its own: it is held to the same
+# path-drift tripwire as the guide. Self-gating — a repo that does not carry the map makes no
+# map claims.
+PROGRAM_DOC = "docs/engineering-program.md"
 INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 # A path-shaped token inside an inline code span. Deliberately excludes glob/placeholder characters
 # (`*`, `<`, `>`, `$`, `{`) so illustrative forms like `agents/*.md` and `skills/<name>/SKILL.md`
@@ -898,10 +903,12 @@ def validate_inventory(root: Path, expected: str) -> list[str]:
 
 
 def validate_agent_guide(root: Path) -> list[str]:
-    """Drift tripwires for the repo's own agent guide (AGENTS.md plus the CLAUDE.md bridge).
+    """Drift tripwires for the repo's own agent guide (AGENTS.md plus the CLAUDE.md bridge) and,
+    when present, the engineering-program map (PROGRAM_DOC), which shares the guide's stale-path
+    rule.
 
     Self-gating: a repo with no AGENTS.md (the synthetic fixtures under tests/) is not making any
-    guide claims, so there is nothing to check and this returns [].
+    guide claims, so there is nothing to check and this returns []. Same for the program map.
     """
     issues: list[str] = []
     guide = root / "AGENTS.md"
@@ -911,6 +918,31 @@ def validate_agent_guide(root: Path) -> list[str]:
         return path.is_file() and any(
             line.strip() == GUIDE_IMPORT for line in read_text(path).splitlines()
         )
+
+    def stale_path_issues(doc: Path) -> list[str]:
+        found: list[str] = []
+        for span in INLINE_CODE_RE.findall(read_text(doc)):
+            for token in GUIDE_PATH_TOKEN_RE.findall(span):
+                token = token.rstrip(".,;:")
+                # Bare filenames and lone directory mentions (`references/`) are prose, not
+                # resolvable claims; only a multi-segment path asserts a location worth checking.
+                if len([part for part in token.split("/") if part]) < 2:
+                    continue
+                if not (root / token.rstrip("/")).exists():
+                    found.append(
+                        f"{doc}: names '{token}', which does not exist in this repository. A "
+                        f"stale path here fails nowhere at runtime — it just misleads every "
+                        f"future session that reads it."
+                    )
+        return found
+
+    # The program map is checked BEFORE the guide's early return, never behind it. Its own header
+    # advertises this tripwire ("the fleet validator resolves every path named here"), and a check
+    # that a missing UNRELATED file disarms is enforcement prose with no guard behind it — the
+    # exact defect class this validator exists to catch (PR #133 finding).
+    program = root / PROGRAM_DOC
+    if program.is_file():
+        issues += stale_path_issues(program)
 
     if not guide.is_file():
         if has_import(bridge):
@@ -928,21 +960,9 @@ def validate_agent_guide(root: Path) -> list[str]:
             f"it is written for."
         )
 
-    text = read_text(guide)
-    for span in INLINE_CODE_RE.findall(text):
-        for token in GUIDE_PATH_TOKEN_RE.findall(span):
-            token = token.rstrip(".,;:")
-            # Bare filenames and lone directory mentions (`references/`) are prose, not resolvable
-            # claims; only a multi-segment path asserts a location worth checking.
-            if len([part for part in token.split("/") if part]) < 2:
-                continue
-            if not (root / token.rstrip("/")).exists():
-                issues.append(
-                    f"{guide}: names '{token}', which does not exist in this repository. A stale "
-                    f"path in the guide fails nowhere at runtime — it just misleads every future "
-                    f"session that loads it."
-                )
+    issues += stale_path_issues(guide)
 
+    text = read_text(guide)
     for alias in sorted(ALIAS_MODELS):
         if f"`{alias}`" not in text:
             issues.append(

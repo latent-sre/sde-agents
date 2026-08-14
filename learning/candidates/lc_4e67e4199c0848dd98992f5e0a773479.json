@@ -1,0 +1,52 @@
+{
+  "applicability": "Any future session doing structural edits to records or docs",
+  "candidate_id": "lc_4e67e4199c0848dd98992f5e0a773479",
+  "created_at": "2026-08-13T18:43:50.463874Z",
+  "destination": null,
+  "disposition": null,
+  "evidence": {
+    "environment": "Claude Code remote container, fleet source repository",
+    "provenance": "verified",
+    "revision": "dcd8954",
+    "source_kind": "session-retro",
+    "source_reference": "Group 1 rescan session 2026-08-13: an ad-hoc python slice script reordering corrections in the PROP-002 scan record wrote s[:i]+block instead of s[:i]+block+s[i:], silently discarding ~130 lines; caught by a grep returning empty, recovered from git HEAD"
+  },
+  "expected_behavior": "Structural reorders in prose files use exact-match Edit operations (or are followed by an immediate line-count/diff sanity check against the pre-edit state); ad-hoc slice-and-rewrite scripts are not used on documents whose tail matters",
+  "fingerprint": "ed1293e44e857f1e939535ab00146d1fd320dc0fb0c2172f95959d245e5e7014",
+  "freshness": {
+    "as_of": "2026-08-13T18:43:50.463874Z",
+    "review_at": "2026-09-12T18:43:50.463874Z"
+  },
+  "observation": "In-place file surgery via ad-hoc string slicing can truncate a document silently and still report success; the Edit tool's exact-match contract refuses precisely this class of error",
+  "owner": null,
+  "promotion_state": "quarantined",
+  "reason": null,
+  "recurrence": {
+    "count": 1,
+    "sources": [
+      {
+        "environment": "Claude Code remote container, fleet source repository",
+        "observed_at": "2026-08-13T18:43:50.463874Z",
+        "provenance": "verified",
+        "revision": "dcd8954",
+        "source_kind": "session-retro",
+        "source_reference": "Group 1 rescan session 2026-08-13: an ad-hoc python slice script reordering corrections in the PROP-002 scan record wrote s[:i]+block instead of s[:i]+block+s[i:], silently discarding ~130 lines; caught by a grep returning empty, recovered from git HEAD"
+      }
+    ]
+  },
+  "retention": {
+    "expires_at": "2027-08-13T18:43:50.463874Z",
+    "policy": "review-or-expire"
+  },
+  "review_history": [],
+  "schema_version": 2,
+  "scope": "applies: agent sessions editing repository documents; excludes: generated files rebuilt from source",
+  "sensitivity_review": {
+    "attestation_count": 1,
+    "attested": true,
+    "last_attested_at": "2026-08-13T18:43:50.463874Z",
+    "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
+  },
+  "transition_history": [],
+  "updated_at": "2026-08-13T18:43:50.463874Z"
+}

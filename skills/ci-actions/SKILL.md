@@ -54,9 +54,17 @@ boundary that also happens to run tests.
   fail on fork contributions. Split it: the required checks run without secrets, the secret-needing
   job runs post-merge or on a label.
 - **Lint the workflows**: `actionlint` for correctness (it catches expression and shell errors CI
-  would otherwise find at runtime) and `zizmor` for these security patterns. Run both in CI itself.
-- **Release integrity** where it matters: build provenance/attestation and an SBOM, generated in the
-  release job, so a consumer can verify what they got.
+  would otherwise find at runtime) and `zizmor` for these security patterns. Run them locally when
+  you edit a workflow; promote them to CI jobs once workflows change often enough that finding the
+  error at runtime costs more than the jobs do. `assets/ci.reusable.yml` pre-wires them for that
+  case — CI checking the CI is worth a job when someone else's edit can break it, not on a
+  repository where the only author already ran the linter.
+- **Release integrity, once the artifact leaves the lab**: build provenance/attestation and an SBOM,
+  generated in the release job, so a consumer can verify what they got. The payoff is a consumer who
+  cannot just ask you — a public image, a published package, a release a stranger pulls. For an
+  image only your own hosts pull, the build is the answer only when deployment pins the built
+  digest — a mutable tag through a registry is a boundary where different bytes can come back, so
+  pin the digest or keep the attestation.
 - Fail the build on the checks you care about; a workflow with `continue-on-error` everywhere is a
   status badge, not a gate.
 
