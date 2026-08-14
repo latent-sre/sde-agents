@@ -281,8 +281,10 @@ artifact** (dangling "this change" referent in the runner's empty cwd — the mo
 referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3
 consistent with **do-the-work bias** as the leading hypothesis (one directional probe performed
 the consult's substance inline — deliberate fork treatment, deferred execution, operator gate —
-with zero invocations; the behavioral port in half (b) is what would confirm the cause). The
-Group 4 rescan's upheld Mode 3 finding rides here unchanged.
+with zero invocations). The hypothesis stays provisional either way: the behavioral port in
+half (b) validates the *verdict's content* once the component runs — reachability is the routing
+suite's question, so no behavioral result confirms why the routing positive failed. The Group 4
+rescan's upheld Mode 3 finding rides here unchanged.
 
 **Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
 --model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
@@ -298,20 +300,28 @@ duplicate stateless remit survives in the body). Electing this half is a values 
 dead-code removal: review named the candidate reader the upheld finding does not cover — the
 human operator, whose own diffs Mode 3 could assess at a ladder bar, a consumer neither
 `self-improve-loop` nor `prompt-engineer` serves — so the ruling weighs that route's worth
-against its per-session description surface. Measured by a fresh
-`--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
-negatives hold their forbidden sets at 0% fire, **and the surviving positive modes show no
-unexplained regression against the paired baseline** — the suite's own protocol treats a
-positive's rate *drop* as the load-bearing signal, so a drop is dispositioned (explained as
-variance with the runs to show it, or repaired) before this item closes on the trim. **Ordering is load-bearing when both halves are
-elected:** half (b)
-edits `evals/routing/ladder.json`, whose exact `eval_sources` identity `eval_baseline.py`
-compares, so the case edit stales the stored benchmark — capture half (a)'s paired run **before**
-any case byte changes, or take a fresh baseline on the revised cases before the description edit;
-an unordered session can spend the full T3 capture and produce no valid Mode 3 comparison. (b) **Instrument repairs** —
+against its per-session description surface. **The cluster cannot witness this trim as it
+stands**: `evals/routing/ladder.json` carries no Mode 3 growth-feedback positive, so a paired run
+on today's cases would report identical rates while never exercising the removed route. The
+trim's measurement therefore starts by authoring a targeted Mode 3 positive (a body-of-work
+growth-feedback prompt), capturing a fresh 'before' that includes it, then making the
+description-plus-body edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
+half's 'before' (its case bytes lack the route) and stands only as the historical anchor. In the
+after run, negatives hold their forbidden sets at 0% fire, the new Mode 3 positive's silence is
+the *expected* result of the trim, **and the surviving positive modes show no unexplained
+regression against the paired before** — the suite's own protocol treats a positive's rate
+*drop* as the load-bearing signal, so a drop is dispositioned (explained as variance with the
+runs to show it, or repaired) before this item closes on the trim. **Ordering when both halves
+are elected:** every elected case-bytes change (the Mode 3 positive here, the assess rewrite in
+half (b)) lands **before** the single fresh 'before' capture on the revised cases, and the
+description-plus-body edit lands between that 'before' and the 'after' — case edits after the
+'before' stale it through `eval_baseline.py`'s exact `eval_sources` identity, and an unordered
+session can spend the full T3 batch and produce no valid comparison. (b) **Instrument repairs** —
 rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
-content (builder-owned + named consult, no wholesale re-owning), retiring or annotating the
+content — builder-owned, the named principal consult marked **required** (optional/advisory
+consult wording fails the case: "optional escalation" is the exact issue #66 miscalibration this
+contract exists to reject), and no wholesale re-owning — retiring or annotating the
 routing positive; case authoring is offline, the re-measure is T3 and starts a new case-bytes
 lineage. Success is defined per instrument, not by having run the sessions: the rewritten assess
 case fires at a nonzero rate, and the new behavioral contract holds across its runs — or the

@@ -16,13 +16,17 @@ with: (1) the `pos-engladder-assess` prompt verbatim, cwd = the repo checkout; (
 `pos-embedded-principal-fork-consult-required` prompt verbatim, cwd = the repo checkout; (3) the
 assess prompt verbatim, cwd = an empty temp directory (the eval's condition); (4) a **blind**
 listing dump — "quote the complete entry for `sde-agents:eng-ladder` exactly, character for
-character", cwd = an empty temp directory so no file read can substitute for the listing, with
-the prompt disclosing none of the target text, and the output diffed offline against the
-canonical description bytes. (An earlier form of this probe named the assess clause in its own
-question and ran where the file was readable — review correctly rejected it as unable to
-distinguish listing-read from echo or file-read; the blind rerun reproduced the full 591-char
-description byte-identically, Mode 3 tail included, which only the live listing could supply.)
-Prompts (1)–(3) are the case bytes
+character", cwd = an empty temp directory, `--tools "Skill"` so no file-access or shell tool
+exists in the session, the prompt disclosing none of the target text, the stream-json transcript
+checked for tool events (zero — the Skill tool was present but never invoked), and the output
+diffed offline against the canonical description bytes. Two earlier forms of this probe were
+rejected in review and superseded: the first named the assess clause in its own question and ran
+where the file was readable (unable to distinguish listing-read from echo or file-read), and a
+tools-fully-disabled variant answered that **no skills listing existed in its context at all** —
+a measurement note in its own right: the listing is delivered with the Skill tool, so `--tools
+""` removes the surface under test. The final blind form reproduced the full 591-char
+description byte-identically, Mode 3 tail included, with no tool use and no file access — bytes
+only the live listing could supply. Prompts (1)–(3) are the case bytes
 in `evals/routing/ladder.json` at `7605e22`. Expect run-to-run variance: these are one-sample
 observations of a probabilistic router, and a replay tests the mechanism, not the exact
 transcript. The external research pass covers 2025–2026 skill-triggering findings
@@ -41,11 +45,12 @@ skill-listing budget that shortens descriptions from the end (claude-code issue 
 directly, closed not-planned; the budget figure itself is excerpt-sourced from claudefa.st's
 skill-listing-budget guide; the fleet's 20 descriptions sum to 11,260 chars, so it *would* bite
 if active — and eng-ladder's assess clause starts at char ~480) — was **falsified by blind
-probe** on CLI 2.1.231: from an empty cwd, with the prompt disclosing none of the target text, a
-headless session reproduced the full 591-character description byte-identically (verified by
-offline diff against the canonical file), assess clause and Mode 3 tail included — bytes only
-the live listing could supply. Keep the arithmetic in mind for future skills; it is not the
-cause today, in the observed session.
+probe** on CLI 2.1.231: from an empty cwd, with `--tools "Skill"` (no file-access or shell tool
+in the session), the prompt disclosing none of the target text, and the retained stream-json
+transcript showing zero tool invocations, a headless session reproduced the full 591-character
+description byte-identically (verified by offline diff against the canonical file), assess
+clause and Mode 3 tail included — bytes only the live listing could supply. Keep the arithmetic
+in mind for future skills; it is not the cause today, in the observed session.
 
 **Assess mode (0/3) — instrument artifact in the eval case, not a description defect.** The
 runner spawns every session in an empty `TemporaryDirectory()` cwd
@@ -70,8 +75,11 @@ a grader to pass.
 the one observed run.** Held as a hypothesis, not an established cause: the stored benchmark
 records only firing data for the three clean-room failures, and the inline-consult behavior was
 observed in one ambient probe — the general tool-underuse literature makes the reading plausible
-without proving all three failures shared it. The behavioral port below is the instrument that
-would confirm or kill it. The probe session
+without proving all three failures shared it. And the hypothesis stays provisional even after
+the behavioral port below: a behavioral case pins or summons its component and grades the
+contract once it runs, so it validates the *verdict's content* — reachability is the routing
+suite's question, and no behavioral result confirms why the routing positive failed. The probe
+session
 made zero tool calls and performed the consult inline: settled the trust-model fork with
 principal-grade reasoning (internal CA over per-host self-signed, argued from `verify-full` +
 topology change), deferred execution to `sde-agents:homelab-platform`, and proposed walking the
