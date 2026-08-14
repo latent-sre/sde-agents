@@ -10,8 +10,8 @@ serial run costs the SUM of module times, this runner costs roughly the longest 
 Each child is a plain `python -m unittest discover -s <start-dir> -p <module>.py` — the same
 sanctioned invocation the T0 loop uses — so a module that fails here reproduces verbatim by
 copying the printed command. Child output is buffered and printed whole when the module
-finishes, never interleaved; the summary aggregates the per-module "Ran N tests" counts so a
-module silently discovering zero tests is visible instead of vanishing into a green total.
+finishes, never interleaved; the summary aggregates the per-module "Ran N tests" counts, and a
+module silently discovering zero tests fails instead of vanishing into a green total.
 
 Exit code: 0 only when every module passed. Discovering no modules at all is an error, not an
 empty success — a typoed --start-dir must not certify a suite that never ran.
@@ -117,15 +117,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.durations is not None:
         passthrough += ["--durations", str(args.durations)]
 
-    # Longest-work-first scheduling, with file size as the runtime proxy: the largest module
-    # (test_validate_fleet) is also the slowest, and starting it last would leave the pool
-    # idling behind it. The proxy being occasionally wrong costs seconds, not correctness.
+    # Start larger modules first as a cheap runtime heuristic, reducing the chance that one long
+    # module is submitted after the short work. Persisting timing data would make runs depend on
+    # mutable local state; an imperfect size proxy can cost seconds but cannot change a verdict.
     modules.sort(key=lambda p: p.stat().st_size, reverse=True)
 
     started = time.perf_counter()
     failures: list[Path] = []
     total_tests = 0
-    unparsed: list[Path] = []
+    count_errors: list[tuple[Path, str]] = []
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         futures = [pool.submit(run_module, start_dir, m, passthrough) for m in modules]
         # Completion order, not submission order: a slow first module must not sit on the
@@ -134,9 +134,12 @@ def main(argv: list[str] | None = None) -> int:
             module, code, output, argv = future.result()
             counted = RAN_RE.search(output)
             if counted:
-                total_tests += int(counted.group(1))
+                module_tests = int(counted.group(1))
+                total_tests += module_tests
+                if module_tests == 0:
+                    count_errors.append((module, "discovered zero tests"))
             else:
-                unparsed.append(module)
+                count_errors.append((module, "did not report a test count"))
             verdict = "ok" if code == 0 else f"FAILED (exit {code})"
             print(f"== {module.name}: {verdict}")
             if code != 0 or args.verbose:
@@ -147,13 +150,15 @@ def main(argv: list[str] | None = None) -> int:
 
     elapsed = time.perf_counter() - started
     print(f"\nRan {total_tests} tests across {len(modules)} modules in {elapsed:.1f}s")
-    for module in unparsed:
-        # A module whose output never says "Ran N tests" ran nothing recognizable; surfacing it
-        # beats folding it into a green total.
-        print(f"warning: could not count tests from {module.name}", file=sys.stderr)
+    for module, problem in count_errors:
+        # A missing count means the child ran nothing recognizable; zero usually means a rename
+        # or discovery mistake. Either would certify coverage that silently disappeared.
+        print(f"error: {module.name} {problem}", file=sys.stderr)
     if failures:
         print(f"FAILED modules: {', '.join(sorted(m.name for m in failures))}", file=sys.stderr)
         return 1
+    if count_errors:
+        return 2
     return 0
 
 
