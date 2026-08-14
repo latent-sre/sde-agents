@@ -1754,8 +1754,10 @@ class FailingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
         cls.payload = cls._run_main(out, [cls._stats()], responses=[cls._FAILING])
         cls.sidecar = cls._evidence(out)
         sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
-        cls.sidecar_bytes = sidecar_path.read_bytes()
-        cls.sidecar_mode = sidecar_path.stat().st_mode
+        # Guarded reads: a retention regression must fail as the labeled assertions below, not
+        # as a raw FileNotFoundError attributed to setUpClass.
+        cls.sidecar_bytes = sidecar_path.read_bytes() if sidecar_path.is_file() else None
+        cls.sidecar_mode = sidecar_path.stat().st_mode if sidecar_path.is_file() else None
 
     def test_failing_run_text_is_retained_beside_the_benchmark(self) -> None:
         self.assertIsNotNone(self.sidecar)
@@ -1807,6 +1809,7 @@ class FailingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
         # PR #133 P2: the sidecar is raw model text -- the retained-artifact class the fleet's
         # own secrets doctrine names as a leak surface -- so a 022 umask must not make it
         # world-readable.
+        self.assertIsNotNone(self.sidecar_mode)
         self.assertEqual(0o600, self.sidecar_mode & 0o777)
 
 
@@ -1848,10 +1851,11 @@ class RunMetricsEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
 class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
     """Sidecar lifecycle across sequential batches reusing one --output-dir.
 
-    One directory, four batches -- failing, passing, passing+failing, passing+failing with
-    --retain-run-evidence -- with the sidecar observed after each step. The stale-file hazards
-    (PR #133 P1) are properties of the sequence, so the sequence runs once and every test reads
-    its recorded steps. All four batches run at concurrency 1: the fake run_session hands
+    One directory, five batches -- failing, passing, passing+failing, failing over a loosened
+    sidecar, passing+failing with --retain-run-evidence -- with the sidecar observed after each
+    step. The stale-file hazards (PR #133 P1) are properties of the sequence, so the sequence
+    runs once and every test reads its recorded steps. All batches run at concurrency 1: the
+    fake run_session hands
     responses out in CALL order, so under the default 3-worker pool which response lands on
     which run_index is a scheduler race in the test double -- the same race the run-metrics
     batch serializes away -- and the executor-seam test in BenchmarkConditionsTest keeps the
@@ -1875,6 +1879,18 @@ class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
             concurrency=1,
         )
         cls.sidecar_after_mixed = cls._evidence(out)
+        # Loosen the surviving sidecar, then run another failing batch over it: the rewrite
+        # branch must tighten a pre-existing regular file back to owner-only BEFORE reopening
+        # it -- O_CREAT's 0600 applies only at creation, so without the explicit chmod in
+        # eval_behavioral the loosened mode would survive the rewrite (PR #133 Copilot
+        # finding; this fail-over-fail reuse path was previously untested).
+        sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
+        os.chmod(sidecar_path, 0o644)
+        cls._run_main(out, [cls._stats()], responses=[cls._FAILING], concurrency=1)
+        cls.sidecar_after_refail = cls._evidence(out)
+        cls.sidecar_mode_after_refail = (
+            sidecar_path.stat().st_mode if sidecar_path.is_file() else None
+        )
         cls.retain_payload = cls._run_main(
             out,
             [cls._stats(), cls._stats()],
@@ -1903,10 +1919,17 @@ class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
                 "the sensitive-output surface",
         )
 
+    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    def test_a_failing_rewrite_over_a_loosened_sidecar_restores_owner_only(self) -> None:
+        self.assertIsNotNone(self.sidecar_after_refail)
+        self.assertIsNotNone(self.sidecar_mode_after_refail)
+        self.assertEqual(0o600, self.sidecar_mode_after_refail & 0o777)
+
     def test_a_retain_rerun_also_clears_the_stale_evidence_file(self) -> None:
         # Same reuse hazard, other exit: a --retain-run-evidence rerun embeds the failing text in
-        # benchmark.json, so a surviving sidecar would be a second, stale copy.
-        self.assertIsNotNone(self.sidecar_after_mixed)
+        # benchmark.json, so a surviving sidecar would be a second, stale copy. The pre-condition
+        # reads the refail step, the batch immediately before the retain rerun.
+        self.assertIsNotNone(self.sidecar_after_refail)
         self.assertIsNone(self.sidecar_after_retain)
 
     def test_retain_run_evidence_supersedes_the_separate_file(self) -> None:
@@ -2130,6 +2153,13 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
         # deterministically, in submission order), and a patched wait() hands the finished
         # futures back REVERSED — exactly the completion-order scramble the runner must survive.
         # Mutation-proven: collecting in wait-return order grades [None, 29, 17].
+        #
+        # Every serialized array is asserted here — durations, usage, sidecar failing_runs, and
+        # (in a second, retain batch) run_evidence_per_run. Today all four derive from the same
+        # submission-order loop, so scrambling one scrambles all — but that safety is a property
+        # of the implementation, not the suite: a refactor collecting any ONE of them in the
+        # wait loop (completion order) would pass a durations-only version of this test and the
+        # concurrency-1 batches alike, and land silently.
         first = self._stats()
         second = self._stats()
         unknown = self._stats(tokens=False)
@@ -2162,12 +2192,58 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
         concurrent.futures.wait = reversed_wait  # type: ignore[assignment]
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                payload = self._run_main(Path(tmp), [first, second, unknown])
+                plain = self._run_main(
+                    Path(tmp),
+                    [first, second, unknown],
+                    responses=[self._PASSING, self._FAILING, self._FAILING],
+                )
+                sidecar = self._evidence(Path(tmp))
+            with tempfile.TemporaryDirectory() as tmp:
+                retained = self._run_main(
+                    Path(tmp),
+                    [self._stats(), self._stats(), self._stats()],
+                    responses=[self._PASSING, self._FAILING, self._FAILING],
+                    retain_run_evidence=True,
+                )
         finally:
             concurrent.futures.ThreadPoolExecutor = real_pool  # type: ignore[misc]
             concurrent.futures.wait = real_wait  # type: ignore[assignment]
-        case = payload["cases"][0]
+        case = plain["cases"][0]
         self.assertEqual([17, 29, None], case["duration_ms_per_run"])
+        self.assertEqual(
+            [
+                {"input_tokens": 100, "output_tokens": 30},
+                {"input_tokens": 100, "output_tokens": 30},
+                None,
+            ],
+            case["usage_per_run"],
+        )
+        contract = next(
+            case
+            for case in eval_behavioral.load_cases("tier-gate-holds")
+            if case["id"] == "tier-gate-holds"
+        )
+        expected_failures = eval_behavioral.assert_case(
+            self._FAILING, contract, {"homelab-platform"}
+        )
+        self.assertTrue(expected_failures)
+        # Two identical failing runs: run_index alone must carry the order, which is exactly
+        # what a completion-order collector under the reversed wait() gets backwards.
+        self.assertEqual(
+            [
+                {"run_index": 1, "failures": expected_failures, "response": self._FAILING},
+                {"run_index": 2, "failures": expected_failures, "response": self._FAILING},
+            ],
+            sidecar["cases"][0]["failing_runs"],
+        )
+        self.assertEqual(
+            [
+                {"response": self._PASSING, "failures": []},
+                {"response": self._FAILING, "failures": expected_failures},
+                {"response": self._FAILING, "failures": expected_failures},
+            ],
+            retained["cases"][0]["run_evidence_per_run"],
+        )
 
     def test_behavioral_batch_aborts_auth_failure_without_writing_benchmark(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
