@@ -58,7 +58,12 @@ own #1-documented multi-agent bug) living inside its own eval suite. The repair 
 eval-bytes change starting a new baseline lineage — distinct from the forbidden move of loosening
 a grader to pass.
 
-**Consult-fork mode (0/3) — do-the-work bias, and the substance was correct.** The probe session
+**Consult-fork mode (0/3) — leading hypothesis: do-the-work bias, with the substance correct in
+the one observed run.** Held as a hypothesis, not an established cause: the stored benchmark
+records only firing data for the three clean-room failures, and the inline-consult behavior was
+observed in one ambient probe — the general tool-underuse literature makes the reading plausible
+without proving all three failures shared it. The behavioral port below is the instrument that
+would confirm or kill it. The probe session
 made zero tool calls and performed the consult inline: settled the trust-model fork with
 principal-grade reasoning (internal CA over per-host self-signed, argued from `verify-full` +
 topology change), deferred execution to `sde-agents:homelab-platform`, and proposed walking the
@@ -95,9 +100,12 @@ non-description reasons.
 - The consult-fork positive gains an honest disposition path: port the calibration to a
   behavioral contract (grade the verdict, not the firing), and either retire the routing positive
   or keep it as documentation of what firing-based grading can see.
-- Option (a), the Mode 3 trim, is unchanged — and the no-truncation probe confirms the Mode 3
-  clause does occupy live listing context in every session, so its cost is real.
-- The negatives' 0%-fire conclusion from LADDER-001 is untouched — nothing here weakens the
+- Option (a), the Mode 3 trim, is unchanged — and the no-truncation probe shows the Mode 3
+  clause occupying live listing context in the observed session (one ambient probe, CLI 2.1.231),
+  which is representative evidence for the clause's per-session cost, not proof across every
+  configuration or later CLI.
+- The negatives' forbidden-sets-at-0%-fire conclusion from LADDER-001 is untouched — nothing here
+  weakens the
   calibration verdict; the probes reinforce it (the consult-fork session did not over-escalate
   even inline).
 

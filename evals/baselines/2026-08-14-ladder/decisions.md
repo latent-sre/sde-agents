@@ -11,7 +11,9 @@ Conditions: CLI 2.1.231, `model_requested: sonnet` (`claude-sonnet-5` observed i
 run), timeout 180s, threshold 0.5, concurrency 4, clean-room. 16 cases × 3 runs = 48 sessions;
 one run excluded (structured error result on `pos-principal-migration`), four runs graded on
 partial transcripts after the 180s timeout — each noted in `benchmark.json`.
-`eval_baseline.py --model sonnet --clean-room` resolves this capture `REUSABLE`.
+`eval_baseline.py --model sonnet --clean-room` resolves this capture `REUSABLE` on the capture
+host; the evaluator identity pins the runtime (CPython 3.11.15), so another Python reports
+`STALE: diverged on evaluator` and owes that runtime or a fresh capture.
 
 ## The two rates LADDER-001 exists to record
 
@@ -22,10 +24,14 @@ partial transcripts after the 180s timeout — each noted in `benchmark.json`.
 
 ## Reading
 
-**The negative half — the half issue #66 was about — is clean.** All seven negatives passed at a
-0% fire rate, including both disambiguation negatives and the issue #66 calibration case. No
-forbidden agent fired anywhere in 48 sessions: nothing re-owned builder work, nothing summoned the
-meta-router onto scoped work. Per the roadmap's own decision rule ("a forbidden agent that fires
+**The negative half — the half issue #66 was about — is clean.** All seven negatives passed with
+their **forbidden sets** at 0% fire, including both disambiguation negatives and the issue #66
+calibration case. Stated precisely: the five cluster-wide negatives saw zero cluster members
+fire, and the two narrowed negatives saw their forbidden targets fire 0/3 —
+`neg-org-five-year-standard-not-principal` recorded one `distinguished-architect` firing
+(`cluster_fire_rate: 0.333` in the benchmark), which is the *permitted* sibling doing the correct
+routing its narrowing exists to allow. No forbidden agent fired anywhere in 48 sessions: nothing
+re-owned builder work, nothing summoned the meta-router onto scoped work. Per the roadmap's own decision rule ("a forbidden agent that fires
 is evidence the guidance is insufficient"), the Mode 1 ownership-vs-consult text and the
 description's scoped-work narrowing are **not indicted**.
 

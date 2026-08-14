@@ -278,10 +278,11 @@ a recorded decision not to buy one — with the instrument fixed to measure what
 cleared by probe (full description visible at CLI 2.1.231 despite the fleet's 11,260-char
 listing volume exceeding the reported ~8k budget), the assess 0/3 shown to be an **eval-case
 artifact** (dangling "this change" referent in the runner's empty cwd — the mode fires when a
-referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3 shown
-to be **do-the-work bias** (the probe session performed the consult's substance inline —
-deliberate fork treatment, deferred execution, operator gate — with zero invocations). The Group 4
-rescan's upheld Mode 3 finding rides here unchanged.
+referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3
+consistent with **do-the-work bias** as the leading hypothesis (one directional probe performed
+the consult's substance inline — deliberate fork treatment, deferred execution, operator gate —
+with zero invocations; the behavioral port in half (b) is what would confirm the cause). The
+Group 4 rescan's upheld Mode 3 finding rides here unchanged.
 
 **Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
 --model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
@@ -295,7 +296,8 @@ description **plus** body: remove the growth-feedback clause from the descriptio
 Mode 3 section in the same delta (a description-only trim would close this item while the
 duplicate stateless remit survives in the body), measured by a fresh
 `--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
-negatives hold at 0% fire. **Ordering is load-bearing when both halves are elected:** half (b)
+negatives hold their forbidden sets at 0% fire. **Ordering is load-bearing when both halves are
+elected:** half (b)
 edits `evals/routing/ladder.json`, whose exact `eval_sources` identity `eval_baseline.py`
 compares, so the case edit stales the stored benchmark — capture half (a)'s paired run **before**
 any case byte changes, or take a fresh baseline on the revised cases before the description edit;

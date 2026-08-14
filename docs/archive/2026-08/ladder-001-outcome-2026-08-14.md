@@ -11,15 +11,23 @@ escalation", the accurate call was builder-owned with a required consult) with a
 timeout-partial transcripts. Capture at
 [`evals/baselines/2026-08-14-ladder/`](../../../evals/baselines/2026-08-14-ladder/decisions.md)
 (benchmark + decisions note); `eval_baseline.py --model sonnet --clean-room` resolves it
-`REUSABLE`, so it stands as the cluster's stored 'before' for any future description edit.
+`REUSABLE` on the capture host, so it stands as the cluster's stored 'before' for any future
+description edit — identity-bound, not unconditional: the evaluator identity pins the runtime
+(CPython 3.11.15 recorded), so a host on another Python reports `STALE: diverged on evaluator`
+and owes that runtime or a fresh capture.
 
 ## The result
 
 - **`neg-embedded-decision-not-principal-owned`: 0/3 fired — PASS.** The issue #66 miscalibration
   does not reproduce: builder-owned work carrying one embedded, builder-recordable decision drew
   no principal, no distinguished, no eng-ladder in any run.
-- **All seven negatives passed at 0% fire.** No forbidden agent fired anywhere in the batch. By
-  the item's own decision rule, the Mode 1 ownership-vs-consult guidance and the description's
+- **All seven negatives passed with their forbidden sets at 0% fire.** No forbidden agent fired
+  anywhere in the batch. Stated precisely: the five cluster-wide negatives saw zero cluster
+  members fire; the two narrowed disambiguation negatives saw their forbidden targets fire 0/3,
+  and one of them (`neg-org-five-year-standard-not-principal`) recorded a single
+  `distinguished-architect` firing — a *permitted* sibling doing the correct routing its
+  narrowing exists to allow, recorded as `cluster_fire_rate: 0.333` in the benchmark. By the
+  item's own decision rule, the Mode 1 ownership-vs-consult guidance and the description's
   scoped-work narrowing are **not indicted** — the calibration the guidance shipped to fix holds
   under measurement.
 - **`pos-embedded-principal-fork-consult-required`: 0/3 — FAIL.** The consult-required shape never
@@ -59,8 +67,8 @@ Two PROP-002 deferrals rode this item; neither is silently stranded:
 ## Lessons
 
 1. **The negative half is the trustworthy instrument.** Every load-bearing conclusion here rests
-   on 0%-fire negatives, which are defect-signals at any rate; the positive half reproduced the
-   documented headless under-fire and settled nothing by itself. Buying 3 runs/case was worth it
+   on forbidden sets holding at 0% fire, which are defect-signals at any rate; the positive half
+   reproduced the documented headless under-fire and settled nothing by itself. Buying 3 runs/case was worth it
    for the negatives alone.
 2. **A stale anchor still earned its keep as a shape check.** The 2026-07 benchmark could not be
    diffed (no conditions/provenance — the exact defect the provenance schema fixed), but its
