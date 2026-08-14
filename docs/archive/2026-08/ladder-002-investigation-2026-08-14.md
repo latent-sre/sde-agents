@@ -20,9 +20,11 @@ plain-scalar colon trap); the description has been byte-identical since it shipp
 is congenital, not drift); the same description fires 3/3 on the altitude mode; the runner's
 detection is sound (it reads real `Skill`/`Agent` tool calls and handles the tool-restricting
 launch quirk); and the one silent-truncation mechanism research surfaced — a reported ~8,000-char
-skill-listing budget that shortens descriptions from the end (claude-code #64606, closed
-not-planned; the fleet's 20 descriptions sum to 11,260 chars, so it *would* bite if active — and
-eng-ladder's assess clause starts at char ~480) — was **falsified by direct probe** on CLI
+skill-listing budget that shortens descriptions from the end (claude-code issue #64606, read
+directly, closed not-planned; the budget figure itself is excerpt-sourced from claudefa.st's
+skill-listing-budget guide; the fleet's 20 descriptions sum to 11,260 chars, so it *would* bite
+if active — and eng-ladder's assess clause starts at char ~480) — was **falsified by direct
+probe** on CLI
 2.1.231: a headless session quoted the eng-ladder listing entry verbatim in full, assess clause
 included. Keep the arithmetic in mind for future skills; it is not the cause today.
 
@@ -52,10 +54,12 @@ topology change), deferred execution to `sde-agents:homelab-platform`, and propo
 rollout/rollback plan past the operator before applying. That is the Mode 1 calibration's
 substance — deliberate treatment of the embedded decision, builder/platform execution, an
 operator gate — with no invocation for firing-based grading to see. External corroboration
-[sourced]: "tool underuse" is a named finding (SMART, ACL Findings 2025 — large models "neglect
-to call essential tools"); practitioner trials put passive "Use when…" descriptions at ~37–77%
-activation vs ~100% for imperative directive forms (650-trial experiment, excerpt-mediated);
-claude-code #32184 measured 100%-precision/0%-recall skill invocation in one `claude -p`
+[sourced]: "tool underuse" is a named finding (SMART, ACL Findings 2025, arXiv 2502.11435 —
+large models "neglect to call essential tools"); practitioner trials put passive "Use when…"
+descriptions at ~37–77% activation vs ~100% for imperative directive forms (Ivan Seleznov's
+650-trial experiment, medium.com/@ivan.seleznov1 "Why Claude Code Skills Don't Activate…",
+excerpt-mediated — its methodology could not be independently examined behind the egress proxy);
+claude-code issue #32184 measured 100%-precision/0%-recall skill invocation in one `claude -p`
 environment (read directly; closed not-planned). If the fleet wants this calibration *measured*
 rather than observed, the honest instrument is a behavioral-contract case grading the verdict's
 content (builder-owned + named consult + no wholesale re-owning), not a routing case grading

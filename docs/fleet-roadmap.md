@@ -283,12 +283,19 @@ to be **do-the-work bias** (the probe session performed the consult's substance 
 deliberate fork treatment, deferred execution, operator gate — with zero invocations). The Group 4
 rescan's upheld Mode 3 finding rides here unchanged.
 
-**Prerequisites:** None — `eval_baseline.py evals/routing/ladder.json --model sonnet
---clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json` `REUSABLE`.
+**Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
+--model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
+`REUSABLE` there. The reuse is identity-bound, not unconditional: the stored evaluator identity
+pins the runtime (CPython 3.11.15 recorded), so a host on another Python reports
+`STALE: diverged on evaluator` and owes either that runtime or a fresh 'before' capture before
+any paired comparison.
 
-**Acceptance:** For each half the operator elects: (a) **Mode 3 description trim** — one
-description-only edit, measured by a fresh `--runs 3 --model sonnet --clean-room` cluster capture
-diffed against the stored baseline; negatives hold at 0% fire. (b) **Instrument repairs** —
+**Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
+description **plus** body: remove the growth-feedback clause from the description and the body's
+Mode 3 section in the same delta (a description-only trim would close this item while the
+duplicate stateless remit survives in the body), measured by a fresh
+`--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
+negatives hold at 0% fire. (b) **Instrument repairs** —
 rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
 content (builder-owned + named consult, no wholesale re-owning), retiring or annotating the

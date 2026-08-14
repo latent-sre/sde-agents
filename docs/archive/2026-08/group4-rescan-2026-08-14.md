@@ -10,10 +10,12 @@ judging, per-finding re-verdicts, gaps hunted in the direction the original scan
 Dated evidence; citations are by content, not line number, except where the original scan's
 citations are quoted.
 
-**Coverage.** All twenty-two files in the group were read in full in one pass — the five SKILL.md
-bodies, every reference, every asset including `cli_skeleton.py` — applying the Group 3 coverage
-lesson from the start rather than after a challenge. That includes the twelve files the original
-scan never flagged.
+**Coverage.** All twenty-three files in the group were read in full in one pass — the five
+SKILL.md bodies, every reference, every asset including `cli_skeleton.py` — applying the Group 3
+coverage lesson from the start rather than after a challenge. That includes every file the
+original scan never flagged (the whole of `prompt-craft` among them). *(Count corrected from
+"twenty-two" in review — a tally error in this record's first draft, not a coverage gap; the
+group's 8+4+1+5+5 files were each read.)*
 
 **Measurement exposure, mapped first — and every candidate edit sits under a freeze.**
 `eng-ladder` is frozen by LADDER-001: its stored `evals/routing/ladder.json` benchmark is STALE and
