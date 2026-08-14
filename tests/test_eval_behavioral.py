@@ -1946,6 +1946,31 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 "the sensitive-output surface",
         )
 
+    def test_a_reused_output_dir_does_not_keep_a_stale_evidence_file(self) -> None:
+        # PR #133 P1: benchmark.json is overwritten on --output-dir reuse, but a sidecar from a
+        # previous failing batch would survive beside it -- another run's raw model text sitting
+        # under this run's provenance, while the fresh conditions say the text is absent.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
+            self.assertIsNotNone(self._evidence(Path(tmp)))
+            payload = self._run_main(Path(tmp), [self._stats()], responses=[self._PASSING])
+            self.assertIsNone(self._evidence(Path(tmp)))
+        self.assertEqual(
+            "none (every run passed)", payload["conditions"]["failing_run_evidence"]
+        )
+
+    def test_a_retain_rerun_also_clears_the_stale_evidence_file(self) -> None:
+        # Same reuse hazard, other exit: a --retain-run-evidence rerun embeds the failing text in
+        # benchmark.json, so a surviving sidecar would be a second, stale copy.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
+            self.assertIsNotNone(self._evidence(Path(tmp)))
+            self._run_main(
+                Path(tmp), [self._stats()], responses=[self._FAILING],
+                retain_run_evidence=True,
+            )
+            self.assertIsNone(self._evidence(Path(tmp)))
+
     def test_retain_run_evidence_supersedes_the_separate_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             payload = self._run_main(

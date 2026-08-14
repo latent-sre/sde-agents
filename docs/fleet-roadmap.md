@@ -97,7 +97,10 @@ Line numbers are deliberately omitted here: the scan record's citations bind com
 say so, while this file is the live tracker, where a line number rots silently as the file moves —
 `self-improve-loop/SKILL.md` has already shifted 37 lines since that scan.
 They are optional to this item's acceptance — closing LEARN-002 does not require making them — but
-they must not be made *without* its measurement. The disposition and reasoning are in
+they must not be made *without* its measurement, and **closing this item owes each ride-along a
+disposition**: worked, re-homed to a named live item, or dropped with reason, recorded in the
+outcome record. A silent close would strand them in archive evidence outside this tracker — the
+roadmap is the only live owner a deferral can have (PR #133 review finding). The disposition and reasoning are in
 [`prop-002-scan-findings-2026-08-13.md`](archive/2026-08/prop-002-scan-findings-2026-08-13.md).
 Note the constraint that record's Correction 8 establishes before touching `runbook`: its propose
 grammar cannot move to `references/`, because the contract that grades it runs skill-only and has
@@ -257,7 +260,9 @@ the paired routing run; the smoke run follows the 1.7.4 release.
 authorizes nothing" a fourth time; the body's three other copies were reconciled in `eb53758`, but
 the description drives routing and this skill sits in the `homelab-ops` cluster whose paired
 'before' capture this item owes at merge base `4fef0ce`. Trimming it first would invalidate that
-side. Optional to acceptance; not to be made without the capture.
+side. Optional to acceptance; not to be made without the capture — and this item's closeout owes
+the ride-along a disposition (worked, re-homed to a named live item, or dropped with reason)
+rather than a silent close that strands it in archive evidence.
 
 #### LADDER-001 — measure the ownership-vs-consult calibration
 
@@ -302,7 +307,9 @@ Mode 3's growth-feedback machinery and the formal consult-and-decision-record pr
 wait for this measurement rather than preceding it. Editing the skill first would move the bytes
 out from under the capture this item exists to buy, and the consult protocol is Mode 1 text
 adjacent to what `ladder-report-not-absorb` grades. The scan record carries the exact line
-citations against commit `c38592c`. Optional to acceptance; not to be made without the run.
+citations against commit `c38592c`. Optional to acceptance; not to be made without the run — and
+this item's closeout owes the ride-along a disposition (worked, re-homed to a named live item, or
+dropped with reason) rather than a silent close that strands it in archive evidence.
 
 #### ACK-001 — make a dropped Learning handoff visible
 

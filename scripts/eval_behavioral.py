@@ -1791,6 +1791,13 @@ def main(argv: list[str] | None = None) -> int:
                 f"wrote {evidence_path} (raw model text from failing runs; inspect before "
                 "committing or sharing)"
             )
+        else:
+            # A reused --output-dir keeps whatever the current batch does not overwrite.
+            # benchmark.json was just replaced above; a sidecar from a previous failing batch
+            # must not survive beside it — that is another run's raw model text sitting under
+            # this run's provenance, while the fresh conditions block says the text is absent
+            # or embedded (PR #133 review finding).
+            (args.output_dir / FAILING_EVIDENCE_FILENAME).unlink(missing_ok=True)
 
     return 0 if passed_cases == len(cases) else 1
 
