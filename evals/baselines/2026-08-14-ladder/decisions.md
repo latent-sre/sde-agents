@@ -49,7 +49,11 @@ under-fire caveat does not excuse, and its three advertised modes fired very dif
 altitude question 3/3, the assess-at-a-bar phrasing 0/3 (also failing in the 2026-07 anchor — a
 two-capture recurrence), and the embedded-consult-fork shape 0/3 (first measurement; the case
 postdates the old anchor). Two of the three modes the description advertises never draw the skill
-in headless capture. If a repair is bought it goes to the description — never the grader — and
-this capture is the stored 'before' for it (LADDER-002 on the roadmap owns that decision).
+in headless capture. *(Routing updated 2026-08-14, same day: the follow-up investigation —
+`docs/archive/2026-08/ladder-002-investigation-2026-08-14.md` — superseded this note's original
+"repair goes to the description" direction: the assess failure needs an inline-diff case repair,
+the consult calibration a behavioral-contract port, and a description rewrite is explicitly not
+indicated. LADDER-002 on the roadmap carries the current options; this capture remains the
+stored 'before' for the Mode 3 trim half.)*
 
 Raw per-case rates live in `benchmark.json` beside this note.

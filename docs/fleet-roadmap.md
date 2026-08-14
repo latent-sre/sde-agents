@@ -309,7 +309,11 @@ rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
 content (builder-owned + named consult, no wholesale re-owning), retiring or annotating the
 routing positive; case authoring is offline, the re-measure is T3 and starts a new case-bytes
-lineage. A description rewrite for the assess mode is explicitly **not** indicated — the
+lineage. Success is defined per instrument, not by having run the sessions: the rewritten assess
+case fires at a nonzero rate, and the new behavioral contract holds across its runs — or the
+experiment that falsified the proposed repair is recorded as its explicit disposition. A repeat
+0/3 or a red contract closed silently would satisfy the letter of a run-only acceptance while
+delivering none of this item's promised outcome. A description rewrite for the assess mode is explicitly **not** indicated — the
 investigation cleared the phrasing for both measured failures. Electing neither half closes the
 item as a recorded decision with the reason.
 

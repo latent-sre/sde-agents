@@ -14,9 +14,15 @@ reviewed quotes this record carries. The probes are instead replayable exactly; 
 `claude -p "<prompt>" --model sonnet --plugin-dir <repo> --output-format stream-json --verbose`
 with: (1) the `pos-engladder-assess` prompt verbatim, cwd = the repo checkout; (2) the
 `pos-embedded-principal-fork-consult-required` prompt verbatim, cwd = the repo checkout; (3) the
-assess prompt verbatim, cwd = an empty temp directory (the eval's condition); (4) a listing dump
-("quote the eng-ladder entry exactly as it appears; does it include the phrase 'Also use to
-assess code or a design at a named level'?"), cwd = the repo. Prompts (1)–(3) are the case bytes
+assess prompt verbatim, cwd = an empty temp directory (the eval's condition); (4) a **blind**
+listing dump — "quote the complete entry for `sde-agents:eng-ladder` exactly, character for
+character", cwd = an empty temp directory so no file read can substitute for the listing, with
+the prompt disclosing none of the target text, and the output diffed offline against the
+canonical description bytes. (An earlier form of this probe named the assess clause in its own
+question and ran where the file was readable — review correctly rejected it as unable to
+distinguish listing-read from echo or file-read; the blind rerun reproduced the full 591-char
+description byte-identically, Mode 3 tail included, which only the live listing could supply.)
+Prompts (1)–(3) are the case bytes
 in `evals/routing/ladder.json` at `7605e22`. Expect run-to-run variance: these are one-sample
 observations of a probabilistic router, and a replay tests the mechanism, not the exact
 transcript. The external research pass covers 2025–2026 skill-triggering findings
@@ -34,10 +40,12 @@ launch quirk); and the one silent-truncation mechanism research surfaced — a r
 skill-listing budget that shortens descriptions from the end (claude-code issue #64606, read
 directly, closed not-planned; the budget figure itself is excerpt-sourced from claudefa.st's
 skill-listing-budget guide; the fleet's 20 descriptions sum to 11,260 chars, so it *would* bite
-if active — and eng-ladder's assess clause starts at char ~480) — was **falsified by direct
-probe** on CLI
-2.1.231: a headless session quoted the eng-ladder listing entry verbatim in full, assess clause
-included. Keep the arithmetic in mind for future skills; it is not the cause today.
+if active — and eng-ladder's assess clause starts at char ~480) — was **falsified by blind
+probe** on CLI 2.1.231: from an empty cwd, with the prompt disclosing none of the target text, a
+headless session reproduced the full 591-character description byte-identically (verified by
+offline diff against the canonical file), assess clause and Mode 3 tail included — bytes only
+the live listing could supply. Keep the arithmetic in mind for future skills; it is not the
+cause today, in the observed session.
 
 **Assess mode (0/3) — instrument artifact in the eval case, not a description defect.** The
 runner spawns every session in an empty `TemporaryDirectory()` cwd
