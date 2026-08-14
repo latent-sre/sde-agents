@@ -9,6 +9,7 @@ write-blocks.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -2058,26 +2059,25 @@ class BenchmarkConditionsTest(unittest.TestCase):
         self.assertEqual(2, code)
         run_session.assert_not_called()
 
-    def test_duration_is_recorded_per_run_in_submission_order(self) -> None:
+    def test_run_metrics_preserve_submission_order_and_label_unknowns_null(self) -> None:
         first = self._stats()
         second = self._stats()
+        unknown = self._stats(tokens=False)
         first["duration_ms"] = 17
         second["duration_ms"] = 29
+        unknown["duration_ms"] = None
         with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [first, second])
-        self.assertEqual([17, 29], payload["cases"][0]["duration_ms_per_run"])
-
-    def test_unavailable_duration_is_labeled_null_not_zero(self) -> None:
-        stats = self._stats()
-        stats["duration_ms"] = None
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [stats])
-        self.assertEqual([None], payload["cases"][0]["duration_ms_per_run"])
-
-    def test_unavailable_usage_is_labeled_null_not_zero(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [self._stats(tokens=False)])
-        self.assertEqual([None], payload["cases"][0]["usage_per_run"])
+            payload = self._run_main(Path(tmp), [first, second, unknown])
+        case = payload["cases"][0]
+        self.assertEqual([17, 29, None], case["duration_ms_per_run"])
+        self.assertEqual(
+            [
+                {"input_tokens": 100, "output_tokens": 30},
+                {"input_tokens": 100, "output_tokens": 30},
+                None,
+            ],
+            case["usage_per_run"],
+        )
 
     def test_behavioral_batch_aborts_auth_failure_without_writing_benchmark(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2286,139 +2286,84 @@ class CodexRuntimeIntegrationTest(unittest.TestCase):
         auth.assert_not_called()
         run.assert_not_called()
 
-    def test_invalid_generated_profile_refuses_before_auth_or_session(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            profile = root / ".codex" / "agents" / "homelab-platform.toml"
-            profile.parent.mkdir(parents=True)
-            profile.write_text(
-                "\n".join((
-                    'name = "homelab-platform"',
-                    'description = "probe"',
-                    'sandbox_mode = "read-only"',
-                    'developer_instructions = "probe"',
-                    'model = "silently dropped"',
-                )),
-                encoding="utf-8",
-            )
-            with mock.patch.object(
-                eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-            ), mock.patch.object(
-                eval_codex_runtime, "CODEX", "codex"
-            ), mock.patch.object(
-                eval_codex_runtime, "auth_provider_mode"
-            ) as auth, mock.patch.object(
-                eval_codex_runtime, "run_session"
-            ) as run:
-                code = eval_behavioral.main([
+    def test_codex_preflight_failures_refuse_before_auth_or_session(self) -> None:
+        cases = (
+            ("invalid-profile", "invalid", "gpt-5.6-terra", None),
+            ("missing-profile", "missing", "gpt-5.6-terra", None),
+            (
+                "ambient-instructions",
+                None,
+                "gpt-5.6-terra",
+                ("clean", "instruction-clean CODEX_HOME required"),
+            ),
+            (
+                "unsupported-cli",
+                None,
+                "gpt-5.6-terra",
+                ("cli", "unsupported Codex CLI"),
+            ),
+            ("blank-model", None, " ", None),
+        )
+        for name, profile_state, model, injected_failure in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                argv = [
                     "--runtime", "codex",
                     "--case", "handoff-simple-build-stays-short",
-                    "--model", "gpt-5.6-terra",
+                    "--model", model,
                     "--reasoning-effort", "medium",
-                    "--plugin-dir", str(root),
-                    "--output-dir", str(root / "output"),
-                ])
+                ]
+                if profile_state is not None:
+                    argv += ["--plugin-dir", str(root)]
+                if profile_state == "invalid":
+                    profile = root / ".codex" / "agents" / "homelab-platform.toml"
+                    profile.parent.mkdir(parents=True)
+                    profile.write_text(
+                        "\n".join((
+                            'name = "homelab-platform"',
+                            'description = "probe"',
+                            'sandbox_mode = "read-only"',
+                            'developer_instructions = "probe"',
+                            'model = "silently dropped"',
+                        )),
+                        encoding="utf-8",
+                    )
 
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
+                with contextlib.ExitStack() as stack:
+                    failure_check = None
+                    stack.enter_context(mock.patch.object(
+                        eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+                    ))
+                    stack.enter_context(mock.patch.object(eval_codex_runtime, "CODEX", "codex"))
+                    if injected_failure is not None:
+                        stage, message = injected_failure
+                        target = (
+                            "assert_clean_subscription_context"
+                            if stage == "clean"
+                            else "require_supported_cli"
+                        )
+                        if stage == "cli":
+                            stack.enter_context(mock.patch.object(
+                                eval_codex_runtime, "assert_clean_subscription_context"
+                            ))
+                        failure_check = stack.enter_context(mock.patch.object(
+                            eval_codex_runtime,
+                            target,
+                            side_effect=eval_codex_runtime.CodexRuntimeError(message),
+                        ))
+                    auth = stack.enter_context(mock.patch.object(
+                        eval_codex_runtime, "auth_provider_mode"
+                    ))
+                    run = stack.enter_context(mock.patch.object(
+                        eval_codex_runtime, "run_session"
+                    ))
+                    code = eval_behavioral.main(argv)
 
-    def test_missing_generated_profile_refuses_before_auth_or_session(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--plugin-dir", tmp,
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_ambient_codex_home_instructions_refuse_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "assert_clean_subscription_context",
-            side_effect=eval_codex_runtime.CodexRuntimeError(
-                "instruction-clean CODEX_HOME required"
-            ),
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_unsupported_cli_refuses_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "require_supported_cli",
-            side_effect=eval_codex_runtime.CodexRuntimeError("unsupported Codex CLI"),
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_blank_model_refuses_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", " ",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
+                self.assertEqual(2, code)
+                if failure_check is not None:
+                    failure_check.assert_called_once()
+                auth.assert_not_called()
+                run.assert_not_called()
 
     def test_subscription_failure_does_not_start_second_serial_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
