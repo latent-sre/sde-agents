@@ -327,6 +327,17 @@ disposition.
   as a wait rather than an action and let PR #128 merge unreviewed while a session sat waiting for a
   pass nobody had asked for.
 
+The disposition loop above carries the same convergence bound as static deep-review, for the same
+reason: applying a finding mints new bytes, the new head owes another wait, and the wait returns
+findings about the fix — an unbounded fixpoint that ran ten review-driven rounds on PR #136 *after*
+the two-round deep-review cap was written, because that cap bound one gate and left this one open.
+So: at most **two** review-driven edit rounds per PR. A finding that arrives after the second round
+is dispositioned in the thread without new bytes — declined with the reason, or recorded as owed
+work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which restarts the
+count, the same escape the deep-review bound reserves for a third static round. This bounds edits,
+never waits: the head-binding clause stands, the merged head has always been waited on, and what
+stops is minting fresh heads for the reviewer to find fixes in.
+
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.
 
