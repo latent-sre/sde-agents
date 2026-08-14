@@ -9,6 +9,24 @@ reads of every cited file, measurement exposure mapped before judging, per-findi
 gaps hunted in the direction the original scan could not see. Dated evidence; citations are by
 content, not line number, except where the original scan's `c38592c`-bound citations are quoted.
 
+**Coverage, honestly.** This record's first pass read every *cited* file in full — a narrower
+scope than Groups 1 and 2, which read their groups completely — and the operator's question caught
+the gap: a zero-gaps claim can only cover the files actually read, and files the original scan
+left clean were clean under the *old* lens, which could not see missing mechanisms at all. The
+completion pass then read the remaining nineteen files (both auth references, the framework and
+language references in full, the observability query/dashboard references, `error_budget.py`, the
+complete starter asset and CI template). Result: **zero new findings**, and one flip strengthened
+— `typescript.md` is a *third* member of the Idempotency-Key contract (the mint-once-per-logical-
+write key lifecycle, with the double-charge and stale-key-replay bugs named), joining the starter
+asset's producer half and consuming-apis' client rule. Representative program-consistent mechanisms
+found in the completion files, none previously flagged: PowerShell's `SupportsShouldProcess` ("buys
+`-WhatIf` from the runtime instead of a hand-rolled dry-run flag" — the gated-effect dry-run rule),
+dashboards' `allowUiUpdates: false` ("makes the repo the source of truth and makes drift impossible
+rather than merely discouraged" — the fleet's byte-drift doctrine in Grafana form), promql's
+`absent()` companion ("the failure mode that hides all the others"), and `error_budget.py`'s
+no-clock determinism ("the same inputs always produce the same output and the result can be pasted
+into a packet as evidence").
+
 **Measurement exposure, mapped first.** `backend-craft`, `frontend-craft`, and `observability`
 appear in the `homelab-ops` routing cluster whose paired 'before' capture LANE-001 owes — and
 description edits owe routing runs regardless — so **no description was touched**. No Group 3 file
