@@ -284,6 +284,15 @@ table `:19-24`.)
     own inputs, with five named consumers), and postmortem's action-artifact-proof rule, both
     retro lists, and its draft|final settledness marker. Per-finding evidence in
     [`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md).
+16. *(Added 2026-08-14, the Group 3 rescan.)* Group 3's producer/consumer contract pairs and
+    threat framings: backend-craft's X-RateLimit budget headers (paired with consuming-apis'
+    self-throttle rule) and the starter asset's required Idempotency-Key (the SKILL's own
+    unconditional retry-safety rule, worked, with its consumer instruction in consuming-apis);
+    frontend-craft's committed design-brief comment (the design's durable spec for the next
+    session); code-craft's multi-reviewer and flaky-test framings (reviews are multi-party here —
+    bot passes and future sessions); and ci-actions' "executes code from anyone who can open a
+    pull request" (the correct threat model for an agent-authored PR population). Per-finding
+    evidence in [`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md).
 
 ## Corrections — scan claims the round's evidence overturned
 
@@ -338,10 +347,14 @@ A later session must not re-apply these as findings:
    it. Group 2 was re-scanned the same day under the same method
    ([`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md)) — six further flips, zero edits
    owed, and the `runbook` "enterprise-shaped" verdict inverted: its slots are the fleet's
-   most-consumed artifact contract. **Groups 3 and 4 stand unrescanned**; the Group 2 record ends
-   with their standing findings enumerated, mis-tier suspects flagged, and the constraints a
-   rescanner must check first. Re-judging them takes the same per-finding read, not this
-   correction alone.
+   most-consumed artifact contract. Group 3 followed on 2026-08-14
+   ([`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md)) — six flips, two one-phrase
+   edits, and the group's own pattern: vocabulary findings resolving into halves of typed
+   producer/consumer contracts whose consuming half sat in a neighboring file. **Group 4 stands
+   unrescanned**; the Group 2 record enumerates its standing findings and the freezes its
+   rescanner must respect (sre-tool contract-graded and edit-sensitive, eng-ladder frozen by
+   LADDER-001, self-improve-loop riding LEARN-002). Re-judging it takes the same per-finding
+   read, not this correction alone.
 
 ## Round disposition as of this record
 
@@ -459,20 +472,22 @@ parked, below.
   recorded here as observed, and a LOW is available as free evidence if a future round edits one of
   these files for a substantive reason anyway.
 
-### 2026-08-13 addendum — Groups 1 and 2 re-dispositioned by rescan
+### 2026-08-13/14 addendum — Groups 1–3 re-dispositioned by rescan
 
-The batch drop above now governs only **Groups 3 and 4's** LOWs. Groups 1 and 2 were re-scanned
-the same day under the engineering-program reading rule and carry **individual** dispositions that
-supersede their membership in the batch. Group 1: six kept as coordination mechanisms (KEEP 14),
-three drops confirmed, one partial, four sharpening edits landed (one with paired behavioral
-evidence), one gap deferred trigger-bound —
-[`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md). Group 2: six further flips
-(KEEP 15), zero edits owed — every remaining finding was fully wired mechanism, riding a recorded
-measurement, or a surviving drop — plus two gaps recorded, the larger being that host-onboard and
-service-onboard's authority preambles are graded by no behavioral contract —
-[`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md), whose closing section enumerates
-Groups 3–4's standing findings and the constraints their rescanner must check first. Correction 9
-owns the lens error that made both rescans necessary.
+The batch drop above now governs only **Group 4's** LOWs. Groups 1–3 were re-scanned under the
+engineering-program reading rule and carry **individual** dispositions that supersede their
+membership in the batch. Group 1: six kept as coordination mechanisms (KEEP 14), three drops
+confirmed, one partial, four sharpening edits landed (one with paired behavioral evidence), one
+gap deferred trigger-bound — [`group1-rescan-2026-08-13.md`](group1-rescan-2026-08-13.md).
+Group 2: six further flips (KEEP 15), zero edits owed — every remaining finding was fully wired
+mechanism, riding a recorded measurement, or a surviving drop — plus two gaps recorded, the larger
+being that host-onboard and service-onboard's authority preambles are graded by no behavioral
+contract — [`group2-rescan-2026-08-13.md`](group2-rescan-2026-08-13.md), whose closing section
+enumerates the remaining groups' standing findings and rescanner constraints. Group 3: six flips
+(KEEP 16), two one-phrase edits in ungraded text, eight drops confirmed, zero gaps — the craft
+group's findings kept resolving into halves of typed producer/consumer contracts —
+[`group3-rescan-2026-08-14.md`](group3-rescan-2026-08-14.md). Correction 9 owns the lens error
+that made the rescans necessary.
 
 ### What closing this item does not claim
 
