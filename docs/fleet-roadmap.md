@@ -264,52 +264,35 @@ side. Optional to acceptance; not to be made without the capture — and this it
 the ride-along a disposition (worked, re-homed to a named live item, or dropped with reason)
 rather than a silent close that strands it in archive evidence.
 
-#### LADDER-001 — measure the ownership-vs-consult calibration
+#### LADDER-002 — decide the eng-ladder description round
 
-**Status:** `ready` — the guidance itself shipped 2026-08-03 (`6fa2be3`, PR #68) and both cluster
-cases now exist (#103's positive as reshaped by `05417c8`, this branch's negative); only the
-measured run is owed.
+**Status:** `decision-needed` — every half of this item is a paid T3 run, so which deltas (if
+any) to buy is the operator's ruling; nothing offline is owed first.
 
-**Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
-measurement instead of a single anecdote, split by what firing-based grading can actually see:
-the positive says the consult-required shape draws `eng-ladder`; the negative says a
-builder-recordable embedded decision draws nothing but the builder — no principal, distinguished,
-or `eng-ladder` summon at all, since its prompt satisfies the scoped-work bypass (obvious owner,
-stated existing pattern) and answers its own altitude question.
+**Outcome:** `eng-ladder`'s description either draws all three modes it advertises or is
+deliberately trimmed to the modes it serves — measured either way, one delta per run, against the
+stored 2026-08-14 baseline.
 
-**Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
-read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
-builder-owned with a required consult); guidance landed in `skills/eng-ladder/SKILL.md` Mode 1;
-ledger candidate `lc_e4234dfe` (triaged 2026-08-10 as proposed/merge, which names this case as the
-residual).
+**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md). The
+closing capture measured the skill's three advertised modes firing 3/3 (altitude question), 0/3
+(assess-at-a-bar — also 0 in the 2026-07 anchor, a two-capture recurrence), and 0/3 (the
+embedded-consult-fork shape); and the Group 4 rescan upheld PROP-002's Mode 3 finding (growth
+feedback has no practicing reader), the only finding to survive all four group rescans, formerly
+riding LADDER-001's freeze.
 
-**Prerequisites:** None. The cluster's only stored benchmark predates the provenance schema
-(`python scripts/eval_baseline.py evals/routing/ladder.json --model sonnet` → `STALE`, 2026-08-10),
-so a fresh capture is owed with or without this case.
+**Prerequisites:** None — `eval_baseline.py evals/routing/ladder.json --model sonnet
+--clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json` `REUSABLE`, so the
+'before' side of any paired run is already on disk.
 
-**Acceptance:** One recorded
-```bash
-python3 scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir "evals/baselines/$(date +%F)-ladder"
-```
-run with the rates of both
-`pos-embedded-principal-fork-consult-required` and `neg-embedded-decision-not-principal-owned`
-reported. The pins are load-bearing: the runner writes `benchmark.json` and provenance only when
-`--output-dir` is supplied, and `eval_baseline.py` rejects unpinned runs as
-non-comparison-grade — without them the paid sessions leave no reusable artifact. A forbidden
-agent that fires is evidence the guidance is insufficient — principal or distinguished firing
-indicts the Mode 1 text, `eng-ladder` firing indicts the scoped-work narrowing in its
-description — and the repair goes to the skill, never to the grader.
+**Acceptance:** For each delta the operator elects — (a) the Mode 3 description trim, (b) an
+assess/consult-shape description repair — one description-only edit measured by a fresh
+`--runs 3 --model sonnet --clean-room` capture of the full cluster diffed against the stored
+baseline, one delta per capture so the change stays attributable. Negatives hold at 0% fire (an
+over-trigger introduced by any edit is a defect at any rate); the repair goes to the description,
+never the grader. Electing **neither** closes the item as a recorded decision that the
+under-firing modes stay advertised — with the reason.
 
-**Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
-
-**Rides this item (PROP-002 deferral, 2026-08-13).** Two `eng-ladder` proportionality trims —
-Mode 3's growth-feedback machinery and the formal consult-and-decision-record protocol in Mode 1 —
-wait for this measurement rather than preceding it. Editing the skill first would move the bytes
-out from under the capture this item exists to buy, and the consult protocol is Mode 1 text
-adjacent to what `ladder-report-not-absorb` grades. The scan record carries the exact line
-citations against commit `c38592c`. Optional to acceptance; not to be made without the run — and
-this item's closeout owes the ride-along a disposition (worked, re-homed to a named live item, or
-dropped with reason) rather than a silent close that strands it in archive evidence.
+**Next action:** Operator ruling on which delta, if either, to buy.
 
 #### ACK-001 — make a dropped Learning handoff visible
 
