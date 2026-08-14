@@ -14,7 +14,7 @@
   "expected_behavior": "Researcher briefs in this environment state up front that primary pages on these domains are excerpt-mediated, and callers weight such quotes as [sourced] rather than [verified]",
   "fingerprint": "dad092d141d5f8761c639328ee4b62ad8cf1fb612b38a6b4fe0505816c1d970c",
   "freshness": {
-    "as_of": "2026-08-13T17:42:59.391397Z",
+    "as_of": "2026-08-14T17:55:19.695574Z",
     "review_at": "2026-09-12T17:42:59.391397Z"
   },
   "observation": "Direct WebFetch of arxiv.org, anthropic.com, cognition.com, and simonwillison.net is egress-blocked behind the agent proxy, so researcher packets citing those domains carry search-excerpt-mediated quotes rather than deterministic page reads",
@@ -22,7 +22,7 @@
   "promotion_state": "quarantined",
   "reason": null,
   "recurrence": {
-    "count": 1,
+    "count": 2,
     "sources": [
       {
         "environment": "Claude Code remote container, agent-proxy egress per /root/.ccr README",
@@ -31,6 +31,14 @@
         "revision": "fabd328",
         "source_kind": "session-retro",
         "source_reference": "Researcher session 2026-08-13 (PROP-002 Group 1 literature sweep): four EGRESS_BLOCKED errors on direct WebFetch; WebSearch excerpts of the same pages still returned"
+      },
+      {
+        "environment": "agent-proxy remote container",
+        "observed_at": "2026-08-14T17:55:19.695574Z",
+        "provenance": "verified",
+        "revision": "7605e22",
+        "source_kind": "research-session",
+        "source_reference": "LADDER-002 skill-triggering research 2026-08-14: researcher session observed eight EGRESS_BLOCKED errors (arxiv.org, anthropic.com, medium.com, dev.to, huggingface.co, philschmid.de, agentskills.io, semanticscholar.org) with code.claude.com, platform.claude.com, github.com readable"
       }
     ]
   },
@@ -42,11 +50,11 @@
   "schema_version": 2,
   "scope": "applies: researcher sessions behind this agent proxy; excludes: environments without the proxy",
   "sensitivity_review": {
-    "attestation_count": 1,
+    "attestation_count": 2,
     "attested": true,
-    "last_attested_at": "2026-08-13T17:42:59.391397Z",
+    "last_attested_at": "2026-08-14T17:55:19.695574Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
   "transition_history": [],
-  "updated_at": "2026-08-13T17:42:59.391397Z"
+  "updated_at": "2026-08-14T17:55:19.695574Z"
 }

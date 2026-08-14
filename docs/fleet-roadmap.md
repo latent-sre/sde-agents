@@ -266,33 +266,38 @@ rather than a silent close that strands it in archive evidence.
 
 #### LADDER-002 — decide the eng-ladder description round
 
-**Status:** `decision-needed` — every half of this item is a paid T3 run, so which deltas (if
-any) to buy is the operator's ruling; nothing offline is owed first.
+**Status:** `decision-needed` — the diagnosis is done; which repairs (if any) to buy is the
+operator's ruling.
 
-**Outcome:** `eng-ladder`'s description either draws all three modes it advertises or is
-deliberately trimmed to the modes it serves — measured either way, one delta per run, against the
-stored 2026-08-14 baseline.
+**Outcome:** Each of the LADDER-001 capture's two under-firing modes has its measured repair, or
+a recorded decision not to buy one — with the instrument fixed to measure what it claims.
 
-**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md). The
-closing capture measured the skill's three advertised modes firing 3/3 (altitude question), 0/3
-(assess-at-a-bar — also 0 in the 2026-07 anchor, a two-capture recurrence), and 0/3 (the
-embedded-consult-fork shape); and the Group 4 rescan upheld PROP-002's Mode 3 finding (growth
-feedback has no practicing reader), the only finding to survive all four group rescans, formerly
-riding LADDER-001's freeze.
+**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md)
+(3/3 / 0/3 / 0/3 mode split), diagnosed by the
+[2026-08-14 investigation](archive/2026-08/ladder-002-investigation-2026-08-14.md): schema
+cleared by probe (full description visible at CLI 2.1.231 despite the fleet's 11,260-char
+listing volume exceeding the reported ~8k budget), the assess 0/3 shown to be an **eval-case
+artifact** (dangling "this change" referent in the runner's empty cwd — the mode fires when a
+referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3 shown
+to be **do-the-work bias** (the probe session performed the consult's substance inline —
+deliberate fork treatment, deferred execution, operator gate — with zero invocations). The Group 4
+rescan's upheld Mode 3 finding rides here unchanged.
 
 **Prerequisites:** None — `eval_baseline.py evals/routing/ladder.json --model sonnet
---clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json` `REUSABLE`, so the
-'before' side of any paired run is already on disk.
+--clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json` `REUSABLE`.
 
-**Acceptance:** For each delta the operator elects — (a) the Mode 3 description trim, (b) an
-assess/consult-shape description repair — one description-only edit measured by a fresh
-`--runs 3 --model sonnet --clean-room` capture of the full cluster diffed against the stored
-baseline, one delta per capture so the change stays attributable. Negatives hold at 0% fire (an
-over-trigger introduced by any edit is a defect at any rate); the repair goes to the description,
-never the grader. Electing **neither** closes the item as a recorded decision that the
-under-firing modes stay advertised — with the reason.
+**Acceptance:** For each half the operator elects: (a) **Mode 3 description trim** — one
+description-only edit, measured by a fresh `--runs 3 --model sonnet --clean-room` cluster capture
+diffed against the stored baseline; negatives hold at 0% fire. (b) **Instrument repairs** —
+rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
+empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
+content (builder-owned + named consult, no wholesale re-owning), retiring or annotating the
+routing positive; case authoring is offline, the re-measure is T3 and starts a new case-bytes
+lineage. A description rewrite for the assess mode is explicitly **not** indicated — the
+investigation cleared the phrasing for both measured failures. Electing neither half closes the
+item as a recorded decision with the reason.
 
-**Next action:** Operator ruling on which delta, if either, to buy.
+**Next action:** Operator ruling on which half, if either, to buy.
 
 #### ACK-001 — make a dropped Learning handoff visible
 
