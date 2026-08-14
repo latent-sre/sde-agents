@@ -311,7 +311,10 @@ after run, negatives hold their forbidden sets at 0% fire, the new Mode 3 positi
 the *expected* result of the trim, **and the surviving positive modes show no unexplained
 regression against the paired before** — the suite's own protocol treats a positive's rate
 *drop* as the load-bearing signal, so a drop is dispositioned (explained as variance with the
-runs to show it, or repaired) before this item closes on the trim. **Ordering when both halves
+runs to show it, or repaired) before this item closes on the trim. The closeout also
+**dispositions the measurement-only Mode 3 case** once the paired result is stored: retire it,
+or convert it to a negative boundary asserting the trimmed route stays silent — left as a
+positive it would grade every future ladder run permanently red and blur real regressions. **Ordering when both halves
 are elected:** every elected case-bytes change (the Mode 3 positive here, the assess rewrite in
 half (b)) lands **before** the single fresh 'before' capture on the revised cases, and the
 description-plus-body edit lands between that 'before' and the 'after' — case edits after the

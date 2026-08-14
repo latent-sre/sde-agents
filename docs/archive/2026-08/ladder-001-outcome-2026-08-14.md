@@ -74,10 +74,13 @@ Two PROP-002 deferrals rode this item; neither is silently stranded:
    on forbidden sets holding at 0% fire, which are defect-signals at any rate; the positive half
    reproduced the documented headless under-fire and settled nothing by itself. Buying 3 runs/case was worth it
    for the negatives alone.
-2. **A stale anchor still earned its keep as a shape check.** The 2026-07 benchmark could not be
-   diffed (no conditions/provenance — the exact defect the provenance schema fixed), but its
-   identical pass/fail pattern is what separates "reproduced property" from "new regression"
-   without a second paid run.
+2. **A stale anchor still earned its keep — as anecdote, not evidence.** The 2026-07 benchmark
+   could not be diffed (no conditions/provenance — the exact defect the provenance schema fixed),
+   and matching threshold-level pass/fail booleans cannot rule out a regression hiding inside
+   changed conditions; only a comparison-grade 'before' can. What the anchor's matching shape
+   *did* buy is a cheaper prior: the under-fire pattern is consistent with a long-standing
+   property rather than something newly broken, which informed where the diagnosis looked first.
+   Historical shape is a hint that guides investigation, never a gate that clears one.
 3. **A measured no-change is a closeable outcome.** This item retires with zero edits: the
    guidance held, the capture is stored and reusable, and the one discovery routes to a named
    owner instead of an edit bought mid-round.

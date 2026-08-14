@@ -53,7 +53,9 @@ in headless capture. *(Routing updated 2026-08-14, same day: the follow-up inves
 `docs/archive/2026-08/ladder-002-investigation-2026-08-14.md` — superseded this note's original
 "repair goes to the description" direction: the assess failure needs an inline-diff case repair,
 the consult calibration a behavioral-contract port, and a description rewrite is explicitly not
-indicated. LADDER-002 on the roadmap carries the current options; this capture remains the
-stored 'before' for the Mode 3 trim half.)*
+indicated. LADDER-002 on the roadmap carries the current options. This capture is **not** the
+Mode 3 trim's 'before' side — its case bytes carry no Mode 3 route, so the trim requires a
+targeted Mode 3 positive authored first and a fresh paired capture including it; this artifact
+stands as the cluster's historical anchor and the record of LADDER-001's acceptance run.)*
 
 Raw per-case rates live in `benchmark.json` beside this note.
