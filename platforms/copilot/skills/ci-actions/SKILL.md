@@ -55,7 +55,9 @@ boundary that also happens to run tests.
   `latest` moves and breaks builds on the platform's schedule, not yours.
 - **Secrets are per-job and never echoed.** Don't pass a secret as a command-line argument (it shows
   in process listings); use `env:` or stdin. Prefer OIDC (`id-token: write` + a cloud trust policy)
-  over long-lived stored credentials.
+  over long-lived stored credentials where the deploy target can trust a workload identity; a LAN
+  target takes the same rule through whatever its transport is — a dedicated, job-scoped credential
+  (an SSH key when SSH is the transport), never a reused operator credential.
 - **Fork PRs don't get secrets, by design** — a workflow that requires a secret to pass will always
   fail on fork contributions. Split it: the required checks run without secrets, the secret-needing
   job runs post-merge or on a label.

@@ -78,7 +78,7 @@ Semantic HTML first; every input labeled; keyboard reachable with visible focus;
 ## Testing & quality gate
 
 - Component/logic units in the repo's test runner (Vitest + React Testing Library in the default stack) — test behavior the user can observe (validation, conditional rendering, error/empty states), not implementation details.
-- **Playwright** (or the repo's E2E runner) for the few end-to-end flows whose breakage would page someone.
+- **Playwright** (or the repo's E2E runner) for the few end-to-end flows whose breakage would interrupt someone — the paged flows in a product, the ones that block household use in a lab.
 - Before "done": it typechecks, lints, unit + E2E tests pass, the dev server runs, and the primary flow was exercised in a **real browser render**, including a keyboard-only pass — evidence in the review packet. A UI that compiles but was never rendered is written, not verified.
 
 The **review packet** is the end-of-task report defined by the calling agent (`sde-fullstack`, which requires this skill). Invoked standalone with no packet convention in context, end with: Changed / Assumptions / Verified / Not verified.

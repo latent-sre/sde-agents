@@ -1775,11 +1775,16 @@ def main(argv: list[str] | None = None) -> int:
         # together. An orphaned sidecar from a benchmark-write failure is the benign residue:
         # it embeds its own conditions, and the reuse cleanup below reclaims it next run.
         evidence_path = args.output_dir / FAILING_EVIDENCE_FILENAME
+        sidecar_sha256 = None
         try:
             if failing_payload and not args.retain_run_evidence:
-                if evidence_path.exists():
-                    # A pre-existing file may carry wider permissions from an older runner;
-                    # tighten before rewriting, not after (best-effort on non-POSIX hosts).
+                if evidence_path.is_file():
+                    # A pre-existing regular file may carry wider permissions from an older
+                    # runner; tighten before rewriting, not after (best-effort on non-POSIX
+                    # hosts). is_file(), not exists(): chmod 0600 on a DIRECTORY at this path
+                    # would strip its execute bit and leave it non-traversable after the error
+                    # exit below — harder to inspect exactly when inspection is needed
+                    # (PR #133 Copilot finding). A directory still fails the open, loudly.
                     os.chmod(evidence_path, 0o600)
                 # Owner-only from the first byte: this file is raw model text, which the fleet's
                 # own secrets doctrine treats as a retained-artifact leak surface. write_text
@@ -1787,13 +1792,32 @@ def main(argv: list[str] | None = None) -> int:
                 descriptor = os.open(
                     evidence_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
                 )
-                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                    handle.write(json.dumps({
-                        "kind": "behavioral-failing-run-evidence",
-                        "benchmark": "benchmark.json",
-                        "conditions": conditions,
-                        "cases": failing_payload,
-                    }, indent=2) + "\n")
+                # One byte buffer, written in binary and hashed as-is: text mode would translate
+                # LF to CRLF on Windows, making every digest recorded there unable to verify its
+                # own sidecar (PR #134 finding). Binary also keeps the artifact LF-identical
+                # across platforms, the same canonical-line-ending rule the validator holds
+                # repository text to.
+                sidecar_bytes = (json.dumps({
+                    "kind": "behavioral-failing-run-evidence",
+                    "benchmark": "benchmark.json",
+                    # Identity, not just conditions: conditions can be byte-identical across
+                    # two plugin versions, so a sidecar detached from its sibling could not
+                    # say WHICH skill-text bytes produced its responses — an unattributable
+                    # measurement, the class the one-writer rule exists to prevent. The same
+                    # provenance the benchmark carries binds this file on its own
+                    # (PR #133 finding).
+                    "provenance": provenance,
+                    "conditions": conditions,
+                    "cases": failing_payload,
+                }, indent=2) + "\n").encode("utf-8")
+                with os.fdopen(descriptor, "wb") as handle:
+                    handle.write(sidecar_bytes)
+                # Provenance identifies the evaluated INPUTS; two batches at the same commit with
+                # identical arguments share it byte-for-byte, so it cannot tell batch A's sidecar
+                # from batch B's. The benchmark therefore records the digest of the exact bytes
+                # just written — deterministic (no clock, no nonce), and a detached pairing is
+                # verifiable in one hash (PR #134 finding).
+                sidecar_sha256 = hashlib.sha256(sidecar_bytes).hexdigest()
             else:
                 # A reused --output-dir keeps whatever the current batch does not overwrite. A
                 # sidecar from a previous failing batch must not survive beside a fresh
@@ -1818,6 +1842,10 @@ def main(argv: list[str] | None = None) -> int:
                 # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
                 # able to tell "nothing failed" from "the text was dropped".
                 "failing_run_evidence": failing_run_evidence,
+                # The digest of the exact sidecar this batch wrote (null when none was written):
+                # provenance and conditions are shared by identical batches, so only this binds a
+                # sidecar to its own benchmark rather than to any same-input run.
+                "failing_run_evidence_sha256": sidecar_sha256,
                 "provenance": provenance,
                 "cases": payload,
             }, indent=2) + "\n",
