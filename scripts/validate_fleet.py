@@ -919,22 +919,6 @@ def validate_agent_guide(root: Path) -> list[str]:
             line.strip() == GUIDE_IMPORT for line in read_text(path).splitlines()
         )
 
-    if not guide.is_file():
-        if has_import(bridge):
-            issues.append(
-                f"{bridge}: imports {GUIDE_IMPORT} but AGENTS.md does not exist — the import "
-                f"resolves to nothing and the project context silently loads empty."
-            )
-        return issues
-
-    if not has_import(bridge):
-        issues.append(
-            f"{guide}: exists but {root / 'CLAUDE.md'} does not carry a line reading "
-            f"{GUIDE_IMPORT!r}. Claude Code reads CLAUDE.md, not AGENTS.md (the README's own "
-            f"bridge convention), so without the import this guide is never loaded by the tool "
-            f"it is written for."
-        )
-
     def stale_path_issues(doc: Path) -> list[str]:
         found: list[str] = []
         for span in INLINE_CODE_RE.findall(read_text(doc)):
@@ -952,10 +936,31 @@ def validate_agent_guide(root: Path) -> list[str]:
                     )
         return found
 
-    issues += stale_path_issues(guide)
+    # The program map is checked BEFORE the guide's early return, never behind it. Its own header
+    # advertises this tripwire ("the fleet validator resolves every path named here"), and a check
+    # that a missing UNRELATED file disarms is enforcement prose with no guard behind it — the
+    # exact defect class this validator exists to catch (PR #133 finding).
     program = root / PROGRAM_DOC
     if program.is_file():
         issues += stale_path_issues(program)
+
+    if not guide.is_file():
+        if has_import(bridge):
+            issues.append(
+                f"{bridge}: imports {GUIDE_IMPORT} but AGENTS.md does not exist — the import "
+                f"resolves to nothing and the project context silently loads empty."
+            )
+        return issues
+
+    if not has_import(bridge):
+        issues.append(
+            f"{guide}: exists but {root / 'CLAUDE.md'} does not carry a line reading "
+            f"{GUIDE_IMPORT!r}. Claude Code reads CLAUDE.md, not AGENTS.md (the README's own "
+            f"bridge convention), so without the import this guide is never loaded by the tool "
+            f"it is written for."
+        )
+
+    issues += stale_path_issues(guide)
 
     text = read_text(guide)
     for alias in sorted(ALIAS_MODELS):

@@ -113,6 +113,25 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(any("'scripts/ledger_drifts.py'" in i for i in issues), issues)
 
+    def test_program_doc_is_validated_without_the_guide(self) -> None:
+        # PR #133 P2: the map's own header advertises this tripwire, so a check that deleting an
+        # UNRELATED file disarms is enforcement prose with no guard behind it -- the exact defect
+        # class the validator exists to catch. The no-guide early return must not swallow the
+        # program map's stale paths.
+        def mutate(repo: Path) -> None:
+            (repo / "AGENTS.md").unlink()
+            (repo / "CLAUDE.md").unlink()
+            path = repo / "docs" / "engineering-program.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "scripts/ledger_drift.py", "scripts/ledger_drifts.py"
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("'scripts/ledger_drifts.py'" in i for i in issues), issues)
+
     def test_repo_without_the_program_doc_is_valid(self) -> None:
         # Self-gating, like the guide: a repo that carries no program map makes no map claims.
         # AGENTS.md names the map as a path, so that mention leaves with it — otherwise the

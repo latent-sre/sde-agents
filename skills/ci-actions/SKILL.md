@@ -62,7 +62,9 @@ boundary that also happens to run tests.
 - **Release integrity, once the artifact leaves the lab**: build provenance/attestation and an SBOM,
   generated in the release job, so a consumer can verify what they got. The payoff is a consumer who
   cannot just ask you — a public image, a published package, a release a stranger pulls. For an
-  image only your own hosts pull, the build that produced it is already the answer.
+  image only your own hosts pull, the build is the answer only when deployment pins the built
+  digest — a mutable tag through a registry is a boundary where different bytes can come back, so
+  pin the digest or keep the attestation.
 - Fail the build on the checks you care about; a workflow with `continue-on-error` everywhere is a
   status badge, not a gate.
 

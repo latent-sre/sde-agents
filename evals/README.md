@@ -276,8 +276,15 @@ For the wider case, `--retain-run-evidence` adds an ordered `run_evidence_per_ru
 requires `--output-dir`, and it supersedes the separate file rather than duplicating it. Both are
 evidence for separating a grader defect from a prompt defect, not a different scoring path.
 
-The conditions block always names which form is present (`failing_run_evidence`), so a run with no
-evidence file is readable as "every run passed" rather than "the text was dropped".
+`benchmark.json` names which form is present in a top-level `failing_run_evidence` field — an
+**outcome**, deliberately outside the conditions block, so two paired runs under identical inputs
+do not read as condition-divergent merely because one failed and one passed (conditions are
+inputs; artifacts written before 2026-08-14 carry the field inside `conditions`, and
+`eval_baseline.py`'s exact-key comparison ignores it in either place). Either way, a run with no
+evidence file is readable as "every run passed" rather than "the text was dropped". The sidecar is
+created owner-read/write only and is written **before** `benchmark.json`, so a failed evidence
+write withholds the benchmark rather than publishing one that claims text that was never produced;
+a rerun into the same `--output-dir` removes a sidecar the new batch did not write.
 
 Treat any retained text as potentially sensitive model output. `failing-run-evidence.json` under
 `evals/baselines/` is **gitignored**, on the same rule as the probe and pilot run logs: it is a
