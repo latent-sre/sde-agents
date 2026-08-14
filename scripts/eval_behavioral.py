@@ -1777,9 +1777,13 @@ def main(argv: list[str] | None = None) -> int:
         evidence_path = args.output_dir / FAILING_EVIDENCE_FILENAME
         try:
             if failing_payload and not args.retain_run_evidence:
-                if evidence_path.exists():
-                    # A pre-existing file may carry wider permissions from an older runner;
-                    # tighten before rewriting, not after (best-effort on non-POSIX hosts).
+                if evidence_path.is_file():
+                    # A pre-existing regular file may carry wider permissions from an older
+                    # runner; tighten before rewriting, not after (best-effort on non-POSIX
+                    # hosts). is_file(), not exists(): chmod 0600 on a DIRECTORY at this path
+                    # would strip its execute bit and leave it non-traversable after the error
+                    # exit below — harder to inspect exactly when inspection is needed
+                    # (PR #133 Copilot finding). A directory still fails the open, loudly.
                     os.chmod(evidence_path, 0o600)
                 # Owner-only from the first byte: this file is raw model text, which the fleet's
                 # own secrets doctrine treats as a retained-artifact leak surface. write_text
@@ -1791,6 +1795,13 @@ def main(argv: list[str] | None = None) -> int:
                     handle.write(json.dumps({
                         "kind": "behavioral-failing-run-evidence",
                         "benchmark": "benchmark.json",
+                        # Identity, not just conditions: conditions can be byte-identical across
+                        # two plugin versions, so a sidecar detached from its sibling could not
+                        # say WHICH skill-text bytes produced its responses — an unattributable
+                        # measurement, the class the one-writer rule exists to prevent. The same
+                        # provenance the benchmark carries binds this file on its own
+                        # (PR #133 finding).
+                        "provenance": provenance,
                         "conditions": conditions,
                         "cases": failing_payload,
                     }, indent=2) + "\n")

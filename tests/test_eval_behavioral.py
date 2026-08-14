@@ -1912,6 +1912,11 @@ class BenchmarkConditionsTest(unittest.TestCase):
         # It must be able to say what it measured on its own; an evidence file whose conditions
         # are only in a sibling file is one copy away from being read against the wrong batch.
         self.assertEqual("opus", evidence["conditions"]["model_requested"])
+        # And identity, not just conditions: conditions can be byte-identical across two plugin
+        # versions, so the sidecar carries the same provenance as its benchmark — a detached
+        # copy stays attributable to the exact evaluated bytes (PR #133 finding).
+        self.assertEqual(payload["provenance"], evidence["provenance"])
+        self.assertIn("plugin", evidence["provenance"])
         self.assertIn(
             eval_behavioral.FAILING_EVIDENCE_FILENAME,
             payload["failing_run_evidence"],
@@ -1959,6 +1964,7 @@ class BenchmarkConditionsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             blocker = Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
             blocker.mkdir()
+            mode_before = blocker.stat().st_mode
             with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
                     mock.patch.object(eval_behavioral, "CLAUDE", "claude"):
                 code = eval_behavioral.main([
@@ -1966,11 +1972,14 @@ class BenchmarkConditionsTest(unittest.TestCase):
                     "--model", "opus", "--timeout", "77", "--output-dir", tmp,
                 ])
             benchmark_exists = (Path(tmp) / "benchmark.json").exists()
-            # The runner tightens the blocker's mode before failing on it; restore so the
-            # TemporaryDirectory cleanup can list and remove it.
-            blocker.chmod(0o755)
+            mode_after = blocker.stat().st_mode
         self.assertEqual(2, code)
         self.assertFalse(benchmark_exists)
+        if os.name == "posix":
+            # Copilot finding on PR #133: chmod-on-exists stripped a blocking DIRECTORY's
+            # execute bit, leaving it non-traversable after the error exit — harder to inspect
+            # exactly when inspection is needed. Only a regular file gets tightened.
+            self.assertEqual(mode_before, mode_after)
 
     @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
     def test_failing_evidence_file_is_owner_only(self) -> None:
