@@ -9,6 +9,7 @@ write-blocks.
 """
 from __future__ import annotations
 
+import concurrent.futures
 import contextlib
 import hashlib
 import json
@@ -2087,6 +2088,55 @@ class BenchmarkConditionsTest(unittest.TestCase):
             ],
             case["usage_per_run"],
         )
+
+    def test_serialization_orders_by_run_index_not_completion_order(self) -> None:
+        # The companion to the concurrency=1 test above, restoring the regression power that
+        # serializing costs: at concurrency 1 an implementation that appended results in
+        # completion order would pass, because completion order equals submission order. The
+        # run_session seam cannot carry run identity (every run of a case shares every argument),
+        # so this test patches the EXECUTOR seam, where the (case, run_index) job is visible: a
+        # synchronous pool executes each job at submit time (binding the fake stats to run_index
+        # deterministically, in submission order), and a patched wait() hands the finished
+        # futures back REVERSED — exactly the completion-order scramble the runner must survive.
+        # Mutation-proven: collecting in wait-return order grades [None, 29, 17].
+        first = self._stats()
+        second = self._stats()
+        unknown = self._stats(tokens=False)
+        first["duration_ms"] = 17
+        second["duration_ms"] = 29
+        unknown["duration_ms"] = None
+
+        class SyncPool:
+            def __init__(self, max_workers: int) -> None:
+                del max_workers
+
+            def submit(self, fn, *args) -> concurrent.futures.Future:
+                future: concurrent.futures.Future = concurrent.futures.Future()
+                try:
+                    future.set_result(fn(*args))
+                except BaseException as exc:  # surfaced to the collector, as a real pool would
+                    future.set_exception(exc)
+                return future
+
+            def shutdown(self, wait: bool = True, cancel_futures: bool = False) -> None:
+                del wait, cancel_futures
+
+        def reversed_wait(futures, return_when=None):
+            del return_when
+            return list(reversed(list(futures))), set()
+
+        real_pool = concurrent.futures.ThreadPoolExecutor
+        real_wait = concurrent.futures.wait
+        concurrent.futures.ThreadPoolExecutor = SyncPool  # type: ignore[misc]
+        concurrent.futures.wait = reversed_wait  # type: ignore[assignment]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                payload = self._run_main(Path(tmp), [first, second, unknown])
+        finally:
+            concurrent.futures.ThreadPoolExecutor = real_pool  # type: ignore[misc]
+            concurrent.futures.wait = real_wait  # type: ignore[assignment]
+        case = payload["cases"][0]
+        self.assertEqual([17, 29, None], case["duration_ms_per_run"])
 
     def test_behavioral_batch_aborts_auth_failure_without_writing_benchmark(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

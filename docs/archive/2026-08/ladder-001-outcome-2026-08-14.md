@@ -45,9 +45,13 @@ and owes that runtime or a fresh capture.
 `eng-ladder`'s three advertised modes fired 3/3 (altitude question), 0/3 (assess-at-a-bar — also
 0 in the 2026-07 anchor, a two-capture recurrence), and 0/3 (the embedded-consult-fork shape,
 first measurement). Two of the three modes the description advertises never draw the skill in
-headless capture. Routed to **LADDER-002** (roadmap, `decision-needed`): any repair is a
-description edit measured against the stored 2026-08-14 'before', one delta per run, never a
-grader change. Not ledgered separately — the roadmap item is the single owner.
+headless capture. Routed to **LADDER-002** (roadmap, `decision-needed`). *(Routing updated
+2026-08-14, same day: the follow-up
+[investigation](ladder-002-investigation-2026-08-14.md) diagnosed the two failures to different
+instruments — the assess case needs an inline-diff case repair and the consult calibration a
+behavioral-contract port — and found a description rewrite explicitly **not** indicated, so this
+record's original "any repair is a description edit" direction is superseded; the roadmap item
+carries the current options.)* Not ledgered separately — the roadmap item is the single owner.
 
 ## Ride-along dispositions (owed by this closeout)
 

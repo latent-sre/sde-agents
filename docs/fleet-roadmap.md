@@ -296,7 +296,10 @@ description **plus** body: remove the growth-feedback clause from the descriptio
 Mode 3 section in the same delta (a description-only trim would close this item while the
 duplicate stateless remit survives in the body), measured by a fresh
 `--runs 3 --model sonnet --clean-room` cluster capture diffed against the stored baseline;
-negatives hold their forbidden sets at 0% fire. **Ordering is load-bearing when both halves are
+negatives hold their forbidden sets at 0% fire, **and the surviving positive modes show no
+unexplained regression against the paired baseline** — the suite's own protocol treats a
+positive's rate *drop* as the load-bearing signal, so a drop is dispositioned (explained as
+variance with the runs to show it, or repaired) before this item closes on the trim. **Ordering is load-bearing when both halves are
 elected:** half (b)
 edits `evals/routing/ladder.json`, whose exact `eval_sources` identity `eval_baseline.py`
 compares, so the case edit stales the stored benchmark — capture half (a)'s paired run **before**
