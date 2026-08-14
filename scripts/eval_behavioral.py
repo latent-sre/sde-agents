@@ -1792,7 +1792,12 @@ def main(argv: list[str] | None = None) -> int:
                 descriptor = os.open(
                     evidence_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
                 )
-                sidecar_text = json.dumps({
+                # One byte buffer, written in binary and hashed as-is: text mode would translate
+                # LF to CRLF on Windows, making every digest recorded there unable to verify its
+                # own sidecar (PR #134 finding). Binary also keeps the artifact LF-identical
+                # across platforms, the same canonical-line-ending rule the validator holds
+                # repository text to.
+                sidecar_bytes = (json.dumps({
                     "kind": "behavioral-failing-run-evidence",
                     "benchmark": "benchmark.json",
                     # Identity, not just conditions: conditions can be byte-identical across
@@ -1804,17 +1809,15 @@ def main(argv: list[str] | None = None) -> int:
                     "provenance": provenance,
                     "conditions": conditions,
                     "cases": failing_payload,
-                }, indent=2) + "\n"
-                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                    handle.write(sidecar_text)
+                }, indent=2) + "\n").encode("utf-8")
+                with os.fdopen(descriptor, "wb") as handle:
+                    handle.write(sidecar_bytes)
                 # Provenance identifies the evaluated INPUTS; two batches at the same commit with
                 # identical arguments share it byte-for-byte, so it cannot tell batch A's sidecar
-                # from batch B's. The benchmark therefore records the digest of the exact sidecar
-                # written with it — deterministic (no clock, no nonce), and a detached pairing is
+                # from batch B's. The benchmark therefore records the digest of the exact bytes
+                # just written — deterministic (no clock, no nonce), and a detached pairing is
                 # verifiable in one hash (PR #134 finding).
-                sidecar_sha256 = hashlib.sha256(
-                    sidecar_text.encode("utf-8")
-                ).hexdigest()
+                sidecar_sha256 = hashlib.sha256(sidecar_bytes).hexdigest()
             else:
                 # A reused --output-dir keeps whatever the current batch does not overwrite. A
                 # sidecar from a previous failing batch must not survive beside a fresh
