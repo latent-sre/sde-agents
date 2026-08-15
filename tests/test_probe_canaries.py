@@ -1,12 +1,14 @@
 """Guards the canary strings scripts/probe_plugin.py depends on to prove skill preloading.
 
-`req_8f3a2c` (skills/backend-craft/SKILL.md, under "## Contract first") and `color courage`
-(skills/frontend-craft/SKILL.md, under "## Visual character") read as ordinary prose, but the
-probe's oracle for "was this skill preloaded, not read" is exactly "did this string appear in the
-transcript" -- see scripts/probe_plugin.py's "sde-fullstack's craft skills are PRELOADED, not read"
-section. An innocent copy-edit to either SKILL.md would silently disarm that check: the probe would
-still run, still print PASS/FAIL, and never say why the canary stopped matching. This test is the
-tripwire.
+BACKEND_CANARY (skills/backend-craft/SKILL.md, under "## Contract first") and FRONTEND_CANARY
+(skills/frontend-craft/SKILL.md, under "## Visual character") are embedded in ordinary skill
+content, but the probe's oracle for "was this skill preloaded, not read" is exactly "did this
+string appear in the transcript" -- see scripts/probe_plugin.py's "sde-fullstack's craft skills
+are PRELOADED, not read" section. A copy-edit to either SKILL.md would silently disarm that
+check: the probe would still run, still print PASS/FAIL, and never say why the canary stopped
+matching. Two layers hold this together: a marker comment beside each canary in the skill file
+warns the editor at the edit site, and this test is the tripwire behind the warning -- asserted
+through the probe's own constants so the probe and this guard cannot drift apart.
 """
 from __future__ import annotations
 
@@ -37,9 +39,12 @@ class ProbeCanaryTests(unittest.TestCase):
         remove_workspace.assert_not_called()
 
     def test_backend_craft_canary_is_present(self) -> None:
+        # Asserted via the probe's own constant, not a copied literal: with a duplicate string
+        # here, a probe-side canary change would fail live probes while this tripwire stayed
+        # green — the exact split-truth this test exists to prevent.
         text = (REPO / "skills" / "backend-craft" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn(
-            "req_8f3a2c",
+            probe_plugin.BACKEND_CANARY,
             text,
             "scripts/probe_plugin.py quotes this canary to prove backend-craft was preloaded -- "
             "do not remove or reword it without updating the probe",
@@ -48,7 +53,7 @@ class ProbeCanaryTests(unittest.TestCase):
     def test_frontend_craft_canary_is_present(self) -> None:
         text = (REPO / "skills" / "frontend-craft" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn(
-            "color courage",
+            probe_plugin.FRONTEND_CANARY,
             text,
             "scripts/probe_plugin.py quotes this canary to prove frontend-craft was preloaded -- "
             "do not remove or reword it without updating the probe",

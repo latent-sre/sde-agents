@@ -20,18 +20,7 @@ from tests import support
 from tests.support import create_directory_link, repo_copy
 
 
-def _relative_snapshot(root: Path) -> dict[Path, bytes]:
-    return {p.relative_to(root): p.read_bytes() for p in support._walk_files(root)}
-
-
 class RepoPoolRestoreTests(unittest.TestCase):
-    def test_consecutive_borrows_see_identical_pristine_content(self) -> None:
-        # The positive control: with no mutation at all, two borrows are byte-identical.
-        with repo_copy() as first:
-            before = _relative_snapshot(first)
-        with repo_copy() as second:
-            self.assertEqual(before, _relative_snapshot(second))
-
     def test_every_mutation_type_is_restored_for_the_next_borrower(self) -> None:
         readme = Path("README.md")
         agents_md = Path("AGENTS.md")

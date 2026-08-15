@@ -264,52 +264,83 @@ side. Optional to acceptance; not to be made without the capture — and this it
 the ride-along a disposition (worked, re-homed to a named live item, or dropped with reason)
 rather than a silent close that strands it in archive evidence.
 
-#### LADDER-001 — measure the ownership-vs-consult calibration
+#### LADDER-002 — decide the eng-ladder description round
 
-**Status:** `ready` — the guidance itself shipped 2026-08-03 (`6fa2be3`, PR #68) and both cluster
-cases now exist (#103's positive as reshaped by `05417c8`, this branch's negative); only the
-measured run is owed.
+**Status:** `decision-needed` — the diagnosis is done; which repairs (if any) to buy is the
+operator's ruling.
 
-**Outcome:** The `eng-ladder` Mode 1 split between ownership and required-consult has a
-measurement instead of a single anecdote, split by what firing-based grading can actually see:
-the positive says the consult-required shape draws `eng-ladder`; the negative says a
-builder-recordable embedded decision draws nothing but the builder — no principal, distinguished,
-or `eng-ladder` summon at all, since its prompt satisfies the scoped-work bypass (obvious owner,
-stated existing pattern) and answers its own altitude question.
+**Outcome:** Each of the LADDER-001 capture's two under-firing modes has its measured repair, or
+a recorded decision not to buy one — with the instrument fixed to measure what it claims.
 
-**Source:** Issue #66 (the DB-01 audit and its three-way calibration table — `eng-ladder` blind
-read "mandatory principal ownership", dispatch read "optional escalation", the accurate call was
-builder-owned with a required consult); guidance landed in `skills/eng-ladder/SKILL.md` Mode 1;
-ledger candidate `lc_e4234dfe` (triaged 2026-08-10 as proposed/merge, which names this case as the
-residual).
+**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md)
+(3/3 / 0/3 / 0/3 mode split), diagnosed by the
+[2026-08-14 investigation](archive/2026-08/ladder-002-investigation-2026-08-14.md): schema
+cleared by probe (full description visible at CLI 2.1.231 despite the fleet's 11,260-char
+listing volume exceeding the reported ~8k budget), the assess 0/3 shown to be an **eval-case
+artifact** (dangling "this change" referent in the runner's empty cwd — the mode fires when a
+referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3
+consistent with **do-the-work bias** as the leading hypothesis (one directional probe performed
+the consult's substance inline — deliberate fork treatment, deferred execution, operator gate —
+with zero invocations). The hypothesis stays provisional either way: the behavioral port in
+half (b) validates the *verdict's content* once the component runs — reachability is the routing
+suite's question, so no behavioral result confirms why the routing positive failed. The Group 4
+rescan's upheld Mode 3 finding rides here unchanged.
 
-**Prerequisites:** None. The cluster's only stored benchmark predates the provenance schema
-(`python scripts/eval_baseline.py evals/routing/ladder.json --model sonnet` → `STALE`, 2026-08-10),
-so a fresh capture is owed with or without this case.
+**Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
+--model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
+`REUSABLE` there. The reuse is identity-bound, not unconditional: the stored evaluator identity
+pins the runtime (CPython 3.11.15 recorded), so a host on another Python reports
+`STALE: diverged on evaluator` and owes either that runtime or a fresh 'before' capture before
+any paired comparison.
 
-**Acceptance:** One recorded
-```bash
-python3 scripts/eval_routing.py evals/routing/ladder.json --runs 3 --model sonnet --clean-room --output-dir "evals/baselines/$(date +%F)-ladder"
-```
-run with the rates of both
-`pos-embedded-principal-fork-consult-required` and `neg-embedded-decision-not-principal-owned`
-reported. The pins are load-bearing: the runner writes `benchmark.json` and provenance only when
-`--output-dir` is supplied, and `eval_baseline.py` rejects unpinned runs as
-non-comparison-grade — without them the paid sessions leave no reusable artifact. A forbidden
-agent that fires is evidence the guidance is insufficient — principal or distinguished firing
-indicts the Mode 1 text, `eng-ladder` firing indicts the scoped-work narrowing in its
-description — and the repair goes to the skill, never to the grader.
+**Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
+description **plus** body: remove the growth-feedback clause from the description and the body's
+Mode 3 section in the same delta (a description-only trim would close this item while the
+duplicate stateless remit survives in the body). Electing this half is a values call, not a
+dead-code removal: review named the candidate reader the upheld finding does not cover — the
+human operator, whose own diffs Mode 3 could assess at a ladder bar, a consumer neither
+`self-improve-loop` nor `prompt-engineer` serves — so the ruling weighs that route's worth
+against its per-session description surface. **The cluster cannot witness this trim as it
+stands**: `evals/routing/ladder.json` carries no Mode 3 growth-feedback positive, so a paired run
+on today's cases would report identical rates while never exercising the removed route. The
+trim's measurement therefore starts by authoring a targeted Mode 3 positive (a body-of-work
+growth-feedback prompt), capturing a fresh 'before' that includes it, then making the
+description-plus-body edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
+half's 'before' (its case bytes lack the route) and stands only as the historical anchor. In the
+after run, negatives hold their forbidden sets at 0% fire, the new Mode 3 positive's silence is
+the *expected* result of the trim, **and the surviving positive modes show no unexplained
+regression against the paired before** — the suite's own protocol treats a positive's rate
+*drop* as the load-bearing signal, so a drop is dispositioned (explained as variance with the
+runs to show it, or repaired) before this item closes on the trim. The closeout also
+**dispositions the measurement-only Mode 3 case** once the paired result is stored: retire it,
+or convert it to a negative boundary asserting the trimmed route stays silent — left as a
+positive it would grade every future ladder run permanently red and blur real regressions. **Ordering when both halves
+are elected:** every elected case-bytes change (the Mode 3 positive here, the assess rewrite in
+half (b)) lands **before** the single fresh 'before' capture on the revised cases, and the
+description-plus-body edit lands between that 'before' and the 'after' — case edits after the
+'before' stale it through `eval_baseline.py`'s exact `eval_sources` identity, and an unordered
+session can spend the full T3 batch and produce no valid comparison. (b) **Instrument repairs** —
+rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
+empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
+content — builder-owned, the named principal consult marked **required** (optional/advisory
+consult wording fails the case: "optional escalation" is the exact issue #66 miscalibration this
+contract exists to reject), and no wholesale re-owning. The routing positive is **annotated,
+not retired by default**: it is the only routing assertion for the bare consult-fork shape, so
+removing it would leave no active instrument recording the reachability gap the behavioral case
+cannot test — retiring it takes an explicit recorded decision accepting that unresolved
+reachability failure. Case authoring is offline, the re-measure is T3 and starts a new
+case-bytes lineage. Success is defined per instrument, not by having run the sessions: the rewritten assess
+case passes at the recorded threshold (0.5 — at three runs, 2/3 or better; a 1/3 "nonzero" is
+still a failing positive), and the new behavioral contract holds across **three runs**
+(`--runs 3` stated because `eval_behavioral.py` defaults to one — a single lucky pass is a
+smoke test, not the promised measured repair) — or the
+experiment that falsified the proposed repair is recorded as its explicit disposition. A repeat
+0/3 or a red contract closed silently would satisfy the letter of a run-only acceptance while
+delivering none of this item's promised outcome. A description rewrite for the assess mode is explicitly **not** indicated — the
+investigation cleared the phrasing for both measured failures. Electing neither half closes the
+item as a recorded decision with the reason.
 
-**Next action:** Operator runs the cluster (T3, real API). Nothing offline is owed.
-
-**Rides this item (PROP-002 deferral, 2026-08-13).** Two `eng-ladder` proportionality trims —
-Mode 3's growth-feedback machinery and the formal consult-and-decision-record protocol in Mode 1 —
-wait for this measurement rather than preceding it. Editing the skill first would move the bytes
-out from under the capture this item exists to buy, and the consult protocol is Mode 1 text
-adjacent to what `ladder-report-not-absorb` grades. The scan record carries the exact line
-citations against commit `c38592c`. Optional to acceptance; not to be made without the run — and
-this item's closeout owes the ride-along a disposition (worked, re-homed to a named live item, or
-dropped with reason) rather than a silent close that strands it in archive evidence.
+**Next action:** Operator ruling on which half, if either, to buy.
 
 #### ACK-001 — make a dropped Learning handoff visible
 

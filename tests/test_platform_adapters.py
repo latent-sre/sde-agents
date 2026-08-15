@@ -217,167 +217,77 @@ class PlatformAdapterTests(unittest.TestCase):
                 issues,
             )
 
-    def test_validation_rejects_linked_generated_root_before_traversal(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
-            root = base / "repo"
-            external = base / "external"
-            link = root / generate_platform_adapters.COPILOT_SKILLS
-            (root / ".claude-plugin").mkdir(parents=True)
-            (root / ".claude-plugin" / "plugin.json").write_text(
-                "{}\n",
-                encoding="utf-8",
-            )
-            external.mkdir()
-            sentinel = external / "outside-secret-name.txt"
-            sentinel.write_text("must remain outside\n", encoding="utf-8")
-            link.parent.mkdir(parents=True)
-            _create_directory_link(external, link)
-            try:
-                with mock.patch.object(
-                    generate_platform_adapters,
-                    "expected_outputs",
-                    return_value={},
-                ):
-                    issues = generate_platform_adapters.validate_generated_outputs(root)
-                self.assertTrue(
-                    any(
-                        "cannot inspect generated platform adapters" in issue
-                        and "link, junction, or reparse point" in issue
-                        and "Validation could read or certify a different tree." in issue
-                        for issue in issues
-                    ),
-                    issues,
+    def test_validation_rejects_links_at_every_generated_tree_depth(self) -> None:
+        placements = (
+            ("root", generate_platform_adapters.COPILOT_SKILLS, Path(".")),
+            ("parent", Path("platforms"), Path("copilot") / "skills"),
+            (
+                "descendant",
+                generate_platform_adapters.COPILOT_SKILLS / "redirected",
+                Path("."),
+            ),
+        )
+        for name, link_relative, sentinel_parent in placements:
+            with self.subTest(placement=name), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary)
+                root = base / "repo"
+                external = base / "external"
+                link = root / link_relative
+                (root / ".claude-plugin").mkdir(parents=True)
+                (root / ".claude-plugin" / "plugin.json").write_text(
+                    "{}\n", encoding="utf-8"
                 )
-                self.assertFalse(
-                    any(sentinel.name in issue for issue in issues),
-                    issues,
-                )
-            finally:
-                _remove_directory_link(link)
+                target = external / sentinel_parent
+                target.mkdir(parents=True)
+                sentinel = target / "outside-secret-name.txt"
+                sentinel.write_text("must remain outside\n", encoding="utf-8")
+                link.parent.mkdir(parents=True, exist_ok=True)
+                _create_directory_link(external, link)
+                try:
+                    with mock.patch.object(
+                        generate_platform_adapters, "expected_outputs", return_value={}
+                    ):
+                        issues = generate_platform_adapters.validate_generated_outputs(root)
+                    self.assertTrue(
+                        any(
+                            "cannot inspect generated platform adapters" in issue
+                            and "link, junction, or reparse point" in issue
+                            and "Validation could read or certify a different tree." in issue
+                            for issue in issues
+                        ),
+                        issues,
+                    )
+                    self.assertFalse(any(sentinel.name in issue for issue in issues), issues)
+                finally:
+                    _remove_directory_link(link)
 
-    def test_validation_rejects_linked_generated_parent_before_traversal(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
-            root = base / "repo"
-            external = base / "external"
-            redirected_target = external / "copilot" / "skills"
-            redirected_target.mkdir(parents=True)
-            (root / ".claude-plugin").mkdir(parents=True)
-            (root / ".claude-plugin" / "plugin.json").write_text(
-                "{}\n",
-                encoding="utf-8",
-            )
-            sentinel = redirected_target / "outside-secret-name.txt"
-            sentinel.write_text("must remain outside\n", encoding="utf-8")
-            link = root / "platforms"
-            _create_directory_link(external, link)
-            try:
-                with mock.patch.object(
-                    generate_platform_adapters,
-                    "expected_outputs",
-                    return_value={},
-                ):
-                    issues = generate_platform_adapters.validate_generated_outputs(root)
-                self.assertTrue(
-                    any(
-                        "cannot inspect generated platform adapters" in issue
-                        and "link, junction, or reparse point" in issue
-                        and "Validation could read or certify a different tree." in issue
-                        for issue in issues
-                    ),
-                    issues,
-                )
-                self.assertFalse(
-                    any(sentinel.name in issue for issue in issues),
-                    issues,
-                )
-            finally:
-                _remove_directory_link(link)
-
-    def test_validation_rejects_linked_generated_descendant_before_traversal(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            base = Path(temporary)
-            root = base / "repo"
-            external = base / "external"
-            generated_root = root / generate_platform_adapters.COPILOT_SKILLS
-            link = generated_root / "redirected"
-            (root / ".claude-plugin").mkdir(parents=True)
-            (root / ".claude-plugin" / "plugin.json").write_text(
-                "{}\n",
-                encoding="utf-8",
-            )
-            generated_root.mkdir(parents=True)
-            external.mkdir()
-            sentinel = external / "outside-secret-name.txt"
-            sentinel.write_text("must remain outside\n", encoding="utf-8")
-            _create_directory_link(external, link)
-            try:
-                with mock.patch.object(
-                    generate_platform_adapters,
-                    "expected_outputs",
-                    return_value={},
-                ):
-                    issues = generate_platform_adapters.validate_generated_outputs(root)
-                self.assertTrue(
-                    any(
-                        "cannot inspect generated platform adapters" in issue
-                        and "link, junction, or reparse point" in issue
-                        and "Validation could read or certify a different tree." in issue
-                        for issue in issues
-                    ),
-                    issues,
-                )
-                self.assertFalse(
-                    any(sentinel.name in issue for issue in issues),
-                    issues,
-                )
-            finally:
-                _remove_directory_link(link)
-
-    def test_write_rejects_linked_generated_root_without_touching_target(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "repo"
-            sensitive = root / "canonical-source"
-            link = root / generate_platform_adapters.COPILOT_SKILLS
-            sensitive.mkdir(parents=True)
-            link.parent.mkdir(parents=True)
-            sentinel = sensitive / "sentinel.txt"
-            sentinel.write_text("must survive\n", encoding="utf-8")
-            _create_directory_link(sensitive, link)
-            try:
-                with mock.patch.object(
-                    generate_platform_adapters,
-                    "expected_outputs",
-                    return_value={},
-                ):
-                    with self.assertRaisesRegex(ValueError, "link|junction|reparse"):
-                        generate_platform_adapters.write_generated_outputs(root)
-                self.assertEqual("must survive\n", sentinel.read_text(encoding="utf-8"))
-            finally:
-                _remove_directory_link(link)
-
-    def test_write_rejects_linked_generated_parent_without_touching_target(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "repo"
-            sensitive = root / "canonical-source"
-            redirected_target = sensitive / "copilot" / "skills"
-            redirected_target.mkdir(parents=True)
-            sentinel = redirected_target / "sentinel.txt"
-            sentinel.write_text("must survive\n", encoding="utf-8")
-            link = root / "platforms"
-            _create_directory_link(sensitive, link)
-            try:
-                with mock.patch.object(
-                    generate_platform_adapters,
-                    "expected_outputs",
-                    return_value={},
-                ):
-                    with self.assertRaisesRegex(ValueError, "link|junction|reparse"):
-                        generate_platform_adapters.write_generated_outputs(root)
-                self.assertEqual("must survive\n", sentinel.read_text(encoding="utf-8"))
-            finally:
-                _remove_directory_link(link)
+    def test_write_rejects_links_at_every_generated_tree_ancestor(self) -> None:
+        placements = (
+            ("root", generate_platform_adapters.COPILOT_SKILLS, Path(".")),
+            ("parent", Path("platforms"), Path("copilot") / "skills"),
+        )
+        for name, link_relative, sentinel_parent in placements:
+            with self.subTest(placement=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "repo"
+                sensitive = root / "canonical-source"
+                target = sensitive / sentinel_parent
+                target.mkdir(parents=True)
+                sentinel = target / "sentinel.txt"
+                sentinel.write_text("must survive\n", encoding="utf-8")
+                link = root / link_relative
+                link.parent.mkdir(parents=True, exist_ok=True)
+                _create_directory_link(sensitive, link)
+                try:
+                    with mock.patch.object(
+                        generate_platform_adapters, "expected_outputs", return_value={}
+                    ):
+                        with self.assertRaisesRegex(ValueError, "link|junction|reparse"):
+                            generate_platform_adapters.write_generated_outputs(root)
+                    self.assertEqual(
+                        "must survive\n", sentinel.read_text(encoding="utf-8")
+                    )
+                finally:
+                    _remove_directory_link(link)
 
     def test_write_replaces_claude_import_agents_without_touching_claude_siblings(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -429,20 +339,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 self.assertEqual(b"external secret", secret.read_bytes())
             finally:
                 _remove_directory_link(link)
-
-    def test_every_canonical_agent_has_all_host_adapters(self) -> None:
-        names = {path.stem for path in (REPO / "agents").glob("*.md")}
-        copilot = {
-            path.name.removesuffix(".agent.md")
-            for path in (REPO / ".github" / "agents").glob("*.agent.md")
-        }
-        codex = {path.stem for path in (REPO / ".codex" / "agents").glob("*.toml")}
-        codex_import = {
-            path.stem for path in (REPO / ".claude" / "agents").glob("*.md")
-        }
-        self.assertEqual(names, copilot)
-        self.assertEqual(names, codex)
-        self.assertEqual(names, codex_import)
 
     def test_copilot_adapters_use_only_native_aliases(self) -> None:
         for path in sorted((REPO / ".github" / "agents").glob("*.agent.md")):

@@ -3,8 +3,9 @@
 The runner replaces the serial CI invocation, so the properties that must not regress are the
 ones a green total could otherwise hide: a failing module must fail the whole run, the summary
 must aggregate real per-module counts, and discovering nothing must be an error rather than an
-empty success — each is pinned against a synthetic module directory, so no test here re-runs
-the real suite inside itself.
+empty success. Subprocess behavior is pinned end to end; discovery classification and synthetic
+child reports are tested in process, so this module does not over-test the runner by repeatedly
+starting children when the child process itself is not the subject.
 """
 from __future__ import annotations
 
@@ -94,6 +95,24 @@ class ParallelRunnerTests(unittest.TestCase):
             code, _ = self._run(Path(tmp))
         self.assertEqual(2, code)
 
+    def test_zero_or_unparseable_child_count_cannot_pass_the_run(self) -> None:
+        # Modern unittest already exits 5 when it discovers zero tests. A real empty
+        # child would therefore exercise the generic child-failure path and leave the runner's
+        # count guard unproved. Synthetic successful reports make both added branches fire and
+        # prove the runner itself—not this interpreter version—rejects lost coverage.
+        reports = {
+            "zero": "Ran 0 tests in 0.000s\n\nOK\n",
+            "unparseable": "child completed without a unittest summary\n",
+        }
+        for name, report in reports.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                module = Path(tmp) / "test_report.py"
+                module.write_text("# run_module is replaced below\n", encoding="utf-8")
+                result = (module, 0, report, ["python", "-m", "unittest"])
+                with mock.patch.object(run_tests, "run_module", return_value=result):
+                    code, _ = self._run(Path(tmp))
+                self.assertEqual(2, code)
+
     def test_nested_importable_test_package_refuses_to_run(self) -> None:
         # Serial `unittest discover` recurses into importable packages; the runner's top-level
         # glob does not. Diverging silently would leave CI green while never running the nested
@@ -113,15 +132,13 @@ class ParallelRunnerTests(unittest.TestCase):
         # suite (Codex review on #91). No nested test_*.py file exists to trip the other
         # guard, so the package itself must be the tripwire.
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
             package = Path(tmp) / "hookpkg"
             package.mkdir()
             (package / "__init__.py").write_text(
                 "def load_tests(loader, tests, pattern):\n    return tests\n",
                 encoding="utf-8",
             )
-            code, _ = self._run(Path(tmp))
-        self.assertEqual(2, code)
+            self.assertEqual([package], run_tests.importable_packages(Path(tmp)))
 
     def test_non_importable_fixture_trees_do_not_block_the_run(self) -> None:
         # Fixture repos may carry test-shaped filenames — or even real sample packages — below
@@ -129,14 +146,11 @@ class ParallelRunnerTests(unittest.TestCase):
         # the runner must ignore them too rather than refusing to run the real suite (Codex
         # review on #91: only an unbroken __init__.py chain participates in discovery).
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "test_alpha.py").write_text(PASSING, encoding="utf-8")
             fixture = Path(tmp) / "fixtures" / "sample"
             fixture.mkdir(parents=True)
             (fixture / "test_shaped.py").write_text(FAILING, encoding="utf-8")
             (fixture / "__init__.py").write_text("", encoding="utf-8")
-            code, out = self._run(Path(tmp))
-        self.assertEqual(0, code, out)
-        self.assertIn("Ran 2 tests across 1 modules", out)
+            self.assertEqual([], run_tests.importable_packages(Path(tmp)))
 
 
 if __name__ == "__main__":

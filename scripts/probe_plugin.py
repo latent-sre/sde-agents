@@ -60,6 +60,17 @@ CLAUDE_CODE_BLOCKS = (
 # The guard's own voice (scripts/readonly-guard.py, _REASON).
 GUARD_DENY = "read-only agent"
 
+# Preload canaries: strings that exist ONLY inside the two craft SKILL.md files, quoted by
+# sde-fullstack to prove `skills:` preloading. Single-sourced here — the probe's checks and
+# tests/test_probe_canaries.py both read these constants, so the probe and its tripwire cannot
+# disagree about what the oracle is. Three-way coupling a new value must preserve: the skill file
+# carries the string beside a load-bearing marker comment, and PROMPT step 2 elicits each by
+# DESCRIPTION, never by value ("a request_id", "a two-word phrase about color") — so a replacement
+# canary must still be a request_id / a two-word color phrase, or the elicitation stops working
+# while every string check here stays green.
+BACKEND_CANARY = "req_8f3a2c"
+FRONTEND_CANARY = "color courage"
+
 # A `find -exec` search: idiomatic, genuinely read-only in intent, and something a reviewer will run
 # in good faith rather than decline — which is the whole point, since an agent that refuses the
 # command on its own leaves the guard untested. The guard denies it because `-exec` can launch
@@ -549,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
     # applies it to the integrity oracle, not just the guard oracle.
     canary_leaks = [
         cmd for cmd, body in bash_results(text).items()
-        if "req_8f3a2c" in body or "color courage" in body
+        if BACKEND_CANARY in body or FRONTEND_CANARY in body
     ]
     probe.check(
         PASS if not craft_reads and not canary_leaks else FAIL,
@@ -588,15 +599,15 @@ def main(argv: list[str] | None = None) -> int:
     # agent_spawn_results for the full reasoning.
     fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))
     probe.check(
-        PASS if "req_8f3a2c" in fullstack_text else FAIL,
+        PASS if BACKEND_CANARY in fullstack_text else FAIL,
         "backend-craft core content was preloaded (canary quoted)",
-        "the canary req_8f3a2c never appeared in sde-fullstack's own spawn result: backend-craft "
-        "was not in the agent's context",
+        f"the canary {BACKEND_CANARY} never appeared in sde-fullstack's own spawn result: "
+        "backend-craft was not in the agent's context",
     )
     probe.check(
-        PASS if "color courage" in fullstack_text else FAIL,
+        PASS if FRONTEND_CANARY in fullstack_text else FAIL,
         "frontend-craft core content was preloaded (canary quoted)",
-        "the canary 'color courage' never appeared in sde-fullstack's own spawn result: "
+        f"the canary '{FRONTEND_CANARY}' never appeared in sde-fullstack's own spawn result: "
         "frontend-craft was not in the agent's context",
     )
 

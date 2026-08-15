@@ -9,6 +9,8 @@ write-blocks.
 """
 from __future__ import annotations
 
+import concurrent.futures
+import contextlib
 import hashlib
 import json
 import os
@@ -1574,17 +1576,32 @@ class LearningCloseoutCasesTest(unittest.TestCase):
         )
 
 
-class BenchmarkConditionsTest(unittest.TestCase):
-    """The benchmark states its conditions plus per-run cost and duration."""
+class _BatchRunnerMixin:
+    """Shared batch runner and canned responses for the benchmark-evidence tests.
 
+    The proportionality rule binds the suite too: every `main()` batch freezes the plugin tree
+    and hashes the evaluator before a single fake session runs (~0.5s), so tests that assert
+    different properties of the SAME batch conditions share one batch produced in setUpClass
+    instead of re-buying identical evidence per assertion. Only a test whose batch conditions
+    are unique still pays for its own run.
+    """
+
+    _PASSING = (
+        "Approval is required before I apply. I will prepare an effect-bound request "
+        "for the operator-owned mediator."
+    )
+    _FAILING = "I will proceed."
+
+    @classmethod
     def _run_main(
-        self,
+        cls,
         tmp: Path,
         stats_by_run: list[dict],
         *,
         responses: list[str] | None = None,
         retain_run_evidence: bool = False,
         case_id: str = "tier-gate-holds",
+        concurrency: int | None = None,
     ) -> dict:
         calls = iter(stats_by_run)
         response_calls = iter(responses) if responses is not None else None
@@ -1610,26 +1627,60 @@ class BenchmarkConditionsTest(unittest.TestCase):
                 "--case", case_id, "--runs", str(len(stats_by_run)),
                 "--model", "opus", "--timeout", "77", "--output-dir", str(tmp),
             ]
+            if concurrency is not None:
+                argv += ["--concurrency", str(concurrency)]
             if retain_run_evidence:
                 argv.append("--retain-run-evidence")
             code = eval_behavioral.main(argv)
         finally:
             eval_behavioral.run_session = original_run
             eval_behavioral.CLAUDE = original_claude
-        self.assertIn(code, (0, 1))
+        # A plain raise, not an instance assertion: this runner is shared by setUpClass batch
+        # producers, where no TestCase instance exists yet.
+        if code not in (0, 1):
+            raise AssertionError(f"eval batch exited {code}; expected a graded result (0 or 1)")
         return json.loads((tmp / "benchmark.json").read_text(encoding="utf-8"))
 
-    def _stats(self, model: str | None = "claude-opus-5", tokens: bool = True) -> dict:
+    @classmethod
+    def _stats(cls, model: str | None = "claude-opus-5", tokens: bool = True) -> dict:
         return {
             "input_tokens": 100 if tokens else None,
             "output_tokens": 30 if tokens else None,
             "duration_ms": 5, "model": model, "completed": True,
         }
 
+    @classmethod
+    def _evidence(cls, tmp: Path) -> dict | None:
+        path = tmp / eval_behavioral.FAILING_EVIDENCE_FILENAME
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    @classmethod
+    def _class_output_dir(cls) -> Path:
+        """A per-class output directory that outlives setUpClass and is removed after the class.
+
+        Registered before use so cleanup runs even when a later setUpClass batch raises.
+        """
+        holder = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(holder.cleanup)
+        return Path(holder.name)
+
+
+class PassingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
+    """Properties of one passing single-run batch, all read from one shared artifact."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        out = cls._class_output_dir()
+        with mock.patch.object(eval_behavioral, "load_codex_runtime") as load_codex_runtime:
+            cls.payload = cls._run_main(out, [cls._stats()], responses=[cls._PASSING])
+        cls.codex_adapter_loaded = load_codex_runtime.called
+        cls.sidecar = cls._evidence(out)
+
     def test_conditions_block_records_what_ran(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [self._stats()])
-        conditions = payload["conditions"]
+        conditions = self.payload["conditions"]
         self.assertEqual("opus", conditions["model_requested"])
         self.assertEqual(77, conditions["timeout_s"])
         self.assertEqual(["claude-opus-5"], conditions["models_observed"])
@@ -1640,6 +1691,281 @@ class BenchmarkConditionsTest(unittest.TestCase):
         # contaminated one look identical and would be diffed as if comparable.
         self.assertEqual(False, conditions["clean_room"])
         self.assertEqual(".", conditions["plugin_dir"])
+
+    def test_benchmark_records_source_selection_and_content_plugin_identity(self) -> None:
+        provenance = self.payload["provenance"]
+        self.assertEqual(eval_routing.PROVENANCE_SCHEMA, provenance["schema"])
+        self.assertEqual("tier-gate-holds", provenance["selection"]["expression"])
+        self.assertEqual(["tier-gate-holds"], provenance["selection"]["case_ids"])
+        self.assertRegex(provenance["selection"]["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(["evals/behavioral/contracts.json"], [
+            source["path"] for source in provenance["eval_sources"]
+        ])
+        self.assertRegex(provenance["eval_sources"][0]["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            [
+                "scripts/eval_behavioral.py",
+                "scripts/eval_clean_room.py",
+                "scripts/eval_routing.py",
+                "scripts/packet_lint.py",
+            ],
+            [record["path"] for record in provenance["evaluator"]["files"]],
+        )
+        self.assertRegex(provenance["evaluator"]["sha256"], r"^[0-9a-f]{64}$")
+        self.assertRegex(
+            provenance["evaluator"]["runtime"]["python_version"], r"^\d+\.\d+"
+        )
+        self.assertRegex(provenance["plugin"]["sha256"], r"^[0-9a-f]{64}$")
+        self.assertIsInstance(provenance["plugin"]["git_dirty"], bool)
+
+    def test_default_claude_runtime_does_not_load_codex_adapter(self) -> None:
+        self.assertFalse(self.codex_adapter_loaded)
+        evaluator_files = {
+            record["path"] for record in self.payload["provenance"]["evaluator"]["files"]
+        }
+        self.assertNotIn("scripts/eval_codex_runtime.py", evaluator_files)
+
+    def test_a_batch_with_no_failures_writes_no_evidence_file(self) -> None:
+        self.assertIsNone(self.sidecar)
+        # Stated, not merely absent: "every run passed" and "the text was dropped" are different
+        # facts, and only the first one makes a missing file safe to read as nothing-to-see.
+        self.assertEqual(
+            "none (every run passed)", self.payload["failing_run_evidence"]
+        )
+        # No sidecar, no digest — a labeled null, never a stale or fabricated hash.
+        self.assertIsNone(self.payload["failing_run_evidence_sha256"])
+
+
+class FailingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
+    """Properties of one failing single-run batch, all read from one shared artifact.
+
+    Failing-run retention (lc_2e549c0b): the runner used to read a failing session's text, grade
+    it, and drop it, so deciding whether a red contract was a grader defect or a text defect
+    meant paying for the session a second time -- 22 of the 76 sessions in the 2026-08-10
+    calibration round were that re-buy. These tests pin the narrow retention that makes the call
+    offline, and the boundaries that keep it from becoming a second copy of
+    --retain-run-evidence.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        out = cls._class_output_dir()
+        cls.payload = cls._run_main(out, [cls._stats()], responses=[cls._FAILING])
+        cls.sidecar = cls._evidence(out)
+        sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
+        # Guarded reads: a retention regression must fail as the labeled assertions below, not
+        # as a raw FileNotFoundError attributed to setUpClass.
+        cls.sidecar_bytes = sidecar_path.read_bytes() if sidecar_path.is_file() else None
+        cls.sidecar_mode = sidecar_path.stat().st_mode if sidecar_path.is_file() else None
+
+    def test_failing_run_text_is_retained_beside_the_benchmark(self) -> None:
+        self.assertIsNotNone(self.sidecar)
+        case = next(
+            case
+            for case in eval_behavioral.load_cases("tier-gate-holds")
+            if case["id"] == "tier-gate-holds"
+        )
+        expected_failures = eval_behavioral.assert_case(
+            self._FAILING, case, {"homelab-platform"}
+        )
+        self.assertTrue(expected_failures)
+        self.assertEqual(
+            [{
+                "run_index": 0,
+                "failures": expected_failures,
+                "response": self._FAILING,
+            }],
+            self.sidecar["cases"][0]["failing_runs"],
+        )
+        # It must be able to say what it measured on its own; an evidence file whose conditions
+        # are only in a sibling file is one copy away from being read against the wrong batch.
+        self.assertEqual("opus", self.sidecar["conditions"]["model_requested"])
+        # And identity, not just conditions: conditions can be byte-identical across two plugin
+        # versions, so the sidecar carries the same provenance as its benchmark — a detached
+        # copy stays attributable to the exact evaluated bytes (PR #133 finding).
+        self.assertEqual(self.payload["provenance"], self.sidecar["provenance"])
+        self.assertIn("plugin", self.sidecar["provenance"])
+        # And execution, not just inputs: two batches at the same commit share provenance
+        # byte-for-byte, so the benchmark records the digest of the exact sidecar written with
+        # it — a detached pairing is verifiable in one hash (PR #134 finding).
+        self.assertEqual(
+            hashlib.sha256(self.sidecar_bytes).hexdigest(),
+            self.payload["failing_run_evidence_sha256"],
+        )
+        self.assertIn(
+            eval_behavioral.FAILING_EVIDENCE_FILENAME,
+            self.payload["failing_run_evidence"],
+        )
+        # Placement is the point: the compared artifact does not grow diagnostic prose.
+        self.assertNotIn("run_evidence_per_run", self.payload["cases"][0])
+
+    def test_raw_run_evidence_is_omitted_by_default(self) -> None:
+        self.assertFalse(self.payload["conditions"]["run_evidence_retained"])
+        self.assertNotIn("run_evidence_per_run", self.payload["cases"][0])
+
+    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    def test_failing_evidence_file_is_owner_only(self) -> None:
+        # PR #133 P2: the sidecar is raw model text -- the retained-artifact class the fleet's
+        # own secrets doctrine names as a leak surface -- so a 022 umask must not make it
+        # world-readable.
+        self.assertIsNotNone(self.sidecar_mode)
+        self.assertEqual(0o600, self.sidecar_mode & 0o777)
+
+
+class RunMetricsEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
+    """Metrics-serialization properties of one three-run batch, read from one shared artifact."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        first = cls._stats()
+        second = cls._stats()
+        unknown = cls._stats(tokens=False)
+        first["duration_ms"] = 17
+        second["duration_ms"] = 29
+        unknown["duration_ms"] = None
+        # concurrency=1 because the fake run_session hands stats out via next() in CALL order:
+        # under the default 3-worker pool, identical runs of one case reach next() in scheduler
+        # order, so which stats land on which run_index is a race in the test double, not in the
+        # runner (which stores results keyed by run_index). Serializing pins stats[i] to run i so
+        # the submission-order and null-labeling assertions test the serialization loop, not the
+        # thread scheduler. Flaked on CI 2026-08-14 ([17, 29, None] became [17, None, 29]).
+        out = cls._class_output_dir()
+        cls.payload = cls._run_main(out, [first, second, unknown], concurrency=1)
+
+    def test_run_metrics_preserve_submission_order_and_label_unknowns_null(self) -> None:
+        self.assertEqual([17, 29, None], self.payload["cases"][0]["duration_ms_per_run"])
+
+    def test_usage_is_recorded_per_run(self) -> None:
+        self.assertEqual(
+            [
+                {"input_tokens": 100, "output_tokens": 30},
+                {"input_tokens": 100, "output_tokens": 30},
+                None,
+            ],
+            self.payload["cases"][0]["usage_per_run"],
+        )
+
+
+class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
+    """Sidecar lifecycle across sequential batches reusing one --output-dir.
+
+    One directory, five batches -- failing, passing, passing+failing, failing over a loosened
+    sidecar, passing+failing with --retain-run-evidence -- with the sidecar observed after each
+    step. The stale-file hazards (PR #133 P1) are properties of the sequence, so the sequence
+    runs once and every test reads its recorded steps. All batches run at concurrency 1: the
+    fake run_session hands
+    responses out in CALL order, so under the default 3-worker pool which response lands on
+    which run_index is a scheduler race in the test double -- the same race the run-metrics
+    batch serializes away -- and the executor-seam test in BenchmarkConditionsTest keeps the
+    completion-order regression power this serialization gives up.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        out = cls._class_output_dir()
+        cls._run_main(out, [cls._stats()], responses=[cls._FAILING], concurrency=1)
+        cls.sidecar_after_failing = cls._evidence(out)
+        cls.passing_payload = cls._run_main(
+            out, [cls._stats()], responses=[cls._PASSING], concurrency=1
+        )
+        cls.sidecar_after_passing = cls._evidence(out)
+        cls._run_main(
+            out,
+            [cls._stats(), cls._stats()],
+            responses=[cls._PASSING, cls._FAILING],
+            concurrency=1,
+        )
+        cls.sidecar_after_mixed = cls._evidence(out)
+        # Loosen the surviving sidecar, then run another failing batch over it: the rewrite
+        # branch must tighten a pre-existing regular file back to owner-only BEFORE reopening
+        # it -- O_CREAT's 0600 applies only at creation, so without the explicit chmod in
+        # eval_behavioral the loosened mode would survive the rewrite (PR #133 Copilot
+        # finding; this fail-over-fail reuse path was previously untested).
+        sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
+        os.chmod(sidecar_path, 0o644)
+        cls._run_main(out, [cls._stats()], responses=[cls._FAILING], concurrency=1)
+        cls.sidecar_after_refail = cls._evidence(out)
+        cls.sidecar_mode_after_refail = (
+            sidecar_path.stat().st_mode if sidecar_path.is_file() else None
+        )
+        cls.retain_payload = cls._run_main(
+            out,
+            [cls._stats(), cls._stats()],
+            responses=[cls._PASSING, cls._FAILING],
+            retain_run_evidence=True,
+            concurrency=1,
+        )
+        cls.sidecar_after_retain = cls._evidence(out)
+
+    def test_a_reused_output_dir_does_not_keep_a_stale_evidence_file(self) -> None:
+        # PR #133 P1: benchmark.json is overwritten on --output-dir reuse, but a sidecar from a
+        # previous failing batch would survive beside it -- another run's raw model text sitting
+        # under this run's provenance, while the fresh conditions say the text is absent.
+        self.assertIsNotNone(self.sidecar_after_failing)
+        self.assertIsNone(self.sidecar_after_passing)
+        self.assertEqual(
+            "none (every run passed)", self.passing_payload["failing_run_evidence"]
+        )
+
+    def test_a_passing_run_beside_a_failing_one_is_not_retained(self) -> None:
+        retained = self.sidecar_after_mixed["cases"][0]["failing_runs"]
+        self.assertEqual([1], [run["run_index"] for run in retained])
+        self.assertNotIn(
+            self._PASSING, json.dumps(self.sidecar_after_mixed),
+            msg="a passing run's text has no diagnostic consumer; retaining it only widens "
+                "the sensitive-output surface",
+        )
+
+    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    def test_a_failing_rewrite_over_a_loosened_sidecar_restores_owner_only(self) -> None:
+        self.assertIsNotNone(self.sidecar_after_refail)
+        self.assertIsNotNone(self.sidecar_mode_after_refail)
+        self.assertEqual(0o600, self.sidecar_mode_after_refail & 0o777)
+
+    def test_a_retain_rerun_also_clears_the_stale_evidence_file(self) -> None:
+        # Same reuse hazard, other exit: a --retain-run-evidence rerun embeds the failing text in
+        # benchmark.json, so a surviving sidecar would be a second, stale copy. The pre-condition
+        # reads the refail step, the batch immediately before the retain rerun.
+        self.assertIsNotNone(self.sidecar_after_refail)
+        self.assertIsNone(self.sidecar_after_retain)
+
+    def test_retain_run_evidence_supersedes_the_separate_file(self) -> None:
+        self.assertIsNone(
+            self.sidecar_after_retain,
+            msg="--retain-run-evidence already stores every failing response in "
+                "benchmark.json; a second on-disk copy is drift waiting to happen",
+        )
+        self.assertIn("benchmark.json", self.retain_payload["failing_run_evidence"])
+        self.assertEqual(
+            self._FAILING,
+            self.retain_payload["cases"][0]["run_evidence_per_run"][1]["response"],
+        )
+
+    def test_opt_in_run_evidence_records_response_and_failures_in_order(self) -> None:
+        case = next(
+            case
+            for case in eval_behavioral.load_cases("tier-gate-holds")
+            if case["id"] == "tier-gate-holds"
+        )
+        expected_failures = eval_behavioral.assert_case(
+            self._FAILING, case, {"homelab-platform"}
+        )
+        self.assertTrue(expected_failures)
+        self.assertTrue(self.retain_payload["conditions"]["run_evidence_retained"])
+        self.assertEqual(
+            [
+                {"response": self._PASSING, "failures": []},
+                {"response": self._FAILING, "failures": expected_failures},
+            ],
+            self.retain_payload["cases"][0]["run_evidence_per_run"],
+        )
+
+
+class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
+    """Batch behaviors whose conditions are unique to one test, so each pays for its own run."""
 
     def test_functional_evidence_is_serialized_without_raw_model_output(self) -> None:
         case = next(
@@ -1712,46 +2038,6 @@ class BenchmarkConditionsTest(unittest.TestCase):
             [evidence], payload["cases"][0]["semantic_evidence_per_run"]
         )
 
-    def test_benchmark_records_source_selection_and_content_plugin_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [self._stats()])
-        provenance = payload["provenance"]
-        self.assertEqual(eval_routing.PROVENANCE_SCHEMA, provenance["schema"])
-        self.assertEqual("tier-gate-holds", provenance["selection"]["expression"])
-        self.assertEqual(["tier-gate-holds"], provenance["selection"]["case_ids"])
-        self.assertRegex(provenance["selection"]["sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(["evals/behavioral/contracts.json"], [
-            source["path"] for source in provenance["eval_sources"]
-        ])
-        self.assertRegex(provenance["eval_sources"][0]["sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(
-            [
-                "scripts/eval_behavioral.py",
-                "scripts/eval_clean_room.py",
-                "scripts/eval_routing.py",
-                "scripts/packet_lint.py",
-            ],
-            [record["path"] for record in provenance["evaluator"]["files"]],
-        )
-        self.assertRegex(provenance["evaluator"]["sha256"], r"^[0-9a-f]{64}$")
-        self.assertRegex(
-            provenance["evaluator"]["runtime"]["python_version"], r"^\d+\.\d+"
-        )
-        self.assertRegex(provenance["plugin"]["sha256"], r"^[0-9a-f]{64}$")
-        self.assertIsInstance(provenance["plugin"]["git_dirty"], bool)
-
-    def test_default_claude_runtime_does_not_load_codex_adapter(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime"
-        ) as load_codex_runtime:
-            payload = self._run_main(Path(tmp), [self._stats()])
-
-        load_codex_runtime.assert_not_called()
-        evaluator_files = {
-            record["path"] for record in payload["provenance"]["evaluator"]["files"]
-        }
-        self.assertNotIn("scripts/eval_codex_runtime.py", evaluator_files)
-
     def test_behavioral_runner_and_imported_graders_use_registered_compiled_buffers(self) -> None:
         paths = eval_behavioral.behavioral_evaluator_paths()
         first = eval_routing.evaluator_identity(paths)
@@ -1817,153 +2103,6 @@ class BenchmarkConditionsTest(unittest.TestCase):
 
         self.assertEqual(0, code)
 
-    def test_usage_is_recorded_per_run(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [self._stats(), self._stats()])
-        case = payload["cases"][0]
-        self.assertEqual(
-            [{"input_tokens": 100, "output_tokens": 30}] * 2, case["usage_per_run"]
-        )
-
-    def test_raw_run_evidence_is_omitted_by_default(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(
-                Path(tmp),
-                [self._stats()],
-                responses=["private diagnostic response"],
-            )
-        self.assertFalse(payload["conditions"]["run_evidence_retained"])
-        self.assertNotIn("run_evidence_per_run", payload["cases"][0])
-
-    def test_opt_in_run_evidence_records_response_and_failures_in_order(self) -> None:
-        passing = (
-            "Approval is required before I apply. I will prepare an effect-bound request "
-            "for the operator-owned mediator."
-        )
-        failing = "I will proceed."
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(
-                Path(tmp),
-                [self._stats(), self._stats()],
-                responses=[passing, failing],
-                retain_run_evidence=True,
-            )
-        case = next(
-            case
-            for case in eval_behavioral.load_cases("tier-gate-holds")
-            if case["id"] == "tier-gate-holds"
-        )
-        expected_failures = eval_behavioral.assert_case(
-            failing, case, {"homelab-platform"}
-        )
-        self.assertTrue(expected_failures)
-        self.assertTrue(payload["conditions"]["run_evidence_retained"])
-        self.assertEqual(
-            [
-                {"response": passing, "failures": []},
-                {"response": failing, "failures": expected_failures},
-            ],
-            payload["cases"][0]["run_evidence_per_run"],
-        )
-
-    # --- failing-run retention (lc_2e549c0b) ---------------------------------------------------
-    # The runner used to read a failing session's text, grade it, and drop it, so deciding whether
-    # a red contract was a grader defect or a text defect meant paying for the session a second
-    # time -- 22 of the 76 sessions in the 2026-08-10 calibration round were that re-buy. These
-    # tests pin the narrow retention that makes the call offline, and the two boundaries that keep
-    # it from becoming a second copy of --retain-run-evidence.
-
-    _PASSING = (
-        "Approval is required before I apply. I will prepare an effect-bound request "
-        "for the operator-owned mediator."
-    )
-    _FAILING = "I will proceed."
-
-    def _evidence(self, tmp: Path) -> dict | None:
-        path = tmp / eval_behavioral.FAILING_EVIDENCE_FILENAME
-        if not path.exists():
-            return None
-        return json.loads(path.read_text(encoding="utf-8"))
-
-    def test_failing_run_text_is_retained_beside_the_benchmark(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(
-                Path(tmp), [self._stats()], responses=[self._FAILING],
-            )
-            evidence = self._evidence(Path(tmp))
-            sidecar_bytes = (
-                Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
-            ).read_bytes()
-        self.assertIsNotNone(evidence)
-        case = next(
-            case
-            for case in eval_behavioral.load_cases("tier-gate-holds")
-            if case["id"] == "tier-gate-holds"
-        )
-        expected_failures = eval_behavioral.assert_case(
-            self._FAILING, case, {"homelab-platform"}
-        )
-        self.assertTrue(expected_failures)
-        self.assertEqual(
-            [{
-                "run_index": 0,
-                "failures": expected_failures,
-                "response": self._FAILING,
-            }],
-            evidence["cases"][0]["failing_runs"],
-        )
-        # It must be able to say what it measured on its own; an evidence file whose conditions
-        # are only in a sibling file is one copy away from being read against the wrong batch.
-        self.assertEqual("opus", evidence["conditions"]["model_requested"])
-        # And identity, not just conditions: conditions can be byte-identical across two plugin
-        # versions, so the sidecar carries the same provenance as its benchmark — a detached
-        # copy stays attributable to the exact evaluated bytes (PR #133 finding).
-        self.assertEqual(payload["provenance"], evidence["provenance"])
-        self.assertIn("plugin", evidence["provenance"])
-        # And execution, not just inputs: two batches at the same commit share provenance
-        # byte-for-byte, so the benchmark records the digest of the exact sidecar written with
-        # it — a detached pairing is verifiable in one hash (PR #134 finding).
-        self.assertEqual(
-            hashlib.sha256(sidecar_bytes).hexdigest(),
-            payload["failing_run_evidence_sha256"],
-        )
-        self.assertIn(
-            eval_behavioral.FAILING_EVIDENCE_FILENAME,
-            payload["failing_run_evidence"],
-        )
-        # Placement is the point: the compared artifact does not grow diagnostic prose.
-        self.assertNotIn("run_evidence_per_run", payload["cases"][0])
-
-    def test_a_batch_with_no_failures_writes_no_evidence_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(
-                Path(tmp), [self._stats()], responses=[self._PASSING],
-            )
-            self.assertIsNone(self._evidence(Path(tmp)))
-        # Stated, not merely absent: "every run passed" and "the text was dropped" are different
-        # facts, and only the first one makes a missing file safe to read as nothing-to-see.
-        self.assertEqual(
-            "none (every run passed)", payload["failing_run_evidence"]
-        )
-        # No sidecar, no digest — a labeled null, never a stale or fabricated hash.
-        self.assertIsNone(payload["failing_run_evidence_sha256"])
-
-    def test_a_passing_run_beside_a_failing_one_is_not_retained(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            self._run_main(
-                Path(tmp),
-                [self._stats(), self._stats()],
-                responses=[self._PASSING, self._FAILING],
-            )
-            evidence = self._evidence(Path(tmp))
-        retained = evidence["cases"][0]["failing_runs"]
-        self.assertEqual([1], [run["run_index"] for run in retained])
-        self.assertNotIn(
-            self._PASSING, json.dumps(evidence),
-            msg="a passing run's text has no diagnostic consumer; retaining it only widens "
-                "the sensitive-output surface",
-        )
-
     def test_a_failed_sidecar_write_withholds_the_benchmark(self) -> None:
         # PR #133 P2: sidecar before benchmark. If the evidence file cannot be written, no
         # benchmark may exist whose failing_run_evidence field claims text this batch never
@@ -1993,61 +2132,6 @@ class BenchmarkConditionsTest(unittest.TestCase):
             # exactly when inspection is needed. Only a regular file gets tightened.
             self.assertEqual(mode_before, mode_after)
 
-    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
-    def test_failing_evidence_file_is_owner_only(self) -> None:
-        # PR #133 P2: the sidecar is raw model text -- the retained-artifact class the fleet's
-        # own secrets doctrine names as a leak surface -- so a 022 umask must not make it
-        # world-readable.
-        with tempfile.TemporaryDirectory() as tmp:
-            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
-            mode = (
-                Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
-            ).stat().st_mode
-        self.assertEqual(0o600, mode & 0o777)
-
-    def test_a_reused_output_dir_does_not_keep_a_stale_evidence_file(self) -> None:
-        # PR #133 P1: benchmark.json is overwritten on --output-dir reuse, but a sidecar from a
-        # previous failing batch would survive beside it -- another run's raw model text sitting
-        # under this run's provenance, while the fresh conditions say the text is absent.
-        with tempfile.TemporaryDirectory() as tmp:
-            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
-            self.assertIsNotNone(self._evidence(Path(tmp)))
-            payload = self._run_main(Path(tmp), [self._stats()], responses=[self._PASSING])
-            self.assertIsNone(self._evidence(Path(tmp)))
-        self.assertEqual(
-            "none (every run passed)", payload["failing_run_evidence"]
-        )
-
-    def test_a_retain_rerun_also_clears_the_stale_evidence_file(self) -> None:
-        # Same reuse hazard, other exit: a --retain-run-evidence rerun embeds the failing text in
-        # benchmark.json, so a surviving sidecar would be a second, stale copy.
-        with tempfile.TemporaryDirectory() as tmp:
-            self._run_main(Path(tmp), [self._stats()], responses=[self._FAILING])
-            self.assertIsNotNone(self._evidence(Path(tmp)))
-            self._run_main(
-                Path(tmp), [self._stats()], responses=[self._FAILING],
-                retain_run_evidence=True,
-            )
-            self.assertIsNone(self._evidence(Path(tmp)))
-
-    def test_retain_run_evidence_supersedes_the_separate_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(
-                Path(tmp),
-                [self._stats()],
-                responses=[self._FAILING],
-                retain_run_evidence=True,
-            )
-            self.assertIsNone(
-                self._evidence(Path(tmp)),
-                msg="--retain-run-evidence already stores every failing response in "
-                    "benchmark.json; a second on-disk copy is drift waiting to happen",
-            )
-        self.assertIn("benchmark.json", payload["failing_run_evidence"])
-        self.assertEqual(
-            self._FAILING, payload["cases"][0]["run_evidence_per_run"][0]["response"]
-        )
-
     def test_run_evidence_retention_requires_an_output_directory(self) -> None:
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
             eval_behavioral, "run_session"
@@ -2058,26 +2142,108 @@ class BenchmarkConditionsTest(unittest.TestCase):
         self.assertEqual(2, code)
         run_session.assert_not_called()
 
-    def test_duration_is_recorded_per_run_in_submission_order(self) -> None:
+    def test_serialization_orders_by_run_index_not_completion_order(self) -> None:
+        # The companion to the concurrency=1 batches in RunMetricsEvidenceTest and
+        # OutputDirReuseSequenceTest, restoring the regression power that
+        # serializing costs: at concurrency 1 an implementation that appended results in
+        # completion order would pass, because completion order equals submission order. The
+        # run_session seam cannot carry run identity (every run of a case shares every argument),
+        # so this test patches the EXECUTOR seam, where the (case, run_index) job is visible: a
+        # synchronous pool executes each job at submit time (binding the fake stats to run_index
+        # deterministically, in submission order), and a patched wait() hands the finished
+        # futures back REVERSED — exactly the completion-order scramble the runner must survive.
+        # Mutation-proven: collecting in wait-return order grades [None, 29, 17].
+        #
+        # Every serialized array is asserted here — durations, usage, sidecar failing_runs, and
+        # (in a second, retain batch) run_evidence_per_run. Today all four derive from the same
+        # submission-order loop, so scrambling one scrambles all — but that safety is a property
+        # of the implementation, not the suite: a refactor collecting any ONE of them in the
+        # wait loop (completion order) would pass a durations-only version of this test and the
+        # concurrency-1 batches alike, and land silently.
         first = self._stats()
         second = self._stats()
+        unknown = self._stats(tokens=False)
         first["duration_ms"] = 17
         second["duration_ms"] = 29
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [first, second])
-        self.assertEqual([17, 29], payload["cases"][0]["duration_ms_per_run"])
+        unknown["duration_ms"] = None
 
-    def test_unavailable_duration_is_labeled_null_not_zero(self) -> None:
-        stats = self._stats()
-        stats["duration_ms"] = None
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [stats])
-        self.assertEqual([None], payload["cases"][0]["duration_ms_per_run"])
+        class SyncPool:
+            def __init__(self, max_workers: int) -> None:
+                del max_workers
 
-    def test_unavailable_usage_is_labeled_null_not_zero(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = self._run_main(Path(tmp), [self._stats(tokens=False)])
-        self.assertEqual([None], payload["cases"][0]["usage_per_run"])
+            def submit(self, fn, *args) -> concurrent.futures.Future:
+                future: concurrent.futures.Future = concurrent.futures.Future()
+                try:
+                    future.set_result(fn(*args))
+                except BaseException as exc:  # surfaced to the collector, as a real pool would
+                    future.set_exception(exc)
+                return future
+
+            def shutdown(self, wait: bool = True, cancel_futures: bool = False) -> None:
+                del wait, cancel_futures
+
+        def reversed_wait(futures, return_when=None):
+            del return_when
+            return list(reversed(list(futures))), set()
+
+        real_pool = concurrent.futures.ThreadPoolExecutor
+        real_wait = concurrent.futures.wait
+        concurrent.futures.ThreadPoolExecutor = SyncPool  # type: ignore[misc]
+        concurrent.futures.wait = reversed_wait  # type: ignore[assignment]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                plain = self._run_main(
+                    Path(tmp),
+                    [first, second, unknown],
+                    responses=[self._PASSING, self._FAILING, self._FAILING],
+                )
+                sidecar = self._evidence(Path(tmp))
+            with tempfile.TemporaryDirectory() as tmp:
+                retained = self._run_main(
+                    Path(tmp),
+                    [self._stats(), self._stats(), self._stats()],
+                    responses=[self._PASSING, self._FAILING, self._FAILING],
+                    retain_run_evidence=True,
+                )
+        finally:
+            concurrent.futures.ThreadPoolExecutor = real_pool  # type: ignore[misc]
+            concurrent.futures.wait = real_wait  # type: ignore[assignment]
+        case = plain["cases"][0]
+        self.assertEqual([17, 29, None], case["duration_ms_per_run"])
+        self.assertEqual(
+            [
+                {"input_tokens": 100, "output_tokens": 30},
+                {"input_tokens": 100, "output_tokens": 30},
+                None,
+            ],
+            case["usage_per_run"],
+        )
+        contract = next(
+            case
+            for case in eval_behavioral.load_cases("tier-gate-holds")
+            if case["id"] == "tier-gate-holds"
+        )
+        expected_failures = eval_behavioral.assert_case(
+            self._FAILING, contract, {"homelab-platform"}
+        )
+        self.assertTrue(expected_failures)
+        # Two identical failing runs: run_index alone must carry the order, which is exactly
+        # what a completion-order collector under the reversed wait() gets backwards.
+        self.assertEqual(
+            [
+                {"run_index": 1, "failures": expected_failures, "response": self._FAILING},
+                {"run_index": 2, "failures": expected_failures, "response": self._FAILING},
+            ],
+            sidecar["cases"][0]["failing_runs"],
+        )
+        self.assertEqual(
+            [
+                {"response": self._PASSING, "failures": []},
+                {"response": self._FAILING, "failures": expected_failures},
+                {"response": self._FAILING, "failures": expected_failures},
+            ],
+            retained["cases"][0]["run_evidence_per_run"],
+        )
 
     def test_behavioral_batch_aborts_auth_failure_without_writing_benchmark(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2286,139 +2452,84 @@ class CodexRuntimeIntegrationTest(unittest.TestCase):
         auth.assert_not_called()
         run.assert_not_called()
 
-    def test_invalid_generated_profile_refuses_before_auth_or_session(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            profile = root / ".codex" / "agents" / "homelab-platform.toml"
-            profile.parent.mkdir(parents=True)
-            profile.write_text(
-                "\n".join((
-                    'name = "homelab-platform"',
-                    'description = "probe"',
-                    'sandbox_mode = "read-only"',
-                    'developer_instructions = "probe"',
-                    'model = "silently dropped"',
-                )),
-                encoding="utf-8",
-            )
-            with mock.patch.object(
-                eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-            ), mock.patch.object(
-                eval_codex_runtime, "CODEX", "codex"
-            ), mock.patch.object(
-                eval_codex_runtime, "auth_provider_mode"
-            ) as auth, mock.patch.object(
-                eval_codex_runtime, "run_session"
-            ) as run:
-                code = eval_behavioral.main([
+    def test_codex_preflight_failures_refuse_before_auth_or_session(self) -> None:
+        cases = (
+            ("invalid-profile", "invalid", "gpt-5.6-terra", None),
+            ("missing-profile", "missing", "gpt-5.6-terra", None),
+            (
+                "ambient-instructions",
+                None,
+                "gpt-5.6-terra",
+                ("clean", "instruction-clean CODEX_HOME required"),
+            ),
+            (
+                "unsupported-cli",
+                None,
+                "gpt-5.6-terra",
+                ("cli", "unsupported Codex CLI"),
+            ),
+            ("blank-model", None, " ", None),
+        )
+        for name, profile_state, model, injected_failure in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                argv = [
                     "--runtime", "codex",
                     "--case", "handoff-simple-build-stays-short",
-                    "--model", "gpt-5.6-terra",
+                    "--model", model,
                     "--reasoning-effort", "medium",
-                    "--plugin-dir", str(root),
-                    "--output-dir", str(root / "output"),
-                ])
+                ]
+                if profile_state is not None:
+                    argv += ["--plugin-dir", str(root)]
+                if profile_state == "invalid":
+                    profile = root / ".codex" / "agents" / "homelab-platform.toml"
+                    profile.parent.mkdir(parents=True)
+                    profile.write_text(
+                        "\n".join((
+                            'name = "homelab-platform"',
+                            'description = "probe"',
+                            'sandbox_mode = "read-only"',
+                            'developer_instructions = "probe"',
+                            'model = "silently dropped"',
+                        )),
+                        encoding="utf-8",
+                    )
 
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
+                with contextlib.ExitStack() as stack:
+                    failure_check = None
+                    stack.enter_context(mock.patch.object(
+                        eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
+                    ))
+                    stack.enter_context(mock.patch.object(eval_codex_runtime, "CODEX", "codex"))
+                    if injected_failure is not None:
+                        stage, message = injected_failure
+                        target = (
+                            "assert_clean_subscription_context"
+                            if stage == "clean"
+                            else "require_supported_cli"
+                        )
+                        if stage == "cli":
+                            stack.enter_context(mock.patch.object(
+                                eval_codex_runtime, "assert_clean_subscription_context"
+                            ))
+                        failure_check = stack.enter_context(mock.patch.object(
+                            eval_codex_runtime,
+                            target,
+                            side_effect=eval_codex_runtime.CodexRuntimeError(message),
+                        ))
+                    auth = stack.enter_context(mock.patch.object(
+                        eval_codex_runtime, "auth_provider_mode"
+                    ))
+                    run = stack.enter_context(mock.patch.object(
+                        eval_codex_runtime, "run_session"
+                    ))
+                    code = eval_behavioral.main(argv)
 
-    def test_missing_generated_profile_refuses_before_auth_or_session(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--plugin-dir", tmp,
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_ambient_codex_home_instructions_refuse_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "assert_clean_subscription_context",
-            side_effect=eval_codex_runtime.CodexRuntimeError(
-                "instruction-clean CODEX_HOME required"
-            ),
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_unsupported_cli_refuses_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "require_supported_cli",
-            side_effect=eval_codex_runtime.CodexRuntimeError("unsupported Codex CLI"),
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_blank_model_refuses_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--model", " ",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
+                self.assertEqual(2, code)
+                if failure_check is not None:
+                    failure_check.assert_called_once()
+                auth.assert_not_called()
+                run.assert_not_called()
 
     def test_subscription_failure_does_not_start_second_serial_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
