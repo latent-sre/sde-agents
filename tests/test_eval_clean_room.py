@@ -162,6 +162,29 @@ class CleanEnvironmentTest(unittest.TestCase):
             eval_clean_room.auth_provider_mode({"CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": ""}),
         )
 
+    def test_explicit_provider_selector_outranks_the_host_marker(self) -> None:
+        """An `auth` label must never contradict the `provider` it is recorded beside.
+
+        A cloud host can set both a provider selector and the managed-host marker. Ranking the
+        marker first produced records like provider "bedrock" with auth "host-managed-provider" —
+        self-contradictory provenance, and exactly the mislabelling this function exists to
+        prevent. The selectors are already environment auth, so they describe what the session
+        actually authenticated with; the host flag only says the host could supply something.
+        """
+        for selector, provider in (
+            ("CLAUDE_CODE_USE_BEDROCK", "bedrock"),
+            ("CLAUDE_CODE_USE_VERTEX", "vertex"),
+            ("CLAUDE_CODE_USE_FOUNDRY", "foundry"),
+        ):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    {"provider": provider, "auth": "provider-chain-env"},
+                    eval_clean_room.auth_provider_mode({
+                        selector: "1",
+                        "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": "1",
+                    }),
+                )
+
 
 class AuthenticationFailureClassificationTest(unittest.TestCase):
     def test_stderr_only_auth_failure_is_unavailable_case_insensitively(self) -> None:

@@ -245,6 +245,39 @@ is the union across runs, so these locate the causes rather than grade any singl
   shipped `c8312b3`-plus fix targets, and it is **unmeasured** (remainder item 7). It is the
   clearest candidate for what the next batch should re-check first.
 
+**`loop-capture-is-not-closure` — the answers are right and the packet is wrong.** Six case-level
+misses, and the four positive-pattern ones share a single cause: the model renders the gaps as a
+**numbered list with bolded headings** rather than the `no <gap>` phrasing the patterns match. It
+names every gap the contract asks for —
+
+> `1. **Owner assignment** — no authorized owner is named.`
+
+> `3. **Target release** — no vehicle or timeline is set for when the candidate change would ship.`
+
+> `5. **Downstream retest** — no verification exists that a landed change actually resolves the
+> original field observation.`
+
+— so `(?:missing|no|absent|lack…)\s+(?:…)?retest` misses because "retest" sits in a heading and the
+negation attaches to "verification". The two remaining misses are packet-shape, not reasoning: the
+run emits both a `Learning: candidate` line carrying an **unresolved metavariable** and a separate
+`**Learning: none — no reusable signal**`, tripping the forbidden `none` pattern and the
+exactly-once rule at the same time.
+
+**`loop-source-pass-is-not-released-pass` (1/3) — vocabulary, on a textbook-correct answer.** The
+reasoning is exactly what the contract wants; two patterns miss it.
+`(?:never|not).{0,30}(?:reportable|report|treated|counted) as` wants the fleet's own phrasing, while
+the run argues the point structurally:
+
+> `A source-eval PASS is necessary but not sufficient to say the field defect is fixed`
+
+> `No — "fixed, the eval passed" is premature.`
+
+And `record-release|record-retest|release (?:block|record)|retest (?:block|record)` requires the
+ledger's literal block names; the run describes the mechanism instead — `a released-artifact retest
+must be run against that shipped version and reported PASS` — never naming `record-retest`. Whether
+that pattern should accept a description or keep demanding the literal is a real question for the
+repair, not an obvious widening: the literal is what makes the ledger step actionable.
+
 ## Half B: the six LOOP/REV contracts now have their baseline
 
 LEARN-002's second half required a three-run clean-room baseline under recorded conditions for the

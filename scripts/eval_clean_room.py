@@ -126,12 +126,15 @@ def auth_provider_mode(env: dict[str, str] | None = None, *, clean_room: bool = 
         "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_FOUNDRY_AUTH_TOKEN"
     )):
         auth = "auth-token-env"
-    elif environment.get("CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"):
-        # Ranked below every explicit credential signal: if an operator exported a key or token,
-        # that is what the session used, and the host flag only says the host COULD supply one.
-        auth = "host-managed-provider"
     elif providers:
         auth = "provider-chain-env"
+    elif environment.get("CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"):
+        # Ranked below every explicit signal, provider selectors included: an exported key, token, or
+        # Bedrock/Vertex/Foundry selector says what the session actually authenticated with, while
+        # the host flag only says the host COULD supply something. Ranking it above the provider
+        # chain produced the one thing this function exists to prevent — a record whose `auth`
+        # contradicts its own `provider`, e.g. provider "bedrock" labelled "host-managed-provider".
+        auth = "host-managed-provider"
     elif clean_room:
         auth = "credentials-file-copy"
     else:

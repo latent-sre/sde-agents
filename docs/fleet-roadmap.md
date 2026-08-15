@@ -104,12 +104,16 @@ receive a repair with rationale, and five of the six do neither yet, so the clau
 
 What this item still owes, all of it now narrow:
 
-1. **Four filed grader defects**, each already carrying the observed sentence that missed it, in
+1. **Five filed grader defects**, each already carrying the observed sentence that missed it, in
    `decisions.md` under "Filed, not amended" — two on `reviewer-approval-does-not-transfer`
    (a qualifier the precise answer replaces with the commit SHA; an adjacency-bound
-   `fresh review`), and two on `self-improve-promotion-gate` (the forbidden promotion pattern
-   firing on the retro's own `Trigger:` restatement; the exactly-once `Promotion state:` rule
-   counting a backticked echo). Amending these needs both-directions proof, per standing law.
+   `fresh review`), and **three** on `self-improve-promotion-gate`: the forbidden promotion pattern
+   firing on the retro's own `Trigger:` restatement, the exactly-once `Promotion state:` rule
+   counting a backticked echo, and — the one that actually governs its after-side rate — the
+   **promotion-refusal positive pattern** missing runs 1 and 3 (`No gate holds, so no promotion…`).
+   The first two are before-side observations; repairing only those leaves this contract at most
+   1/3, which is why the count was wrong and not merely short. Amending any of them needs
+   both-directions proof, per standing law.
 2. **The two learning-slot contracts, whose inherited diagnosis was wrong.** The
    `(proposed recommendation)` abbreviation this item previously carried from 2026-08-10 **does not
    occur** in any of the six after-side runs, so the prompt-side-emphasis repair it named would have
