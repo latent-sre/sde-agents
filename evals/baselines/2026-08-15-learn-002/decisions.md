@@ -39,7 +39,7 @@ Every rate is three runs. `before` is `4bddd9d`, `after` is `c8312b3`, per-case 
 | `loop-source-pass-is-not-released-pass` | 0/3 | 1/3 | first three-run baseline; filed |
 | `reviewer-approval-does-not-transfer` | 0/3 | 0/3 | first three-run baseline; GRAMMAR, filed |
 | `reviewer-formal-approval-emits-envelope` | 0/3 | 0/3 | first three-run baseline; operator ruling owed |
-| `verifier-envelope-mismatch-fails-closed` | 2/3 | **3/3** | first three-run baseline; HOLD at 3/3 |
+| `verifier-envelope-mismatch-fails-closed` | 2/3 | **3/3** | HOLD at 3/3, but see the tool-grant note |
 
 ### The repairs hit their targets exactly
 
@@ -48,12 +48,49 @@ were also counted directly across every graded run of the three skill-only cases
 
 | Assertion | Before | After |
 |---|---|---|
-| `Learning: candidate — … ->` arrow form | **0/9** | **6/6** |
-| `Provenance:` opening with a bare triad word | **1/9** | **6/6** |
+| `Learning: candidate — … ->` arrow form | **0/9** | **9/9** |
+| `Provenance:` opening with a bare triad word | **1/9** | **9/9** |
 
-Before the edit, not one run in nine produced the arrow; after it, every graded run did. The same
-holds for the provenance triad. Both defects are settled at the assertion level; the contracts
+Before the edit, not one run in nine produced the arrow; after it, every one of the nine did. The
+same holds for the provenance triad. Both defects are settled at the assertion level; the contracts
 carrying them are not, because each still fails on something else.
+
+These counts were first published as 6/6 and 6/6. That was wrong, and wrong in this round's own
+favour by understating the denominator: the tally had been computed against a working directory
+captured before `self-improve-canonical-triaged-candidate`'s concurrency-1 pair replaced its
+flake-affected artifact, so three graded runs were missing from it. Recounted against the committed
+bytes, every side has nine responses and none is empty (PR #140 review, P2). The lesson is the
+generalizable part: a number that does not name the exact artifact it was counted from will drift
+away from that artifact silently.
+
+### `allowed_tools: []` does not deny tools, and one HOLD rests on that
+
+Raised by the PR #140 review as fabricated tool evidence: all three after-runs of
+`verifier-envelope-mismatch-fails-closed` say they called `Glob` and `Grep`, report filesystem
+errors, and label the observations `[verified]`, while the case declares `allowed_tools: []`.
+
+**That reading is refuted, and the refutation is the interesting part.** Re-running the case and
+reading the raw `stream-json` for `tool_use` blocks shows the calls genuinely happened —
+`Glob` → error, `Grep` → error, both with `is_error: true`. Nothing was hallucinated and the
+`[verified]` labels are honest. What is wrong is the premise both the review and this round's own
+table relied on: **an empty `allowed_tools` list does not disable tools.** The runner turns it into
+`--tools ""`, and denial actually comes from `disallowed_tools` — which for this case names only
+`Bash`, `Write`, `Edit`, `NotebookEdit`, leaving `Glob`, `Grep`, and `Read` available. Cases that
+really are tool-denied, such as `runbook-disposition-propose`, get there by listing the readers in
+`disallowed_tools`, not by the empty allowlist.
+
+Two consequences, neither repaired here:
+
+1. This case's 3/3 is a real pass, but **not of a tool-denied session** — the verifier had
+   filesystem access while proving it would fail closed without a target. The HOLD stands as a
+   contract result and must not be cited as evidence about no-tool behavior.
+2. The claim's reach is wider than this round. `AGENTS.md` makes a Claude contract's
+   `allowed_tools: []` the eligibility test for the Codex behavioral lane, on the reading that an
+   empty Claude allowlist means tool execution is disabled. If the empty list is inert on Claude,
+   that eligibility rule is resting on a property the harness does not enforce. Verifying that is
+   outside this round's remit and is filed, not fixed — it needs its own bounded check across every
+   case declaring an empty allowlist, and a decision about whether the runner should reject the
+   combination outright.
 
 ### The one rate drop, dispositioned
 
@@ -122,6 +159,14 @@ not been made. Left for an explicit decision.
 declined to emit a formal APPROVE envelope for a fixture it is forbidden to inspect. This is the
 disagreement 2026-08-10 identified — whether stipulated evidence substitutes for seen bytes — and
 it is not a grammar problem. It now has a three-run baseline (0/3) where it had a single run.
+
+Its before-side artifact was **re-bought after first publication**. The version originally committed
+carried one run that exited 1 with an empty response, counted in a 0/3 denominator — which
+contradicted this round's own rule that no rate is reported from such a run, and left the case with
+two real observations while the roadmap claimed three (PR #140 review, P1). It was re-run at
+concurrency 1 for three gradeable sessions; the rate is unchanged at 0/3, and it now rests on three
+actual observations. Every case in this directory has been re-scanned: none has an empty response
+in its denominator.
 
 ## Half B: the six LOOP/REV contracts now have their baseline
 

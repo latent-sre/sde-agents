@@ -224,10 +224,12 @@ The decision lines are a machine-readable handoff contract. In a full retro or a
 decision, render the canonical candidate block on literal lines beginning `Learning: candidate`,
 `Evidence:`, `Scope:`, `Provenance:`, `Learning disposition:`, `Promotion state:`, `Destination:`,
 and `Owner:` before explaining it. The `Learning:` line takes one of two literal value forms, and
-they are the whole vocabulary of that field:
+they are the whole vocabulary of that field — the no-signal form is a fixed string, not a slot for
+your own reason, because `scripts/packet_lint.py` accepts exactly that sentence and rejects every
+other `none` value:
 
 ```text
-Learning: none — <reason>
+Learning: none — no reusable signal
 Learning: candidate — <observed -> expected>
 Provenance: <verified|sourced|unverified> — <source and freshness detail>
 ```
@@ -240,7 +242,9 @@ detail, never in front of it. `Provenance: local, verified — 2026-08-15` is a 
 candidate form carries the **divergence**, not the rule drawn from it. A well-formed rule in
 that slot — "generated adapters must be verified before promotion" — is still a malformed packet,
 because the one thing this field exists to record is what actually diverged from what was expected;
-the rule it implies belongs in `Destination:` and the prose below the block. This is the literal
+the rule it implies belongs in the prose below the block. It does **not** belong on `Destination:`,
+which names the exact artifact that must change — a rule sentence there is substantive enough to
+pass the linter while leaving the receiving coordinator with nothing to edit. This is the literal
 form the receiving agents and `scripts/packet_lint.py` read, so a paraphrase of it is a dropped
 handoff rather than a style difference. Put exactly one selected learning disposition on
 `Learning disposition:`; alternatives may be discussed only in prose. Put exactly one compatible,

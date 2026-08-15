@@ -92,7 +92,10 @@ measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/),
 capture template taught `local` as a Provenance value while the canonical block requires the triad
 word), and add-vs-merge. The two measured assertions moved 0/9 → 6/6 and 1/9 → 6/6 across graded
 runs. **The six LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both
-sides**, so that clause of Acceptance is met and their first-contact single runs are superseded.
+sides**, superseding their first-contact single runs — but that satisfies only the *baseline* half
+of their Acceptance clause. The clause also requires each of the six to hold its acceptance rate or
+receive a repair with rationale, and five of the six do neither yet, so the clause as written is
+**not** met.
 
 What this item still owes, all of it now narrow:
 
@@ -111,6 +114,23 @@ What this item still owes, all of it now narrow:
 4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
    `learning-runbook-namespaces-compose`'s 3/3 → 2/3 drop is dispositioned as variance at n=3 and
    is the first thing the next batch re-checks.
+5. **Five of the six LOOP-001/REV-001 contracts are baselined but unsettled**, and each still owes
+   a hold or a repair with rationale before its half closes — they are named here because this file
+   is the only live tracker, and a remainder list that omits them lets a later session close
+   LEARN-002 with them red: `loop-capture-is-not-closure` (0/3), `loop-duplicate-merges-provenance`
+   (0/3, GRAMMAR causes quoted in `decisions.md`), `loop-source-pass-is-not-released-pass` (1/3),
+   `reviewer-approval-does-not-transfer` (0/3, item 1 above), and
+   `reviewer-formal-approval-emits-envelope` (0/3, item 3 above). The sixth,
+   `verifier-envelope-mismatch-fails-closed`, holds at 3/3 — with the caveat in item 6.
+6. **`allowed_tools: []` does not deny tools**, discovered in the PR #140 review round and verified
+   by reading `tool_use` blocks from a re-run: the runner turns an empty allowlist into `--tools ""`
+   and actual denial comes from `disallowed_tools`. So `verifier-envelope-mismatch-fails-closed`
+   passed with `Glob`/`Grep` available, and its HOLD must not be cited as no-tool evidence. Wider
+   reach, and the reason this is listed rather than filed away: `AGENTS.md` uses a Claude contract's
+   empty `allowed_tools` as the eligibility test for the Codex behavioral lane, on the reading that
+   it disables tool execution. That rule currently rests on a property the harness does not enforce.
+   Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
+   the runner should reject the combination outright.
 
 Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
 repair has **no measured effect** (its target case was already 3/3 before the edit, on model
