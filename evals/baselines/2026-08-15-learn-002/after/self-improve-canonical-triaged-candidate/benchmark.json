@@ -1,0 +1,180 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 1,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (1 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "self-improve-canonical-triaged-candidate",
+      "limit": null,
+      "case_ids": [
+        "self-improve-canonical-triaged-candidate"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "3ea4aad6806c6af3153b2fa7f8bacbdfa466ba537830e7f898268c8116dc3ab9"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "e6e7bd47d296d5532ddb42bf0d1c4aaf1fe534df9de3a6bac40fcec8486275ab",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "c8312b3a9589368e8437410a9d14f6d1c1b3a104",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "self-improve-canonical-triaged-candidate",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "packet: Learning: must appear exactly once with a non-empty value"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3099
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2503
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2702
+        }
+      ],
+      "duration_ms_per_run": [
+        35822,
+        31008,
+        31833
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "**Learning: candidate \u2014 generated adapters ship without a parity assertion against their source, reproduced identically across two independently verified revisions; expected each generated adapter to carry an explicit assertion that its output matches the source before promotion.**\n\n```\nLearning: candidate \u2014 generated-adapter output has no parity assertion against source across two verified revisions -> each generated adapter must assert parity with its source before promotion\nEvidence: two independently verified revisions reproduced the identical missing-parity-assertion gap; this pass is planning-only (no file inspection performed), so exact revision/artifact IDs are not captured here and must be supplied by the owner before promotion\nScope: generated-adapter validation only; excludes runtime probes\nProvenance: verified \u2014 local, recurrence confirmed across two independently verified revisions as reported by the caller; 2026-08-15\nLearning disposition: add\nPromotion state: proposed\nDestination: scripts/validate_fleet.py\nOwner: fleet-maintainer\n```\n\n**Criteria and frozen baseline** \u2014 Success means `scripts/validate_fleet.py` fails closed when a generated adapter diverges from its source; today it does not assert parity at all, so the baseline is \"no check exists\" rather than a regressed one.\n\n**Disposition rationale** \u2014 `add` because recurrence (same gap, two verified revisions) rules out a one-off, and this pass performed no inventory search of the destination (no file inspection was permitted), so absence of an owning check could not be independently confirmed here \u2014 the owner should re-run that inventory search before implementing, and retriage to `merge`/`supersede` if a partial check is already present.\n\n**Verification** \u2014 Not run in this pass by design (planning-only). Per the promotion gate, `proposed` requires targeted, regression/adverse, fresh-context, and exact-artifact proof before it can move to `approved`/`promoted`; none of those gates have been executed, so this stays a proposal, not a fix.\n\n**Handoff boundary** \u2014 This is an evidence-bound candidate, not a same-context self-approval: `fleet-maintainer` owns implementation and must independently validate the evidence, add the parity assertion to `scripts/validate_fleet.py`, and run it against the exact generated-adapter bytes (not just source) before promoting.\n\n**Rollback / recheck** \u2014 Rollback is trivial (revert the added assertion) since no code change has been made yet. Recheck trigger: any future change to the adapter-generation path should re-run this check against a freshly generated artifact, not a cached one.",
+          "failures": [
+            "packet: Learning: must appear exactly once with a non-empty value"
+          ]
+        },
+        {
+          "response": "## Full retro \u2014 missing generated-adapter parity assertion (recurrence, 2 revisions)\n\n**Criteria and frozen baseline**\n\nImprovement means: `scripts/validate_fleet.py` asserts parity between a regenerated host adapter and its canonical source before a revision is accepted. Baseline (frozen, as reported): two independently verified revisions both passed without that assertion existing, and both reproduced the same gap \u2014 the check that would have caught a divergent generated adapter was absent, not merely skipped or misconfigured.\n\n**Evidence**\n\n- Two verified revisions, same observed behavior, same boundary (generated-adapter output vs. canonical source), same expected result (a parity assertion blocking acceptance) \u2014 this meets the skill's recurrence bar (same behavior + boundary + expected result, not just similar wording).\n- No specific revision/occurrence IDs or command output were supplied in this turn, and file inspection is out of scope for this response \u2014 that detail is missing from the evidence record, not fabricated here.\n\n**Candidate**\n\n```text\nLearning: candidate \u2014 regenerated host adapters were accepted across two verified revisions with no parity assertion against their canonical source -> a generated-adapter parity assertion is expected to gate acceptance before it does today\nEvidence: two verified revisions, same missing generated-adapter parity assertion (occurrence IDs not supplied to this planning-only pass)\nScope: generated-adapter validation only; excludes runtime probes\nProvenance: verified \u2014 local, two independent revisions reproducing the same gap\nLearning disposition: add\nPromotion state: proposed\nDestination: scripts/validate_fleet.py\nOwner: fleet-maintainer\n```\n\n**Disposition rationale**\n\nNormally the inventory search runs before choosing `add`, to rule out an existing owner for this fact. That search requires reading `scripts/validate_fleet.py`, which is out of scope for this planning-only response \u2014 so `add` here is taken as given rather than independently confirmed. Before promotion, the fleet-maintainer (or a fresh context with write authority) must run that inventory search: if `scripts/validate_fleet.py` or another validator already owns a generated-artifact parity check, the correct disposition becomes `merge` (extend it to cover this adapter class) rather than `add`.\n\n**Destination and owner**\n\n`scripts/validate_fleet.py` \u2014 a mechanical invariant (generated output must match its canonical source) belongs in a deterministic check, not in prose guidance. Owner: fleet-maintainer, who holds write authority over that script and must run the inventory search and gate checks below before merging any change.\n\n**Verification (not run \u2014 planning only)**\n\nNone of the promotion gates have been executed in this pass:\n\n1. Targeted proof \u2014 not run: no reproducer confirming the new assertion catches the specific divergence from the two revisions.\n2. Regression/adverse proof \u2014 not run: no confirmation that existing adapters still pass, or that a deliberately divergent adapter now fails.\n3. Fresh evaluator \u2014 not run: this candidate is self-reported by the same loop that observed the recurrence; a separate context or the fleet-maintainer must grade it independently.\n4. Exact-artifact proof \u2014 not run: must evaluate the regenerated adapter bytes themselves, not just the generator source.\n\nBecause these gates are unrun, this stays unpromoted regardless of disposition \u2014 `Promotion state: proposed` reflects that.\n\n**Rollback / recheck**\n\nRollback: revert the added assertion in `scripts/validate_fleet.py` if it produces false positives against legitimately divergent adapters. Recheck trigger: any change to the adapter-generation path or its canonical-source format should re-run gates 1\u20134 before the assertion is trusted again.",
+          "failures": []
+        },
+        {
+          "response": "## Full retro \u2014 missing generated-adapter parity assertion\n\n**Trigger:** Explicit retro request; two verified revisions independently reproduced the same divergence (same behavior, same boundary, same expected result \u2192 true recurrence, not anecdote).\n\n**Criteria and frozen baseline:** Success means generated-adapter validation fails whenever a regenerated adapter diverges from its canonical source. Frozen baseline (as observed, not inspected further per read-only/planning-only scope): validation currently reports pass with no assertion comparing the regenerated adapter against canonical source \u2014 confirmed twice, independently.\n\n---\n\n```text\nLearning: candidate \u2014 generated-adapter validation completed without asserting regenerated-adapter/canonical-source parity -> validation should fail (or explicitly flag) when a regenerated adapter diverges from its canonical source\nEvidence: two independently verified revisions; both reproduced the identical missing-parity-assertion divergence during generated-adapter validation (occurrence count = 2, same behavior/boundary/expected result)\nScope: generated-adapter validation only; excludes runtime probes\nProvenance: verified \u2014 local, two independent revision reproductions, 2026-08-15\nLearning disposition: add\nPromotion state: proposed\nDestination: scripts/validate_fleet.py\nOwner: fleet-maintainer\n```\n\n**Candidate (prose):** `scripts/validate_fleet.py`'s generated-adapter validation path should assert parity between each regenerated adapter and its canonical source as a mechanical check, not rely on incidental coverage \u2014 this is a deterministic invariant, not a judgment call, so it belongs in the validator rather than reviewer prose.\n\n**Disposition rationale:** `add`, per the caller's direction \u2014 this response is planning-only and does not perform the inventory search over `scripts/validate_fleet.py` that would normally gate `add` vs. `merge`/`supersede`. That inventory check is a required precondition before this candidate is actually written, and is called out below as an open verification item, not silently skipped.\n\n**Destination and owner:** `scripts/validate_fleet.py` (mechanical invariant \u2192 validator/guard), owned by `fleet-maintainer` for implementation and approval \u2014 outside this response's authority to write.\n\n**Verification (none executed \u2014 planning only):**\n1. Targeted proof \u2014 not run.\n2. Regression/adverse proof \u2014 not run.\n3. Fresh-evaluator proof \u2014 not run; a context other than this one must judge the eventual candidate change.\n4. Exact-artifact proof \u2014 not run; must cover the regenerated adapter bytes themselves, not only canonical source.\n\nAll four gates are open. Per the promotion gate rule, an unrun gate does not hold \u2014 this stays `proposed`, not `approved`.\n\n**Rollback / recheck:** No artifact change was made, so no rollback is needed. Recheck trigger: re-run this candidate through the four promotion gates once `fleet-maintainer` authorizes an implementation pass against `scripts/validate_fleet.py`, and re-verify after any subsequent change to the generated-adapter pipeline that could reintroduce the same gap.",
+          "failures": []
+        }
+      ]
+    }
+  ]
+}

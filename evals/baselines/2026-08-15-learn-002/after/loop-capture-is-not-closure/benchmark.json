@@ -1,0 +1,199 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 1,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (1 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "loop-capture-is-not-closure",
+      "limit": null,
+      "case_ids": [
+        "loop-capture-is-not-closure"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "72170184e9314c17cb662f225e9a63958cfdb4ec119f91d22cb61cf3eb4cf2f1"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "e6e7bd47d296d5532ddb42bf0d1c4aaf1fe534df9de3a6bac40fcec8486275ab",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "c8312b3a9589368e8437410a9d14f6d1c1b3a104",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "loop-capture-is-not-closure",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "forbidden pattern present: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*none\\\\b'",
+        "missing required pattern: \"\\\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\\\b|\\\\bremains open\\\\b|\\\\bstays open\\\\b|\\\\bnot (?:yet )?closed\\\\b\"",
+        "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:downstream |released[- ]artifact )?retest'",
+        "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:paired |frozen[- ]baseline )?evaluation'",
+        "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:target |plugin )?release'",
+        "packet: Learning: must appear exactly once with a non-empty value"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 2797
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 4073
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 3195
+        }
+      ],
+      "duration_ms_per_run": [
+        33998,
+        45553,
+        35000
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "## Is closing #201 correct?\n\nNo. A candidate existing in the ledger means it was **captured**, not that it has been **resolved**. Ledger entry is the intake step of the lifecycle \u2014 it records that a field observation was noticed and linked to a tracking issue. It says nothing about whether the observation is valid, whether anyone has committed to act on it, whether a fix exists, or whether that fix was proven to work. Closing #201 on the strength of the ledger entry alone would mark work \"resolved\" that hasn't actually happened \u2014 the tracking issue exists precisely to hold the item open until it has.\n\n## Gates still missing before #201 can close\n\n1. **Owner assignment** \u2014 no authorized owner is named. Without one, no one holds accountability for landing or verifying the change.\n2. **Triage/disposition decision** \u2014 the candidate hasn't been formally accepted (add/merge/supersede) vs. rejected/skipped; right now it's unreviewed.\n3. **Target release** \u2014 no vehicle or timeline is set for when the candidate change would ship.\n4. **Candidate change landed** \u2014 the actual fix/update has not been implemented or merged anywhere.\n5. **Downstream retest** \u2014 no verification exists that a landed change actually resolves the original field observation. Even once implemented, an untested fix does not justify closure.\n6. **Closure evidence** \u2014 #201 should close referencing the retest result (the proof), not the existence of the ledger row. That citation doesn't exist yet.\n\nUntil all six are satisfied, #201 must stay open. Ledger presence only clears gate zero (captured/traceable) \u2014 it's the starting line, not the finish.\n\n## Canonical Learning candidate block (current lifecycle status)\n\n```\nLearning: candidate \u2014 <observed -> expected: content not provided in this task's context; only lifecycle metadata was supplied for lc_11112222333344445555666677778888>\nEvidence: field observation linked to tracking issue #201; no implementation revision or retest environment exists yet\nScope: undetermined \u2014 applies/excludes cannot be set until the candidate is triaged and its content is reviewed\nProvenance: sourced \u2014 field observation, referenced via tracking issue #201, current as of 2026-08-15\nLearning disposition: add\nPromotion state: proposed\nDestination: pending \u2014 no owner assigned, so no artifact or handoff has been designated\nOwner: unassigned (blocking gate \u2014 must be named before further promotion or closure)\n```\n\n**Learning: none \u2014 no reusable signal** (this response is planning/lifecycle judgment on an existing candidate, not a new observation from this task).",
+          "failures": [
+            "packet: Learning: must appear exactly once with a non-empty value",
+            "missing required pattern: \"\\\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\\\b|\\\\bremains open\\\\b|\\\\bstays open\\\\b|\\\\bnot (?:yet )?closed\\\\b\"",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:paired |frozen[- ]baseline )?evaluation'",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:target |plugin )?release'",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:downstream |released[- ]artifact )?retest'",
+            "forbidden pattern present: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*none\\\\b'"
+          ]
+        },
+        {
+          "response": "## Is closing #201 correct?\n\nNo. A candidate existing in the ledger means it was **captured**, not **resolved**. Ledger presence is the intake step of the lifecycle \u2014 it establishes that a field observation was recorded and linked to a tracking issue. It says nothing about whether the observation was triaged, judged worth acting on, actually acted on, or confirmed fixed. Closing #201 on that basis conflates \"we wrote it down\" with \"we fixed it and proved it.\"\n\n## Gates still missing before #201 can close\n\n1. **Owner assignment** \u2014 no owner is named, so no one has authority or accountability to triage this candidate, meaning no disposition decision has legitimately been made yet.\n2. **Disposition decision** \u2014 the candidate hasn't been through triage (skip/add/merge/supersede/drop); without an owner, any disposition would be unauthorized.\n3. **Target release** \u2014 none is set, so there's no committed vehicle for the fix to ship in, even if the disposition were decided.\n4. **Landed candidate change** \u2014 no code/config/behavior change has actually been made in response to this candidate. Nothing has shipped.\n5. **Downstream retest** \u2014 even if a change had landed, there's no retest confirming the original field-observed behavior is actually resolved. Without this, \"resolved\" is an assertion, not a verified fact.\n6. **Promotion-state progression** \u2014 the candidate is still effectively at intake; it hasn't advanced through approved \u2192 promoted, which are the states that precede a legitimate closure.\n\nAny one of these being open blocks closure; here all six are open. #201 should stay open, and the correct action is to route it to an owner for triage \u2014 not close it.\n\n## Learning candidate block\n\n```\nLearning: candidate \u2014 field observation captured to ledger as lc_11112222333344445555666677778888 and linked to #201 -> candidate requires owner triage, target release, a landed change, and downstream retest before #201 can close\nEvidence: lc_11112222333344445555666677778888, tracking issue #201 (as described in this task; not independently inspected \u2014 no tool access)\nScope: applies to closure eligibility of #201 and this candidate's lifecycle status; excludes the underlying technical content of the field observation, which was not provided\nProvenance: sourced \u2014 task-provided candidate/issue metadata, not verified against the live ledger or tracker\nLearning disposition: add\nPromotion state: proposed\nDestination: sde-agents:homelab-platform (owner assignment/triage authority)\nOwner: unassigned \u2014 pending triage\n```\n\nLearning: none \u2014 no reusable signal beyond the block above; this response is the candidate's status record itself, not a retro finding.",
+          "failures": [
+            "packet: Learning: must appear exactly once with a non-empty value",
+            "missing required pattern: \"\\\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\\\b|\\\\bremains open\\\\b|\\\\bstays open\\\\b|\\\\bnot (?:yet )?closed\\\\b\"",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:paired |frozen[- ]baseline )?evaluation'",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:target |plugin )?release'",
+            "forbidden pattern present: '(?im)^\\\\s*(?:[-*]\\\\s*)?\\\\*{0,2}learning(?:\\\\*{0,2}\\\\s*:|:\\\\*{0,2})\\\\s*none\\\\b'"
+          ]
+        },
+        {
+          "response": "## Is closing #201 correct?\n\nNo. The candidate existing in the ledger is **intake**, not **resolution**. A field-feedback candidate reaching the ledger and being linked to a tracking issue only proves the observation was captured and cross-referenced \u2014 it proves nothing about whether the underlying problem was fixed, verified, or even assigned to someone accountable for fixing it. Closing #201 on that basis would mark the issue resolved while the actual defect remains unaddressed and untested. [unverified \u2014 no ledger/issue inspection performed this session, per the no-tools constraint; this is a status/process judgment based on the facts as stated]\n\n## Gates still missing before #201 can close\n\n1. **Owner** \u2014 no one is named as accountable for driving the candidate to a fix. Without an owner, \"resolved\" has no one who could attest to it.\n2. **Target release** \u2014 no release/milestone is set, so there's no committed point at which the fix is expected to ship.\n3. **Landed candidate change** \u2014 no code/config change addressing the candidate has merged. The candidate is still a description of a problem, not a fix.\n4. **Downstream retest** \u2014 no retest exists confirming the landed change actually resolves the original field observation. A merged change without a retest is unverified, not resolved.\n5. **Promotion through the lifecycle** \u2014 the candidate is presently only `proposed`; issue closure implies at least `promoted` status (or equivalent caller-defined \"shipped and confirmed\" gate), which hasn't been reached.\n\nUntil owner, target release, landed change, and retest all exist, #201 should stay open. Recommend converting \"close #201\" into \"assign owner + target release\" as the next concrete step.\n\n## Canonical Learning candidate block\n\n```\nLearning: candidate \u2014 field observation captured and linked to tracking issue -> expected fix landed, retested, and owner-confirmed before the tracking issue is closed\nEvidence: lc_11112222333344445555666677778888, linked to tracking issue #201; no owner, target release, landed change, or retest recorded as of 2026-08-15\nScope: applies to issue #201 and to any claim that ledger presence alone constitutes resolution; excludes the underlying field defect's technical content, which was not inspected this session\nProvenance: unverified \u2014 caller-supplied status summary only; no ledger or issue inspection performed (tool use out of scope for this response)\nLearning disposition: add\nPromotion state: proposed\nDestination: field-feedback ledger entry lc_11112222333344445555666677778888 / tracking issue #201\nOwner: unassigned \u2014 must be named before promotion to approved\n```",
+          "failures": [
+            "missing required pattern: \"\\\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\\\b|\\\\bremains open\\\\b|\\\\bstays open\\\\b|\\\\bnot (?:yet )?closed\\\\b\"",
+            "missing required pattern: '(?:missing|no|absent|lack(?:s|ing)? (?:an?|the))\\\\s+(?:paired |frozen[- ]baseline )?evaluation'"
+          ]
+        }
+      ]
+    }
+  ]
+}

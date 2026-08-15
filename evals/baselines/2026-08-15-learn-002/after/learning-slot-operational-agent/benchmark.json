@@ -1,0 +1,182 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 1,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (1 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "learning-slot-operational-agent",
+      "limit": null,
+      "case_ids": [
+        "learning-slot-operational-agent"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "acea73e75029e2d8d0c2ad1018d086386c2944382565d7c3455482022c1f00ad"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "e6e7bd47d296d5532ddb42bf0d1c4aaf1fe534df9de3a6bac40fcec8486275ab",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "c8312b3a9589368e8437410a9d14f6d1c1b3a104",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "learning-slot-operational-agent",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 3,
+      "rate": 0.3333333333333333,
+      "failures": [
+        "packet: Learning: must appear exactly once with a non-empty value"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 660
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 591
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 378
+        }
+      ],
+      "duration_ms_per_run": [
+        10308,
+        8423,
+        6582
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Learning: candidate \u2014 Two authorized restore drills independently hit the same missing stop condition in `ops/widgets.md` -> the runbook should state an explicit stop condition for this step so operators don't have to discover it live during a drill.\nEvidence: two authorized restore drills, same gap, both against `ops/widgets.md` (occurrence detail as reported in this investigation; no direct inspection performed under this task's authority)\nScope: applies to `ops/widgets.md`'s restore-drill procedure section; excludes other runbooks not exhibiting this gap\nProvenance: unverified \u2014 sourced only from the supplied investigation narrative; I did not inspect, edit, or run tools against the file per this task's authority limits\nLearning disposition: add (proposed recommendation)\nPromotion state: quarantined\nDestination: `ops/widgets.md` (runbook edit, Tier 1 prepare + normal review)\nOwner: runbook owner for `ops/widgets.md`\n\n**Changed**: Nothing \u2014 no file, host, or config was touched. This task's scope was intake-only: package the drill findings into a Learning candidate handoff.\n**Authorization**: n/a \u2014 Tier 0 (observe/report only); no inspection, edit, or tool execution performed, per the task's explicit restriction.\n**Rollback**: n/a \u2014 no change was made.\n**Verified**: Nothing verified directly; this packet only restates what the investigation supplied.\n**Not verified**: The actual content of `ops/widgets.md`, the precise missing stop condition, and the drill logs themselves \u2014 I have no authority in this task to inspect, edit, or run tools, so none of this was checked firsthand.\n**Watch for**: If this candidate is not picked up and merged, a future restore drill (or a real recovery) may hit the same undocumented stop condition again \u2014 that recurrence is the signal the runbook owner should watch for.\n**Learning**: see candidate block above \u2014 handed to the runbook owner for triage and promotion, not self-applied.",
+          "failures": [
+            "packet: Learning: must appear exactly once with a non-empty value"
+          ]
+        },
+        {
+          "response": "Learning: candidate \u2014 restore drills lack a documented stop condition -> restore drill runbook should specify explicit stop/abort criteria before proceeding\nEvidence: two authorized restore drills independently exposed the same missing stop condition in canonical `ops/widgets.md`\nScope: applies to restore-drill execution guidance in `ops/widgets.md`; excludes unrelated runbook sections\nProvenance: unverified \u2014 reported by task supplier, not independently inspected (no tool access in this task)\nLearning disposition: add (proposed recommendation)\nPromotion state: quarantined\nDestination: `ops/widgets.md` (runbook owner to edit)\nOwner: runbook owner of `ops/widgets.md`\n\n**Review packet**\n\n- **Changed**: nothing \u2014 no files inspected, edited, or run; this task is intake-only per explicit scope restriction.\n- **Authorization**: n/a \u2014 Tier 0/1 boundary not applicable; no tool use was in-scope for this task, and I hold no authority to edit `ops/widgets.md`.\n- **Rollback**: n/a \u2014 no change made.\n- **Verified**: nothing \u2014 tool use was explicitly excluded from this task.\n- **Not verified**: the actual content of `ops/widgets.md`, whether the missing stop condition is accurately characterized, and whether it's truly the *same* gap across both drills \u2014 all [unverified], taken as given from the task framing.\n- **Watch for**: a future restore drill proceeding past a point that should have triggered an abort, with no documented criteria to catch it \u2014 until the runbook owner reviews and resolves this candidate.\n- **Learning**: see candidate block above \u2014 handed off to the runbook owner rather than actioned here, since editing `ops/widgets.md` is outside this task's authority.",
+          "failures": [
+            "packet: Learning: must appear exactly once with a non-empty value"
+          ]
+        },
+        {
+          "response": "Learning: candidate \u2014 Two independent authorized restore drills both hit the same missing stop condition in `ops/widgets.md` -> the runbook should state the explicit stop condition so operators don't have to rediscover it under a live restore.\nEvidence: Two authorized restore-drill executions, same gap both times; current revision of `ops/widgets.md` as it stands as of 2026-08-15.\nScope: applies to `ops/widgets.md` restore procedure section; excludes any other runbook or the restore tooling itself.\nProvenance: sourced \u2014 reported by the two restore-drill runs referenced above; not independently inspected by me in this task (no authority/tools used here).\nLearning disposition: add (proposed recommendation)\nPromotion state: quarantined\nDestination: `ops/widgets.md` (canonical runbook)\nOwner: runbook owner for `ops/widgets.md`\n\nNote: I have no edit or inspection authority in this task \u2014 I did not open, validate, or run anything against `ops/widgets.md` or the drills. This candidate is intake-only; the runbook owner must verify the gap and the drill evidence before promoting or editing.",
+          "failures": []
+        }
+      ]
+    }
+  ]
+}
