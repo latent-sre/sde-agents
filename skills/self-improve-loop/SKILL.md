@@ -98,7 +98,10 @@ fleet already owns.
 Choose exactly one lifecycle disposition:
 
 - **skip** — no reusable signal, insufficient evidence, or no meaningful change to retain;
-- **add** — a novel, scoped lesson has no current owner artifact;
+- **add** — a novel, scoped lesson has no current owner artifact. Run the inventory search first and
+  believe its answer: when an owning artifact already covers the behavior, the disposition is
+  `merge` or `supersede`, never `add`, however much new detail this occurrence carries. A second
+  record for an already-owned fact is precisely the duplicate this loop exists to prevent;
 - **merge** — the lesson extends or corroborates an existing rule without changing its meaning. A
   repeated occurrence of the same cause merges its provenance or recurrence into the canonical
   record even when it adds no new scope; do not call that `skip` merely because the rule already
@@ -214,7 +217,20 @@ For a full retro, report:
 The decision lines are a machine-readable handoff contract. In a full retro or a planning-only
 decision, render the canonical candidate block on literal lines beginning `Learning: candidate`,
 `Evidence:`, `Scope:`, `Provenance:`, `Learning disposition:`, `Promotion state:`, `Destination:`,
-and `Owner:` before explaining it. Put exactly one selected learning disposition on
+and `Owner:` before explaining it. The `Learning:` line takes one of two literal value forms, and
+they are the whole vocabulary of that field:
+
+```text
+Learning: none — <reason>
+Learning: candidate — <observed -> expected>
+```
+
+The candidate form carries the **divergence**, not the rule drawn from it. A well-formed rule in
+that slot — "generated adapters must be verified before promotion" — is still a malformed packet,
+because the one thing this field exists to record is what actually diverged from what was expected;
+the rule it implies belongs in `Destination:` and the prose below the block. This is the literal
+form the receiving agents and `scripts/packet_lint.py` read, so a paraphrase of it is a dropped
+handoff rather than a style difference. Put exactly one selected learning disposition on
 `Learning disposition:`; alternatives may be discussed only in prose. Put exactly one compatible,
 post-triage lifecycle state on `Promotion state:`. Missing but obtainable evidence is
 `Learning disposition: skip` with `Promotion state: inconclusive`. Do not use the intake-only
