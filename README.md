@@ -112,10 +112,10 @@ future updates; `/import` remains a one-time migration and never overwrites an e
 
 The Codex lane is supported but limited, and its limits are about *discovery*, not content. Two
 host behaviors change how the fleet is reached here. Both were read from the upstream source at
-HEAD `a16863f8` (re-verified 2026-08-09), not measured against an installed CLI — the newest
-Codex CLI version this repository records from an actual run is `codex-cli 0.145.0`
-(`evals/baselines/2026-07-31-p0-p1/host-conformance/`), so treat the two as source-established
-and re-check them on a version bump:
+HEAD `a16863f8` (re-verified 2026-08-09), not measured against an installed CLI. The repository's
+newest actual Codex run used `codex-cli 0.147.0`
+(`evals/baselines/2026-08-11-handoff-001/`), but that behavioral capture did not test these two
+discovery claims. Treat the claims as source-established and re-check them on a version bump:
 
 - **Explicit-only skills are invisible to the model.** `service-onboard` and `host-onboard` ship
   with `policy.allow_implicit_invocation: false`, and Codex keeps such skills out of every

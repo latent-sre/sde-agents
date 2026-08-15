@@ -10,7 +10,7 @@ recorded scope stale against the spec it anchors.
 No new sessions were run for the regrade, and none were needed: `fired_per_run` records every
 fleet component that fired in each run (that is why `neg-lab-outage` shows `lab-incident`, a
 non-member), so regrading is deterministic. The recorded runs were re-scored with the runner's own
-`score_case` against the current four-member cluster. `application-security-auditor` fired in 0
+`score_case` against the then-current four-member cluster. `application-security-auditor` fired in 0
 runs of every case; every verdict, rate, and the 4/4 summary are unchanged — only the grading
 scope shown in `detail` now matches the spec. `conditions.plugin_dir` was also normalized to `.`
 in the same pass;

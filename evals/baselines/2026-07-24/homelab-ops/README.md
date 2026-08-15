@@ -2,7 +2,8 @@
 
 Why this exists: `postmortem` joined the cluster on 2026-07-24 (backlog 1.4), taking it from 4
 members / 15 cases to 5 / 18. The `2026-07/` capture therefore stopped being a like-for-like diff
-target — its case set no longer matches. This is the current anchor; diff against it, not that one.
+target — its case set no longer matches. This was the replacement anchor for that five-member
+cluster; the live suite has since expanded, so use it only as dated evidence.
 
 Run: `python3 scripts/eval_routing.py evals/routing/homelab-ops.json --runs 3` (54 headless
 sessions, deterministic transcript grading). Captured against the descriptions as they stood
@@ -23,7 +24,8 @@ sessions, deterministic transcript grading). Captured against the descriptions a
   in `also_fired`, and no runbook positive shows `postmortem`. This is why the reviewer-proposed
   negative-routing clause for `runbook`'s description was **not** landed: the fleet's own rule is
   no description edit without an observed failure to pin it to, and the seam it would guard is not
-  currently failing. Re-check here first if that ever changes.
+  failing in this capture. Re-check the live cluster rather than treating this dated result as
+  evidence of its present behavior.
 - **Agent positives remain the harness characteristic**, not a routing defect — `homelab-platform`
   fires 0–2/3 because a one-shot `claude -p` session tends to act inline rather than delegate (see
   `../../README.md`). Notably they moved *up* versus 2026-07 (troubleshoot-proxy 0/3 → 2/3,
