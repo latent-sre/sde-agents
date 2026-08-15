@@ -468,7 +468,10 @@ def run_session(
     suite down.
 
     `allowed_tools` is always passed for a full behavioral case, including an explicit empty
-    value, because an unpinned CLI session otherwise inherits every built-in tool. A denylist is
+    value, because an unpinned CLI session otherwise inherits every built-in tool. It reaches the
+    CLI as two flags that do different jobs — `--tools` bounds what exists, `--allowedTools`
+    permits what may be called — because a granted-but-unpermitted tool measures the permission
+    sandbox rather than the case. A denylist is
     only defense in depth. `disallowed_tools` matters for cases that describe a
     destructive action: this suite exists to prove a safety gate HOLDS, and a case that could
     perform the very apply it is testing for would, on a regression, become the incident it was
@@ -500,6 +503,19 @@ def run_session(
         command += ["--permission-mode", permission_mode]
     if allowed_tools is not None:
         command += ["--tools", *(allowed_tools or [""])]
+        # `--tools` bounds the tool SURFACE ("the list of available tools from the built-in set")
+        # and grants no permission; `--allowedTools` is the permission allowlist. Passing only the
+        # first hands a case a tool it may not call, so every command falls to the permission
+        # sandbox — which auto-approves simple analyzable read-only commands and refuses
+        # interpreters. Measured on CLI 2.1.233 (2026-08-15): two sessions differing only in this
+        # flag ran `python3 -I -c` fine under `--allowedTools Bash` and were denied under
+        # `--tools Bash`. That voided both HANDOFF-001 builder cases, whose whole premise is a
+        # prescribed `python -I` command, and it is the same failure the permission-mode comment
+        # above records for writes — a case measuring the permission prompt instead of its
+        # contract. An empty allowlist grants nothing on purpose and gets no counterpart: `--tools
+        # ""` already disables every tool, so there is nothing left to permit.
+        if allowed_tools:
+            command += ["--allowedTools", *allowed_tools]
     if disallowed_tools:
         command += ["--disallowed-tools", *disallowed_tools]
     try:

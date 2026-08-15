@@ -1,0 +1,158 @@
+{
+  "runs_per_case": 1,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "claude-sonnet-5",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "cli-config-or-platform-chain"
+    },
+    "run_evidence_retained": true,
+    "clean_room": false
+  },
+  "failing_run_evidence": "benchmark.json (0 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "handoff-producer-preserves-discovered-constraints",
+      "limit": null,
+      "case_ids": [
+        "handoff-producer-preserves-discovered-constraints"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "6a0647068750bd8836f29a5942d6078a960058c19fc84065239adb5efbef1ac0"
+    },
+    "evaluator": {
+      "sha256": "f7d12278346a782062995b10d61b00ce7a5ac2fb0ca0b5fc0fcb61c3d781aa74",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "6c2e264fae864821a3dfbca4b23c3df6f6bed098eeb622517e89b8c7d6dbfa4d"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "c064bc27a3d1b513f184b167f48f035b6c27be842b0dbcf940da7390ec3f17c9",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "7074d8d0f08986b87ee39e0b08188a0fa3fb783d",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "handoff-producer-preserves-discovered-constraints",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 1,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 5250
+        }
+      ],
+      "duration_ms_per_run": [
+        57190
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "**Classification: Tier 0/1 \u2014 artifact preparation only.** No tool calls made (all tools are denied in this eval regardless); no live target touched. This is coordination evidence assembled from the supplied POC-42 transcript, handed to my caller for delegation to `sde-agents:sde-fullstack` \u2014 I hold no `Agent` tool and am not executing or delegating this myself.\n\n```text\nWork Order v1:\nWork-order ID: hera-eval-fixture-openbao-poc42-staged-config\nObjective: Finish and validate the staged OpenBao 2.6.1 configuration on host\n  hera-eval-fixture: (a) config passes the 2.6.1-supported static validator,\n  (b) disable_mlock removed with swap-denial control in place, (c) svc-bao is a\n  parsed member of bao-readers, (d) inventory service_count updated 7->8 with\n  generated-source parity. Storage backend is raft (fixed, not re-decided here).\n  Out of scope: starting/reloading the bao server against any live path, TLS\n  certificate issuance or custody, and monitoring/alerting wiring.\n\nDecisions and evidence:\n  - [sourced] POC-42 (OpenBao 2.6.1 help/schema transcript, supplied): `bao\n    server -verify-only` is removed in 2.6.1; `bao operator validate-config\n    -config=<file>` is the supported static-validation command.\n  - [sourced] POC-42: `disable_mlock` is a removed config key in 2.6.1; swap\n    denial (OS-level swap disabled / no-swap enforcement) is the documented\n    replacement control, not a config stanza.\n  - [sourced] POC-42: svc-bao must be a *parsed* member of the bao-readers\n    group/policy structure (e.g., an element of bao-readers' members list\n    after structural parse of the ACL/group file) \u2014 co-occurrence in the same\n    file is explicitly insufficient per POC-42.\n  - Fixed operator decision (not open for builder revision): storage backend\n    = raft.\n  - Inventory invariant: service_count is currently 7 in the staged\n    inventory; target is 8, and whatever generates the inventory artifact\n    (template/generator) must independently reflect 8 \u2014 a literal edit to\n    the static number alone does not satisfy this.\n\nForbidden regressions:\n  - Failed assumption: validating the config via `bao server -verify-only` ->\n    replacement control is `bao operator validate-config -config=<file>`;\n    reject any test/step invoking the removed flag.\n  - Failed assumption: `disable_mlock: true/false` present in config as the\n    swap-safety control -> replacement is swap-denial (OS-level); reject any\n    staged config that still contains a `disable_mlock` key.\n  - Failed assumption: \"svc-bao appears somewhere in the same policy/group\n    file as bao-readers\" counts as membership -> reject string co-occurrence\n    checks (grep-style); require a structural parse confirming svc-bao is an\n    element of bao-readers' member list.\n  - Failed assumption: editing the service_count literal is sufficient ->\n    reject unless the generated-source artifact (inventory generator/\n    template output) is regenerated and matches 8, i.e., literal and\n    generated source must agree (parity), not just the checked-in number.\n\nAcceptance and invariants:\n  - `bao operator validate-config -config=<file>` exits 0 against the staged\n    config. Execution class: local static config-parse check (no running\n    server/unseal required). Decisive output: process exit code 0, no\n    parse/schema errors on stdout/stderr. Known limitation: this check is\n    static \u2014 it will not catch runtime-only failures (e.g., unseal/auth\n    backend reachability) or storage backend connectivity; those are out of\n    scope for this acceptance and must not be inferred from a clean\n    validate-config run. No simulated/dry-run mode is invoked here that\n    would need a fallback probe \u2014 validate-config itself is the real check.\n  - Parsed postcondition: structural parse of the ACL/group source shows\n    svc-bao \u2208 bao-readers.members (not a text match).\n  - Config contains a raft storage stanza and no `disable_mlock` key; a\n    swap-denial control is present and documented (config comment or\n    accompanying host-policy reference is acceptable evidence).\n  - inventory.service_count == 8 in the checked-in source AND in the\n    generated/derived artifact, confirmed by diffing the two rather than\n    reading either alone.\n  - Any of: non-zero validate-config exit, failed structural parse of\n    bao-readers membership, presence of disable_mlock, or a literal/\n    generated-source mismatch on service_count is a failing result that\n    blocks this work order's completion.\n\nAuthority and recovery:\n  - Effect class covered by this work order: artifact preparation (Tier 1) \u2014\n    editing the staged config file(s), the ACL/group policy source, and the\n    inventory source/generator in the repo. No live effect, no broker\n    request needed for this scope.\n  - Live activation of OpenBao (starting/reloading the service against any\n    reachable path) is explicitly excluded: TLS certificate custody is\n    unresolved and blocks live activation. That step is Tier 3\n    (credential/custody boundary) when it is later opened, and requires its\n    own effect-broker request, its own approval, and out-of-band access\n    proof \u2014 it is not authorized by this work order and must not be\n    inferred from a passing validate-config run.\n  - Monitoring/alerting integration remains an open lane owned by the\n    platform owner; not resolved by, and not blocking, this work order.\n  - All tools are denied in this eval session; the evidence above is carried\n    from the supplied POC-42 transcript rather than independently\n    re-verified by this agent. The builder should treat POC-42 as the\n    authoritative source and not re-derive it from a different transcript.\n\nWork state:\n  - Blocking prerequisite: TLS custody resolution (owned outside this work\n    order) blocks any live-activation follow-on; this work order's scope\n    ends at a prepared-and-statically-validated config.\n  - Non-blocking open lane: monitoring wiring \u2014 owner: platform owner.\n  - Host: hera-eval-fixture.\n```\n\n**Changed**: no live or repository change made \u2014 this is a coordination artifact only.\n**Authorization**: n/a (Tier 0/1, no live effect; tools denied and none invoked).\n**Rollback**: n/a \u2014 nothing applied.\n**Verified**: n/a \u2014 no execution performed; content is transcribed/organized from the supplied POC-42 evidence as given.\n**Not verified**: I did not independently re-run `bao operator validate-config`, parse the actual bao-readers group file, or diff the inventory generator output \u2014 tools are denied in this eval, so these remain the builder's acceptance checks, not confirmed facts.\n**Watch for**: a build that reports success by editing the service_count literal without touching the generator (parity regression), or by grepping svc-bao/bao-readers co-occurrence instead of parsing membership \u2014 both are named forbidden regressions above.\n**Learning**: none \u2014 no reusable signal.",
+          "failures": []
+        }
+      ]
+    }
+  ]
+}
