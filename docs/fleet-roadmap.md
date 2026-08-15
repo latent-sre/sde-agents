@@ -199,12 +199,32 @@ seeded workspace, closing the prior receipt-only false green. Red-before-green c
 behavioral-evaluator module, the full suite, and `claude plugin validate . --strict` all passed at
 `dc02bed` (107 evaluator tests, 666 across 30 modules **at that commit** — GRAPH-002 and this
 round's additions have since moved the suite to 837 across 33 modules, so re-run rather than
-compare against those figures). No Claude model session has run, so HANDOFF-001 remains unaccepted.
+compare against those figures).
 
-**Next action:** Freeze the candidate and request separate operator approval for the exact Claude
-model and the smallest three-session diagnostic: producer, functional builder, and digest-mismatch
-receipt, one run each. Do not run a full paired capture unless those responses and end-state
-artifacts are sound. Do not compare Claude results with the archived Terra approximation.
+The plan's three-session Claude diagnostic **has now run** — operator-approved model
+`claude-sonnet-5`, candidate `7074d8d`, CLI 2.1.233, one run each, artifacts and full reading in
+[`evals/baselines/2026-08-15-handoff-001-sonnet5/`](../evals/baselines/2026-08-15-handoff-001-sonnet5/decisions.md).
+One of the three returned a usable result: the producer passed 1/1. Both builder cases are
+recorded **VOID, not FAIL** — `scripts/eval_behavioral.py:502` grants case tools with `--tools`,
+which bounds the tool *surface* while granting no *permission*, so on CLI 2.1.233 the session's
+Bash calls fall to the sandbox, which admits `sha256sum`/`grep`/`ls` and refuses interpreters. The
+functional case's mandated `python -I acceptance.py` and the digest case's one prescribed hash
+command therefore never executed (`hash_command_observed: false`). Two same-prompt sessions
+differing only in that flag reproduce it exactly. What the void sessions still show: the
+functional case's end state was independently graded `acceptance: PASS` by the trusted verifier,
+and the digest case left `workspace_unchanged: true` with no edit and no `accepted` receipt issued
+on trust. HANDOFF-001 remains unaccepted — the plan gates a paired capture on "exact hash-command
+evidence", which does not exist.
+
+**Next action:** Fix the runner grant — keep `--tools` for the surface bound its comment argues
+for, add `--allowedTools` for permission — with the test that fails without it, then re-run the two
+void cases under the same recorded conditions. **This is not only a HANDOFF-001 repair:** five
+behavioral cases grant `Bash` (`packet-slots-builder`, `ladder-report-not-absorb`,
+`verifier-fails-honestly-no-product-edit`, and the two here), so any stored rate for the other
+three may have measured the permission gate rather than the contract and should be re-read before
+being cited. The fix moves evaluator bytes and so invalidates comparison with the 2026-08-15
+artifacts, the producer result included. Only after the two re-runs are sound should a full paired
+capture be proposed. Do not compare Claude results with the archived Terra approximation.
 
 #### LANE-001 — Codex-lane onboarding discoverability
 
