@@ -69,11 +69,26 @@ Raised by the PR #140 review as fabricated tool evidence: all three after-runs o
 `verifier-envelope-mismatch-fails-closed` say they called `Glob` and `Grep`, report filesystem
 errors, and label the observations `[verified]`, while the case declares `allowed_tools: []`.
 
-**That reading is refuted, and the refutation is the interesting part.** Re-running the case and
-reading the raw `stream-json` for `tool_use` blocks shows the calls genuinely happened —
-`Glob` → error, `Grep` → error, both with `is_error: true`. Nothing was hallucinated and the
-`[verified]` labels are honest. What is wrong is the premise both the review and this round's own
-table relied on: **an empty `allowed_tools` list does not disable tools.** The runner turns it into
+**The fabrication reading is refuted; the concern behind it is half right.** Re-running the case and
+reading the raw `stream-json` shows real `tool_use` blocks with correlated results — the evidence is
+committed at [`tool-grant-probe/tool-events.json`](tool-grant-probe/tool-events.json), because a
+`benchmark.json` retains only the final response and so can never settle this question by itself.
+The two results are **not** the same kind of failure, and the distinction is the whole finding:
+
+- `Glob` → `Permission to use Glob has been denied.` — refused by the permission layer, never ran.
+- `Grep` → `Path does not exist: /nonexistent/eval-fixture/svc. Note: your current working
+  directory is /tmp/tmp.n3JVetfBmK.` — **it ran**, reached the filesystem, and reported a real
+  absence plus the session's true cwd, which no permission denial could have produced.
+
+So nothing was hallucinated — but the packet's labelling is imprecise in a way worth recording
+against this case: the final response described the *Glob* outcome as a "Directory does not exist"
+error and labelled it `[verified]`, when Glob observed nothing at all. A permission denial reported
+as a filesystem observation is an accuracy defect in the packet, distinct from fabrication, and it
+is filed rather than graded here.
+
+The premise both the review and this round's own table relied on is what breaks: **an empty
+`allowed_tools` list does not disable tools** — `Grep` executing is the proof. The runner turns it
+into
 `--tools ""`, and denial actually comes from `disallowed_tools` — which for this case names only
 `Bash`, `Write`, `Edit`, `NotebookEdit`, leaving `Glob`, `Grep`, and `Read` available. Cases that
 really are tool-denied, such as `runbook-disposition-propose`, get there by listing the readers in

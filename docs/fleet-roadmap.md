@@ -38,8 +38,11 @@ single tracker instead of leaking into memory or issue lists.
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
 LOOP-001/REV-001 contracts this docket now owns. The 2026-08-15 paired round landed the three
-canonical text repairs and both halves' three-run baselines; what remains is grader work and one
-operator ruling, listed under **Next action**.
+canonical text repairs and both halves' three-run baselines. What remains is six items listed under
+**Next action** — grader repairs, two text decisions, an operator ruling, a two-consecutive-batch
+measurement, five unsettled LOOP/REV contracts, and a bounded harness investigation into
+`allowed_tools: []`. Read that list, not this sentence, before scoping the item: a headline is not
+an inventory.
 
 **Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
 graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
@@ -90,7 +93,7 @@ measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/),
 `decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
 `Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
 capture template taught `local` as a Provenance value while the canonical block requires the triad
-word), and add-vs-merge. The two measured assertions moved 0/9 → 6/6 and 1/9 → 6/6 across graded
+word), and add-vs-merge. The two measured assertions moved 0/9 → 9/9 and 1/9 → 9/9 across graded
 runs. **The six LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both
 sides**, superseding their first-contact single runs — but that satisfies only the *baseline* half
 of their Acceptance clause. The clause also requires each of the six to hold its acceptance rate or
