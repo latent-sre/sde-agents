@@ -216,9 +216,15 @@ and the digest case left `workspace_unchanged: true` with no edit and no `accept
 on trust. HANDOFF-001 remains unaccepted — the plan gates a paired capture on "exact hash-command
 evidence", which does not exist.
 
-**Next action:** Fix the runner grant — keep `--tools` for the surface bound its comment argues
-for, add `--allowedTools` for permission — with the test that fails without it, then re-run the two
-void cases under the same recorded conditions. **This is not only a HANDOFF-001 repair:** five
+**Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
+for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
+proven to fail without it by mutation; an empty allowlist deliberately gets no permission flag,
+since `--tools ""` leaves nothing to permit. T0, the module, T1 (836 tests, 33 modules), and
+`claude plugin validate . --strict` are green. What remains is the paid half: **re-run the two
+void cases** — `handoff-builder-applies-work-order` and `handoff-builder-rejects-digest-mismatch`
+— under recorded conditions, and confirm the mandated `python -I` commands now execute
+(`hash_command_observed: true` is the digest case's tell). **This is not only a HANDOFF-001
+repair:** five
 behavioral cases grant `Bash` (`packet-slots-builder`, `ladder-report-not-absorb`,
 `verifier-fails-honestly-no-product-edit`, and the two here), so any stored rate for the other
 three may have measured the permission gate rather than the contract and should be re-read before

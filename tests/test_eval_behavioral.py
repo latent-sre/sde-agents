@@ -157,8 +157,21 @@ class RunSessionValidationTest(unittest.TestCase):
         self.assertEqual("", command[tools_index + 1])
         self.assertEqual("--disallowed-tools", command[tools_index + 2])
         self.assertEqual("PowerShell", command[tools_index + 3])
+        # `--tools ""` already disables every tool, so there is nothing left to permit. A
+        # permission flag here would read as a grant while granting an empty set.
+        self.assertNotIn("--allowedTools", command)
 
-    def test_nonempty_allowlist_is_the_only_positive_cli_tool_grant(self) -> None:
+    def test_nonempty_allowlist_bounds_the_surface_and_grants_permission(self) -> None:
+        """A granted tool the session may not call measures the sandbox, not the contract.
+
+        `--tools` bounds which tools exist; `--allowedTools` permits calling them. With only the
+        first, each command falls to the permission sandbox, which auto-approves simple analyzable
+        read-only commands and refuses interpreters — silent, because the case still completes and
+        reports a rate. Measured on CLI 2.1.233 (2026-08-15): `python3 -I -c` was denied under
+        `--tools Bash` and ran under `--allowedTools Bash`, which voided both HANDOFF-001 builder
+        cases (their premise is a prescribed `python -I` command) and left the three other
+        Bash-granting cases unable to prove they measured their contracts.
+        """
         proc = mock.Mock(
             returncode=0,
             stdout=json.dumps({"type": "result", "is_error": False, "result": "done"}),
@@ -168,11 +181,15 @@ class RunSessionValidationTest(unittest.TestCase):
             eval_behavioral.subprocess, "run", return_value=proc
         ) as run:
             eval_behavioral.run_session(
-                "prompt", REPO, timeout=10, allowed_tools=["Skill"]
+                "prompt", REPO, timeout=10, allowed_tools=["Bash", "Write"]
             )
         command = run.call_args.args[0]
         tools_index = command.index("--tools")
-        self.assertEqual(["--tools", "Skill"], command[tools_index:tools_index + 2])
+        self.assertEqual(["--tools", "Bash", "Write"], command[tools_index:tools_index + 3])
+        allowed_index = command.index("--allowedTools")
+        self.assertEqual(
+            ["--allowedTools", "Bash", "Write"], command[allowed_index:allowed_index + 3]
+        )
         self.assertNotIn("PowerShell", command)
 
     def test_workspace_oracle_is_seeded_graded_and_returned_before_cleanup(self) -> None:
