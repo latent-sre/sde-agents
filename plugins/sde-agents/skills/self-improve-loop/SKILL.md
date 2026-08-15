@@ -229,9 +229,15 @@ they are the whole vocabulary of that field:
 ```text
 Learning: none — <reason>
 Learning: candidate — <observed -> expected>
+Provenance: <verified|sourced|unverified> — <source and freshness detail>
 ```
 
-The candidate form carries the **divergence**, not the rule drawn from it. A well-formed rule in
+The angle-bracketed names describe values; never emit the brackets. `Provenance:` opens with one
+bare triad word and nothing before it — the capture template's `local` / `official` / `upstream`
+vocabulary describes *where* evidence came from, so it belongs after the triad word as the source
+detail, never in front of it. `Provenance: local, verified — 2026-08-15` is a dropped handoff;
+`Provenance: verified — local, 2026-08-15` is the same fact in the contract's grammar. The
+candidate form carries the **divergence**, not the rule drawn from it. A well-formed rule in
 that slot — "generated adapters must be verified before promotion" — is still a malformed packet,
 because the one thing this field exists to record is what actually diverged from what was expected;
 the rule it implies belongs in `Destination:` and the prose below the block. This is the literal
