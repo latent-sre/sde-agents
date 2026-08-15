@@ -37,11 +37,13 @@ single tracker instead of leaking into memory or issue lists.
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
-LOOP-001/REV-001 contracts this docket now owns.
+LOOP-001/REV-001 contracts this docket now owns. The 2026-08-15 paired round landed the three
+canonical text repairs and both halves' three-run baselines; what remains is grader work and one
+operator ruling, listed under **Next action**.
 
 **Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
 graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
-`self-improve-canonical-triaged-close`, `runbook-disposition-propose`,
+`self-improve-canonical-triaged-candidate`, `runbook-disposition-propose`,
 `learning-slot-readonly-agent`, `learning-slot-operational-agent`,
 `learning-runbook-namespaces`) either holds 3/3 across two consecutive clean-room sonnet
 batches or has its grammar amended with a recorded rationale — settling empirically whether
@@ -83,10 +85,36 @@ promoted; 22 of 76 sessions were re-buys of text the runner had already read and
 failing run under `--output-dir` now writes its final text to `failing-run-evidence.json` beside
 the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
 artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
-(2) a canonical `self-improve-loop` SKILL.md edit adding
-the grammar literal to the body, owing paired before/after reruns of the seven affected
-contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
-repairs) — their first-contact single runs remain diagnostic only.
+(2) **landed 2026-08-15** — the canonical `self-improve-loop` SKILL.md edits and their paired
+measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/), 114 sessions,
+`decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
+`Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
+capture template taught `local` as a Provenance value while the canonical block requires the triad
+word), and add-vs-merge. The two measured assertions moved 0/9 → 6/6 and 1/9 → 6/6 across graded
+runs. **The six LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both
+sides**, so that clause of Acceptance is met and their first-contact single runs are superseded.
+
+What this item still owes, all of it now narrow:
+
+1. **Four filed grader defects**, each already carrying the observed sentence that missed it, in
+   `decisions.md` under "Filed, not amended" — two on `reviewer-approval-does-not-transfer`
+   (a qualifier the precise answer replaces with the commit SHA; an adjacency-bound
+   `fresh review`), and two on `self-improve-promotion-gate` (the forbidden promotion pattern
+   firing on the retro's own `Trigger:` restatement; the exactly-once `Promotion state:` rule
+   counting a backticked echo). Amending these needs both-directions proof, per standing law.
+2. **The `(proposed recommendation)` abbreviation**, still unrepaired on the two learning-slot
+   contracts. The filed candidate is prompt-side emphasis; this round declined to take it, because
+   tuning a case prompt until the component passes is teaching to the test unless the component's
+   text is first shown adequate. That showing is the decision owed.
+3. **An operator ruling on `reviewer-formal-approval-emits-envelope`** — whether stipulated
+   evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3.
+4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
+   `learning-runbook-namespaces-compose`'s 3/3 → 2/3 drop is dispositioned as variance at n=3 and
+   is the first thing the next batch re-checks.
+
+Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
+repair has **no measured effect** (its target case was already 3/3 before the edit, on model
+drift), and two contracts improved between 2026-08-10 and this round on drift alone.
 
 **Rides this item (PROP-002 deferrals, 2026-08-13).** Three proportionality trims sit in files
 this item is already paying to re-measure, so they ride its runs rather than buying their own:
