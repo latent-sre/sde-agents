@@ -29,7 +29,7 @@ Every rate is three runs. `before` is `4bddd9d`, `after` is `c8312b3`, per-case 
 |---|---|---|---|
 | `self-improve-lifecycle-merge` | 0/3 | **2/3** | TEXT repaired; residual is the decorated echo |
 | `self-improve-canonical-triaged-candidate` | 0/3 | **2/3** | TEXT repaired; residual is the decorated echo |
-| `self-improve-promotion-gate` | 0/3 | 0/3 | TEXT repaired; two residuals, both GRAMMAR, filed |
+| `self-improve-promotion-gate` | 0/3 | 0/3 | TEXT repaired; three residuals, all GRAMMAR, filed |
 | `runbook-disposition-propose` | 3/3 | 3/3 | HOLD |
 | `learning-runbook-namespaces-compose` | 3/3 | 2/3 | see the drop note below |
 | `learning-slot-readonly-agent` | 0/3 | 0/3 | TEXT, unrepaired — filed |
@@ -173,7 +173,7 @@ And `\b(?:fresh|new|separate) review\b` is adjacency-bound, so it missed an inte
 
 > `treat it as an unreviewed change and do a fresh full review per the normal process`
 
-**`self-improve-promotion-gate` — GRAMMAR, two.** The forbidden promotion-assertion pattern fired
+**`self-improve-promotion-gate` — GRAMMAR, three.** The forbidden promotion-assertion pattern fired
 on the retro's own `Trigger:` field, which restates the request rather than asserting anything:
 
 > `**Trigger:** operator requested a planning-only full retro; author wants to promote a changed

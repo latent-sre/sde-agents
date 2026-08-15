@@ -46,10 +46,12 @@ are **byte-identical** across them, sha256 `224fe87f0392abcd…` on both sides, 
 `1/9 → 9/9` are evidence for the shipped bytes. Reproduce with:
 
 ```
-git show ade8f47:…/SKILL.md   # or b8b7262 for the shipped side
+git cat-file blob ade8f47   # measured side; b8b7262 for the shipped side
 ```
 
-extracting the fenced value-forms block and the paragraph beginning `The angle-bracketed names`. The two amendments themselves are
+extracting the fenced value-forms block and the paragraph beginning `The angle-bracketed names`.
+Note the command form: these are **blob** IDs, so `git show <object>:<path>` exits 128 — that syntax
+needs a tree-ish. `git cat-file blob` is what reads a blob by hash. The two amendments themselves are
 unmeasured, tracked as LEARN-002 remainder item 7, and must not be described as having behavioral
 evidence in this round.
 
