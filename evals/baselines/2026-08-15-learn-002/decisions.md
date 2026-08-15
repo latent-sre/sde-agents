@@ -27,8 +27,8 @@ Every rate is three runs. `before` is `4bddd9d`, `after` is `c8312b3`, per-case 
 
 | Case | Before | After | Decision |
 |---|---|---|---|
-| `self-improve-lifecycle-merge` | 0/3 | **2/3** | TEXT repaired; one residual |
-| `self-improve-canonical-triaged-candidate` | 0/3 | **2/3** | TEXT repaired; one residual |
+| `self-improve-lifecycle-merge` | 0/3 | **2/3** | TEXT repaired; residual is the decorated echo |
+| `self-improve-canonical-triaged-candidate` | 0/3 | **2/3** | TEXT repaired; residual is the decorated echo |
 | `self-improve-promotion-gate` | 0/3 | 0/3 | TEXT repaired; two residuals, both GRAMMAR, filed |
 | `runbook-disposition-propose` | 3/3 | 3/3 | HOLD |
 | `learning-runbook-namespaces-compose` | 3/3 | 2/3 | see the drop note below |
@@ -116,6 +116,26 @@ Two consequences, neither repaired here:
    outside this round's remit and is filed, not fixed — it needs its own bounded check across every
    case declaring an empty allowlist, and a decision about whether the runner should reject the
    combination outright.
+
+### The two 2/3 residuals are one already-filed defect, not two new ones
+
+Both cases that the repairs moved to 2/3 lose their third run to the **decorated-echo** family — the
+same defect filed against `self-improve-promotion-gate`, not anything new. Named here because the
+results table previously said only "one residual", which left the next session to rediscover them
+and risked reading the five filed grader defects as covering fewer cases than they do:
+
+- `self-improve-lifecycle-merge` run 3 — `Promotion state: proposed` followed by
+  `**Promotion state**: \`proposed\`. Rollback: none needed…`. Same value, different decoration,
+  backticked: counted twice.
+- `self-improve-canonical-triaged-candidate` run 1 — a bolded
+  `**Learning: candidate — generated adapters ship without a parity assertion…` above the plain
+  `Learning: candidate — …` line. Same field, opening emphasis, counted twice.
+
+**Consequence for the repair, and the reason this matters more than a bookkeeping note:** the
+decorated-echo amendment's confirmation scope is not one contract but **four** —
+`self-improve-promotion-gate`, both cases above, and `learning-slot-operational-agent`, whose
+duplicate-`Learning:` cause is the same shape. A repair validated against only the contract it was
+filed under would look settled while three other contracts still fail on it.
 
 ### The one rate drop, dispositioned
 

@@ -113,7 +113,11 @@ What this item still owes, all of it now narrow:
    **promotion-refusal positive pattern** missing runs 1 and 3 (`No gate holds, so no promotion…`).
    The first two are before-side observations; repairing only those leaves this contract at most
    1/3, which is why the count was wrong and not merely short. Amending any of them needs
-   both-directions proof, per standing law.
+   both-directions proof, per standing law. **The decorated-echo repair's confirmation scope is four
+   contracts, not one** — it is also the sole residual keeping `self-improve-lifecycle-merge` and
+   `self-improve-canonical-triaged-candidate` at 2/3, and the same shape as
+   `learning-slot-operational-agent`'s duplicate `Learning:` field. Validated against only the
+   contract it is filed under, it would read as settled while three others still fail on it.
 2. **The two learning-slot contracts, whose inherited diagnosis was wrong.** The
    `(proposed recommendation)` abbreviation this item previously carried from 2026-08-10 **does not
    occur** in any of the six after-side runs, so the prompt-side-emphasis repair it named would have

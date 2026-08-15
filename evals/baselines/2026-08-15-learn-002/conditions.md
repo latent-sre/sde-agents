@@ -31,11 +31,25 @@ PR #140 review: the no-signal literal became the fixed string `Learning: none �
 (it had been a `<reason>` slot that `packet_lint` rejects), and the `Destination:` instruction was
 corrected. No session in this directory ran against those bytes.
 
-What that does and does not invalidate is checkable rather than arguable. The sentences governing
-the two measured assertions — the `Learning: candidate — <observed -> expected>` form and the
-triad-first `Provenance:` paragraph — are **byte-identical** between `c8312b3` and the shipped
-commit (`git diff c8312b3 HEAD -- skills/self-improve-loop/SKILL.md` touches neither), so
-`0/9 → 9/9` and `1/9 → 9/9` are evidence for the shipped bytes. The two amendments themselves are
+What that does and does not invalidate is checkable rather than arguable, and it is pinned to
+immutable identities so a later session can reproduce the claim from this file alone — `HEAD` moves,
+and a comparison written against it would rot into either a false alarm or a false reassurance:
+
+| | SKILL.md blob |
+|---|---|
+| Measured (`c8312b3`) | `ade8f47edecb37b87942948c6f4edf91212f294c` |
+| Shipped (this round's final skill edit) | `b8b72622b8e676f86376f23943dc203b9c66309f` |
+
+The blobs differ, as they must. The sentences governing the two measured assertions — the
+`Learning: candidate — <observed -> expected>` form and the triad-first `Provenance:` paragraph —
+are **byte-identical** across them, sha256 `224fe87f0392abcd…` on both sides, so `0/9 → 9/9` and
+`1/9 → 9/9` are evidence for the shipped bytes. Reproduce with:
+
+```
+git show ade8f47:…/SKILL.md   # or b8b7262 for the shipped side
+```
+
+extracting the fenced value-forms block and the paragraph beginning `The angle-bracketed names`. The two amendments themselves are
 unmeasured, tracked as LEARN-002 remainder item 7, and must not be described as having behavioral
 evidence in this round.
 
