@@ -275,6 +275,17 @@ or "enforced" lands with the reader check and its firing test, or it is reworded
 behavior — a prose claim of enforcement with no guard behind it survives every check for the
 same reason an untested guard does (executed-verification finding, 2026-08-10).
 
+**Retiring a tripwire whose risk is structurally gone** — the symmetric half of the
+defensive-branch rule above. A tripwire test names the silent failure it watches for (its
+docstring's risk hypothesis); a change that makes that failure impossible *by construction* —
+consolidating the second parser a drift test watched, removing the config surface a guard
+checked — retires the test in the same change, with the elimination stated in the commit. The
+suite is evidence, not a ledger of past fears: a test whose hypothesis can no longer occur
+re-proves nothing (the proportionality rule already bans that) while still taxing every edit
+that touches its fixtures. The bar is structural impossibility, not "hasn't fired lately" — a
+quiet tripwire watching a still-possible failure stays, and when the two readings are arguable
+the test stays and the doubt is recorded where the retirement would have been.
+
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
 before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
@@ -315,6 +326,17 @@ disposition.
   replaced one asserting the reviews arrive "two to five minutes behind `gh pr create`", which read
   as a wait rather than an action and let PR #128 merge unreviewed while a session sat waiting for a
   pass nobody had asked for.
+
+The disposition loop above carries the same convergence bound as static deep-review, for the same
+reason: applying a finding mints new bytes, the new head owes another wait, and the wait returns
+findings about the fix — an unbounded fixpoint that ran ten review-driven rounds on PR #136 *after*
+the two-round deep-review cap was written, because that cap bound one gate and left this one open.
+So: at most **two** review-driven edit rounds per PR. A finding that arrives after the second round
+is dispositioned in the thread without new bytes — declined with the reason, or recorded as owed
+work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which restarts the
+count, the same escape the deep-review bound reserves for a third static round. This bounds edits,
+never waits: the head-binding clause stands, the merged head has always been waited on, and what
+stops is minting fresh heads for the reviewer to find fixes in.
 
 Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
 enough to skim past stops working, and each section in it was added for an observed failure.
