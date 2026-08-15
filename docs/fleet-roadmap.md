@@ -134,6 +134,23 @@ What this item still owes, all of it now narrow:
    it disables tool execution. That rule currently rests on a property the harness does not enforce.
    Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
    the runner should reject the combination outright.
+7. **Two SKILL.md sentences ship unmeasured.** Every after-side artifact binds
+   `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it: the no-signal
+   literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the linter rejects)
+   and the `Destination:` clarification. What survives that gap is exact, not a judgement call —
+   the sentences governing both *measured* assertions are byte-identical between `c8312b3` and the
+   shipped commit, so `0/9 → 9/9` and `1/9 → 9/9` remain evidence for the shipped bytes. The two
+   amendments themselves have **no** behavioral evidence. The no-signal one is the live risk, since
+   it changes what a session emits for every no-signal scan; the next batch measures it, and until
+   then this fleet's own exact-artifact gate is unsatisfied for those two sentences.
+8. **The `Claude exited 1` resultless-session flake has a live owner here, and this is it.** It hit
+   five before-side and four after-side case batches, never at concurrency 1. The runner grades a
+   resultless session as a contract failure, so an operator who does not notice publishes a
+   corrupted rate — it converted three working contracts into apparent 0/3s in this round alone.
+   Interim workaround, used throughout this round: re-run the affected case at `--concurrency 1` and
+   discard the flaked artifact rather than grading it. Owed: a root cause, and a decision on whether
+   `eval_behavioral.py` should classify a resultless session as `INCONCLUSIVE` rather than a
+   failure — the 2026-08-10 round filed that same runner-design question and it is still open.
 
 Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
 repair has **no measured effect** (its target case was already 3/3 before the edit, on model

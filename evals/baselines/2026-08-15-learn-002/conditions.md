@@ -17,12 +17,27 @@ run gets misread.
 | Auth mode | `host-managed-provider` (see below) |
 | `clean_room` | `true` on both sides |
 | Before revision | `4bddd9d` (worktree, nothing else writing to it) |
-| After revision | `c8312b3` (worktree, nothing else writing to it) |
+| After revision | `c8312b3` (worktree, nothing else writing to it) — **not the shipped bytes; see below** |
 
 The two sides differ in exactly one thing that is not a condition: the canonical
 `skills/self-improve-loop/SKILL.md` text repairs in `6f2d14d` and `c8312b3`. `4bddd9d` is the
 before base precisely so the clean-room enabler is present on both sides and is not part of the
 delta.
+
+## The after side is not the shipped skill
+
+Two `skills/self-improve-loop/SKILL.md` amendments landed **after** `c8312b3` in response to the
+PR #140 review: the no-signal literal became the fixed string `Learning: none — no reusable signal`
+(it had been a `<reason>` slot that `packet_lint` rejects), and the `Destination:` instruction was
+corrected. No session in this directory ran against those bytes.
+
+What that does and does not invalidate is checkable rather than arguable. The sentences governing
+the two measured assertions — the `Learning: candidate — <observed -> expected>` form and the
+triad-first `Provenance:` paragraph — are **byte-identical** between `c8312b3` and the shipped
+commit (`git diff c8312b3 HEAD -- skills/self-improve-loop/SKILL.md` touches neither), so
+`0/9 → 9/9` and `1/9 → 9/9` are evidence for the shipped bytes. The two amendments themselves are
+unmeasured, tracked as LEARN-002 remainder item 7, and must not be described as having behavioral
+evidence in this round.
 
 ## Not uniform: concurrency is paired per case, not across the round
 
