@@ -101,8 +101,13 @@ PLUGIN_NAME = "sde-agents"
 # cooperative, and both files say so. Note validate_fleet.py only COMPELS guarding for a Bash-holder
 # with no write tool; these two are here by choice, and the hook's own agent list is kept in sync by
 # a validator rule (adding a name here without the hook would silently guard nothing).
+#
+# `repository-investigator` holds Bash solely for git history and revision identity (log, blame,
+# show, rev-parse) and no write tool, so the validator compels its membership. Its local-only trust
+# boundary survives the grant only because this allowlist carries no network command — an
+# unguarded Bash would hand it curl and collapse the researcher/investigator split.
 GUARDED_AGENT_NAMES = frozenset({
-    "code-reviewer", "principal-engineer", "distinguished-architect",
+    "code-reviewer", "principal-engineer", "distinguished-architect", "repository-investigator",
 })
 GUARDED_AGENTS = frozenset(
     set(GUARDED_AGENT_NAMES) | {f"{PLUGIN_NAME}:{name}" for name in GUARDED_AGENT_NAMES}

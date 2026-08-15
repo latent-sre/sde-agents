@@ -24,10 +24,17 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from scripts import validate_fleet
+
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
-# Guarded by choice rather than by the validator's rule: both hold Write (for documents) and both
-# promise an inspection-only Bash, which is the half a command allowlist can actually enforce.
-DESIGN_AGENTS = frozenset({"principal-engineer", "distinguished-architect"})
+# The full roster, loaded from the guard itself rather than restated here: a new roster member
+# must inherit the both-name-forms coverage below without anyone remembering to add it, or the
+# test would keep passing while the newest guarded agent went unexercised. (The design agents in
+# it are guarded by choice rather than by the validator's rule — they hold Write for documents
+# while promising an inspection-only Bash, the half a command allowlist can actually enforce.)
+GUARDED_AGENT_NAMES = validate_fleet.load_guard(
+    Path(__file__).resolve().parents[1]
+).GUARDED_AGENT_NAMES
 
 # Must match scripts/readonly-guard.py.
 EXIT_ALLOW = 42
@@ -466,10 +473,13 @@ class GuardScopingTest(unittest.TestCase):
         self.assertEqual(decision(proc), "deny")
 
     def test_every_guarded_agent_is_guarded_in_both_name_forms(self) -> None:
-        # The roster grew past the reviewer: the design agents' "inspection only" Bash is enforced
-        # too. Each name must be guarded under BOTH the namespaced and the bare agent_type, and a
-        # design agent must still be allowed the reads its own file promises it.
-        for name in DESIGN_AGENTS | {"code-reviewer"}:
+        # The roster grew past the reviewer: the design agents' "inspection only" Bash and the
+        # repository investigator's history-only Bash are enforced too. Each name must be guarded
+        # under BOTH the namespaced and the bare agent_type, and every guarded agent must still be
+        # allowed the reads its own file promises it. The roster comes from the guard module, so a
+        # future member cannot be added without walking through this test.
+        self.assertIn("code-reviewer", GUARDED_AGENT_NAMES)  # non-vacuity: the load worked
+        for name in GUARDED_AGENT_NAMES:
             for agent_type in (name, f"sde-agents:{name}"):
                 with self.subTest(agent_type=agent_type):
                     denied = run_guard(bash_call("pytest -q", agent_type=agent_type))

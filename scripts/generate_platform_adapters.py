@@ -490,17 +490,58 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             flags=re.DOTALL,
         )
 
-    if host == "codex" and name == "repository-investigator":
+    if name == "repository-investigator":
+        # The canonical paragraph claims a PreToolUse reader allowlist behind Bash. That hook is
+        # Claude-only, so on both other hosts the claim must be replaced, not carried: prose that
+        # names a control the host cannot load would read as armor and be nothing.
+        if host == "copilot":
+            replacement = (
+                "Keep the investigation local-only: do not fetch external content or change\n"
+                "files. This profile receives no shell/execute tool — Copilot and VS Code cannot\n"
+                "scope Claude's per-agent command guard — so gather history evidence through\n"
+                "read/search tools and name the commit-history evidence you could not reach. The\n"
+                "local-only boundary prevents private source from sharing a subordinate context\n"
+                "with fetched external content."
+            )
+        else:
+            replacement = (
+                "Keep the investigation local-only and do not fetch external content or change\n"
+                "files. Codex custom-agent TOML cannot remove inherited web, shell, or write\n"
+                "authority, its requested sandbox is overridable, and the source profile's\n"
+                "reader-allowlist command guard does not exist on this host — so every boundary\n"
+                "here is cooperative: use the shell only for read-only repository inspection\n"
+                "(`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code\n"
+                "execution or network access, and let the caller provide an outer isolation\n"
+                "boundary before treating that separation as enforced."
+            )
         text = re.sub(
             r"Your context is deliberately local-only:.*?fetched external content\.",
-            "Keep the investigation local-only and do not fetch external content, run commands,\n"
-            "or change files. Codex custom-agent TOML cannot remove inherited web, shell, or write\n"
-            "authority, and its requested sandbox is overridable, so the caller must provide an\n"
-            "outer isolation boundary before treating that separation as enforced.",
+            replacement,
             text,
             count=1,
             flags=re.DOTALL,
         )
+        if host == "copilot":
+            # The method steps name git commands the guard allows on the source host; this
+            # profile holds no shell at all, so an instruction to run them would contradict the
+            # boundary the paragraph above just drew.
+            text = text.replace(
+                "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
+                "   `git status` to detect a dirty tree.",
+                "Name the repository root and the revision supplied by the caller or exposed\n"
+                "   by the host context.",
+            )
+            text = text.replace(
+                "When the question is \"how did it get this way\" or \"why is this here\", "
+                "history is the evidence:\n"
+                "   `git log`/`git blame` on the region, citing the commit that introduced or "
+                "last changed it.",
+                "When the question is \"how did it get this way\" or \"why is this here\", "
+                "history is the evidence:\n"
+                "   use the host's read-only history context when available, and name the "
+                "commit-history\n"
+                "   evidence you could not reach.",
+            )
 
     if host == "codex" and name == "verification-engineer":
         text = re.sub(
