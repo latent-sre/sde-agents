@@ -1,0 +1,186 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 1,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (1 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "loop-duplicate-merges-provenance",
+      "limit": null,
+      "case_ids": [
+        "loop-duplicate-merges-provenance"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "651b24f4b9994dcb7f68a6bde752577a527083a89ca1cf3b04c5e224b3140a60"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "60f4b045a7d1aa2ffc555b6b9532936c08572d033704009752f579adc23a196b",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "4bddd9d0ab65eb7d8882abd488f2507de9356ca1",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "loop-duplicate-merges-provenance",
+      "suite": "contracts",
+      "passes": 0,
+      "runs": 3,
+      "rate": 0.0,
+      "failures": [
+        "missing required pattern: '(preserv|retain)\\\\w*.{0,40}(occurrence|evidence|provenance)'",
+        "missing required pattern: '\\\\b(?:not|no) (?:a )?(?:new|separate|duplicate) (?:issue|rule|record|candidate)\\\\b'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 1707
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 1763
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 1648
+        }
+      ],
+      "duration_ms_per_run": [
+        20307,
+        21583,
+        18904
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "## What should happen with the second report\n\nFiling a new issue and a new candidate would fork the ledger: two entries tracking one underlying divergence (the release-note process omitting the regenerated-adapter parity assertion), splitting evidence and confidence instead of compounding it. The correct action is to **fold the second, independent report into `lc_99998888777766665555444433332222`** as corroborating evidence \u2014 same observed\u2192expected pair, same root cause, different occurrence (different session/day) \u2014 rather than mint a sibling candidate. A second independent reproduction is exactly the signal that should *strengthen* an existing candidate's standing, not dilute it across two IDs. The new issue, if filed, should reference and close into the existing candidate ID, not stand alone.\n\nThat makes the disposition **merge** (consolidate the new evidence into the existing, already-`proposed` candidate) and moves the post-triage state to **approved** \u2014 two independent, corroborating occurrences is enough to move this past single-report uncertainty and mark it ready for promotion into the owning artifact, even though it hasn't been applied yet.\n\nLearning: candidate \u2014 release note omitted the regenerated-adapter parity assertion -> release note must include regenerated-adapter parity assertion\nEvidence: second independent occurrence (different session, different day) of the same divergence already tracked as lc_99998888777766665555444433332222\nScope: applies to release notes accompanying regenerated-adapter changes; excludes releases with no adapter regeneration\nProvenance: sourced \u2014 two independent field reports citing the same omission, no first-hand run in this session\nLearning disposition: merge\nPromotion state: approved\nDestination: lc_99998888777766665555444433332222 (existing ledger candidate \u2014 merge new occurrence, do not create a new candidate/issue)\nOwner: sde-agents:homelab-platform",
+          "failures": [
+            "missing required pattern: '\\\\b(?:not|no) (?:a )?(?:new|separate|duplicate) (?:issue|rule|record|candidate)\\\\b'",
+            "missing required pattern: '(preserv|retain)\\\\w*.{0,40}(occurrence|evidence|provenance)'"
+          ]
+        },
+        {
+          "response": "## What should happen with the second report\n\nDon't file a new issue or a new candidate. A second, independent occurrence of the *same observed\u2192expected divergence* (release note omits the regenerated-adapter parity assertion) is corroborating evidence for the existing candidate `lc_99998888777766665555444433332222`, not a distinct finding. Filing a fresh candidate would fragment the ledger \u2014 two entries tracking one root cause, double the triage overhead, and a false signal that there are two problems instead of one problem observed twice.\n\nThe correct action: attach the second report's occurrence (its session/date reference) as additional evidence to the existing candidate, and let that added corroboration move the candidate's confidence forward. Two independent reproductions is meaningfully stronger evidence than one, which is exactly what should push the candidate from initial proposal toward an approved state \u2014 but it stays the same candidate ID throughout. `merge` is the disposition that captures \"new evidence folded into an existing entry,\" and it's only valid paired with `proposed|approved|promoted`, so the second report cannot be `add` (that's for genuinely new candidates) nor `skip`/`drop` (the behavior is real and reproduced, not dismissed).\n\nLearning candidate block for the second report:\n\nLearning: candidate \u2014 release note omits regenerated-adapter parity assertion -> release note must assert parity after adapter regeneration\nEvidence: second independent field report, different session/day, reproduces same divergence already tracked in lc_99998888777766665555444433332222\nScope: applies to release-note generation whenever the adapter is regenerated; excludes releases with no adapter regeneration\nProvenance: sourced \u2014 second field report citing its own session, corroborating the original occurrence behind lc_99998888777766665555444433332222\nLearning disposition: merge\nPromotion state: approved\nDestination: lc_99998888777766665555444433332222 (merge as corroborating evidence, no new candidate)\nOwner: owner of record for lc_99998888777766665555444433332222 [unverified \u2014 not specified in the prompt, carry forward existing owner rather than reassigning]",
+          "failures": [
+            "missing required pattern: '(preserv|retain)\\\\w*.{0,40}(occurrence|evidence|provenance)'"
+          ]
+        },
+        {
+          "response": "## What should happen with the second report\n\nThe second report isn't a new problem \u2014 it's the same observed behavior (release note omitting the regenerated-adapter parity assertion) recurring in an independent session on a different day. That's corroborating evidence for the existing candidate, not grounds for a sibling candidate. Filing a fresh issue/candidate here would fork the evidence trail: two ledger entries tracking one divergence, which fragments signal and makes it look like two separate problems when it's one problem observed twice. The correct move is to fold the second report into `lc_99998888777766665555444433332222` as additional evidence, not open `lc_<new>` alongside it.\n\nTwo independent reproductions is meaningful \u2014 it raises confidence this is a real, repeating gap rather than a one-off \u2014 but it doesn't itself constitute approval or promotion; that determination belongs to whoever reviews the ledger entry, not to the person filing the field report. So the promotion state stays at `proposed` while the disposition records the merge.\n\n## Canonical Learning candidate block\n\nLearning: candidate \u2014 release notes omit the regenerated-adapter parity assertion -> release notes must include the parity assertion whenever an adapter is regenerated\nEvidence: second independent field report (distinct session, distinct day) reproducing the same divergence already recorded in lc_99998888777766665555444433332222; corroborating, not new\nScope: applies to release-note generation for regenerated adapters; excludes other release-note content or non-adapter changes\nProvenance: sourced \u2014 second field report reference, current as of 2026-08-15\nLearning disposition: merge\nPromotion state: proposed\nDestination: existing ledger entry lc_99998888777766665555444433332222 (append corroborating occurrence; no new candidate)\nOwner: self-improve-loop ledger owner",
+          "failures": [
+            "missing required pattern: '(preserv|retain)\\\\w*.{0,40}(occurrence|evidence|provenance)'"
+          ]
+        }
+      ]
+    }
+  ]
+}

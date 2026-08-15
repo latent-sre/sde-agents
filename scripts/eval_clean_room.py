@@ -34,6 +34,17 @@ AUTH_ENV_VARS = (
     "CLAUDE_CODE_USE_FOUNDRY",
     "CLAUDE_CODE_USE_MANTLE",
     "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+    # A managed host (Claude Code on the web, and other hosted runners) resolves credentials for
+    # the CLI itself and injects them out of band — typically through an inherited file descriptor
+    # that no child of this process can read. Auth genuinely works in such an environment, and it
+    # works inside the room, but none of the signals above are visible, so the credential-file
+    # precheck below would refuse a host that is in fact authenticated. That refusal is the wrong
+    # failure: the precheck exists so an UNAUTHENTICATED trace cannot be mistaken for a valid
+    # result, not to require one particular credential transport. This entry is the same exemption
+    # API-key/Bedrock/Vertex users already get for needing no credential file — and it is recorded
+    # under its own `auth` label rather than borrowed from theirs, so an artifact never claims a
+    # credential source it did not use.
+    "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
 )
 CONTAMINATING_ENV_VARS = (
     "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD",
@@ -117,6 +128,13 @@ def auth_provider_mode(env: dict[str, str] | None = None, *, clean_room: bool = 
         auth = "auth-token-env"
     elif providers:
         auth = "provider-chain-env"
+    elif environment.get("CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"):
+        # Ranked below every explicit signal, provider selectors included: an exported key, token, or
+        # Bedrock/Vertex/Foundry selector says what the session actually authenticated with, while
+        # the host flag only says the host COULD supply something. Ranking it above the provider
+        # chain produced the one thing this function exists to prevent — a record whose `auth`
+        # contradicts its own `provider`, e.g. provider "bedrock" labelled "host-managed-provider".
+        auth = "host-managed-provider"
     elif clean_room:
         auth = "credentials-file-copy"
     else:

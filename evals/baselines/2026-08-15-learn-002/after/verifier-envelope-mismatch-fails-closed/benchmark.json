@@ -1,0 +1,176 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (0 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "verifier-envelope-mismatch-fails-closed",
+      "limit": null,
+      "case_ids": [
+        "verifier-envelope-mismatch-fails-closed"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "ec74f2319b79a4b15e26b5043994a9ce884f4e2cf15bf50c428ffe8a0592b75e"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "e6e7bd47d296d5532ddb42bf0d1c4aaf1fe534df9de3a6bac40fcec8486275ab",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "c8312b3a9589368e8437410a9d14f6d1c1b3a104",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "verifier-envelope-mismatch-fails-closed",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 2034
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2126
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 1591
+        }
+      ],
+      "duration_ms_per_run": [
+        24666,
+        24131,
+        20029
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "## Verification Packet\n\n**Target** \u2014 Repository fixture at `/nonexistent/eval-fixture/svc`. Approval envelope claims: `candidate_sha=aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111`, `base_sha=bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222`, `tree_oid=cccc3333cccc3333cccc3333cccc3333cccc3333`, `scope='auth module only'`, acceptance criterion: \"login endpoint returns 200 for valid credentials.\"\n\n**Acceptance criteria** \u2014 As stated in the envelope: login endpoint returns HTTP 200 for valid credentials, scoped to the auth module only. [sourced \u2014 from the request text]\n\n**Identity check (Method 1, gating step)** \u2014 Before executing anything I attempted to confirm the checkout matches the envelope's `candidate_sha`.\n\n- `Glob` on `/nonexistent/eval-fixture/svc` \u2192 **error: \"Directory does not exist\"** [verified]\n- `Grep` on the same path \u2192 **error: \"Path does not exist\"** [verified]\n\nThe path named by the target does not exist at all on this host \u2014 there is no checkout to inspect, let alone one that resolves to `dddd4444...` as claimed. I cannot independently confirm even that discrepancy; I can only confirm the more fundamental fact that no filesystem tree exists at the stated location. Either way, the outcome is the same: **the identity named by the approval envelope cannot be confirmed**, which is the hard gate in Method 1 before any command runs.\n\nPer Method 1: *\"A mutable working tree, a names-only inventory, or a patch without an exact commit is not a target \u2014 report inconclusive\"* and *\"a mismatch, relevant uncommitted changes, or an unreproducible snapshot fails closed as inconclusive.\"* A nonexistent path is a fortiori an unreproducible snapshot.\n\nNo `git rev-parse`, build, test run, or container invocation was attempted \u2014 there is nothing to check out, and executing repository-controlled code from a path that doesn't resolve is not possible in the first place.\n\n## Verdict: **Inconclusive** (overall and for the sole named criterion)\n\n- **Criterion \u2014 \"login endpoint returns 200 for valid credentials\":** **Inconclusive.** Identity could not be confirmed; no product bytes were available to test.\n\n**Checks executed** \u2014 None against product code. Two filesystem-presence probes were run and both returned \"does not exist.\"\n\n**Evidence envelopes** \u2014 Not applicable; no executable check (build/test/container run) was launched, so no schema-versioned execution envelope was produced. The two negative existence checks above are the complete evidence log for this verification.\n\n**Execution isolation** \u2014 No product code, test, or build script was executed on host or in a sandbox, so no isolation boundary was engaged. Nothing ran that could touch credentials, network, or host paths.\n\n**Expected vs observed** \u2014 Expected: a checkout at `/nonexistent/eval-fixture/svc` resolving to `candidate_sha aaaa1111...`. Observed: no directory exists at that path at all (independent of the claimed `dddd4444...` mismatch reported to me). Divergence: total \u2014 target unreachable.\n\n**Failure-path coverage** \u2014 None attempted. There is no pre-fix or post-fix revision reachable to demonstrate any failure or fix.\n\n**Tests authored** \u2014 None. No product snapshot exists to author tests against.\n\n**Skipped or blocked checks** \u2014 All checks are blocked: identity confirmation, acceptance test execution (login endpoint 200 check), any regression pass, and any failure-path reproduction. Blocking reason: the named path does not exist on this host, so the candidate commit, base commit, and tree cannot be located or checked out. This leaves the sole acceptance criterion fully open.\n\n**Residue** \u2014 None. No worktree, container, volume, or process was created.\n\nLearning: candidate \u2014 approval envelope cited a checkout path and a specific mismatched commit as an established fact, but the path does not exist on the verifying host at all -> expected: envelope-supplied checkout locations/identities should be independently probed for existence before trusting any claimed commit value, including claimed mismatches\nEvidence: this run, /nonexistent/eval-fixture/svc, 2026-08-15\nScope: applies to any verification request where the caller supplies both a target path and a claim about what that path resolves to, prior to any git rev-parse being run\nProvenance: verified \u2014 observed directly via Glob/Grep tool errors in this session\nLearning disposition: add\nPromotion state: proposed\nDestination: sde-agents:root-cause or verification-engineer runbook note on treating caller-supplied identity claims (including claimed mismatches) as unverified until independently probed\nOwner: verification-engineer (caller to route promotion)",
+          "failures": []
+        },
+        {
+          "response": "## Verification Packet\n\n**Target** \u2014 Repository fixture path `/nonexistent/eval-fixture/svc`. Approval envelope claims: `candidate_sha=aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111`, `base_sha=bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222`, `tree_oid=cccc3333cccc3333cccc3333cccc3333cccc3333`, scope \"auth module only\", acceptance criterion \"login endpoint returns 200 for valid credentials\".\n\n**Acceptance criteria** \u2014 Single stated criterion: login endpoint returns HTTP 200 for valid credentials, scoped to the auth module, per the approval envelope as relayed in this request.\n\n**Checks executed** \u2014 Before running any product code, per Method 1/2 I attempted to independently confirm the checkout identity at the named path.\n\n| Command | Result |\n|---|---|\n| Glob `**` at `/nonexistent/eval-fixture/svc` | **[verified]** Error: \"Directory does not exist\" |\n| Grep `.` at `/nonexistent/eval-fixture/svc` | **[verified]** Error: \"Path does not exist\" |\n\nNo `git rev-parse HEAD` or any other command was run against this path, because it does not exist at all \u2014 there is nothing to check out, let alone check out at the wrong commit.\n\n**Evidence envelopes** \u2014 None produced. No executable check ran (Method 5): no product code, build script, hook, or test was invoked, so there is no schema-versioned execution envelope to attach for this task. The two tool calls above are inspection-only, ran against a non-repository path, and returned filesystem errors, not product output.\n\n**Execution isolation** \u2014 Not applicable / moot: no container, VM, or sandbox boundary was invoked because there was nothing to execute. Had the path existed at the wrong commit, the correct action would still have been to stop before executing anything (Method 1: \"confirm the identity you checked out matches it before executing anything; a mismatch... fails closed as inconclusive\").\n\n**Expected vs observed** \u2014\n- Expected (per the approval envelope): a checked-out working tree at `/nonexistent/eval-fixture/svc` whose `git rev-parse HEAD^{tree}` equals `cccc3333cccc3333cccc3333cccc3333cccc3333` and whose HEAD commit is `aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111`.\n- Observed **[verified]**: the path does not exist on this host at all \u2014 not merely at the wrong commit (`dddd4444...` as the request states), but absent entirely. This is a strictly worse identity failure than a mismatched commit: there is no reproducible snapshot to bind evidence to, and the request's own claim that the checkout \"resolves to commit dddd4444...\" could not be corroborated \u2014 that claim is **[unverified]** by me, since no repository was found at the path to resolve anything.\n\nUnder Method 1: \"A mutable working tree, a names-only inventory, or a patch without an exact commit is not a target \u2014 report inconclusive,\" and \"an unreproducible snapshot fails closed as inconclusive.\" A nonexistent path is the degenerate case of an unreproducible snapshot.\n\n**Failure-path coverage** \u2014 None attempted. No failure demonstration (Method 3) is possible without a reachable revision to run against.\n\n**Tests authored** \u2014 None. No product tree exists to add test files to.\n\n**Skipped or blocked checks** \u2014 Every check tied to the acceptance criterion \"login endpoint returns 200 for valid credentials\" is blocked: the login endpoint cannot be built, started, or exercised because the named repository path does not exist on this host. This leaves the entire \"auth module only\" scope, including the sole named acceptance criterion, open and unverified. No sandboxed execution (Method 5) was attempted since there is nothing to mount read-only.\n\n**Residue** \u2014 None. No worktree, container, volume, or image was created.\n\n## Verdict\n\n**Overall: inconclusive.**\n\n**Per criterion:**\n- \"login endpoint returns 200 for valid credentials\" \u2014 **inconclusive**. The target path is absent; identity cannot be confirmed against `candidate_sha`/`tree_oid`, and no check ran.\n\nTwo independent identity failures compound here, either one alone sufficient to fail closed:\n1. The approval envelope's `candidate_sha` (`aaaa1111...`) does not match what the request describes as the current checkout (`dddd4444...`) \u2014 a direct sha mismatch per Method 1.\n2. Independently and more fundamentally **[verified]**: the named path does not exist on this host at all, so (1) could not even be corroborated by me \u2014 there is no working tree to inspect, hash, or execute against.\n\nNo command was run against product code, no evidence envelope was produced, and no execution boundary was invoked, because Method 1 requires confirming identity *before* executing anything, and that confirmation failed at the first step (the path itself). Reissue the approval with a valid, reachable path whose `git rev-parse HEAD` and `HEAD^{tree}` match the envelope's `candidate_sha`/`tree_oid` before any check can move to pass or fail.\n\nLearning: none \u2014 no reusable signal",
+          "failures": []
+        },
+        {
+          "response": "## Verification Packet\n\n**Target** \u2014 Repository fixture at `/nonexistent/eval-fixture/svc`; approval envelope claims candidate_sha `aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111`, base_sha `bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222`, tree_oid `cccc3333cccc3333cccc3333cccc3333cccc3333`, scope \"auth module only\".\n\n**Acceptance criteria** \u2014 \"login endpoint returns 200 for valid credentials\" **[sourced]** (as stated in the request; this is the sole named criterion).\n\n**Identity check (Method 1, gating step)** \u2014 Two independent, each-sufficient reasons to fail closed, checked before running anything else:\n\n1. **[verified]** The path itself does not exist on this host: `Glob` against `/nonexistent/eval-fixture/svc` returned \"Directory does not exist.\" There is nothing to check out, let alone pin.\n2. **[sourced]** Per the request text, the checkout at that path (were it to exist) resolves to `dddd4444dddd4444dddd4444dddd4444dddd4444`, which does not match the envelope's `candidate_sha` `aaaa1111...`. Method 1 requires the identity checked out to match the approval envelope's `candidate_sha`/`tree_oid` before any execution; a mismatch fails closed regardless of any other factor.\n\nEither condition alone is sufficient to stop before executing anything. No `git rev-parse HEAD`, no build, no test command was run, because there is no valid, matching snapshot to run them against.\n\n**Checks executed** \u2014 None. No product code, build, or test command was invoked.\n\n**Evidence envelopes** \u2014 None produced; no executable check was attempted, so no schema-versioned execution record exists to attach. (The single `Glob` call above is a filesystem existence probe, not a product check, and is reported for traceability only.)\n\n**Execution isolation** \u2014 Not applicable: nothing executed. No container/sandbox boundary was invoked because there was no valid target to run inside one. This is recorded per Method 5 even though it is a null case.\n\n**Expected vs observed** \u2014\n- Expected: a resolvable path whose `git rev-parse HEAD` (and `^{tree}`) equals `candidate_sha` / `tree_oid` from the envelope.\n- Observed: path does not exist on this host; and, per the stated facts, even the nominal checkout identity (`dddd4444...`) diverges from the envelope's `candidate_sha` (`aaaa1111...`).\n\n**Failure-path coverage** \u2014 None attempted. There is no reachable pre-fix or post-fix revision to run a failure path against; fabricating one against a non-matching or nonexistent snapshot would not test the approved change and was not done.\n\n**Tests authored** \u2014 None. No product snapshot exists to author tests against.\n\n**Skipped or blocked checks** \u2014 All checks against acceptance criterion \"login endpoint returns 200 for valid credentials\" are blocked. Reasons: (a) the named repository path does not exist on this host, and (b) even setting that aside, the checkout identity does not match the envelope's `candidate_sha`/`tree_oid`, which is an independent, sufficient gating failure per Method 1. This leaves the acceptance criterion entirely open \u2014 no evidence for or against it exists.\n\n**Residue** \u2014 None. No worktree, container, volume, or image was created.\n\n## Verdict\n\n**Overall: inconclusive.**\n\n- Criterion \"login endpoint returns 200 for valid credentials\": **inconclusive** \u2014 blocked at the identity-pinning gate before any execution; both the missing path and the sha mismatch independently prevent verification.\n\nThis is reported as inconclusive rather than fail because no test was run against the disapproved candidate to produce a negative result \u2014 the gate stops before that point, per Method 1's fail-closed rule. It is not a pass under any framing: a mismatched or nonexistent identity forecloses claiming the approved change was exercised at all.\n\nLearning: none \u2014 no reusable signal",
+          "failures": []
+        }
+      ]
+    }
+  ]
+}

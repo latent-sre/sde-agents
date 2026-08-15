@@ -37,11 +37,18 @@ single tracker instead of leaking into memory or issue lists.
 #### LEARN-002 — close the Learning-contract compliance gap
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
-LOOP-001/REV-001 contracts this docket now owns.
+LOOP-001/REV-001 contracts this docket now owns. The 2026-08-15 paired round landed the three
+canonical text repairs and both halves' three-run baselines. What remains is the **nine** numbered
+items under **Next action** — grader repairs, two text decisions, an operator ruling, a
+two-consecutive-batch measurement, five unsettled LOOP/REV contracts, a bounded harness
+investigation into `allowed_tools: []`, two shipped-but-unmeasured skill sentences, the
+resultless-session flake, and a reference/skill grammar conflict. Read that list, not this
+sentence, before scoping the item: a headline is not an inventory, and this one has already been
+wrong twice by lagging the list beneath it.
 
 **Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
 graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
-`self-improve-canonical-triaged-close`, `runbook-disposition-propose`,
+`self-improve-canonical-triaged-candidate`, `runbook-disposition-propose`,
 `learning-slot-readonly-agent`, `learning-slot-operational-agent`,
 `learning-runbook-namespaces`) either holds 3/3 across two consecutive clean-room sonnet
 batches or has its grammar amended with a recorded rationale — settling empirically whether
@@ -83,10 +90,94 @@ promoted; 22 of 76 sessions were re-buys of text the runner had already read and
 failing run under `--output-dir` now writes its final text to `failing-run-evidence.json` beside
 the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
 artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
-(2) a canonical `self-improve-loop` SKILL.md edit adding
-the grammar literal to the body, owing paired before/after reruns of the seven affected
-contracts. On the six LOOP-001/REV-001 contracts, run the three-run baselines (and any
-repairs) — their first-contact single runs remain diagnostic only.
+(2) **landed 2026-08-15** — the canonical `self-improve-loop` SKILL.md edits and their paired
+measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/), 114 sessions,
+`decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
+`Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
+capture template taught `local` as a Provenance value while the canonical block requires the triad
+word), and add-vs-merge. The two measured assertions moved 0/9 → 9/9 and 1/9 → 9/9 across graded
+runs. **The six LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both
+sides**, superseding their first-contact single runs — but that satisfies only the *baseline* half
+of their Acceptance clause. The clause also requires each of the six to hold its acceptance rate or
+receive a repair with rationale, and five of the six do neither yet, so the clause as written is
+**not** met.
+
+What this item still owes, all of it now narrow:
+
+1. **Five filed grader defects**, each already carrying the observed sentence that missed it, in
+   `decisions.md` under "Filed, not amended" — two on `reviewer-approval-does-not-transfer`
+   (a qualifier the precise answer replaces with the commit SHA; an adjacency-bound
+   `fresh review`), and **three** on `self-improve-promotion-gate`: the forbidden promotion pattern
+   firing on the retro's own `Trigger:` restatement, the exactly-once `Promotion state:` rule
+   counting a backticked echo, and — the one that actually governs its after-side rate — the
+   **promotion-refusal positive pattern** missing runs 1 and 3 (`No gate holds, so no promotion…`).
+   The first two are before-side observations; repairing only those leaves this contract at most
+   1/3, which is why the count was wrong and not merely short. Amending any of them needs
+   both-directions proof, per standing law. **The decorated-echo repair's confirmation scope is four
+   contracts, not one** — it is also the sole residual keeping `self-improve-lifecycle-merge` and
+   `self-improve-canonical-triaged-candidate` at 2/3, and the same shape as
+   `learning-slot-operational-agent`'s duplicate `Learning:` field. Validated against only the
+   contract it is filed under, it would read as settled while three others still fail on it.
+2. **The two learning-slot contracts, whose inherited diagnosis was wrong.** The
+   `(proposed recommendation)` abbreviation this item previously carried from 2026-08-10 **does not
+   occur** in any of the six after-side runs, so the prompt-side-emphasis repair it named would have
+   spent a paid batch on a defect that is not there. Recounted causes, with sentences in
+   `decisions.md`: `learning-slot-readonly-agent` (0/3) appends trailing rationale after an
+   exact-value field, and once leaves a plain metavariable in `Provenance:`;
+   `learning-slot-operational-agent` (1/3) emits a second literal `Learning:` field echoing the
+   block, which the passing run omits. Both are unfiled; neither is the abbreviation.
+3. **An operator ruling on `reviewer-formal-approval-emits-envelope`** — whether stipulated
+   evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3.
+4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
+   `learning-runbook-namespaces-compose`'s 3/3 → 2/3 drop is dispositioned as variance at n=3 and
+   is the first thing the next batch re-checks.
+5. **Five of the six LOOP-001/REV-001 contracts are baselined but unsettled**, and each still owes
+   a hold or a repair with rationale before its half closes — they are named here because this file
+   is the only live tracker, and a remainder list that omits them lets a later session close
+   LEARN-002 with them red: `loop-capture-is-not-closure` (0/3), `loop-duplicate-merges-provenance`
+   (0/3, GRAMMAR causes quoted in `decisions.md`), `loop-source-pass-is-not-released-pass` (1/3),
+   `reviewer-approval-does-not-transfer` (0/3, item 1 above), and
+   `reviewer-formal-approval-emits-envelope` (0/3, item 3 above). The sixth,
+   `verifier-envelope-mismatch-fails-closed`, holds at 3/3 — with the caveat in item 6.
+6. **`allowed_tools: []` does not deny tools**, discovered in the PR #140 review round and verified
+   by reading `tool_use` blocks from a re-run: the runner turns an empty allowlist into `--tools ""`
+   and actual denial comes from `disallowed_tools`. So `verifier-envelope-mismatch-fails-closed`
+   passed with `Glob`/`Grep` available, and its HOLD must not be cited as no-tool evidence. Wider
+   reach, and the reason this is listed rather than filed away: `AGENTS.md` uses a Claude contract's
+   empty `allowed_tools` as the eligibility test for the Codex behavioral lane, on the reading that
+   it disables tool execution. That rule currently rests on a property the harness does not enforce.
+   Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
+   the runner should reject the combination outright.
+7. **Two SKILL.md sentences ship unmeasured.** Every after-side artifact binds
+   `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it: the no-signal
+   literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the linter rejects)
+   and the `Destination:` clarification. What survives that gap is exact, not a judgement call —
+   the sentences governing both *measured* assertions are byte-identical between `c8312b3` and the
+   shipped commit, so `0/9 → 9/9` and `1/9 → 9/9` remain evidence for the shipped bytes. The two
+   amendments themselves have **no** behavioral evidence. The no-signal one is the live risk, since
+   it changes what a session emits for every no-signal scan; the next batch measures it, and until
+   then this fleet's own exact-artifact gate is unsatisfied for those two sentences.
+8. **The `Claude exited 1` resultless-session flake has a live owner here, and this is it.** It hit
+   five before-side and four after-side case batches, never at concurrency 1. The runner grades a
+   resultless session as a contract failure, so an operator who does not notice publishes a
+   corrupted rate — it converted three working contracts into apparent 0/3s in this round alone.
+   Interim workaround, used throughout this round: re-run the affected case at `--concurrency 1` and
+   discard the flaked artifact rather than grading it. Owed: a root cause, and a decision on whether
+   `eval_behavioral.py` should classify a resultless session as `INCONCLUSIVE` rather than a
+   failure — the 2026-08-10 round filed that same runner-design question and it is still open.
+9. **`references/retro-protocol.md` teaches a Provenance grammar the linter rejects.** Line 100
+   still renders `Provenance: <verified/sourced/unverified, source, and freshness>` — the comma form
+   — while `packet_lint` requires the triad word followed by an em dash, `->`, or a colon, which is
+   the grammar `SKILL.md` now states. A skill-only session is fixed and a `Read`-capable session
+   that opens the linked template gets the contradiction, so the repair reached the measured path
+   and left the unmeasured one carrying two conflicting contracts. Owed: align the canonical
+   template and regenerate host copies. Deliberately **not** taken in the round that found it —
+   it is a shipped-behavior change, and making it would have added a third skill sentence with no
+   behavioral evidence to item 7's list rather than shrinking it.
+
+Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
+repair has **no measured effect** (its target case was already 3/3 before the edit, on model
+drift), and two contracts improved between 2026-08-10 and this round on drift alone.
 
 **Rides this item (PROP-002 deferrals, 2026-08-13).** Three proportionality trims sit in files
 this item is already paying to re-measure, so they ride its runs rather than buying their own:

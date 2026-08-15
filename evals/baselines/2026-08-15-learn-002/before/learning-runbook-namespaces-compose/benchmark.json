@@ -1,0 +1,176 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.233 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "host-managed-provider"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "failing_run_evidence": "benchmark.json (0 case(s); --retain-run-evidence retains every run)",
+  "failing_run_evidence_sha256": null,
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "973434214fbee2f73b2026c59173b9598d01099a260c9a4bf98427395d8ab177"
+      }
+    ],
+    "selection": {
+      "expression": "learning-runbook-namespaces-compose",
+      "limit": null,
+      "case_ids": [
+        "learning-runbook-namespaces-compose"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "54fe339b6b55bd581b6874842a0fc7ce0304b3cdc440158ace9b071bb2937dd7"
+    },
+    "evaluator": {
+      "sha256": "3afff69347420802b5e3cb0d1ab2ac5d14cddb571927f41115e27a5fd7ebf996",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "7070b26c28f92ec4369999b0e90ad78db58ae182eb7ce673770a38bcd5691423"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "194d7cc099dc7c8cff7759e1468d0fcc04c0a9e2dffb0bda8a46ca958afb1d4f"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "eb545791d51d4732fa8cc704ff55433acbf69ffba90a760c520288f7cab7ce17"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.11.15"
+      }
+    },
+    "plugin": {
+      "sha256": "60f4b045a7d1aa2ffc555b6b9532936c08572d033704009752f579adc23a196b",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "4bddd9d0ab65eb7d8882abd488f2507de9356ca1",
+      "git_dirty": false,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "learning-runbook-namespaces-compose",
+      "suite": "contracts",
+      "passes": 3,
+      "runs": 3,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 3403
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 3716
+        },
+        {
+          "input_tokens": 4,
+          "output_tokens": 2084
+        }
+      ],
+      "duration_ms_per_run": [
+        36667,
+        39437,
+        24210
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Planning-only recommendation \u2014 no files inspected, edited, or written.\n\n**Self-improve-loop lifecycle (this fleet's decision):**\n\n```\nLearning: candidate \u2014 ops/widgets.md's Recovery section is missing a step, confirmed twice by independent verified drills sharing the same cause and expected result\nEvidence: two verified recovery-drill runs against ops/widgets.md, same missing step observed both times\nScope: ops/widgets.md Recovery section only; applicability and safe replay path already established by the drills\nProvenance: local, verified via drill execution\nLearning disposition: merge\nPromotion state: proposed\nDestination: ops/widgets.md (existing owned canonical runbook), via sde-agents:runbook\nOwner: ops/widgets.md's already-established runbook owner\n```\n\n`merge` applies rather than `add` because the runbook already exists and owns Recovery; the two drills are a repeated occurrence of the same cause corroborating the same gap in that existing record, not a novel lesson needing a new owner artifact. `Promotion state: proposed` because this is a planning-only recommendation pending the owner's review, not yet approved or promoted.\n\n**Runbook lifecycle (routed destination's decision):**\n\n```\nRunbook disposition: update\n```\n\n`update` applies because ops/widgets.md is the existing canonical runbook, its owner and applicability are already known, and the missing recovery step falls squarely inside that document's Recovery section \u2014 no competing document is warranted.\n\nNext step (not taken here): the owner authorizes an actual edit to ops/widgets.md's Recovery section under `sde-agents:runbook`, adding the confirmed step and updating \"Last verified\" with the drill evidence.",
+          "failures": []
+        },
+        {
+          "response": "## Planning-only: lifecycle routing for the missing recovery step\n\n**Self-improve-loop lifecycle** \u2014 two verified drills independently converging on the *same* missing step is the explicit recurrence case the loop calls out: \"A repeated occurrence of the same cause merges its provenance or recurrence into the canonical record\u2026 do not call that skip merely because the rule already exists.\" The owning artifact (`ops/widgets.md`) already exists and is owned, so this isn't a novel lesson with no owner (`add`) \u2014 it's a corroborating recurrence against that existing canonical record.\n\n**Runbook gate** \u2014 owner, applicability, and a safe replay path are already established for `ops/widgets.md`, and the change (a recovery step) fits that document's existing purpose. That rules out `create` (a canonical doc already exists) and `propose` (no evidence gap remains to name).\n\n```text\nLearning: candidate \u2014 ops/widgets.md is missing a recovery step surfaced identically by two independent verified drills\nEvidence: two verified drill occurrences, same cause, same boundary, same expected result; applicability and safe replay path already established\nScope: recovery procedure in ops/widgets.md; no other document\nProvenance: local, verified by drill, current\nLearning disposition: merge\nPromotion state: proposed\nDestination: ops/widgets.md, via sde-agents:runbook\nOwner: owner of record for ops/widgets.md (already established, not restated here)\n```\n\n```text\nRunbook disposition: update\n```\n\nNext step (not taken here): hand the merged candidate to `sde-agents:runbook` to actually add the recovery step to `ops/widgets.md` under the `update` gate.",
+          "failures": []
+        },
+        {
+          "response": "**Learning disposition: merge**\n**Runbook disposition: update**\n\n```text\nLearning: candidate \u2014 ops/widgets.md's Recovery section is missing a step that both verified drills required to complete the restore\nEvidence: two independent verified drill replays against ops/widgets.md, same missing step, same expected outcome\nScope: ops/widgets.md Recovery procedure only\nProvenance: local, verified \u2014 established applicability and safe replay path from the drills\nLearning disposition: merge\nPromotion state: proposed\nDestination: ops/widgets.md (existing owned canonical runbook)\nOwner: ops/widgets.md's declared owner\n```\n\nRationale: ops/widgets.md is already the owned canonical runbook and its applicability/safe-replay path is established \u2014 this isn't a novel, ownerless lesson (`add`), a replacement of an existing rule (`supersede`), or something to discard (`drop`). Two drills converging on the same gap is recurrence corroborating the existing Recovery procedure, so it `merge`s into that canonical record. Correspondingly, under `sde-agents:runbook`'s disposition gate this is an `update` \u2014 not `create` (a canonical doc already exists) and not `propose` (owner, applicability, edit authority, and replay path are all already established, so no gap packet is warranted).\n\nPer your constraint, I haven't inspected, edited, or written the procedure itself \u2014 this states the two lifecycle choices only. Next step, when you're ready to act: hand this off to whoever holds edit authority on ops/widgets.md to actually add the step and re-verify.",
+          "failures": []
+        }
+      ]
+    }
+  ]
+}

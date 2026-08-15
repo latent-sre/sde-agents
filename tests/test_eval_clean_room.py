@@ -117,6 +117,74 @@ class CleanEnvironmentTest(unittest.TestCase):
             eval_clean_room.auth_provider_mode({}, clean_room=True),
         )
 
+    def test_host_managed_provider_runs_without_a_credential_file(self) -> None:
+        """A managed host authenticates the CLI out of band; refusing it measures nothing.
+
+        The risk this covers is the inverse of the refusal path above: on Claude Code on the web
+        and similar hosted runners the token arrives through an inherited descriptor no child can
+        read, so every visible auth signal is absent while sessions authenticate normally. Without
+        this branch the room refuses on a host that is authenticated, and the whole behavioral
+        suite is unrunnable there for a reason that has nothing to do with authentication.
+        """
+        with tempfile.TemporaryDirectory() as root:
+            with mock.patch.dict(
+                os.environ,
+                {"CLAUDE_CONFIG_DIR": root, "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": "1"},
+                clear=False,
+            ):
+                for key in eval_clean_room.AUTH_ENV_VARS:
+                    if key != "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST":
+                        os.environ.pop(key, None)
+                with eval_clean_room.clean_env() as env:
+                    room = Path(env["CLAUDE_CONFIG_DIR"])
+                    # No credential file exists to copy, and none is invented.
+                    self.assertEqual([], list(room.iterdir()))
+                    self.assertEqual("1", env["CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"])
+
+    def test_host_managed_provider_is_recorded_under_its_own_auth_label(self) -> None:
+        """The artifact must not claim a credential source the session did not use."""
+        self.assertEqual(
+            {"provider": "anthropic", "auth": "host-managed-provider"},
+            eval_clean_room.auth_provider_mode({"CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": "1"}),
+        )
+        # Ranked below every explicit credential: an exported key is what the session actually
+        # used, so the host flag must not mask it.
+        self.assertEqual(
+            {"provider": "anthropic", "auth": "api-key-env"},
+            eval_clean_room.auth_provider_mode({
+                "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": "1",
+                "ANTHROPIC_API_KEY": "test-not-real",
+            }),
+        )
+        # An unset/empty flag is not a host-managed session, and must still reach the refusal path.
+        self.assertEqual(
+            {"provider": "anthropic", "auth": "cli-config-or-platform-chain"},
+            eval_clean_room.auth_provider_mode({"CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": ""}),
+        )
+
+    def test_explicit_provider_selector_outranks_the_host_marker(self) -> None:
+        """An `auth` label must never contradict the `provider` it is recorded beside.
+
+        A cloud host can set both a provider selector and the managed-host marker. Ranking the
+        marker first produced records like provider "bedrock" with auth "host-managed-provider" —
+        self-contradictory provenance, and exactly the mislabelling this function exists to
+        prevent. The selectors are already environment auth, so they describe what the session
+        actually authenticated with; the host flag only says the host could supply something.
+        """
+        for selector, provider in (
+            ("CLAUDE_CODE_USE_BEDROCK", "bedrock"),
+            ("CLAUDE_CODE_USE_VERTEX", "vertex"),
+            ("CLAUDE_CODE_USE_FOUNDRY", "foundry"),
+        ):
+            with self.subTest(selector=selector):
+                self.assertEqual(
+                    {"provider": provider, "auth": "provider-chain-env"},
+                    eval_clean_room.auth_provider_mode({
+                        selector: "1",
+                        "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST": "1",
+                    }),
+                )
+
 
 class AuthenticationFailureClassificationTest(unittest.TestCase):
     def test_stderr_only_auth_failure_is_unavailable_case_insensitively(self) -> None:
