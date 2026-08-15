@@ -38,11 +38,13 @@ single tracker instead of leaking into memory or issue lists.
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
 LOOP-001/REV-001 contracts this docket now owns. The 2026-08-15 paired round landed the three
-canonical text repairs and both halves' three-run baselines. What remains is six items listed under
-**Next action** — grader repairs, two text decisions, an operator ruling, a two-consecutive-batch
-measurement, five unsettled LOOP/REV contracts, and a bounded harness investigation into
-`allowed_tools: []`. Read that list, not this sentence, before scoping the item: a headline is not
-an inventory.
+canonical text repairs and both halves' three-run baselines. What remains is the **nine** numbered
+items under **Next action** — grader repairs, two text decisions, an operator ruling, a
+two-consecutive-batch measurement, five unsettled LOOP/REV contracts, a bounded harness
+investigation into `allowed_tools: []`, two shipped-but-unmeasured skill sentences, the
+resultless-session flake, and a reference/skill grammar conflict. Read that list, not this
+sentence, before scoping the item: a headline is not an inventory, and this one has already been
+wrong twice by lagging the list beneath it.
 
 **Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
 graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
@@ -108,10 +110,14 @@ What this item still owes, all of it now narrow:
    `fresh review`), and two on `self-improve-promotion-gate` (the forbidden promotion pattern
    firing on the retro's own `Trigger:` restatement; the exactly-once `Promotion state:` rule
    counting a backticked echo). Amending these needs both-directions proof, per standing law.
-2. **The `(proposed recommendation)` abbreviation**, still unrepaired on the two learning-slot
-   contracts. The filed candidate is prompt-side emphasis; this round declined to take it, because
-   tuning a case prompt until the component passes is teaching to the test unless the component's
-   text is first shown adequate. That showing is the decision owed.
+2. **The two learning-slot contracts, whose inherited diagnosis was wrong.** The
+   `(proposed recommendation)` abbreviation this item previously carried from 2026-08-10 **does not
+   occur** in any of the six after-side runs, so the prompt-side-emphasis repair it named would have
+   spent a paid batch on a defect that is not there. Recounted causes, with sentences in
+   `decisions.md`: `learning-slot-readonly-agent` (0/3) appends trailing rationale after an
+   exact-value field, and once leaves a plain metavariable in `Provenance:`;
+   `learning-slot-operational-agent` (1/3) emits a second literal `Learning:` field echoing the
+   block, which the passing run omits. Both are unfiled; neither is the abbreviation.
 3. **An operator ruling on `reviewer-formal-approval-emits-envelope`** — whether stipulated
    evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3.
 4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
@@ -151,6 +157,15 @@ What this item still owes, all of it now narrow:
    discard the flaked artifact rather than grading it. Owed: a root cause, and a decision on whether
    `eval_behavioral.py` should classify a resultless session as `INCONCLUSIVE` rather than a
    failure — the 2026-08-10 round filed that same runner-design question and it is still open.
+9. **`references/retro-protocol.md` teaches a Provenance grammar the linter rejects.** Line 100
+   still renders `Provenance: <verified/sourced/unverified, source, and freshness>` — the comma form
+   — while `packet_lint` requires the triad word followed by an em dash, `->`, or a colon, which is
+   the grammar `SKILL.md` now states. A skill-only session is fixed and a `Read`-capable session
+   that opens the linked template gets the contradiction, so the repair reached the measured path
+   and left the unmeasured one carrying two conflicting contracts. Owed: align the canonical
+   template and regenerate host copies. Deliberately **not** taken in the round that found it —
+   it is a shipped-behavior change, and making it would have added a third skill sentence with no
+   behavioral evidence to item 7's list rather than shrinking it.
 
 Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
 repair has **no measured effect** (its target case was already 3/3 before the edit, on model

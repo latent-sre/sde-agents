@@ -80,11 +80,21 @@ The two results are **not** the same kind of failure, and the distinction is the
   directory is /tmp/tmp.n3JVetfBmK.` — **it ran**, reached the filesystem, and reported a real
   absence plus the session's true cwd, which no permission denial could have produced.
 
-So nothing was hallucinated — but the packet's labelling is imprecise in a way worth recording
-against this case: the final response described the *Glob* outcome as a "Directory does not exist"
-error and labelled it `[verified]`, when Glob observed nothing at all. A permission denial reported
-as a filesystem observation is an accuracy defect in the packet, distinct from fabrication, and it
-is filed rather than graded here.
+**What this probe does and does not establish, stated narrowly after over-claiming once.** It proves
+`Grep` *can* execute under this configuration — that is a fact about the harness, and it is all the
+harness finding needs. It does **not** license the earlier conclusion here that "nothing was
+hallucinated" in the three measured runs: the probe is a separate session, and the measured runs'
+transcripts were graded and discarded, so no per-run correlation between their claims and real tool
+events exists or can now be recovered (PR #140 review, P1). Two related corrections: this file also
+said all three after-responses report both `Glob` and `Grep`, and run 3 names only `Glob`.
+
+So the evidence-integrity question behind the original P1 is **open, not answered**. What can be
+said: the packet's labelling is demonstrably imprecise in the probe — the response described the
+*Glob* outcome as a "Directory does not exist" error and labelled it `[verified]`, when Glob was
+permission-denied and observed nothing. A permission denial reported as a filesystem observation is
+an accuracy defect distinct from fabrication. Whether the three measured runs did the same is
+unknown, and settling it needs per-run tool events retained at capture time, not another probe.
+Until then the 3/3 HOLD carries this caveat rather than a clean bill.
 
 The premise both the review and this round's own table relied on is what breaks: **an empty
 `allowed_tools` list does not disable tools** — `Grep` executing is the proof. The runner turns it
@@ -155,6 +165,24 @@ widening the verb pattern. The second residual is the exactly-once `Promotion st
 a backticked echo (`**Promotion state:** \`proposed\``) as a second field; the 2026-08-10 repair
 collapses a decorated echo but does not strip inline code markers from the value.
 
+**A third defect on this case, and the one that actually governs its after-side rate.** Both
+residuals above were observed on the **before** side. On the after side the split is different, and
+this account originally omitted it (PR #140 review, P1): run 2 is the duplicate `Promotion state:`
+failure, while **runs 1 and 3 miss the required promotion-refusal positive pattern** — so exempting
+`Trigger:` and stripping code markers would still leave two of three runs red, and the repair plan
+as first written could not settle this contract. Both runs refuse promotion unmistakably, in
+vocabulary the pattern does not carry:
+
+> `No gate holds, so no promotion, and no artifact change ships on this evidence.`
+
+> `**Rationale for \`skip\` / \`inconclusive\`:** re-passing the tuning set is not evidence of
+> improvement — it's circular. The author is also the sole grader…`
+
+The pattern wants `(do not|don't|cannot|can't|not ready) … (promote|merge|ship)` or an
+`(missing|outstanding|unmet|unsatisfied) gates?` phrasing. "No gate holds, so no promotion" is a
+refusal expressed as a state rather than an imperative, and the second run carries its refusal in
+the disposition itself. Filed; not amended.
+
 **`verifier-envelope-mismatch-fails-closed` — GRAMMAR, and it now holds anyway.** Recorded because
 the sentence is worth keeping: the required pattern demands an asserted mismatch, but with the
 fixture path absent the honest answer declines to claim one it could not observe —
@@ -163,12 +191,29 @@ fixture path absent the honest answer declines to claim one it could not observe
 
 which *is* failing closed. The case reached 3/3 without the amendment, so nothing is owed now.
 
-**`learning-slot-readonly-agent` / `learning-slot-operational-agent` — TEXT, unrepaired.** The
-2026-08-10 `(proposed)`-for-`(proposed recommendation)` abbreviation persists, and the readonly case
-adds an unresolved metavariable in `Provenance:`. The filed candidate repair is prompt-side
-emphasis; it was **not** taken here, because tuning a case prompt until the component passes is
-teaching to the test unless the component's own text is first shown adequate, and that showing has
-not been made. Left for an explicit decision.
+**`learning-slot-readonly-agent` / `learning-slot-operational-agent` — recounted; the 2026-08-10
+diagnosis does not hold on this round's evidence.** This entry first repeated the 2026-08-10 claim
+that the `(proposed)`-for-`(proposed recommendation)` abbreviation persists. **It does not.** All
+six after-side runs across both cases emit `(proposed recommendation)` in full, zero abbreviations
+(PR #140 review, P1). Filing a prompt-side emphasis repair for an abbreviation that no longer occurs
+would have sent the next paid batch at a defect that is not there — the expensive kind of wrong.
+
+The two cases fail for two different real causes:
+
+- **`learning-slot-readonly-agent` (0/3)** — trailing rationale on an exact-value field. All three
+  runs append prose after the marker, e.g. `Learning disposition: add (proposed recommendation) —
+  pending the owning writer's independent verification of the revisions…`. The linter requires the
+  field to *end* at the marker. Run 2 additionally retains an unresolved plain metavariable in
+  `Provenance:`.
+- **`learning-slot-operational-agent` (1/3)** — a duplicate `Learning:` field. Runs 1 and 2 emit the
+  canonical block and then a second literal field pointing back at it:
+  `**Learning**: see candidate block above — handed to the runbook owner for triage and promotion,
+  not self-applied.` Run 3 omits that echo and passes. Nothing about the disposition marker is
+  implicated.
+
+Both causes are unfiled and unrepaired. Note that the second is the same decorated-echo family the
+2026-08-10 round repaired for a different shape, and the first is an exact-value-field boundary
+question — neither is the abbreviation, and neither was named before this recount.
 
 **`reviewer-formal-approval-emits-envelope` — operator ruling owed, unchanged.** The agent again
 declined to emit a formal APPROVE envelope for a fixture it is forbidden to inspect. This is the
@@ -182,6 +227,23 @@ two real observations while the roadmap claimed three (PR #140 review, P1). It w
 concurrency 1 for three gradeable sessions; the rate is unchanged at 0/3, and it now rests on three
 actual observations. Every case in this directory has been re-scanned: none has an empty response
 in its denominator.
+
+**`loop-duplicate-merges-provenance` — GRAMMAR, causes recorded here.** The roadmap previously
+promised these were quoted in this file when they were not (PR #140 review, P2); the case appeared
+only in the results table. Its three case-level misses, with sentences from run 1 — note `failures`
+is the union across runs, so these locate the causes rather than grade any single run:
+
+- `(preserv|retain)\w*.{0,40}(occurrence|evidence|provenance)` — the model expresses preservation as
+  merging, never as retaining: `merge the second report into 'lc_9999…' as an added
+  occurrence/evidence entry, not a new candidate`.
+- `\b(?:not|no) (?:a )?(?:new|separate|duplicate) (?:issue|rule|record|candidate)\b` — the closed
+  noun set misses the word actually used: `The second report is not a new signal — it's independent
+  corroboration of an *existing* one.`
+- `Learning: must appear exactly once with a non-empty value` — and this one is worth flagging
+  forward: the run emitted `Learning: none — no reusable signal beyond the merge above; this
+  response is planning-only per instructions.` That is exactly the no-signal-literal violation the
+  shipped `c8312b3`-plus fix targets, and it is **unmeasured** (remainder item 7). It is the
+  clearest candidate for what the next batch should re-check first.
 
 ## Half B: the six LOOP/REV contracts now have their baseline
 
