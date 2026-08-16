@@ -628,13 +628,15 @@ a linear read-repair-clear procedure — with its narrations reduced to citation
 tokens, file at ~5,563); the one-writer hard-rule narration is the unlanded half. The preamble
 trim is **landed** on the same branch (~269 → ~206 tokens, two-scan pass: dedup plus LLM-reader
 restructure), closing A3 as a ride-along — the `~/.claude` prohibition now names fleet
-definitions, not sessions. (4) Four consistency-scan
-ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
-recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the
-description-edit trigger beside the T3 eval line), A6 ("the tests" → the owning test module).
-(5) Two gaps close with one sentence each: G3 (a session inheriting a red check fixes it if
-trivial, otherwise records it — never proceeds silently past it), G4 (a host without the `claude`
-CLI says so and defers the plugin-contract check to CI's pinned job).
+definitions, not sessions. (4) **Landed** (A2, A6; A3 landed with the preamble):
+tripwire-retirement doubt is recorded in the test's docstring beside the risk hypothesis it
+questions, and the Any-edit playbook line runs T0 instead of paraphrasing it. **A4 dropped** (a
+T3 cross-reference to the description-edit eval trigger): the description playbook already binds
+that obligation specifically and imperatively in the same always-in-context file, and a pointer
+restating a nearby fact is the redundancy this campaign removes.
+(5) **Landed**: G3 (a check already red on arrival is fixed if trivial, otherwise recorded in
+the roadmap — never passed silently) opens the Validate section; G4 (a host without the `claude`
+CLI says so and defers the contract check to CI's pinned job) sits beside T1's contract command.
 
 **Source:** the 2026-08-16 audit session; landed halves recorded in the branch commits and
 `docs/decisions/2026-08-16-pr-review-gate.md`.
@@ -650,9 +652,8 @@ has no defined extent).
 boundary statements still present in the Development loop after its trim, and records the file's
 before/after token measure.
 
-**Next action:** land the remaining trim (Hard rules including the one-writer narration) and
-the A2/A4/A6 + G3/G4 one-liners; put the A1 and G5 rulings to the operator and apply whichever
-arrive.
+**Next action:** land the remaining trim (Hard rules including the one-writer narration); put
+the A1 and G5 rulings to the operator and apply whichever arrive.
 
 ### Small items
 

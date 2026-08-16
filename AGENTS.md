@@ -42,7 +42,8 @@ one writer per artifact, structure only at the boundaries that remain.
 ## Validate before you push
 
 Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence
-instead of recomputing it.
+instead of recomputing it. A check already red when you arrive is never passed silently: fix it
+if trivial, otherwise record it in `docs/fleet-roadmap.md` and continue.
 
 - **T0 — edit loop** (seconds): run `python3 scripts/validate_fleet.py` and the test module
   that owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
@@ -50,7 +51,8 @@ instead of recomputing it.
   needed; `generate_platform_adapters.py --write` (below) is the regeneration command after
   canonical edits.
 - **T1 — before push or PR**: run `python3 scripts/run_tests.py` (full offline suite),
-  `claude plugin validate . --strict` (platform contract), and `python3 scripts/fleet_doctor.py`.
+  `claude plugin validate . --strict` (platform contract; a host without the `claude` CLI says
+  so and defers this check to CI's pinned job), and `python3 scripts/fleet_doctor.py`.
   CI repeats the first two on every PR but can never substitute for fleet_doctor — the drift it
   finds lives in your host installation, not in the checkout. Exit 3 means warnings: read the
   report, repair host drift (the common case) with
@@ -142,7 +144,7 @@ cancellation, reset) wait for GRAPH-004.
 
 ## Change playbooks
 
-**Any edit** — run the validator and the tests. If you touched text that paraphrases another file,
+**Any edit** — run T0. If you touched text that paraphrases another file,
 find the declared owner and fix in the right direction (see "Owned conventions" below).
 
 **Editing any canonical agent or skill** — run
@@ -227,7 +229,8 @@ suite is evidence, not a ledger of past fears: a test whose hypothesis can no lo
 re-proves nothing (the proportionality rule already bans that) while still taxing every edit
 that touches its fixtures. The bar is structural impossibility, not "hasn't fired lately" — a
 quiet tripwire watching a still-possible failure stays, and when the two readings are arguable
-the test stays and the doubt is recorded where the retirement would have been.
+the test stays and the doubt is recorded in the test's docstring, beside the risk hypothesis it
+questions.
 
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
