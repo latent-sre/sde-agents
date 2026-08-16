@@ -691,8 +691,8 @@ def main(argv: list[str] | None = None) -> int:
     # through `install_codex_agents.py --check`, because nothing an exit status reaches ever said
     # so. Warnings are distinct from failures rather than promoted into them: 1 still means a check
     # FAILED, 3 means no check failed but at least one warning needs attention (host drift is the
-    # common cause, not the only one — CRLF paths, an absent host CLI, and listing-budget overruns
-    # warn too), and only 0 means nothing needs attention.
+    # common cause, not the only one — CRLF paths and listing-budget overruns warn too; an absent
+    # host CLI is a skip, not a warning), and only 0 means nothing needs attention.
     summary = report["summary"]  # type: ignore[assignment]
     if summary["fail"]:
         return 1

@@ -456,7 +456,8 @@ class GuardScopingTest(unittest.TestCase):
     """
 
     def test_main_loop_is_never_guarded(self) -> None:
-        # The main loop carries no `agent_type` key at all (probed on CLI 2.1.200). This is the
+        # A plain main loop carries no `agent_type` key (probed on CLI 2.1.200); an `--agent`
+        # session carries that agent's name (doc-sourced — PROBE-001). This scoping is the
         # property that makes a session-wide read-only guard safe to ship.
         proc = run_guard(bash_call("git push --force origin main", agent_type=None))
         self.assertEqual(decision(proc), "allow")
@@ -496,8 +497,9 @@ class GuardScopingTest(unittest.TestCase):
         self.assertEqual(decision(proc), "allow")
 
     def test_renamed_agent_type_field_fails_closed(self) -> None:
-        # The contract canary. `agent_type` is undocumented; if it is ever renamed upstream, every
-        # payload would look like the main loop and the guard would silently stop guarding. When
+        # The contract canary. `agent_type` is documented upstream, but a rename in a newly
+        # pinned CLI would still make every payload look like the main loop and the guard would
+        # silently stop guarding. When
         # some other agent-ish key still names a guarded agent but no `agent_type` did, that is the
         # contract moving under us — deny loudly rather than disarm quietly.
         #

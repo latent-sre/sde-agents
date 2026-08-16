@@ -19,8 +19,9 @@ on the payload's `agent_type`. Two properties follow, and both are tested below 
 either wrong is worse than having no guard at all:
 
   1. It must DENY state-changing Bash for the reviewer, and fail CLOSED when it cannot decide.
-  2. It must NEVER touch anyone else — above all the user's own main-session Bash, which carries
-     no `agent_type` key at all.
+  2. It must NEVER touch anyone else — above all the user's own Bash in a plain main session,
+     whose payload carries no `agent_type` key (an `--agent` session carries that agent's name;
+     the scoping contract in scripts/readonly-guard.py's docstring is the owner).
 
 The trust boundary also moved, and improved: the guard now runs from ${CLAUDE_PLUGIN_ROOT}, the
 plugin's installed copy, which by construction is not inside the repository under review.
@@ -69,8 +70,9 @@ def hook_command() -> str:
 def payload(command: str, agent_type: str | None = None) -> str:
     """A PreToolUse payload shaped like the real one (compact JSON, as observed on CLI 2.1.200).
 
-    The main loop genuinely has NO `agent_type` key — it is not empty, it is absent — so
-    `agent_type=None` omits it rather than sending a null.
+    A plain main loop genuinely has NO `agent_type` key — it is not empty, it is absent — so
+    `agent_type=None` omits it rather than sending a null. (An `--agent` session carries the
+    agent's name; that lane is doc-sourced, PROBE-001.)
     """
     data: dict = {
         "hook_event_name": "PreToolUse",
@@ -170,8 +172,10 @@ class HookWiringTest(unittest.TestCase):
 
     # --- everyone else, above all the user ---------------------------------------------
     def test_main_loop_is_never_guarded(self) -> None:
-        # The main loop carries NO agent_type. This is the property that makes a session-wide
-        # hook safe to ship: get it wrong and the user cannot run git in their own session.
+        # A plain main loop carries NO agent_type. This is the property that makes a
+        # session-wide hook safe to ship: get it wrong and the user cannot run git in their own
+        # ordinary session. (An --agent session carries the agent's name — deliberate scoping,
+        # owned by the guard docstring.)
         self.assertIsNone(decision(self._run(payload(PUSH))))
 
     def test_other_subagents_are_never_guarded(self) -> None:
