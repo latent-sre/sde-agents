@@ -621,8 +621,11 @@ engineering-program section is restructured for
 LLM legibility per operator ruling: the stateless premise leads, one labeled bullet per strand in
 the owner's headline vocabulary, and the reading rule gains the owner's two-question trim
 procedure — a measured net growth (~424 → ~480 after tightening) rather than the originally
-targeted ~250-token cut; clarity was bought instead, at stated cost. (3) The incident narrations in "Validate
-before you push" and the one-writer hard rule become bare citations. (4) Four consistency-scan
+targeted ~250-token cut; clarity was bought instead, at stated cost. (3) **Landed in part**
+(`8d9dccf`): "Validate before you push" is rewritten for the stateless-session reader — each
+tier leads with its command roster, T2 is marked as requiring nothing from the reader, exit-3 is
+a linear read-repair-clear procedure — with its narrations reduced to citations (~818 → ~642
+tokens, file at ~5,563); the one-writer hard-rule narration is the unlanded half. (4) Four consistency-scan
 ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
 recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the
 description-edit trigger beside the T3 eval line), A6 ("the tests" → the owning test module).
@@ -644,9 +647,9 @@ has no defined extent).
 boundary statements still present in the Development loop after its trim, and records the file's
 before/after token measure.
 
-**Next action:** land the remaining trims (Validate before you push, Hard rules, preamble) and
-the A2/A3/A4/A6 + G3/G4 one-liners; put the A1 and G5 rulings to the operator and apply whichever
-arrive.
+**Next action:** land the remaining trims (Hard rules including the one-writer narration,
+preamble) and the A2/A3/A4/A6 + G3/G4 one-liners; put the A1 and G5 rulings to the operator and
+apply whichever arrive.
 
 ### Small items
 
