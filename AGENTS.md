@@ -295,44 +295,33 @@ disposition.
 ## Opening a pull request
 
 Work reaches the default branch through a topic branch and a merge-commit PR, never a direct
-push: every gate in this section — the requested review, the gates table, the edit-round cap —
-attaches to the PR mechanism, and a direct push bypasses them all silently. Branch names use the
-expanded conventional form `<type>/<kebab-slug>` (`feat`, `fix`, `docs`, `refactor`, `test`,
-`chore`, `ci`, `perf`, `build`), so the branch list reads as a change inventory. Because merges
-are merge commits, branch history survives on the default branch: a canonical edit and everything
-it makes necessary — regenerated adapters, a refreshed README inventory, a guard-list entry —
-land in the same commit, keeping every commit in history validator-green for bisect and revert.
-That atomicity is writer discipline, not an enforced gate: CI validates the PR head, not each
-commit. Commit messages carry the same claim-plus-consequence register as the PR template and the
-validator's error messages.
+push — every gate in this section attaches to the PR mechanism, and a direct push bypasses them
+all silently. Branch names use the expanded conventional form `<type>/<kebab-slug>` (`feat`,
+`fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`, `build`), so the branch list reads as a
+change inventory. Merge commits keep branch history on the default branch, so a canonical edit
+and everything it makes necessary — regenerated adapters, a refreshed README inventory, a
+guard-list entry — land in the same commit, keeping every commit validator-green for bisect and
+revert (writer discipline, not an enforced gate: CI validates the PR head, not each commit).
 
-`.github/pull_request_template.md` is the shape. Every line carries claim plus consequence —
-"removed `ag`, whose exec-flag surface cannot be enumerated without the binary" rather than
-"removed `ag`" — the same register as the validator's error messages, because a reviewer can only
-disagree with a decision they can see. The conditional gates table is the part that catches
-things: the expensive checks are situational (a description edit owes a before/after routing run,
-a guard or hook edit owes the probe, a new validator rule owes a test proven to fail without it,
-a canonical fleet edit owes regenerated host adapters) — fill the rows you tripped. Keep the
-"Deliberately not done" section honest and the whole template short; one long enough to skim past
-stops working.
+`.github/pull_request_template.md` is the shape, and it owns its own detail. Write every line —
+commit messages included — in the claim-plus-consequence register the template models: what
+changed *and* what it means, because a reviewer can only disagree with a decision they can see.
+Fill the conditional-gates rows your change tripped — the table names the situational check each
+change type owes. Keep "Deliberately not done" honest and the whole template short.
 
-The automated review is request-triggered; opening a PR does not request it, and on this
-repository requesting is an **operator step, not an agent one**: the reviewer bot resolves
-through neither `gh` nor the REST API — both fail silently — and is assigned only in the PR
-page's Reviewers box (the Codex connector follows Copilot's request without needing one of its
-own). An agent opening a PR hands the request to its operator and says so, never reporting the PR
-as awaiting review.
+The automated review is request-triggered; opening a PR does not request it, and requesting is an
+**operator step**: the reviewer bot resolves through neither `gh` nor the REST API — both fail
+silently — and is assigned only in the PR page's Reviewers box (the Codex connector follows
+Copilot's request). An agent opening a PR hands the request to its operator and says so, never
+reporting the PR as awaiting review.
 
-Then wait for both passes **on the current head**, and disposition every comment — applied, or
-declined with the reason. A review-driven edit mints bytes the cleared passes never saw, so the
-last edit owes another wait. At most **two** review-driven edit rounds per PR: a finding that
-arrives after the second round is dispositioned in the thread without new bytes — declined with
-the reason, or recorded as owed work in `docs/fleet-roadmap.md` — unless an explicit operator
-ruling buys one further round, the same one-round escape the deep-review bound reserves for a
-third static round. This bounds edits, never waits: the merged head has always been waited on;
-what stops is minting fresh heads for the reviewer to find fixes in. The incidents that minted
-these rules — an unreviewed merge, a post-merge P1 and revert, a ten-round disposition loop —
-live in `docs/decisions/2026-08-16-pr-review-gate.md`.
+Wait for both passes **on the current head** — a review-driven edit mints bytes the cleared
+passes never saw, so the last edit owes another wait — and disposition every comment: applied, or
+declined with the reason. At most **two** review-driven edit rounds per PR; a later finding is
+dispositioned in the thread without new bytes (declined with the reason, or recorded as owed work
+in `docs/fleet-roadmap.md`) unless an explicit operator ruling buys one further round, the same
+one-round escape as the deep-review bound's third static round. The cap bounds edits, never
+waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions
 
