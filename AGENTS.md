@@ -100,41 +100,26 @@ claude --plugin-dir .
 
 For Copilot CLI, the equivalent local loop is `copilot plugin install .`. VS Code uses the
 working-tree path in `chat.pluginLocations`. Codex loads `.codex/agents/` at project scope; its
-nested plugin is installed through the repository marketplace. Generated `.claude/agents/`
-profiles exercise Codex's official `/import` conversion contract, while
-`scripts/install_codex_agents.py --target <agents-directory>` exercises repeatable standalone-agent
-sync without touching the real user scope. `/import` is an initial migration and skips an existing
-same-name Codex TOML; it is not an update mechanism. The synchronizer may adopt unmarked importer
-output only when its parsed contract exactly matches the current generated agent. Any extra or
-changed field remains an unmanaged conflict.
+nested plugin is installed through the repository marketplace. Standalone Codex agent sync —
+including `/import`'s one-time-migration limits and the exact-match adoption contract — is owned
+by the `scripts/install_codex_agents.py` docstring.
 
 Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
-  and the guard fires for the guarded agents and only them. Re-run after upgrading the Claude
-  Code CLI: the guard rests on the `agent_type` payload field (contract owned by the
-  `scripts/readonly-guard.py` docstring), and the probe is the only runtime proof the pinned
-  binary still honors it — what turns a silent upstream rename into a loud failure instead of a
-  quietly disarmed guard.
-  **CI's `plugin-contract` job pins the CLI version**, so bumping that pin is the upgrade — and the
-  moment this probe is owed. The pin buys a deterministic gate; this probe is what keeps the pin
-  from meaning the platform contract stopped being tested.
-- `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals. Run
-  before **and** after any description edit and diff the rates. Results are rates over runs, not
-  booleans; a negative (near-miss) case firing against its declared forbidden set is a defect
-  regardless of variance (`evals/README.md` owns the narrowing semantics). Agent
-  positives systematically under-fire in headless mode — trust negatives and regressions over
-  absolute agent rates. See `evals/README.md`.
+  and the guard fires for the guarded agents and only them. Owed at every CLI pin bump (**CI's
+  `plugin-contract` job pins the CLI version**, so bumping the pin is the upgrade): the guard
+  rests on the `agent_type` payload field — contract owned by the `scripts/readonly-guard.py`
+  docstring — and the probe is the only runtime proof the pinned binary still honors it.
+- `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals, owed
+  before **and** after any description edit with the rates diffed (the description playbook has
+  the recipe). Read `evals/README.md` first — it owns the negative-case and narrowing semantics
+  and the headless caveat: agent positives systematically under-fire, so trust negatives and
+  regressions over absolute agent rates.
 - `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
-  default. The Codex subscription lane (`scripts/eval_codex_runtime.py` is its transport) is
-  explicit and narrower:
-  `--runtime codex --model <exact-slug> --reasoning-effort <effort>`. It projects the selected
-  generated agent into a read-only, tool-reduced main session because `codex exec` has no
-  `--agent` selector. Skill/tool-enabled cases and cases requiring a Claude permission mode are
-  refused; a writer-role profile is eligible only when its contract declares `allowed_tools: []`.
-  Codex 0.147.0 cannot expose every code-mode tool attempt or atomically attest managed MCP state,
-  so this is same-host paired evidence with a no-MCP activation prerequisite, not Claude
-  empty-allowlist parity. See `evals/README.md`.
+  default. The narrower Codex subscription lane (`--runtime codex`; transport
+  `scripts/eval_codex_runtime.py`) and its eligibility limits are owned by `evals/README.md` —
+  read it before running that lane.
 
 One report is manual, on demand, and **offline** — no model session, no API cost:
 
@@ -143,16 +128,13 @@ python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.m
 ```
 
 Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
-candidate — output is sorted, timestamp-free, LF, and repository-relative, so identical trees in
-different directories emit identical bytes and the two documents diff cleanly. Generated output is
-never committed. An agent declaring no `tools:` inherits every tool, so the report separates
-declared grants from `tool_authority_undeclared`, withholds the host projections it cannot derive,
-and marks itself INCOMPLETE rather than showing an empty grant. Read it with its three layers kept
-apart: authored edges are what the
-files declare, each host projection states only that host's control and its limitations, and the
-routing overlay is co-membership plus separately identified case assertions — co-membership is not
-behavioral coverage. Every section is advisory. Deliberately **not** a T0, CI, or PR gate: an
-advisory that became a gate would make each topology observation a merge blocker.
+candidate — output is deterministic, so identical trees diff cleanly, and generated output is
+never committed (this report's output, not the host adapters). Read it with its three layers kept
+apart: authored edges are what the files declare, each host projection states only that host's
+control and its limitations, and the routing overlay is co-membership plus separately identified
+case assertions — co-membership is not behavioral coverage. Every section is advisory.
+Deliberately **not** a T0, CI, or PR gate: an advisory that became a gate would make each
+topology observation a merge blocker.
 
 The design validator is the other offline on-demand tool, and it takes one explicit document:
 
@@ -160,15 +142,13 @@ The design validator is the other offline on-demand tool, and it takes one expli
 python3 scripts/workflow_contract.py path/to/design.json --root .
 ```
 
-Exit 0 prints a `design_digest`; exit 1 lists ordered defects, each with a deterministic witness
-(entry→stuck node, a cycle, an illegal zone edge, a wrong-kind binding, or an approval bypass path);
-exit 2 means the input could not be read, which is not a design defect. Read the verdict as what it
-says — **design-consistent, not runtime-enforced**. No host checks a workflow this way at dispatch,
-so this is a reviewable property of the document, and approval coverage stops at every `subgraph`
-boundary, which the summary lists as unverified interiors. Schema v1 is deliberately narrow: `all`
-joins, acyclic graphs, all-path human approval, finite condition routes, and no embedded
-expressions. `any`/quorum joins, late arrival, cancellation, and reset wait for GRAPH-004, because a
-validator that guessed at those semantics would certify designs whose behavior nobody has defined.
+Exit 0 prints a `design_digest`; exit 1 lists ordered defects, each with a deterministic witness;
+exit 2 means the input could not be read, which is not a design defect. Read the verdict as what
+it says — **design-consistent, not runtime-enforced**: no host checks a workflow this way at
+dispatch, and approval coverage stops at every `subgraph` boundary. Schema v1 is deliberately
+narrow; the semantics it excludes (`any`/quorum joins, late arrival, cancellation, reset) wait
+for GRAPH-004, because a validator that guessed at them would certify designs whose behavior
+nobody has defined.
 
 ## Change playbooks
 
