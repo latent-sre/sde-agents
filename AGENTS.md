@@ -4,7 +4,8 @@ This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, a
 Plugins. The definitions in `agents/` and `skills/` are the only authored source and exactly what
 Claude Code loads. Codex, Copilot, and VS Code load generated host adapters. Edit the canonical
 files directly and regenerate; never edit a generated copy or resolve a Claude fleet file under
-`~/.claude`, which does not contain this fleet once it ships as a plugin.
+`~/.claude`, which does not contain this fleet once it ships as a plugin. Every script under
+`scripts/` states its own contract in its docstring — read it before touching or invoking one.
 
 This file is the fleet's own instance of the project context convention that `README.md` defines
 for target repositories. Where it paraphrases the README or a script's docstring, that source wins
@@ -34,39 +35,6 @@ justifications are often coordination mechanisms wearing organizational vocabula
 real reader and what consumes an artifact before trimming it. The counterweight binds equally:
 coordination is not free — prefer fewer handoffs over richer ones, one writer per artifact,
 structure only at the boundaries that remain.
-
-## Map
-
-| Path | What it is |
-|---|---|
-| `agents/*.md` | Canonical subagent definitions, loaded as-is by Claude. Filename must equal `name:`. |
-| `skills/<name>/SKILL.md` | Canonical skills; `references/` and `assets/` sit beside each. |
-| `.claude/agents/` | Generated, Claude-compatible staging profiles for Codex's official `/import` migration. Never edit them directly. |
-| `.github/agents/`, `.codex/agents/` | Generated Copilot/VS Code and Codex agent adapters. Never edit them directly. |
-| `platforms/copilot/skills/`, `plugins/sde-agents/skills/` | Generated host-specific skill copies. Never edit them directly. |
-| `plugin.json`, `.claude-plugin/`, `.agents/plugins/marketplace.json`, `plugins/sde-agents/.codex-plugin/` | Host manifests. Identity and versions must remain aligned. |
-| `hooks/hooks.json` | The **Claude-only** session guard; plugin agents cannot carry `hooks:`. |
-| `hooks/copilot-hooks.json` | Empty override that prevents Copilot/VS Code from loading the Claude guard. |
-| `workflows/deep-review.js` | Claude-only plugin workflow (deterministic multi-agent review pipeline). `workflows/` is auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
-| `scripts/readonly-guard.py` | Allowlist guard for read-only agents that hold `Bash`. Read its docstring before touching it. |
-| `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
-| `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |
-| `scripts/fleet_records.py` | The fleet's one parser for frontmatter, `tools:` values, and namespaced references, plus the typed records built from them. It records and never judges; a second parser would let two reports about the same tree disagree with nothing to arbitrate them. It parses an inspected tree as data and never imports or executes it, so a foreign or frozen-baseline checkout is safe to read. |
-| `scripts/capability_graph.py` | On-demand operator topology report over a fleet checkout — authored edges, per-host authority projections, and the routing overlay, kept separate on purpose. Advisory only: it is never a T0 or PR gate, and it emits no unioned fleet authority. |
-| `scripts/workflow_contract.py` | Design-consistency validator for one prospective workflow document (schema v1). It proves `design-consistent`, never `runtime-enforced`: nothing here executes, and no host validates a workflow this way at dispatch. Takes one explicit path, never scans a directory, and `validate_fleet.py` never calls it. |
-| `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
-| `scripts/run_tests.py` | Parallel test runner — one process per module, exactly the discovery invocation T0 uses. |
-| `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
-| `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
-| `scripts/eval_baseline.py` | Offline resolver from current bytes to a still-valid stored routing benchmark; it answers whether a paired run's 'before' side is already on disk before any API money is spent. |
-| `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; Claude is the default, while bounded empty-Claude-allowlist cases can use `--runtime codex` through a tool-execution-disabled generated-role projection. Both bind source, execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
-| `scripts/eval_codex_runtime.py` | Narrow Codex behavioral transport; it captures each selected generated agent once, requires a dedicated instruction-clean Codex home, rejects observable tool events, and reuses opaque ChatGPT login state without reading credentials. |
-| `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
-| `scripts/ledger_drift.py` | Advisory CI watch for pending learning candidates whose named destinations changed later, plus intake with no watchable destination. |
-| `scripts/fleet_doctor.py` | Read-only health report over the repository **and this host's installation** — generated-adapter drift, manifest alignment, canonical line endings, which host CLIs are present, and whether the standalone Codex agents still match the generated roles. It is the only check that sees the gap between what this repository ships and what your session actually loads; a stale installed profile is invisible to every other tier because they all read the checkout. Exit 0 clean, 3 warnings, 1 a failed check, 2 unreadable. It never generates, installs, prunes, or runs a model session — the fix it reports is yours to run. |
-| `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
-| `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. GitHub issues are evidence-bound intake, not a second tracker — an issue adds work only when the roadmap imports it, per `docs/README.md` rule 7. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file; a spec headed drafted merely awaits operator approval and starts nothing. |
-| `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
 
 ## Validate before you push
 
@@ -158,7 +126,8 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
   positives systematically under-fire in headless mode — trust negatives and regressions over
   absolute agent rates. See `evals/README.md`.
 - `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
-  default. The Codex subscription lane is explicit and narrower:
+  default. The Codex subscription lane (`scripts/eval_codex_runtime.py` is its transport) is
+  explicit and narrower:
   `--runtime codex --model <exact-slug> --reasoning-effort <effort>`. It projects the selected
   generated agent into a read-only, tool-reduced main session because `codex exec` has no
   `--agent` selector. Skill/tool-enabled cases and cases requiring a Claude permission mode are
@@ -259,7 +228,9 @@ repository under review can never supply it; it fails closed for guarded agents 
 everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
 Do not port that hook to Codex, Copilot, or VS Code: their `PreToolUse` payload does not supply the
-active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
+active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead;
+`hooks/copilot-hooks.json` is the deliberately empty override that keeps Copilot and VS Code from
+loading the Claude guard — leave it empty, it is doing its job.
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -291,7 +262,8 @@ the test stays and the doubt is recorded where the retirement would have been.
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
 before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
-disposition.
+disposition. `docs/fleet-roadmap.md` is the only task tracker; a GitHub issue is evidence-bound
+intake that adds work only when the roadmap imports it (`docs/README.md` rule 7).
 
 ## Opening a pull request
 
@@ -332,9 +304,15 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, or
   `plugins/sde-agents/skills/`. Change the
   canonical file or generator, regenerate, and let byte-drift validation prove the result.
+- **One parser per fact.** `scripts/fleet_records.py` is the fleet's only parser for frontmatter,
+  `tools:` values, and namespaced references; every validator, generator, and report builds on its
+  records. A second parser would let two reports about the same tree disagree with nothing to
+  arbitrate them — extend the shared records, never parse alongside them.
 - **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
   guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with
   compatible-looking prose or load the Claude hook on a host whose payload cannot scope it.
+  `workflows/` is Claude-only for the same reason: Copilot, VS Code, and Codex have no workflow
+  runtime, so a ported reference would read as available and fail silently.
 - **Claude plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
   silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
   armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
