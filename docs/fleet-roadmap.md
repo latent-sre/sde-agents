@@ -603,6 +603,46 @@ consumer waits. (3) Agents writing packets to a well-known scratch file — **re
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
 
+#### GUIDE-001 — finish the AGENTS.md audit remainder
+
+**Status:** `ready` — the 2026-08-16 three-scan audit of the repository guide (design/weight,
+accuracy against sources, consistency) landed its correctness fixes and the two largest rewrites
+on `claude/agents-md-review-jp2ly0` (contradiction fixes through Map deletion, `c2865eb`..`00f1649`,
+~7,940 → ~6,290 tokens); this item is the unlanded remainder, stated in full below so no external
+record is needed to scope it.
+
+**Outcome:** (1) The Development-loop manual-check bullets shrink to one line each plus pointers
+at `evals/README.md` and the script docstrings, while **keeping** the capability-graph and
+workflow-contract boundary statements ("advisory, never a T0/CI/PR gate"; "design-consistent,
+never runtime-enforced") — their Map copies are already deleted, so these subsections are the
+boundaries' only remaining ambient home. (2) The engineering-program strands compress to one line
+each behind the reading rule, which stays in full. (3) The incident narrations in "Validate
+before you push" and the one-writer hard rule become bare citations. (4) Four consistency-scan
+ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
+recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the
+description-edit trigger beside the T3 eval line), A6 ("the tests" → the owning test module).
+(5) Two gaps close with one sentence each: G3 (a session inheriting a red check fixes it if
+trivial, otherwise records it — never proceeds silently past it), G4 (a host without the `claude`
+CLI says so and defers the plugin-contract check to CI's pinned job).
+
+**Source:** the 2026-08-16 audit session; landed halves recorded in the branch commits and
+`docs/decisions/2026-08-16-pr-review-gate.md`.
+
+**Prerequisites:** none for the trims and one-liners. Two operator rulings gate only their own
+edits: **A1** — whether the two-round static deep-review cap widens from "agent or skill text" to
+all fleet prose (the six-round failure mode it was written for is currently uncapped on `docs/`
+and this guide itself); **G5** — whether a release or CLI-pin bump owes every routing cluster or
+only affected ones (`evals/README.md` documents no all-clusters mode, so today "the eval suites"
+has no defined extent).
+
+**Acceptance:** validator and full suite green on each commit; the closing commit shows the two
+boundary statements still present in the Development loop after its trim, and records the file's
+before/after token measure.
+
+**Next action:** land the Development-loop trim under the boundary-preservation constraint, then
+the remaining trims and one-liners; put the A1 and G5 rulings to the operator and apply whichever
+arrive.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
