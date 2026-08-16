@@ -18,13 +18,11 @@ and the model-alias list are checked against the source and fail on drift.
 The fleet is one program built on one premise: **a session is stateless.** Whatever it learns,
 decides, or verifies dies at exit unless it lands in an artifact — and the next session reads
 that artifact with no memory of why it was written, trusting it more than it should. Each strand
-below is one engineered consequence. `docs/engineering-program.md` maps each strand to its
-mechanisms and checks — read it for the *why* behind a discipline before touching one; it is held
-to the same stale-path tripwire as this file.
+below is one engineered consequence; `docs/engineering-program.md` maps each strand to its
+mechanisms and checks — read it before touching a discipline.
 
 - **Handoff engineering — artifacts are the only carrier.** A handoff is complete only when the
-  receiver can act correctly with nothing but the artifact (packets, ledger rows, digest-bound
-  work orders with receipt-only returns).
+  receiver can act correctly with nothing but the artifact (packets, ledger rows, work orders).
 - **Loop engineering — convergence across memoryless sessions.** Audits, incidents, campaigns,
   and eval rounds must converge even though every iteration starts amnesiac; written exceptions,
   recurrence-merged rows, and literal status transitions make that possible.
@@ -36,12 +34,11 @@ to the same stale-path tripwire as this file.
   wrong one compounds instead of fading.
 
 The reading rule for any review of fleet prose: **the reader is the next session, not the
-operator's memory.** Owner slots, status lifecycles, and written justifications here are usually
-strand mechanisms wearing organizational vocabulary. Two questions decide any trim: who is the
-real reader, and what consumes the artifact — "only the operator" and "nothing" means trim it; a
-future session, script, grader, or guard as consumer means the trim is a regression. The
-counterweight binds equally: coordination is not free — fewer handoffs over richer ones, one
-writer per artifact, structure only at the boundaries that remain.
+operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
+any trim: who is the real reader, and what consumes the artifact — "only the operator" and
+"nothing" means trim it; a future session, script, grader, or guard as consumer means the trim
+is a regression. The counterweight: coordination is not free — fewer handoffs over richer ones,
+one writer per artifact, structure only at the boundaries that remain.
 
 ## Validate before you push
 
