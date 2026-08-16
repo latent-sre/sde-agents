@@ -4,8 +4,10 @@
 `validate_fleet.py` and `claude plugin validate` both check files. Neither can tell you that the
 fleet loads, that `${CLAUDE_PLUGIN_ROOT}` expands where the agents depend on it, or that the
 read-only guard fires for the reviewer and only for the reviewer. Those are runtime facts, and this
-fleet's guard rests on `agent_type` — a payload field that WORKS but is UNDOCUMENTED. A probe is the
-only thing standing between "undocumented" and "silently disarmed after a CLI upgrade".
+fleet's guard rests on `agent_type` — documented upstream, with the contract owned by the
+readonly-guard.py docstring. Documentation is a promise about the contract, not proof the binary
+you just pinned still honors it: this probe is the only thing standing between a silent upstream
+rename and a quietly disarmed guard.
 
 Re-run after upgrading the Claude Code CLI.
 
