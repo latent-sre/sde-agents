@@ -63,11 +63,18 @@ guard — be what holds. (`core.pager` is NOT part of this: probed on the same v
 the pager entirely when stdout is not a TTY, which it never is under a hook.)
 
 SCOPING CONTRACT (probed, not assumed): the stdin payload carries `agent_type` — namespaced for a
-plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. THE MAIN LOOP CARRIES
-NO `agent_type` KEY AT ALL, which is what makes a session-wide hook safe: the user's own Bash can
-never match GUARDED_AGENTS and is never inspected. `agent_type` is documented upstream, but if it
-is ever renamed (or the plugin namespaced form changes) the guard would silently stop guarding —
-see the contract canary in main().
+plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. A PLAIN main loop
+carries no `agent_type` key, which is what makes a session-wide hook safe: the user's own Bash in
+an ordinary session never matches GUARDED_AGENTS and is never inspected. A session launched with
+`--agent` does carry that agent's name (inside a subagent, the subagent's type takes precedence),
+so a main session deliberately run as a guarded agent is guarded on purpose, not as collateral —
+this `--agent` clause is doc-sourced, not probe-verified: the probe drives subagent spawns only
+(extending it is PROBE-001 in docs/fleet-roadmap.md).
+The field and its plugin-scoped values are documented in the upstream hooks reference
+(code.claude.com/docs/en/hooks.md); this docstring owns the fleet's statement of the contract —
+other files point here rather than restating it. Documentation is not proof a newly pinned binary
+still honors the contract: if `agent_type` is renamed (or the plugin namespaced form changes) the
+guard would silently stop guarding — see the contract canary in main().
 
 Decision transport: a deny is the permissionDecision JSON on stdout with exit EXIT_DENY (43); an
 allow is empty stdout with exit EXIT_ALLOW (42). The distinctive codes are how the hook tells THIS
@@ -500,13 +507,16 @@ def main() -> None:
         _allow()
 
     # This hook is registered SESSION-WIDE (a plugin cannot scope a PreToolUse hook to one of its
-    # own agents), so the guard scopes itself. The main loop carries NO `agent_type` key, so the
-    # user's own Bash exits here and is never inspected — that property is what makes a
-    # session-wide read-only guard safe to ship at all.
+    # own agents), so the guard scopes itself. A plain main loop carries NO `agent_type` key, so
+    # the user's own Bash in an ordinary session exits here and is never inspected — that property
+    # is what makes a session-wide read-only guard safe to ship at all. A `--agent` session is
+    # guarded exactly when it runs as a guarded agent (see the scoping contract in the module
+    # docstring).
     agent = data.get("agent_type")
     if agent not in GUARDED_AGENTS:
-        # Contract canary. `agent_type` is undocumented. If it is renamed upstream, every payload
-        # starts looking like the main loop and the guard would quietly stop guarding — precisely
+        # Contract canary. `agent_type` is documented upstream, but a rename (or a changed
+        # plugin-namespaced form) in a newly pinned CLI would still make every payload look like
+        # the main loop and the guard would quietly stop guarding — precisely
         # the silent-disarm class of bug this fleet hardened against in validate_fleet.py. So when
         # the payload still identifies a guarded agent under some OTHER key, yet no `agent_type`
         # did, treat the contract as broken and fail CLOSED.

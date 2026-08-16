@@ -191,7 +191,7 @@ EXTERNAL_RESEARCH_TOOLS = {"ToolSearch", "WebFetch", "WebSearch", *EVIDENCE_MCP_
 # `repository-investigator` REQUIRES Bash — for git history and revision identity — and that grant
 # is admissible only because the read-only guard covers it (Bash with no write tool compels roster
 # membership, checked below) and the guard scopes the allowlist's one network family away from it:
-# the `gh` readers are GitHub fetches, granted via GH_AGENT_NAMES to the review/design roles and
+# the `gh` readers are GitHub fetches, granted via NETWORK_AGENT_NAMES to the review/design roles and
 # deliberately withheld from this role (PR #141 review finding). The
 # application-security-auditor keeps Bash forbidden: its mandate is to be safe against a HOSTILE
 # repository, and the guard's own docstring names the git-config ext-diff vector that a shell —

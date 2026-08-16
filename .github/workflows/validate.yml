@@ -100,8 +100,8 @@ jobs:
       # first rule is that an unpinned dependency lets someone else decide what your CI runs.
       # The obvious objection is that a pin stops this job noticing NEW platform requirements — but
       # catching upstream drift was never this job's role. `scripts/probe_plugin.py` is the fleet's
-      # drift detector (AGENTS.md: it "turns a silent upstream rename into a loud failure"), and it
-      # is manual on purpose because it drives real API sessions. So: bumping this pin is exactly
+      # drift detector — the runtime proof that an upstream rename has not silently disarmed the
+      # guard — and it is manual on purpose because it drives real API sessions. So: bumping this pin is exactly
       # the moment to re-run the probe, and the two are a pair — deliberate upgrade, deliberate
       # re-verification, rather than a silent change arriving mid-PR on someone else's release day.
       - name: Install the Claude Code CLI

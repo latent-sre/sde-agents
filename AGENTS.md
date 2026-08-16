@@ -4,7 +4,8 @@ This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, a
 Plugins. The definitions in `agents/` and `skills/` are the only authored source and exactly what
 Claude Code loads. Codex, Copilot, and VS Code load generated host adapters. Edit the canonical
 files directly and regenerate; never edit a generated copy or resolve a Claude fleet file under
-`~/.claude`, which does not contain this fleet once it ships as a plugin.
+`~/.claude`, which does not contain this fleet once it ships as a plugin. Every script under
+`scripts/` states its own contract in its docstring — read it before touching or invoking one.
 
 This file is the fleet's own instance of the project context convention that `README.md` defines
 for target repositories. Where it paraphrases the README or a script's docstring, that source wins
@@ -14,59 +15,30 @@ and the model-alias list are checked against the source and fail on drift.
 
 ## The engineering program
 
-This is not a prompt library. It is one program with four strands: **handoff engineering** —
-stateless sessions coordinate only through artifacts (packets, ledger rows, digest-bound work
-orders with receipt-only returns), so a handoff is complete only when the receiver can act on the
-artifact alone; **loop engineering** — audits, incidents, campaigns, and eval rounds must converge
-across memoryless sessions, which is what written exceptions, recurrence-merged ledger rows, and
-literal status transitions are for; **graph engineering** — authority is typed edges with
-host-specific enforcement, owned by `docs/decisions/2026-07-31-ai-graph-engineering.md`; and
-**self-learning** — `scripts/learning_ledger.py` gates lessons behind evidence-bound quarantine
-because a session replays a stored lesson uncritically. `docs/engineering-program.md` maps each
-strand to its implementing mechanisms and the checks that keep them honest, and is held to the
-same stale-path tripwire as this file.
+The fleet is one program built on one premise: **a session is stateless.** Whatever it learns,
+decides, or verifies dies at exit unless it lands in an artifact — and the next session reads
+that artifact with no memory of why it was written, trusting it more than it should. Each strand
+below is one engineered consequence; `docs/engineering-program.md` maps each strand to its
+mechanisms and checks — read it before touching a discipline.
 
-The reading rule to apply in any review of fleet prose: **the reader is the next session, not the
-operator's memory.** A fleet of stateless workers re-creates the conditions organizations invented
-ceremony for — no shared memory, artifact-only communication, claims that cannot be trusted
-unverified — so owner slots, status lifecycles, contemporaneous capture, and written
-justifications are often coordination mechanisms wearing organizational vocabulary. Identify the
-real reader and what consumes an artifact before trimming it. The counterweight binds equally:
-coordination is not free — prefer fewer handoffs over richer ones, one writer per artifact,
-structure only at the boundaries that remain.
+- **Handoff engineering — artifacts are the only carrier.** A handoff is complete only when the
+  receiver can act correctly with nothing but the artifact (packets, ledger rows, work orders).
+- **Loop engineering — convergence across memoryless sessions.** Audits, incidents, campaigns,
+  and eval rounds must converge even though every iteration starts amnesiac; written exceptions,
+  recurrence-merged rows, and literal status transitions make that possible.
+- **Graph engineering — authority is typed edges.** Who may write what, who hands to whom, where
+  approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
+  `docs/decisions/2026-07-31-ai-graph-engineering.md`.
+- **Self-learning — admission-gated memory.** `scripts/learning_ledger.py` quarantines every
+  lesson behind evidence-bound staged promotion: a stored lesson is replayed uncritically, so a
+  wrong one compounds instead of fading.
 
-## Map
-
-| Path | What it is |
-|---|---|
-| `agents/*.md` | Canonical subagent definitions, loaded as-is by Claude. Filename must equal `name:`. |
-| `skills/<name>/SKILL.md` | Canonical skills; `references/` and `assets/` sit beside each. |
-| `.claude/agents/` | Generated, Claude-compatible staging profiles for Codex's official `/import` migration. Never edit them directly. |
-| `.github/agents/`, `.codex/agents/` | Generated Copilot/VS Code and Codex agent adapters. Never edit them directly. |
-| `platforms/copilot/skills/`, `plugins/sde-agents/skills/` | Generated host-specific skill copies. Never edit them directly. |
-| `plugin.json`, `.claude-plugin/`, `.agents/plugins/marketplace.json`, `plugins/sde-agents/.codex-plugin/` | Host manifests. Identity and versions must remain aligned. |
-| `hooks/hooks.json` | The **Claude-only** session guard; plugin agents cannot carry `hooks:`. |
-| `hooks/copilot-hooks.json` | Empty override that prevents Copilot/VS Code from loading the Claude guard. |
-| `workflows/deep-review.js` | Claude-only plugin workflow (deterministic multi-agent review pipeline). `workflows/` is auto-discovered at plugin root; **never** adapted to other hosts — Copilot, VS Code, and Codex have no workflow runtime, so a ported reference would read as available and fail silently. |
-| `scripts/readonly-guard.py` | Allowlist guard for read-only agents that hold `Bash`. Read its docstring before touching it. |
-| `scripts/generate_platform_adapters.py` | Generates and validates every non-Claude adapter. |
-| `scripts/install_codex_agents.py` | Safely synchronizes standalone Codex agents into an explicit scope. |
-| `scripts/fleet_records.py` | The fleet's one parser for frontmatter, `tools:` values, and namespaced references, plus the typed records built from them. It records and never judges; a second parser would let two reports about the same tree disagree with nothing to arbitrate them. It parses an inspected tree as data and never imports or executes it, so a foreign or frozen-baseline checkout is safe to read. |
-| `scripts/capability_graph.py` | On-demand operator topology report over a fleet checkout — authored edges, per-host authority projections, and the routing overlay, kept separate on purpose. Advisory only: it is never a T0 or PR gate, and it emits no unioned fleet authority. |
-| `scripts/workflow_contract.py` | Design-consistency validator for one prospective workflow document (schema v1). It proves `design-consistent`, never `runtime-enforced`: nothing here executes, and no host validates a workflow this way at dispatch. Takes one explicit path, never scans a directory, and `validate_fleet.py` never calls it. |
-| `scripts/validate_fleet.py` | Fleet-policy validator; every rule is a tripwire for a failure that is silent at runtime. |
-| `scripts/run_tests.py` | Parallel test runner — one process per module, exactly the discovery invocation T0 uses. |
-| `scripts/probe_plugin.py` | Behavioral probe against a real headless session. |
-| `scripts/eval_routing.py` | Routing-eval runner over `evals/routing/*.json`; read `evals/README.md` first. |
-| `scripts/eval_baseline.py` | Offline resolver from current bytes to a still-valid stored routing benchmark; it answers whether a paired run's 'before' side is already on disk before any API money is spent. |
-| `scripts/eval_behavioral.py` | Behavioral-contract runner over `evals/behavioral/contracts.json`; Claude is the default, while bounded empty-Claude-allowlist cases can use `--runtime codex` through a tool-execution-disabled generated-role projection. Both bind source, execution bytes, evaluator/grader, runtime, concurrency, and non-secret auth-mode provenance. |
-| `scripts/eval_codex_runtime.py` | Narrow Codex behavioral transport; it captures each selected generated agent once, requires a dedicated instruction-clean Codex home, rejects observable tool events, and reuses opaque ChatGPT login state without reading credentials. |
-| `scripts/learning_ledger.py`, `learning/` | Fail-closed repository-local intake for evidence-bound learning candidates. It records applicability-bound recurrence, lifecycle decisions, and bounded review renewal; it never edits or approves a destination. |
-| `scripts/ledger_drift.py` | Advisory CI watch for pending learning candidates whose named destinations changed later, plus intake with no watchable destination. |
-| `scripts/fleet_doctor.py` | Read-only health report over the repository **and this host's installation** — generated-adapter drift, manifest alignment, canonical line endings, which host CLIs are present, and whether the standalone Codex agents still match the generated roles. It is the only check that sees the gap between what this repository ships and what your session actually loads; a stale installed profile is invisible to every other tier because they all read the checkout. Exit 0 clean, 3 warnings, 1 a failed check, 2 unreadable. It never generates, installs, prunes, or runs a model session — the fix it reports is yours to run. |
-| `tests/` | Stdlib unittest suite. `tests/fixtures/` holds minimal repos that each violate exactly one rule. |
-| `docs/` | The roadmap, decision records, and `archive/`. `docs/fleet-roadmap.md` is the only file that tracks unfinished or deferred work; `docs/README.md` maps authority. GitHub issues are evidence-bound intake, not a second tracker — an issue adds work only when the roadmap imports it, per `docs/README.md` rule 7. Archived reviews, outcome records, and the adaptation backlog are dated evidence, never task lists. An active round adds a spec and a plan document under the layout `docs/README.md` defines, and both retire to an archived outcome record when it finishes — so their absence means no round is running, not a missing file; a spec headed drafted merely awaits operator approval and starts nothing. |
-| `.gitattributes` | Marks generated host trees for review tooling; it does not change their authority. |
+The reading rule for any review of fleet prose: **the reader is the next session, not the
+operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
+any trim: who is the real reader, and what consumes the artifact — "only the operator" and
+"nothing" means trim it; a future session, script, grader, or guard as consumer means the trim
+is a regression. The counterweight: coordination is not free — fewer handoffs over richer ones,
+one writer per artifact, structure only at the boundaries that remain.
 
 ## Validate before you push
 
@@ -85,8 +57,8 @@ instead of recomputing it.
   tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
   Linux. Also run `python3 scripts/fleet_doctor.py` — it is **local-only and CI can never
   substitute for it**, because the drift it finds lives in your host installation rather than in
-  the checkout every other tier reads. Exit 3 means this host has drifted from what the
-  repository ships; the usual repair is
+  the checkout every other tier reads. Exit 3 means at least one warning — read the report to see
+  which; host drift from what the repository ships is the common case, and its repair is
   `python3 scripts/install_codex_agents.py --user`. Treat a warning as owed work before you
   measure anything: a session running against a stale installed profile is not testing the fleet
   you edited, which is how a superseded, materially stricter `homelab-platform` profile drove a
@@ -130,40 +102,25 @@ wrong Claude loop when the plugin is what you are editing:
 claude --plugin-dir .
 ```
 
-For Copilot CLI, the equivalent local loop is `copilot plugin install .`. VS Code uses the
-working-tree path in `chat.pluginLocations`. Codex loads `.codex/agents/` at project scope; its
-nested plugin is installed through the repository marketplace. Generated `.claude/agents/`
-profiles exercise Codex's official `/import` conversion contract, while
-`scripts/install_codex_agents.py --target <agents-directory>` exercises repeatable standalone-agent
-sync without touching the real user scope. `/import` is an initial migration and skips an existing
-same-name Codex TOML; it is not an update mechanism. The synchronizer may adopt unmarked importer
-output only when its parsed contract exactly matches the current generated agent. Any extra or
-changed field remains an unmanaged conflict.
+The Copilot CLI, VS Code, and Codex local loops are owned by `README.md`'s Install section.
+Standalone Codex agent sync — including `/import`'s one-time-migration limits and the exact-match
+adoption contract — is owned by the `scripts/install_codex_agents.py` docstring.
 
 Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
-  and the guard fires for the guarded agents and only them. Re-run after upgrading the Claude
-  Code CLI: the guard rests on the `agent_type` payload field — documented upstream since July
-  2026, though its plugin-namespaced form is still only probe-verified — and the probe is what
-  turns a silent upstream rename into a loud failure instead of a quietly disarmed guard.
-  **CI's `plugin-contract` job pins the CLI version**, so bumping that pin is the upgrade — and the
-  moment this probe is owed. The pin buys a deterministic gate; this probe is what keeps the pin
-  from meaning the platform contract stopped being tested.
-- `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals. Run
-  before **and** after any description edit and diff the rates. Results are rates over runs, not
-  booleans; a negative (near-miss) case firing at all is a defect regardless of variance. Agent
-  positives systematically under-fire in headless mode — trust negatives and regressions over
-  absolute agent rates. See `evals/README.md`.
+  and the guard fires for the guarded agents and only them. Owed at every CLI pin bump (the pin
+  lives in CI's `claude-plugin-contract` job): the probe is the only runtime proof the pinned
+  binary still honors the guard's payload contract (owner: the `scripts/readonly-guard.py`
+  docstring).
+- `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals, owed
+  before **and** after any description edit (the description playbook owns the recipe). Read
+  `evals/README.md` first — it owns the negative-case and narrowing semantics and the headless
+  caveat.
 - `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
-  default. The Codex subscription lane is explicit and narrower:
-  `--runtime codex --model <exact-slug> --reasoning-effort <effort>`. It projects the selected
-  generated agent into a read-only, tool-reduced main session because `codex exec` has no
-  `--agent` selector. Skill/tool-enabled cases and cases requiring a Claude permission mode are
-  refused; a writer-role profile is eligible only when its contract declares `allowed_tools: []`.
-  Codex 0.147.0 cannot expose every code-mode tool attempt or atomically attest managed MCP state,
-  so this is same-host paired evidence with a no-MCP activation prerequisite, not Claude
-  empty-allowlist parity. See `evals/README.md`.
+  default. The narrower Codex subscription lane (`--runtime codex`; transport
+  `scripts/eval_codex_runtime.py`) is documented — invocation and eligibility limits — in
+  `evals/README.md`; read it before running that lane.
 
 One report is manual, on demand, and **offline** — no model session, no API cost:
 
@@ -172,16 +129,13 @@ python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.m
 ```
 
 Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
-candidate — output is sorted, timestamp-free, LF, and repository-relative, so identical trees in
-different directories emit identical bytes and the two documents diff cleanly. Generated output is
-never committed. An agent declaring no `tools:` inherits every tool, so the report separates
-declared grants from `tool_authority_undeclared`, withholds the host projections it cannot derive,
-and marks itself INCOMPLETE rather than showing an empty grant. Read it with its three layers kept
-apart: authored edges are what the
-files declare, each host projection states only that host's control and its limitations, and the
-routing overlay is co-membership plus separately identified case assertions — co-membership is not
-behavioral coverage. Every section is advisory. Deliberately **not** a T0, CI, or PR gate: an
-advisory that became a gate would make each topology observation a merge blocker.
+candidate — output is deterministic, and generated output is never committed (this report's
+output, not the host adapters). Read it with its three layers kept
+apart: authored edges are what the files declare, each host projection states only that host's
+control and its limitations, and the routing overlay is co-membership plus separately identified
+case assertions — co-membership is not behavioral coverage. Every section is advisory.
+Deliberately **not** a T0, CI, or PR gate: an advisory that became a gate would make each
+topology observation a merge blocker.
 
 The design validator is the other offline on-demand tool, and it takes one explicit document:
 
@@ -189,15 +143,10 @@ The design validator is the other offline on-demand tool, and it takes one expli
 python3 scripts/workflow_contract.py path/to/design.json --root .
 ```
 
-Exit 0 prints a `design_digest`; exit 1 lists ordered defects, each with a deterministic witness
-(entry→stuck node, a cycle, an illegal zone edge, a wrong-kind binding, or an approval bypass path);
-exit 2 means the input could not be read, which is not a design defect. Read the verdict as what it
-says — **design-consistent, not runtime-enforced**. No host checks a workflow this way at dispatch,
-so this is a reviewable property of the document, and approval coverage stops at every `subgraph`
-boundary, which the summary lists as unverified interiors. Schema v1 is deliberately narrow: `all`
-joins, acyclic graphs, all-path human approval, finite condition routes, and no embedded
-expressions. `any`/quorum joins, late arrival, cancellation, and reset wait for GRAPH-004, because a
-validator that guessed at those semantics would certify designs whose behavior nobody has defined.
+Read the verdict as what it says — **design-consistent, not runtime-enforced**: no host checks a
+workflow this way at dispatch, and approval coverage stops at every `subgraph` boundary. Schema
+v1 is deliberately narrow; the semantics it excludes (`any`/quorum joins, late arrival,
+cancellation, reset) wait for GRAPH-004.
 
 ## Change playbooks
 
@@ -257,7 +206,9 @@ repository under review can never supply it; it fails closed for guarded agents 
 everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
 Do not port that hook to Codex, Copilot, or VS Code: their `PreToolUse` payload does not supply the
-active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
+active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead;
+`hooks/copilot-hooks.json` is the deliberately empty override that keeps Copilot and VS Code from
+loading the Claude guard — leave it empty, it is doing its job.
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -289,57 +240,39 @@ the test stays and the doubt is recorded where the retirement would have been.
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
 before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
-disposition.
+disposition. `docs/fleet-roadmap.md` is the only task tracker; a GitHub issue is evidence-bound
+intake that adds work only when the roadmap imports it (`docs/README.md` rule 7).
 
 ## Opening a pull request
 
-`.github/pull_request_template.md` is the shape. Three things about it are load-bearing:
+Work reaches the default branch through a topic branch and a merge-commit PR, never a direct
+push — every gate in this section attaches to the PR mechanism, and a direct push bypasses them
+all silently. Branch names use the expanded conventional form `<type>/<kebab-slug>` (`feat`,
+`fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`, `build`), so the branch list reads as a
+change inventory. Merge commits keep branch history on the default branch, so a canonical edit
+and everything it makes necessary — regenerated adapters, a refreshed README inventory, a
+guard-list entry — land in the same commit, keeping every commit validator-green for bisect and
+revert (writer discipline, not an enforced gate: CI validates the PR head, not each commit).
 
-- **Claim plus consequence.** Every line says what changed *and* what it means — "removed `ag`,
-  whose exec-flag surface cannot be enumerated without the binary" rather than "removed `ag`". Same
-  register as the comments in `scripts/` and the validator's error messages, for the same reason: a
-  reviewer can only disagree with a decision they can see.
-- **The conditional gates table is the part that catches things.** The expensive checks here are
-  situational — a description edit owes a before/after routing run, a guard or hook edit owes the
-  probe, a validator rule owes a test proven to fail without it, and a canonical fleet edit owes
-  regenerated host adapters. Fill the rows you tripped.
-- **The automated review is request-triggered, and opening a PR does not request it.** Every bot
-  pass in this repository's history is preceded by a `review_requested` event, and the passes land
-  roughly **ten minutes after that request** rather than after `gh pr create` — PR #124 was
-  requested at 07:07:07 and reviewed at 07:17:28 and 07:17:44. Request Copilot explicitly; the
-  Codex connector has followed that request without needing one of its own. Requesting is a step
-  you take, not a wait you serve — **and on this repository it is an operator step, not an agent
-  one**: the reviewer is `copilot-pull-request-reviewer[bot]`, which `suggestedActors` does not
-  list, so `gh pr edit --add-reviewer Copilot` fails to resolve the login and a REST
-  `requested_reviewers` post silently leaves `reviewRequests` empty. Use the PR page's Reviewers
-  box. An agent opening a PR here must therefore hand the request to its operator and say so,
-  rather than reporting the PR as awaiting review. Then wait for both passes **on the current
-  head**, and
-  disposition every comment — applied,
-  or declined with the reason. Applying one writes new bytes, and the passes that cleared the
-  previous head never saw them: the last review-driven edit owes another wait, or the gate is
-  satisfiable by a review of code the fix already replaced. Four rounds paid for this line — a PR
-  merged four minutes after opening carried a P1 that landed two minutes *after* the merge and cost
-  a revert; a later PR's unread comments correctly refuted a claim that would otherwise have
-  promoted an unsupported rule into this file; the head-binding clause exists because the first
-  draft of this very rule shipped with that loophole in it; and the sentence you are reading
-  replaced one asserting the reviews arrive "two to five minutes behind `gh pr create`", which read
-  as a wait rather than an action and let PR #128 merge unreviewed while a session sat waiting for a
-  pass nobody had asked for.
+`.github/pull_request_template.md` is the shape, and it owns its own detail. Write every line —
+commit messages included — in the claim-plus-consequence register the template models: what
+changed *and* what it means, because a reviewer can only disagree with a decision they can see.
+Fill the conditional-gates rows your change tripped — the table names the situational check each
+change type owes. Keep "Deliberately not done" honest and the whole template short.
 
-The disposition loop above carries the same convergence bound as static deep-review, for the same
-reason: applying a finding mints new bytes, the new head owes another wait, and the wait returns
-findings about the fix — an unbounded fixpoint that ran ten review-driven rounds on PR #136 *after*
-the two-round deep-review cap was written, because that cap bound one gate and left this one open.
-So: at most **two** review-driven edit rounds per PR. A finding that arrives after the second round
-is dispositioned in the thread without new bytes — declined with the reason, or recorded as owed
-work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which restarts the
-count, the same escape the deep-review bound reserves for a third static round. This bounds edits,
-never waits: the head-binding clause stands, the merged head has always been waited on, and what
-stops is minting fresh heads for the reviewer to find fixes in.
+The automated review is request-triggered; opening a PR does not request it, and requesting is an
+**operator step**: the reviewer bot resolves through neither `gh` (which fails to resolve the
+login) nor the REST API (which silently leaves the request unset) — it is assigned only in the PR
+page's Reviewers box (the Codex connector follows Copilot's request). An agent opening a PR hands
+the request to its operator and says so, never reporting the PR as awaiting review.
 
-Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
-enough to skim past stops working, and each section in it was added for an observed failure.
+Wait for both passes **on the current head** — a review-driven edit mints bytes the cleared
+passes never saw, so the last edit owes another wait — and disposition every comment: applied, or
+declined with the reason. At most **two** review-driven edit rounds per PR; a later finding is
+dispositioned in the thread without new bytes (declined with the reason, or recorded as owed work
+in `docs/fleet-roadmap.md`) unless an explicit operator ruling buys one further round, the same
+one-round escape as the deep-review bound's third static round. The cap bounds edits, never
+waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions
 
@@ -349,9 +282,15 @@ enough to skim past stops working, and each section in it was added for an obser
   `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, or
   `plugins/sde-agents/skills/`. Change the
   canonical file or generator, regenerate, and let byte-drift validation prove the result.
+- **One parser per fact.** `scripts/fleet_records.py` is the fleet's only parser for frontmatter,
+  `tools:` values, and namespaced references; every validator, generator, and report builds on its
+  records. A second parser would let two reports about the same tree disagree with nothing to
+  arbitrate them — extend the shared records, never parse alongside them.
 - **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
   guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with
   compatible-looking prose or load the Claude hook on a host whose payload cannot scope it.
+  `workflows/` is Claude-only for the same reason: Copilot, VS Code, and Codex have no workflow
+  runtime, so a ported reference would read as available and fail silently.
 - **Claude plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
   silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
   armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
