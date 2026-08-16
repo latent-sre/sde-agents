@@ -233,19 +233,24 @@ contracts holding.
 **Status:** `ready`
 
 **Outcome:** The fleet's model-visible listing (non-DMI skills plus workflows, currently ~11.9k
-chars across 19 entries) fits the 8,000-char worst-case budget with stated headroom, so
-200k-context Claude hosts and Codex render every entry with its description instead of silently
-degrading plugin entries to bare names — and the doctor's `repository.skill-listing-budget`
-warning is then promoted to a `validate_fleet.py` hard rule (with a fixture that fails without
-it) so regrowth fails T0 instead of failing silently at runtime.
+chars across 19 entries) fits the 8,000-char worst-case budget with stated headroom — which
+fully fixes Codex (whose 8,000 budget carries no bundled-skill share) and maximizes surviving
+entries on 200k-context Claude hosts — plus a documented, probe-verified
+`skillListingBudgetFraction` settings line for consuming repositories, because bundled skills
+are budget-exempt and charged first, so trimming alone cannot guarantee full survival where the
+bundled share is large (measured ~5.5–6k chars in the investigation container: a ~3.9k-char
+trimmed listing still lost 8 of 18 descriptions at the default budget). The doctor's
+`repository.skill-listing-budget` warning is then promoted to a `validate_fleet.py` hard rule
+(with a fixture that fails without it) so regrowth fails T0 instead of failing silently at
+runtime.
 
-**Source:** 2026-08-16 skill-listing investigation (CLI 2.1.233 binary constants — budget =
-window tokens × 4 × `skillListingBudgetFraction` 0.01, per-description cap 1536 — plus live
-headless probes: a 200k-window model rendered 18 of 19 fleet entries name-only; larger-window
-models rendered all in full). Platform facts recorded in
-`skills/prompt-craft/references/claude-code-frontmatter.md`; the LADDER-002 investigation's
-"full description visible at 2.1.231 despite ~11k listing volume" observation is explained by
-the window scaling — that probe ran on a large-window model.
+**Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
+(CLI 2.1.233 binary constants; live listing state by model; behavioral routing A/B — the
+`continuous-improvement` positive fired 0/2 with a bare name and 2/2 with the description
+restored; mitigation calibration — fraction 0.02 measured partial, 0.05 full; trim simulation).
+Platform facts recorded in `skills/prompt-craft/references/claude-code-frontmatter.md`; the
+LADDER-002 investigation's "full description visible at 2.1.231 despite ~11k listing volume"
+observation is explained by the window scaling — that probe ran on a large-window model.
 
 **Prerequisites:** none — but every description edit owes the standing paired routing-eval
 discipline, so the work batches naturally with any LADDER-002 repairs the operator buys.
@@ -258,8 +263,10 @@ the trim to confirm every entry survives.
 
 **Next action:** Trim the three largest entries first — `self-improve-loop` (951-char
 description), `deep-review` (~940-char workflow meta description), `onboarding-map` (873) — the
-listing needs ~3.9k chars cut, and a consuming-repo `skillListingBudgetFraction: 0.02` settings
-line is the operator-side mitigation available meanwhile.
+listing needs ~3.9k chars cut. The consuming-repo mitigation available meanwhile is
+`skillListingBudgetFraction: 0.05` in `.claude/settings.json` (verified full restoration in the
+investigation container; 0.02 measured partial there — calibrate with a live listing probe, not
+by assumption).
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
