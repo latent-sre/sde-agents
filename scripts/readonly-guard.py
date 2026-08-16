@@ -108,15 +108,16 @@ PLUGIN_NAME = "sde-agents"
 # the `gh` readers below are network fetches (PR bodies, issue text, `gh search code` results from
 # arbitrary GitHub repositories), which is exactly the external content this role's trust split
 # exists to keep out of the same context as private source. So the gh family is scoped to the
-# roles whose remit includes PR context, via GH_AGENT_NAMES below, rather than granted with the
+# roles whose remit includes PR context, via NETWORK_AGENT_NAMES below, rather than granted with the
 # roster (PR #141 review finding: a uniform roster grant handed the investigator `gh search code`).
 GUARDED_AGENT_NAMES = frozenset({
     "code-reviewer", "principal-engineer", "distinguished-architect", "repository-investigator",
 })
-# Roles entitled to the `gh` read subcommands. Membership here means "fetched GitHub content may
-# share this role's context"; the investigator is deliberately absent, and any future roster
-# member starts absent until its trust boundary is argued.
-GH_AGENT_NAMES = frozenset({
+# Roles entitled to the allowlist's NETWORK reads — the `gh` subcommands, and the bare
+# `git remote show` (which queries the remote unless `-n` is given). Membership here means
+# "fetched external content may share this role's context"; the investigator is deliberately
+# absent, and any future roster member starts absent until its trust boundary is argued.
+NETWORK_AGENT_NAMES = frozenset({
     "code-reviewer", "principal-engineer", "distinguished-architect",
 })
 GUARDED_AGENTS = frozenset(
@@ -301,11 +302,12 @@ _REASON = (
 
 
 _LOCAL_ONLY_REASON = (
-    "Blocked: `gh` subcommands are network reads — they fetch PR, issue, and search content from "
-    "GitHub — and this local-only role's allowlist deliberately excludes them so private source "
-    "never shares a subordinate context with fetched external content. Use local git history and "
-    "Read/Grep/Glob instead; if GitHub-hosted context is load-bearing, request it from the caller "
-    "as a separate provenance-labeled packet."
+    "Blocked: this command is a network read — `gh` subcommands fetch PR, issue, and search "
+    "content from GitHub, and a bare `git remote show` queries the remote (`-n` is the "
+    "no-query form) — and this local-only role's allowlist deliberately excludes network reads "
+    "so private source never shares a subordinate context with fetched external content. Use "
+    "local git history and Read/Grep/Glob instead; if externally hosted context is "
+    "load-bearing, request it from the caller as a separate provenance-labeled packet."
 )
 
 
@@ -344,7 +346,7 @@ def _positionals(args: list[str]) -> list[str]:
     return [arg for arg in args if not arg.startswith("-")]
 
 
-def _git_allowed(args: list[str]) -> bool:
+def _git_allowed(args: list[str], *, network_allowed: bool = True) -> bool:
     # Step over git's global options to find the subcommand.
     index = 0
     while index < len(args) and args[index].startswith("-"):
@@ -375,7 +377,15 @@ def _git_allowed(args: list[str]) -> bool:
 
     if subcommand in _GIT_READ_VERBS:
         verbs = _positionals(rest)
-        return bool(verbs) and verbs[0] in _GIT_READ_VERBS[subcommand]
+        if not (verbs and verbs[0] in _GIT_READ_VERBS[subcommand]):
+            return False
+        # A bare `git remote show <name>` QUERIES THE REMOTE — `-n` is git's documented
+        # "do not query remotes" form — so for a role whose slice excludes network reads the
+        # default spelling is a network fetch wearing a read verb (PR #141 round-2 finding).
+        # `get-url` stays: it reads local config only.
+        if not network_allowed and subcommand == "remote" and verbs[0] == "show":
+            return "-n" in rest
+        return True
 
     if subcommand == "config":
         return any(arg.split("=", 1)[0] in _GIT_CONFIG_READ for arg in rest)
@@ -407,16 +417,16 @@ def _rg_allowed(args: list[str]) -> bool:
     return not any(arg.split("=", 1)[0] in _RG_EXECUTION_FLAGS for arg in args)
 
 
-def _segment_allowed(segment: list[str], *, gh_allowed: bool = True) -> bool:
+def _segment_allowed(segment: list[str], *, network_allowed: bool = True) -> bool:
     command, args = segment[0], segment[1:]
     # A path to a binary (`/bin/cat`, `./deploy.sh`, `scripts/setup.sh`) is never allowed: the
     # allowlist names commands, and a path is how you smuggle a different one in.
     if "/" in command or "\\" in command or "=" in command:
         return False
     if command == "git":
-        return _git_allowed(args)
+        return _git_allowed(args, network_allowed=network_allowed)
     if command == "gh":
-        return gh_allowed and _gh_allowed(args)
+        return network_allowed and _gh_allowed(args)
     if command == "rg":
         return _rg_allowed(args)
     if command == "find":
@@ -440,12 +450,13 @@ def _tokenize(line: str) -> list[str]:
     return list(lexer)
 
 
-def is_allowed(command: str, *, gh_allowed: bool = True) -> bool:
+def is_allowed(command: str, *, network_allowed: bool = True) -> bool:
     """True only if every segment of every line of `command` is a known read-only command.
 
-    `gh_allowed=False` withholds the `gh` family on top of the base allowlist — the network-read
-    slice a local-only role must not hold. The default stays True so the base allowlist keeps one
-    meaning; main() computes the flag from GH_AGENT_NAMES per guarded agent.
+    `network_allowed=False` withholds the allowlist's network reads — the `gh` family and the
+    bare `git remote show` — on top of the base allowlist: the slice a local-only role must not
+    hold. The default stays True so the base allowlist keeps one meaning; main() computes the
+    flag from NETWORK_AGENT_NAMES per guarded agent.
     """
     if not command.strip():
         return True  # nothing to run
@@ -463,7 +474,7 @@ def is_allowed(command: str, *, gh_allowed: bool = True) -> bool:
             return False  # unbalanced quotes: we do not understand it, so we do not permit it
         segments = _split_segments(tokens)
         if not segments or not all(
-            _segment_allowed(segment, gh_allowed=gh_allowed) for segment in segments
+            _segment_allowed(segment, network_allowed=network_allowed) for segment in segments
         ):
             return False
     return True
@@ -524,12 +535,12 @@ def main() -> None:
         _allow()
 
     command = (data.get("tool_input") or {}).get("command", "") or ""
-    gh_ok = agent.split(":", 1)[-1] in GH_AGENT_NAMES
-    if not is_allowed(command, gh_allowed=gh_ok):
-        # A command the base allowlist would accept but the gh scoping withheld gets the reason
-        # that teaches the actual boundary — the generic reason lists `gh pr view` as allowed,
-        # which for this role it deliberately is not.
-        if not gh_ok and is_allowed(command, gh_allowed=True):
+    network_ok = agent.split(":", 1)[-1] in NETWORK_AGENT_NAMES
+    if not is_allowed(command, network_allowed=network_ok):
+        # A command the base allowlist would accept but the network scoping withheld gets the
+        # reason that teaches the actual boundary — the generic reason lists `gh pr view` as
+        # allowed, which for this role it deliberately is not.
+        if not network_ok and is_allowed(command, network_allowed=True):
             _deny(_LOCAL_ONLY_REASON)
         _deny(_REASON)
     _allow()

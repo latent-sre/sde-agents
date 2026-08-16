@@ -535,8 +535,8 @@ class GuardScopingTest(unittest.TestCase):
         self.assertEqual(decision(proc), "allow")
 
 
-class GhFamilyScoping(unittest.TestCase):
-    """The gh readers are network fetches, so they are a scoped grant, not a roster grant.
+class NetworkReadScoping(unittest.TestCase):
+    """The allowlist's network reads are a scoped grant, not a roster grant.
 
     `repository-investigator`'s whole trust boundary is that private local source never shares a
     subordinate context with fetched external content; a uniform roster grant handed it
@@ -548,10 +548,10 @@ class GhFamilyScoping(unittest.TestCase):
 
     GUARD_MODULE = validate_fleet.load_guard(Path(__file__).resolve().parents[1])
 
-    def test_gh_roles_are_a_strict_subset_of_the_roster(self) -> None:
+    def test_network_roles_are_a_strict_subset_of_the_roster(self) -> None:
         module = self.GUARD_MODULE
-        self.assertTrue(set(module.GH_AGENT_NAMES) < set(module.GUARDED_AGENT_NAMES))
-        self.assertNotIn("repository-investigator", module.GH_AGENT_NAMES)
+        self.assertTrue(set(module.NETWORK_AGENT_NAMES) < set(module.GUARDED_AGENT_NAMES))
+        self.assertNotIn("repository-investigator", module.NETWORK_AGENT_NAMES)
 
     def test_investigator_is_denied_gh_in_both_name_forms(self) -> None:
         for agent_type in ("repository-investigator", "sde-agents:repository-investigator"):
@@ -566,10 +566,22 @@ class GhFamilyScoping(unittest.TestCase):
                     # lists `gh pr view` as allowed, which for this role it deliberately is not.
                     self.assertIn("network read", reason)
 
-    def test_gh_entitled_roles_keep_the_gh_readers(self) -> None:
-        for name in sorted(self.GUARD_MODULE.GH_AGENT_NAMES):
-            with self.subTest(agent=name):
-                proc = run_guard(bash_call("gh pr view 12", agent_type=f"sde-agents:{name}"))
+    def test_network_entitled_roles_keep_the_network_readers(self) -> None:
+        for name in sorted(self.GUARD_MODULE.NETWORK_AGENT_NAMES):
+            for command in ("gh pr view 12", "git remote show origin"):
+                with self.subTest(agent=name, command=command):
+                    proc = run_guard(bash_call(command, agent_type=f"sde-agents:{name}"))
+                    self.assertEqual(decision(proc), "allow")
+
+    def test_investigator_git_remote_show_requires_the_no_query_form(self) -> None:
+        # `git remote show <name>` without `-n` queries the remote — a network fetch wearing a
+        # read verb. The no-query form and the config-only `get-url` stay available.
+        agent = "sde-agents:repository-investigator"
+        denied = run_guard(bash_call("git remote show origin", agent_type=agent))
+        self.assertEqual(decision(denied), "deny")
+        for command in ("git remote show -n origin", "git remote get-url origin"):
+            with self.subTest(command=command):
+                proc = run_guard(bash_call(command, agent_type=agent))
                 self.assertEqual(decision(proc), "allow")
 
     def test_investigator_keeps_its_local_readers(self) -> None:

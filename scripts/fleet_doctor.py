@@ -185,15 +185,40 @@ def _workflow_listing_entries(root: Path, plugin_name: str) -> tuple[list[tuple[
     for path in sorted(workflows_dir.glob("*.js")):
         text = path.read_text(encoding="utf-8")
         blanked = validate_fleet._blank_js_strings_and_comments(text)
+        # Bound the search to the meta object's TOP LEVEL. An unscoped file-wide regex would take
+        # whichever `description:` appears first — a nested `phases: [{description: 'tiny'}]` or
+        # a schema constant later in the body — and silently undercount the listing by the whole
+        # real entry (PR #141 round-2 finding). Blanked text has no braces inside strings, so
+        # brace depth is reliable.
         fields: dict[str, str] = {}
-        for key in ("name", "description"):
-            match = re.search(rf"\b{key}\s*:\s*(['\"`])", blanked)
-            if match is None:
-                continue
-            end = blanked.find(match.group(1), match.end())
-            if end == -1:
-                continue
-            fields[key] = text[match.end():end]
+        declaration = validate_fleet._META_DECLARATION_RE.search(blanked)
+        if declaration is not None:
+            open_index = declaration.end() - 1
+            depth = 0
+            close_index = None
+            for index in range(open_index, len(blanked)):
+                if blanked[index] in "{[":
+                    depth += 1
+                elif blanked[index] in "}]":
+                    depth -= 1
+                    if depth == 0:
+                        close_index = index
+                        break
+            if close_index is not None:
+                meta_blanked = blanked[open_index + 1 : close_index]
+                for key in ("name", "description"):
+                    for match in re.finditer(rf"\b{key}\s*:\s*(['\"`])", meta_blanked):
+                        prefix = meta_blanked[: match.start()]
+                        if prefix.count("{") + prefix.count("[") != prefix.count(
+                            "}"
+                        ) + prefix.count("]"):
+                            continue  # nested inside phases/args/etc., not the listing field
+                        end = meta_blanked.find(match.group(1), match.end())
+                        if end == -1:
+                            break
+                        start = open_index + 1 + match.end()
+                        fields[key] = text[start : open_index + 1 + end]
+                        break
         if "description" in fields:
             entries.append((fields.get("name", path.stem), fields["description"]))
         else:
@@ -275,11 +300,31 @@ def _skill_listing_budget_check(root: Path) -> Check:
         "largest_entries": [f"{name} ({length} chars)" for name, length in largest],
         "dmi_excluded_chars": dmi_chars,
     }
-    dmi_note = (
-        f" Headroom excludes {dmi_chars} chars of disable-model-invocation entries that "
-        f"pre-2.1.233 CLIs still list."
-        if dmi_chars
-        else ""
+    headroom = _SKILL_LISTING_BUDGET_CHARS - total
+    legacy_over = bool(dmi_chars and not over and dmi_chars > headroom)
+    details["legacy_dmi_over_headroom"] = legacy_over
+    dmi_note = ""
+    if dmi_chars:
+        dmi_note = (
+            f" Headroom excludes {dmi_chars} chars of disable-model-invocation entries that "
+            f"pre-2.1.233 CLIs still list"
+            + (
+                " — which exceeds the remaining headroom, so those hosts are over budget "
+                "despite this pass."
+                if legacy_over
+                else "."
+            )
+        )
+    # The 8,000 figure is the FLEET's worst-case allowance, not the host's: bundled skills are
+    # budget-exempt and charged first, and their share varies by environment (measured ~5.5-6k
+    # chars in one container), so a pass here is necessary, never sufficient, for full survival
+    # on a given 200k-context host. The doctor runs no model session by contract, so the host's
+    # actual bundled share is unobservable here — a live listing probe on the target host is the
+    # sufficiency check.
+    shared_note = (
+        " Budget is shared with budget-exempt bundled skills charged first, so this is the "
+        "fleet's own footprint only — a live listing probe on the target host is the "
+        "sufficiency check."
     )
     return Check(
         "repository.skill-listing-budget",
@@ -294,7 +339,7 @@ def _skill_listing_budget_check(root: Path) -> Check:
             if over
             else f"Model-visible skill listing is ~{total} chars for {len(entry_lengths)} "
             f"entries, within the {_SKILL_LISTING_BUDGET_CHARS}-char worst-case budget "
-            f"({_SKILL_LISTING_BUDGET_CHARS - total} chars of headroom).{dmi_note}"
+            f"({headroom} chars of headroom).{shared_note}{dmi_note}"
         ),
         details,
     )

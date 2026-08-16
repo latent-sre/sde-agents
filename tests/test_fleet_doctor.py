@@ -225,6 +225,50 @@ class SkillListingBudgetCheck(support.TempDirTestCase):
         self.assertEqual("inconclusive", check.status)
         self.assertIn("skills/broken/SKILL.md", str(check.details["unreadable"]))
 
+    def test_workflow_extraction_takes_the_top_level_description_not_a_nested_decoy(self) -> None:
+        # An unscoped regex would take the first `description:` in the file — here a tiny nested
+        # one inside phases — and undercount the listing by the whole real entry.
+        root = self._tree(skills={"one": "short"}, label="nested-meta")
+        (root / "workflows").mkdir()
+        (root / "workflows" / "wf.js").write_text(
+            "export const meta = {\n"
+            "  name: 'wf',\n"
+            "  phases: [{ title: 'Scan', description: 'tiny' }],\n"
+            f"  description: '{'D' * 900}',\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        check = self._check(root)
+        self.assertEqual(2, check.details["entries"])
+        # The 900-char top-level description dominates the total; the 4-char decoy cannot.
+        self.assertGreater(check.details["total_chars"], 900)
+
+    def test_a_workflow_with_only_a_nested_description_blocks_the_verdict(self) -> None:
+        # The nested value is not the listing field; treating it as one would report a
+        # near-empty entry for a workflow whose real listing cost is unknown.
+        root = self._tree(skills={"one": "short"}, label="nested-only-meta")
+        (root / "workflows").mkdir()
+        (root / "workflows" / "wf.js").write_text(
+            "export const meta = {\n"
+            "  name: 'wf',\n"
+            "  phases: [{ title: 'Scan', description: 'tiny' }],\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        check = self._check(root)
+        self.assertEqual("inconclusive", check.status)
+
+    def test_legacy_dmi_cost_exceeding_headroom_is_named_in_the_pass(self) -> None:
+        # A pass whose headroom is smaller than the excluded DMI cost does not hold on
+        # pre-2.1.233 hosts, and the message must say so rather than leaving it to arithmetic.
+        skills = {f"skill-{i}": "d" * 900 for i in range(8)}  # ~7.5k of 8k: little headroom
+        check = self._check(
+            self._tree(skills=skills, dmi={"ceremony": "d" * 800}, label="legacy-over")
+        )
+        self.assertEqual("pass", check.status)
+        self.assertTrue(check.details["legacy_dmi_over_headroom"])
+        self.assertIn("over budget despite this pass", check.summary)
+
     def test_a_workflow_without_an_extractable_description_blocks_the_verdict(self) -> None:
         # workflows/ is auto-discovered, so a meta this extractor cannot read is a real listing
         # entry with an unknown cost — silently skipping it shrinks the sum toward a false pass.
