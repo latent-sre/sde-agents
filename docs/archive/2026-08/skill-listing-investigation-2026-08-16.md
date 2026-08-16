@@ -1,8 +1,9 @@
 # Skill-listing budget investigation — 2026-08-16
 
-**Status:** dated evidence record for roadmap item CTX-002. This archive captures the mechanism,
-the live probes, and the mitigation calibration so the trim campaign starts from committed
-evidence rather than a session's memory. It adds no work of its own.
+**Status:** dated evidence record for roadmap items CTX-002, CTX-003, and CTX-004. This archive
+captures the mechanism, the live probes, the mitigation calibration, and the preload/body
+footprint so the remediation passes start from committed evidence rather than a session's
+memory. It adds no work of its own.
 
 **Conditions.** Claude Code CLI 2.1.233 (native binary, string-extracted constants), plugin
 loaded from the working tree via `--plugin-dir .`, remote container (claude.ai/code environment
@@ -88,6 +89,33 @@ fleet cannot control or predict that share across environments. Consequence for 
   (0.05 verified in this container; 0.02 measured partial).
 - The honest CTX-002 outcome is therefore both levers: the trim for every host, plus a
   documented, probe-verified settings line for consuming repositories.
+
+## Preload and body footprint [verified — byte counts on this tree]
+
+The listing budget is the *always-loaded* layer; the second cost center is per-spawn preloading:
+an agent's `skills:` field loads each named skill's **full SKILL.md body** at spawn (references
+stay on-demand — this repository's probe passed "sde-fullstack read `references/consuming-apis.md`
+when the task called an upstream API" the same day, so the claim in some doc paraphrases that
+references preload too is contradicted by executed evidence).
+
+- `sde-fullstack` preloads `backend-craft`, `frontend-craft`, `code-craft`, `root-cause`,
+  `self-improve-loop`: **48,317 bytes (~12.1k tokens) of skill bodies** on top of its own
+  19,540-byte (~4.9k-token) body — roughly 17k tokens before the task arrives.
+- `self-improve-loop` is the largest skill body (18.1k bytes, 272 lines, ~4.5k tokens — at the
+  Agent Skills spec's "<5,000 tokens recommended" line) and is preloaded by **three** agents
+  (`sde-fullstack`, `prompt-engineer`, `verification-engineer`), each of which already carries
+  the Learning closeout stanza inline in its own Output format.
+- All 20 skill bodies are within the published <500-line guidance (largest 272); the reference
+  trees already practice progressive disclosure (`code-craft`: 2.8k body over 51k of on-demand
+  references).
+- **Constraint for any body diet:** `scripts/probe_plugin.py` asserts craft-skill *canary
+  content is preloaded* (canary quoted from the body). Moving body content into references
+  either keeps the canaries in the body or moves them deliberately with a probe update — a
+  silent move would fail the probe or, worse, hollow out what "preloaded" proves.
+- Adjacent hard cap, same family: GitHub's `.agent.md` body limit is 30,000 characters
+  [sourced — github/docs `custom-agents-configuration.md`]; the generated
+  `homelab-platform.agent.md` is at **24,631 (82%)** and that agent's canonical body has been
+  the fleet's fastest-growing. Nothing warns before the cliff today.
 
 ## Artifacts
 

@@ -230,19 +230,18 @@ contracts holding.
 
 #### CTX-002 — fit the model-visible skill listing inside the 8,000-char host budget
 
-**Status:** `ready`
+**Status:** `ready` — pass 1 of the three-pass context remediation (CTX-002 listing layer,
+CTX-003 invocation layer, CTX-004 environment and enforcement); passes 1 and 3 share no files
+with pass 2 and may run independently of it.
 
 **Outcome:** The fleet's model-visible listing (non-DMI skills plus workflows, currently ~11.9k
 chars across 19 entries) fits the 8,000-char worst-case budget with stated headroom — which
 fully fixes Codex (whose 8,000 budget carries no bundled-skill share) and maximizes surviving
-entries on 200k-context Claude hosts — plus a documented, probe-verified
-`skillListingBudgetFraction` settings line for consuming repositories, because bundled skills
-are budget-exempt and charged first, so trimming alone cannot guarantee full survival where the
-bundled share is large (measured ~5.5–6k chars in the investigation container: a ~3.9k-char
-trimmed listing still lost 8 of 18 descriptions at the default budget). The doctor's
-`repository.skill-listing-budget` warning is then promoted to a `validate_fleet.py` hard rule
-(with a fixture that fails without it) so regrowth fails T0 instead of failing silently at
-runtime.
+entries on 200k-context Claude hosts. Bundled skills are budget-exempt and charged first, so
+trimming alone cannot guarantee full survival where the bundled share is large (measured
+~5.5–6k chars in the investigation container: a ~3.9k-char trimmed listing still lost 8 of 18
+descriptions at the default budget) — the settings-side completion and the enforcement
+promotion are CTX-004's remit, gated on this trim landing first.
 
 **Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
 (CLI 2.1.233 binary constants; live listing state by model; behavioral routing A/B — the
@@ -257,9 +256,9 @@ discipline, so the work batches naturally with any LADDER-002 repairs the operat
 
 **Acceptance:** Paired before/after routing runs for the overlapping clusters of every edited
 description (`scripts/eval_baseline.py` may satisfy the 'before' side); doctor check reporting
-`pass` with headroom on the trimmed tree; the promoted validator rule landing with its failing
-fixture; regenerated adapters. Bare-name degradation on a 200k-window model re-probed once after
-the trim to confirm every entry survives.
+`pass` with headroom on the trimmed tree; regenerated adapters. A live listing probe on a
+200k-window model after the trim, recording how many entries survive at the default budget —
+survivors are maximized here; full survival on bundled-rich hosts closes in CTX-004.
 
 **Next action:** Trim the three largest entries first — `self-improve-loop` (951-char
 description), `deep-review` (~940-char workflow meta description), `onboarding-map` (873) — the
@@ -267,6 +266,69 @@ listing needs ~3.9k chars cut. The consuming-repo mitigation available meanwhile
 `skillListingBudgetFraction: 0.05` in `.claude/settings.json` (verified full restoration in the
 investigation container; 0.02 measured partial there — calibrate with a live listing probe, not
 by assumption).
+
+#### CTX-003 — shrink the per-spawn preload footprint without hollowing the probe's proof
+
+**Status:** `ready` — pass 2 of the three-pass context remediation; independent of CTX-002 and
+CTX-004, and the heaviest pass (behavioral-contract rounds), so it runs when there is appetite
+for that instrument rather than blocking the other two.
+
+**Outcome:** The per-spawn context cost of preloading drops measurably — `sde-fullstack`
+currently loads ~12.1k tokens of skill bodies (48,317 bytes across five preloads) on top of its
+own ~4.9k-token body, and `self-improve-loop` (largest body: 18.1k bytes, 272 lines, ~4.5k
+tokens) is preloaded by three agents that already carry the Learning closeout stanza inline —
+with behavioral contracts proving the slimmed bodies still deliver what the fat ones did.
+References stay the on-demand layer (probe-verified 2026-08-16: conditional reference reads
+work; preloading takes the SKILL.md body only).
+
+**Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md),
+"Preload and body footprint" — byte counts, the redundancy of the preloaded Learning protocol
+against the agents' inline closeout stanzas, and the probe-canary constraint.
+
+**Prerequisites:** none mechanically — but the probe-canary constraint is a design decision
+inside the pass, not an accident to stumble into: `scripts/probe_plugin.py` asserts craft-skill
+canary content is *preloaded* by quoting it from the body, so a body-to-reference move either
+keeps the canaries in the body or moves them deliberately with a probe update in the same
+change. A silent move fails the probe — or worse, quietly hollows out what "preloaded" proves.
+
+**Acceptance:** Before/after behavioral-contract runs (`scripts/eval_behavioral.py`) for every
+agent whose preloaded set changed; the probe green with its canary assertions intact or
+deliberately migrated; regenerated adapters; the doctor and validator green throughout. Byte
+deltas recorded per skill in the closing record.
+
+**Next action:** Restructure `self-improve-loop` first — compact loop plus closeout contract in
+SKILL.md, full lifecycle protocol to a reference — because it pays three times per fleet-heavy
+session and its behavioral contracts (the learning-closeout cases) already exist as the
+instrument.
+
+#### CTX-004 — lock the context wins in: settings lines, validator promotion, Copilot cap
+
+**Status:** `ready` — pass 3 of the three-pass context remediation; the promotion step is gated
+on CTX-002, the other two deliverables are not.
+
+**Outcome:** Three locks, one per discovered cliff. (1) Consuming lab repositories carry a
+probe-calibrated `skillListingBudgetFraction` line in `.claude/settings.json` (0.05 verified
+full in the investigation container; 0.02 measured partial — each environment calibrates by
+live listing probe because the bundled share differs). (2) The doctor's
+`repository.skill-listing-budget` warning is promoted to a `validate_fleet.py` hard rule with a
+fixture that fails without it, so listing regrowth fails T0 instead of failing silently at
+runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
+warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-platform.agent.md` is at
+24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
+host rejecting the profile.
+
+**Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
+(mitigation calibration table; the Copilot cap under "Preload and body footprint").
+
+**Prerequisites:** CTX-002 for the promotion step only.
+
+**Acceptance:** Settings lines landed in the lab repositories with each environment's live-probe
+calibration recorded; the promoted validator rule with its failing fixture; the Copilot-cap
+tripwire with a test that makes it fire (a synthetic body over threshold), thresholds stated in
+the rule's message with the consequence named; regenerated adapters and green tiers.
+
+**Next action:** The Copilot-cap tripwire — it is prerequisite-free, small, and the 82%
+measurement is already committed evidence.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
