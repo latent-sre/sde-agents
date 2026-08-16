@@ -1,17 +1,16 @@
 # Repository guide for coding agents
 
 This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent
-Plugins. The definitions in `agents/` and `skills/` are the only authored source and exactly what
-Claude Code loads. Codex, Copilot, and VS Code load generated host adapters. Edit the canonical
-files directly and regenerate; never edit a generated copy or resolve a Claude fleet file under
-`~/.claude`, which does not contain this fleet once it ships as a plugin. Every script under
-`scripts/` states its own contract in its docstring — read it before touching or invoking one.
+Plugins: `agents/` and `skills/` are the only authored source, loaded directly by Claude Code;
+the other hosts load generated adapters. Edit canonical files and regenerate — never a generated
+copy, never a fleet definition resolved under `~/.claude` (the shipped plugin does not live
+there). Every script under `scripts/` states its contract in its docstring — read it before
+touching or invoking one.
 
-This file is the fleet's own instance of the project context convention that `README.md` defines
-for target repositories. Where it paraphrases the README or a script's docstring, that source wins
-on conflict — fix the paraphrase here, never the source. The validator holds this file to that
-rule: the `@AGENTS.md` bridge in `CLAUDE.md`, every concrete multi-segment repo path named here,
-and the model-alias list are checked against the source and fail on drift.
+Where this file paraphrases `README.md` or a script's docstring, the source wins — fix the
+paraphrase here, never the source. The validator pins the checkable facts (the `@AGENTS.md`
+bridge in `CLAUDE.md`, concrete multi-segment repo paths, the model-alias list) and fails them
+on drift.
 
 ## The engineering program
 
