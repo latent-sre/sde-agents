@@ -294,6 +294,18 @@ disposition.
 
 ## Opening a pull request
 
+Work reaches the default branch through a topic branch and a merge-commit PR, never a direct
+push: every gate in this section — the requested review, the gates table, the edit-round cap —
+attaches to the PR mechanism, and a direct push bypasses them all silently. Branch names use the
+expanded conventional form `<type>/<kebab-slug>` (`feat`, `fix`, `docs`, `refactor`, `test`,
+`chore`, `ci`, `perf`, `build`), so the branch list reads as a change inventory. Because merges
+are merge commits, branch history survives on the default branch: a canonical edit and everything
+it makes necessary — regenerated adapters, a refreshed README inventory, a guard-list entry —
+land in the same commit, keeping every commit in history validator-green for bisect and revert.
+That atomicity is writer discipline, not an enforced gate: CI validates the PR head, not each
+commit. Commit messages carry the same claim-plus-consequence register as the PR template and the
+validator's error messages.
+
 `.github/pull_request_template.md` is the shape. Every line carries claim plus consequence —
 "removed `ag`, whose exec-flag surface cannot be enumerated without the binary" rather than
 "removed `ag`" — the same register as the validator's error messages, because a reviewer can only
