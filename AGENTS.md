@@ -45,41 +45,34 @@ one writer per artifact, structure only at the boundaries that remain.
 Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence
 instead of recomputing it.
 
-- **T0 — edit loop** (seconds): `python3 scripts/validate_fleet.py` plus the test module that
-  owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
-  validator byte-compares every generated adapter itself, so a separate
-  `generate_platform_adapters.py --check` adds nothing here; `--write` (below) remains the
-  regeneration command after canonical edits.
-- **T1 — before push / PR**: the full offline suite via `python3 scripts/run_tests.py` (one
-  process per module, in parallel — a serial `python3 -m unittest discover -s tests -v` proves
-  the same thing at the sum of the module times instead of roughly the longest one), plus
-  `claude plugin validate . --strict` for the platform contract. CI runs the validator, the
-  tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
-  Linux. Also run `python3 scripts/fleet_doctor.py` — it is **local-only and CI can never
-  substitute for it**, because the drift it finds lives in your host installation rather than in
-  the checkout every other tier reads. Exit 3 means at least one warning — read the report to see
-  which; host drift from what the repository ships is the common case, and its repair is
-  `python3 scripts/install_codex_agents.py --user`. Treat a warning as owed work before you
-  measure anything: a session running against a stale installed profile is not testing the fleet
-  you edited, which is how a superseded, materially stricter `homelab-platform` profile drove a
-  whole Codex-host session and cost roughly ten hours (issue #126).
-- **T2 — merge and weekly** (CI-owned): pushes to main, the Monday sweep, and manual dispatch
-  run the full Linux/macOS/Windows matrix, so platform-specific guard and hook paths are
-  exercised without billing every PR for them (see the matrix comment in
+- **T0 — edit loop** (seconds): run `python3 scripts/validate_fleet.py` and the test module
+  that owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
+  validator byte-compares every generated adapter itself, so no separate `--check` run is
+  needed; `generate_platform_adapters.py --write` (below) is the regeneration command after
+  canonical edits.
+- **T1 — before push or PR**: run `python3 scripts/run_tests.py` (full offline suite),
+  `claude plugin validate . --strict` (platform contract), and `python3 scripts/fleet_doctor.py`.
+  CI repeats the first two on every PR but can never substitute for fleet_doctor — the drift it
+  finds lives in your host installation, not in the checkout. Exit 3 means warnings: read the
+  report, repair host drift (the common case) with
+  `python3 scripts/install_codex_agents.py --user`, and clear every warning before measuring
+  anything — a stale installed profile means you are measuring something other than the fleet
+  you edited (issue #126).
+- **T2 — merge and weekly** (CI-owned, nothing for you to run): pushes to main, the weekly
+  sweep, and manual dispatch run the full three-OS matrix, so platform-specific guard and hook
+  paths are exercised without billing every PR for them (see the matrix comment in
   `.github/workflows/validate.yml`).
-- **T3 — release / CLI pin bump** (manual, real API): `scripts/probe_plugin.py` and the eval
-  suites, per the section below. Before a paired routing run, `scripts/eval_baseline.py`
-  reports whether a stored benchmark already covers the 'before' side — reuse it when it does;
-  the 'after' side is always fresh.
+- **T3 — release or CLI pin bump** (manual, real API): run `scripts/probe_plugin.py` and the
+  eval suites, per the next section. Before a paired routing run, check
+  `scripts/eval_baseline.py` — a stored benchmark it reports reusable covers the 'before' side;
+  the 'after' side is always a fresh run.
 
-Static review has a convergence bound. A prose-behavior change (agent or skill text) gets at
-most **two** deep-review rounds: when a later round's criticals land in sentences the previous
-round's fix introduced, the loop is diverging — natural-language rules have unbounded
-hypothetical attack surface, so each rewrite mints the next round's findings. Close with the
-instrument that measures behavior instead (a live behavioral-contract run, or an executed
-verification pass); a third static round happens only on an explicit operator ruling. This rule
-exists because one branch spent six rounds and ~1.5M review tokens finding defects only in its
-own successive fixes.
+Static review has a convergence bound: at most **two** deep-review rounds per prose-behavior
+change (agent or skill text). The divergence signal: a round's criticals land in sentences the
+previous round's fix introduced — each rewrite mints the next round's findings. Close with an
+instrument that measures behavior instead (a behavioral-contract run, or an executed
+verification pass); a third static round happens only on an explicit operator ruling
+(provenance: six rounds and ~1.5M review tokens on one branch).
 
 After **any** canonical agent or skill edit, regenerate the host adapters:
 
