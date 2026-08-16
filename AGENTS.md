@@ -98,28 +98,25 @@ wrong Claude loop when the plugin is what you are editing:
 claude --plugin-dir .
 ```
 
-For Copilot CLI, the equivalent local loop is `copilot plugin install .`. VS Code uses the
-working-tree path in `chat.pluginLocations`. Codex loads `.codex/agents/` at project scope; its
-nested plugin is installed through the repository marketplace. Standalone Codex agent sync —
-including `/import`'s one-time-migration limits and the exact-match adoption contract — is owned
-by the `scripts/install_codex_agents.py` docstring.
+The Copilot CLI, VS Code, and Codex local loops are owned by `README.md`'s Install section.
+Standalone Codex agent sync — including `/import`'s one-time-migration limits and the exact-match
+adoption contract — is owned by the `scripts/install_codex_agents.py` docstring.
 
 Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
-  and the guard fires for the guarded agents and only them. Owed at every CLI pin bump (**CI's
-  `plugin-contract` job pins the CLI version**, so bumping the pin is the upgrade): the guard
-  rests on the `agent_type` payload field — contract owned by the `scripts/readonly-guard.py`
-  docstring — and the probe is the only runtime proof the pinned binary still honors it.
+  and the guard fires for the guarded agents and only them. Owed at every CLI pin bump (the pin
+  lives in CI's `claude-plugin-contract` job): the probe is the only runtime proof the pinned
+  binary still honors the guard's payload contract (owner: the `scripts/readonly-guard.py`
+  docstring).
 - `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals, owed
-  before **and** after any description edit with the rates diffed (the description playbook has
-  the recipe). Read `evals/README.md` first — it owns the negative-case and narrowing semantics
-  and the headless caveat: agent positives systematically under-fire, so trust negatives and
-  regressions over absolute agent rates.
+  before **and** after any description edit (the description playbook owns the recipe). Read
+  `evals/README.md` first — it owns the negative-case and narrowing semantics and the headless
+  caveat.
 - `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
   default. The narrower Codex subscription lane (`--runtime codex`; transport
-  `scripts/eval_codex_runtime.py`) and its eligibility limits are owned by `evals/README.md` —
-  read it before running that lane.
+  `scripts/eval_codex_runtime.py`) is documented — invocation and eligibility limits — in
+  `evals/README.md`; read it before running that lane.
 
 One report is manual, on demand, and **offline** — no model session, no API cost:
 
@@ -128,8 +125,8 @@ python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.m
 ```
 
 Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
-candidate — output is deterministic, so identical trees diff cleanly, and generated output is
-never committed (this report's output, not the host adapters). Read it with its three layers kept
+candidate — output is deterministic, and generated output is never committed (this report's
+output, not the host adapters). Read it with its three layers kept
 apart: authored edges are what the files declare, each host projection states only that host's
 control and its limitations, and the routing overlay is co-membership plus separately identified
 case assertions — co-membership is not behavioral coverage. Every section is advisory.
@@ -142,13 +139,10 @@ The design validator is the other offline on-demand tool, and it takes one expli
 python3 scripts/workflow_contract.py path/to/design.json --root .
 ```
 
-Exit 0 prints a `design_digest`; exit 1 lists ordered defects, each with a deterministic witness;
-exit 2 means the input could not be read, which is not a design defect. Read the verdict as what
-it says — **design-consistent, not runtime-enforced**: no host checks a workflow this way at
-dispatch, and approval coverage stops at every `subgraph` boundary. Schema v1 is deliberately
-narrow; the semantics it excludes (`any`/quorum joins, late arrival, cancellation, reset) wait
-for GRAPH-004, because a validator that guessed at them would certify designs whose behavior
-nobody has defined.
+Read the verdict as what it says — **design-consistent, not runtime-enforced**: no host checks a
+workflow this way at dispatch, and approval coverage stops at every `subgraph` boundary. Schema
+v1 is deliberately narrow; the semantics it excludes (`any`/quorum joins, late arrival,
+cancellation, reset) wait for GRAPH-004.
 
 ## Change playbooks
 

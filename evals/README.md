@@ -172,7 +172,10 @@ The default `claude` runtime retains the complete case surface. The `codex` runt
 bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
 cases, tool-enabled cases, and cases requiring a Claude permission mode are refused before a model
 call. A writer-role profile is eligible only when the selected contract explicitly declares
-`allowed_tools: []`; the Codex session still runs read-only. This declaration selects the bounded
+`allowed_tools: []`; the Codex session still runs read-only. The lane's invocation is explicit —
+`python3 scripts/eval_behavioral.py --runs 3 --runtime codex --model <exact-slug>
+--reasoning-effort <effort>` — because Codex requires the exact model slug and reasoning effort;
+the runner refuses before any spend when either is missing. This declaration selects the bounded
 lane, but does not mean Codex has reproduced Claude's empty allowlist. Codex CLI 0.147.0 has no
 main-session
 `--agent` selector, so the adapter captures the selected generated
