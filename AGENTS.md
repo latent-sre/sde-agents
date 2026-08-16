@@ -85,8 +85,8 @@ instead of recomputing it.
   tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
   Linux. Also run `python3 scripts/fleet_doctor.py` — it is **local-only and CI can never
   substitute for it**, because the drift it finds lives in your host installation rather than in
-  the checkout every other tier reads. Exit 3 means this host has drifted from what the
-  repository ships; the usual repair is
+  the checkout every other tier reads. Exit 3 means at least one warning — read the report to see
+  which; host drift from what the repository ships is the common case, and its repair is
   `python3 scripts/install_codex_agents.py --user`. Treat a warning as owed work before you
   measure anything: a session running against a stale installed profile is not testing the fleet
   you edited, which is how a superseded, materially stricter `homelab-platform` profile drove a
@@ -152,7 +152,8 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
   from meaning the platform contract stopped being tested.
 - `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals. Run
   before **and** after any description edit and diff the rates. Results are rates over runs, not
-  booleans; a negative (near-miss) case firing at all is a defect regardless of variance. Agent
+  booleans; a negative (near-miss) case firing against its declared forbidden set is a defect
+  regardless of variance (`evals/README.md` owns the narrowing semantics). Agent
   positives systematically under-fire in headless mode — trust negatives and regressions over
   absolute agent rates. See `evals/README.md`.
 - `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
@@ -333,8 +334,8 @@ findings about the fix — an unbounded fixpoint that ran ten review-driven roun
 the two-round deep-review cap was written, because that cap bound one gate and left this one open.
 So: at most **two** review-driven edit rounds per PR. A finding that arrives after the second round
 is dispositioned in the thread without new bytes — declined with the reason, or recorded as owed
-work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which restarts the
-count, the same escape the deep-review bound reserves for a third static round. This bounds edits,
+work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which buys one
+further round, the same one-round escape the deep-review bound reserves for a third static round. This bounds edits,
 never waits: the head-binding clause stands, the merged head has always been waited on, and what
 stops is minting fresh heads for the reviewer to find fixes in.
 
