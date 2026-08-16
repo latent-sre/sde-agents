@@ -90,6 +90,15 @@ fleet cannot control or predict that share across environments. Consequence for 
 - The honest CTX-002 outcome is therefore both levers: the trim for every host, plus a
   documented, probe-verified settings line for consuming repositories.
 
+## Agent listing: no comparable cliff [verified — negative result]
+
+The Agent tool's subagent listing (~6.9k chars across 11 fleet agent descriptions) was checked
+for the same truncation class and cleared: no budget constant surfaced in the CLI binary, and a
+live 200k-window session rendered all 11 fleet agent descriptions in full. The
+`evals/README.md` "agent positives under-fire in headless mode" observation therefore keeps its
+existing explanation (one-shot sessions prefer doing work inline over delegating) — it is not a
+listing-budget effect. Recorded so the check is not re-run from scratch.
+
 ## Preload and body footprint [verified — byte counts on this tree]
 
 The listing budget is the *always-loaded* layer; the second cost center is per-spawn preloading:
