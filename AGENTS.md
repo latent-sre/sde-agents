@@ -294,53 +294,33 @@ disposition.
 
 ## Opening a pull request
 
-`.github/pull_request_template.md` is the shape. Three things about it are load-bearing:
+`.github/pull_request_template.md` is the shape. Every line carries claim plus consequence —
+"removed `ag`, whose exec-flag surface cannot be enumerated without the binary" rather than
+"removed `ag`" — the same register as the validator's error messages, because a reviewer can only
+disagree with a decision they can see. The conditional gates table is the part that catches
+things: the expensive checks are situational (a description edit owes a before/after routing run,
+a guard or hook edit owes the probe, a new validator rule owes a test proven to fail without it,
+a canonical fleet edit owes regenerated host adapters) — fill the rows you tripped. Keep the
+"Deliberately not done" section honest and the whole template short; one long enough to skim past
+stops working.
 
-- **Claim plus consequence.** Every line says what changed *and* what it means — "removed `ag`,
-  whose exec-flag surface cannot be enumerated without the binary" rather than "removed `ag`". Same
-  register as the comments in `scripts/` and the validator's error messages, for the same reason: a
-  reviewer can only disagree with a decision they can see.
-- **The conditional gates table is the part that catches things.** The expensive checks here are
-  situational — a description edit owes a before/after routing run, a guard or hook edit owes the
-  probe, a validator rule owes a test proven to fail without it, and a canonical fleet edit owes
-  regenerated host adapters. Fill the rows you tripped.
-- **The automated review is request-triggered, and opening a PR does not request it.** Every bot
-  pass in this repository's history is preceded by a `review_requested` event, and the passes land
-  roughly **ten minutes after that request** rather than after `gh pr create` — PR #124 was
-  requested at 07:07:07 and reviewed at 07:17:28 and 07:17:44. Request Copilot explicitly; the
-  Codex connector has followed that request without needing one of its own. Requesting is a step
-  you take, not a wait you serve — **and on this repository it is an operator step, not an agent
-  one**: the reviewer is `copilot-pull-request-reviewer[bot]`, which `suggestedActors` does not
-  list, so `gh pr edit --add-reviewer Copilot` fails to resolve the login and a REST
-  `requested_reviewers` post silently leaves `reviewRequests` empty. Use the PR page's Reviewers
-  box. An agent opening a PR here must therefore hand the request to its operator and say so,
-  rather than reporting the PR as awaiting review. Then wait for both passes **on the current
-  head**, and
-  disposition every comment — applied,
-  or declined with the reason. Applying one writes new bytes, and the passes that cleared the
-  previous head never saw them: the last review-driven edit owes another wait, or the gate is
-  satisfiable by a review of code the fix already replaced. Four rounds paid for this line — a PR
-  merged four minutes after opening carried a P1 that landed two minutes *after* the merge and cost
-  a revert; a later PR's unread comments correctly refuted a claim that would otherwise have
-  promoted an unsupported rule into this file; the head-binding clause exists because the first
-  draft of this very rule shipped with that loophole in it; and the sentence you are reading
-  replaced one asserting the reviews arrive "two to five minutes behind `gh pr create`", which read
-  as a wait rather than an action and let PR #128 merge unreviewed while a session sat waiting for a
-  pass nobody had asked for.
+The automated review is request-triggered; opening a PR does not request it, and on this
+repository requesting is an **operator step, not an agent one**: the reviewer bot resolves
+through neither `gh` nor the REST API — both fail silently — and is assigned only in the PR
+page's Reviewers box (the Codex connector follows Copilot's request without needing one of its
+own). An agent opening a PR hands the request to its operator and says so, never reporting the PR
+as awaiting review.
 
-The disposition loop above carries the same convergence bound as static deep-review, for the same
-reason: applying a finding mints new bytes, the new head owes another wait, and the wait returns
-findings about the fix — an unbounded fixpoint that ran ten review-driven rounds on PR #136 *after*
-the two-round deep-review cap was written, because that cap bound one gate and left this one open.
-So: at most **two** review-driven edit rounds per PR. A finding that arrives after the second round
-is dispositioned in the thread without new bytes — declined with the reason, or recorded as owed
-work in `docs/fleet-roadmap.md` — unless an explicit operator ruling applies it, which buys one
-further round, the same one-round escape the deep-review bound reserves for a third static round. This bounds edits,
-never waits: the head-binding clause stands, the merged head has always been waited on, and what
-stops is minting fresh heads for the reviewer to find fixes in.
-
-Keep the "Deliberately not done" section honest and keep the whole thing short; a template long
-enough to skim past stops working, and each section in it was added for an observed failure.
+Then wait for both passes **on the current head**, and disposition every comment — applied, or
+declined with the reason. A review-driven edit mints bytes the cleared passes never saw, so the
+last edit owes another wait. At most **two** review-driven edit rounds per PR: a finding that
+arrives after the second round is dispositioned in the thread without new bytes — declined with
+the reason, or recorded as owed work in `docs/fleet-roadmap.md` — unless an explicit operator
+ruling buys one further round, the same one-round escape the deep-review bound reserves for a
+third static round. This bounds edits, never waits: the merged head has always been waited on;
+what stops is minting fresh heads for the reviewer to find fixes in. The incidents that minted
+these rules — an unreviewed merge, a post-merge P1 and revert, a ten-round disposition loop —
+live in `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions
 
