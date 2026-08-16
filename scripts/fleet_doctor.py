@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -26,10 +27,17 @@ from typing import Callable, Sequence
 sys.dont_write_bytecode = True
 
 try:
-    from scripts import generate_platform_adapters, install_codex_agents
+    from scripts import (
+        fleet_records,
+        generate_platform_adapters,
+        install_codex_agents,
+        validate_fleet,
+    )
 except ModuleNotFoundError:
+    import fleet_records  # type: ignore[no-redef]
     import generate_platform_adapters  # type: ignore[no-redef]
     import install_codex_agents  # type: ignore[no-redef]
+    import validate_fleet  # type: ignore[no-redef]
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -145,8 +153,111 @@ def _git_checks(root: Path, run: CommandRunner) -> list[Check]:
     return checks
 
 
+# The skill listing sent to the model is budgeted in CHARACTERS: context-window tokens x 4
+# chars/token x `skillListingBudgetFraction` (default 0.01) -- exactly 8,000 on a 200k-token
+# model, and OpenAI Codex applies the same 8,000-char default when the window is unknown. Over
+# budget, Claude Code does not drop a skill; it silently degrades plugin entries to bare
+# `- name` lines with no description (bundled skills are exempt and charge the budget first),
+# and Codex shortens descriptions then omits entries. Probed on CLI 2.1.233: binary constants
+# (fraction 0.01, 4 chars/token, 200k default window, 1536-char per-description cap) plus live
+# headless sessions -- a 200k-window model rendered 18 of this fleet's 19 entries name-only
+# while larger-window models rendered all of them in full. The failure is silent at runtime:
+# description-driven skill routing simply stops, and nothing in a session says so.
+_SKILL_LISTING_BUDGET_CHARS = 8000
+_SKILL_LISTING_MAX_DESC_CHARS = 1536
+
+
+def _workflow_listing_entries(root: Path, plugin_name: str) -> list[tuple[str, str]]:
+    """(name, description) for each workflows/*.js meta literal.
+
+    Workflows appear in the model's skill listing exactly like skills (observed live on CLI
+    2.1.233: `- sde-agents:deep-review: <meta description>`), so a budget sum that skipped them
+    would under-report by each workflow's full entry. String spans are located on the
+    validator's blanked text -- quotes survive blanking while contents (including escaped
+    quotes) do not -- so the first matching close quote is the real end of the literal, and the
+    raw slice between the quotes is the description as the runtime reads it.
+    """
+    entries: list[tuple[str, str]] = []
+    workflows_dir = root / "workflows"
+    if not workflows_dir.is_dir():
+        return entries
+    for path in sorted(workflows_dir.glob("*.js")):
+        text = path.read_text(encoding="utf-8")
+        blanked = validate_fleet._blank_js_strings_and_comments(text)
+        fields: dict[str, str] = {}
+        for key in ("name", "description"):
+            match = re.search(rf"\b{key}\s*:\s*(['\"`])", blanked)
+            if match is None:
+                continue
+            end = blanked.find(match.group(1), match.end())
+            if end == -1:
+                continue
+            fields[key] = text[match.end():end]
+        if "description" in fields:
+            entries.append((fields.get("name", path.stem), fields["description"]))
+    return entries
+
+
+def _skill_listing_budget_check(root: Path) -> Check:
+    try:
+        manifest = json.loads(
+            (root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        plugin_name = manifest["name"]
+        records = fleet_records.collect(root, plugin_name)
+        listed: list[tuple[str, str]] = []
+        for member in records.members:
+            if member.kind != "skill":
+                continue
+            # disable-model-invocation removes the entry from the model's listing (absence
+            # verified live on CLI 2.1.233), so it costs the budget nothing.
+            if member.fields.get("disable-model-invocation", "").strip().lower() == "true":
+                continue
+            listed.append((member.name, member.description))
+        listed.extend(_workflow_listing_entries(root, plugin_name))
+    except (OSError, ValueError, KeyError) as exc:
+        return Check(
+            "repository.skill-listing-budget",
+            "inconclusive",
+            "The model-visible skill listing could not be computed.",
+            {"error": str(exc)},
+        )
+    entry_lengths = {
+        f"{plugin_name}:{name}": len(f"- {plugin_name}:{name}: ")
+        + min(len(description), _SKILL_LISTING_MAX_DESC_CHARS)
+        for name, description in listed
+    }
+    total = sum(entry_lengths.values()) + max(0, len(entry_lengths) - 1)
+    over = total > _SKILL_LISTING_BUDGET_CHARS
+    largest = sorted(entry_lengths.items(), key=lambda item: -item[1])[:3]
+    details = {
+        "total_chars": total,
+        "budget_chars": _SKILL_LISTING_BUDGET_CHARS,
+        "entries": len(entry_lengths),
+        "largest_entries": [f"{name} ({length} chars)" for name, length in largest],
+    }
+    return Check(
+        "repository.skill-listing-budget",
+        "warn" if over else "pass",
+        (
+            f"Model-visible skill listing is ~{total} chars for {len(entry_lengths)} entries, "
+            f"over the {_SKILL_LISTING_BUDGET_CHARS}-char budget a 200k-context host applies -- "
+            f"over-budget entries silently degrade to bare names there (and Codex shortens then "
+            f"omits at the same default), so description-driven routing quietly stops. Trim the "
+            f"largest descriptions, or raise skillListingBudgetFraction in the consuming "
+            f"repository's settings."
+            if over
+            else f"Model-visible skill listing is ~{total} chars for {len(entry_lengths)} "
+            f"entries, within the {_SKILL_LISTING_BUDGET_CHARS}-char worst-case budget "
+            f"({_SKILL_LISTING_BUDGET_CHARS - total} chars of headroom)."
+        ),
+        details,
+    )
+
+
 def _repository_checks(root: Path) -> list[Check]:
     checks: list[Check] = []
+    checks.append(_skill_listing_budget_check(root))
     adapter_issues = generate_platform_adapters.validate_generated_outputs(root)
     checks.append(
         Check(

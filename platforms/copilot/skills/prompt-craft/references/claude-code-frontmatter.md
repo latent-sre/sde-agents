@@ -49,15 +49,15 @@ Core fields: `name`, `description` (the trigger), `argument-hint`. Behavior swit
 
 - `disable-model-invocation: true` — intended for side-effect skills (deploy, send, commit):
   user-only via `/name`, description removed from the model's context, and not preloadable via an
-  agent's `skills:` field. **Caveat — version-sensitive, not timeless: this flag is currently
-  ignored for plugin-shipped skills** (anthropics/claude-code#22345; last verified against CLI
-  2.1.212, 2026-07-17 — the issue was open and the docs still described the flag as preventing
-  model invocation). A plugin skill so marked still loads into context and stays model-invocable.
-  Set it anyway (correct once fixed, and it documents intent), but do not treat it as an enforced
-  boundary in a plugin; make the skill's own content defer authority instead. Re-verify after CLI
-  upgrades — `scripts/probe_plugin.py` is the capability test — and update this stamp. (Docs also
-  state the flag stops scheduled-task firings that name the skill, as of v2.1.196 — doc-checked
-  2026-07-24, not probed.)
+  agent's `skills:` field. **Caveat — version-sensitive, not timeless.** On CLI 2.1.212 the flag
+  was ignored outright for plugin-shipped skills (anthropics/claude-code#22345, verified
+  2026-07-17). Probed again 2026-08-16 on CLI 2.1.233: the listing half now works — both of this
+  plugin's flagged skills were absent from a live session's model-visible skill listing — but
+  whether Skill-tool invocation is also blocked for a plugin skill remains unprobed, so keep
+  making the skill's own content defer authority rather than treating the flag as an enforced
+  boundary. Re-verify after CLI upgrades — `scripts/probe_plugin.py` is the capability test — and
+  update this stamp. (Docs also state the flag stops scheduled-task firings that name the skill,
+  as of v2.1.196 — doc-checked 2026-07-24, not probed.)
 - `user-invocable: false` — background-knowledge skills, hidden from the `/` menu.
 - `allowed-tools` **grants** (pre-approves, no permission prompt) while the skill is active — it
   does **not** restrict availability. Takes bare tool names or permission-rule specifiers
@@ -91,7 +91,24 @@ ignore the field outright (see above), so treat this as unenforced in a plugin u
 - **`/verify`** — a bundled skill (v2.1.145+): builds and runs the app to confirm a change does
   what it should. Since v2.1.215 it runs only when the user invokes it, never autonomously.
 
-Keep descriptions lean — they load into context every session.
+- **Skill-listing character budget** (probed 2026-08-16, CLI 2.1.233 — binary constants plus live
+  headless sessions). The model-visible skill listing is budgeted at context-window tokens × 4
+  chars/token × `skillListingBudgetFraction` (default 0.01) — exactly **8,000 characters on a
+  200k-token model** — with each description also capped at `skillListingMaxDescChars` (1536).
+  Over budget, entries are not dropped: plugin and user entries silently degrade to bare
+  `- name` lines with **no description**, greedily by priority, while Anthropic-bundled skills
+  are exempt and charge the budget first; the only signal is a debug-log warning. Live: a
+  200k-window model rendered 18 of this fleet's 19 entries name-only, while larger-window models
+  rendered all in full. Workflows list exactly like skills (`- plugin:name: meta description`)
+  and spend the same budget. OpenAI Codex applies the same 8,000-char default when the window is
+  unknown (shortens descriptions, then omits entries). `scripts/fleet_doctor.py` computes the
+  fleet's footprint (`repository.skill-listing-budget`); consuming repositories can raise
+  `skillListingBudgetFraction` / `skillListingMaxDescChars` in settings, or override outright
+  with the `SLASH_COMMAND_TOOL_CHAR_BUDGET` environment variable.
+
+Keep descriptions lean — they load into context every session, and past the listing budget above
+a long description does not degrade gracefully: it disappears entirely on the hosts that
+truncate, taking its routing with it.
 
 ## Fleet decisions on unused fields
 

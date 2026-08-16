@@ -228,6 +228,39 @@ Named audit material from the 2026-08-09 estate feedback: the Learning-bullet sp
 value is one line — a compression candidate gated on the pinned learning-slot behavioral
 contracts holding.
 
+#### CTX-002 — fit the model-visible skill listing inside the 8,000-char host budget
+
+**Status:** `ready`
+
+**Outcome:** The fleet's model-visible listing (non-DMI skills plus workflows, currently ~11.9k
+chars across 19 entries) fits the 8,000-char worst-case budget with stated headroom, so
+200k-context Claude hosts and Codex render every entry with its description instead of silently
+degrading plugin entries to bare names — and the doctor's `repository.skill-listing-budget`
+warning is then promoted to a `validate_fleet.py` hard rule (with a fixture that fails without
+it) so regrowth fails T0 instead of failing silently at runtime.
+
+**Source:** 2026-08-16 skill-listing investigation (CLI 2.1.233 binary constants — budget =
+window tokens × 4 × `skillListingBudgetFraction` 0.01, per-description cap 1536 — plus live
+headless probes: a 200k-window model rendered 18 of 19 fleet entries name-only; larger-window
+models rendered all in full). Platform facts recorded in
+`skills/prompt-craft/references/claude-code-frontmatter.md`; the LADDER-002 investigation's
+"full description visible at 2.1.231 despite ~11k listing volume" observation is explained by
+the window scaling — that probe ran on a large-window model.
+
+**Prerequisites:** none — but every description edit owes the standing paired routing-eval
+discipline, so the work batches naturally with any LADDER-002 repairs the operator buys.
+
+**Acceptance:** Paired before/after routing runs for the overlapping clusters of every edited
+description (`scripts/eval_baseline.py` may satisfy the 'before' side); doctor check reporting
+`pass` with headroom on the trimmed tree; the promoted validator rule landing with its failing
+fixture; regenerated adapters. Bare-name degradation on a 200k-window model re-probed once after
+the trim to confirm every entry survives.
+
+**Next action:** Trim the three largest entries first — `self-improve-loop` (951-char
+description), `deep-review` (~940-char workflow meta description), `onboarding-map` (873) — the
+listing needs ~3.9k chars cut, and a consuming-repo `skillListingBudgetFraction: 0.02` settings
+line is the operator-side mitigation available meanwhile.
+
 #### LABSEC-002 — add a guard-enforced lab inspector
 
 **Status:** `ready` — DEPLOY-001 accepted Option A on 2026-07-31, and normal-session probes proved
