@@ -184,18 +184,58 @@ class SkillListingBudgetCheck(support.TempDirTestCase):
         self.assertEqual("warn", with_workflow.status)
         self.assertEqual(9, with_workflow.details["entries"])
 
-    def test_disable_model_invocation_entries_cost_nothing(self) -> None:
+    def test_disable_model_invocation_entries_cost_nothing_but_are_reported(self) -> None:
         # The DMI skill's description would tip the budget if counted; its absence from the
         # model's listing was verified live on CLI 2.1.233, so counting it would overstate
-        # the fleet's footprint and demand trims the listing does not need.
+        # the fleet's footprint and demand trims the listing does not need. But 2.1.212-era
+        # CLIs listed flagged plugin skills anyway, so the excluded cost must be visible —
+        # a pass on those hosts is only honest if its headroom covers the DMI entries too.
         skills = {f"skill-{i}": "d" * 900 for i in range(8)}
-        check = self._check(self._tree(skills=skills, dmi={"ceremony": "d" * 5000}))
+        check = self._check(self._tree(skills=skills, dmi={"ceremony": "d" * 500}))
         self.assertEqual("pass", check.status)
         self.assertEqual(8, check.details["entries"])
+        self.assertGreater(check.details["dmi_excluded_chars"], 500)
+        self.assertIn("disable-model-invocation entries", check.summary)
 
     def test_an_unreadable_tree_is_inconclusive_not_a_verdict(self) -> None:
         check = self._check(self.base / "missing")
         self.assertEqual("inconclusive", check.status)
+
+    def test_a_non_string_plugin_name_is_inconclusive_not_a_traceback(self) -> None:
+        # `re.escape(7)` five frames down would print a traceback exactly when the manifest is
+        # damaged — the moment the documented inconclusive path exists for.
+        root = self._tree(skills={"one": "short"}, label="bad-name")
+        (root / ".claude-plugin" / "plugin.json").write_text(
+            '{"name": 7}\n', encoding="utf-8"
+        )
+        check = self._check(root)
+        self.assertEqual("inconclusive", check.status)
+
+    def test_an_unparseable_skill_definition_blocks_the_verdict(self) -> None:
+        # The unparseable file is omitted from the sum, so a verdict over the remainder would
+        # report headroom the model does not have — fictitious-pass, the review finding's exact
+        # scenario: eight parseable skills under budget plus one unreadable large one.
+        root = self._tree(
+            skills={f"skill-{i}": "d" * 900 for i in range(8)}, label="broken-skill"
+        )
+        broken = root / "skills" / "broken" / "SKILL.md"
+        broken.parent.mkdir(parents=True)
+        broken.write_text("no frontmatter at all\n", encoding="utf-8")
+        check = self._check(root)
+        self.assertEqual("inconclusive", check.status)
+        self.assertIn("skills/broken/SKILL.md", str(check.details["unreadable"]))
+
+    def test_a_workflow_without_an_extractable_description_blocks_the_verdict(self) -> None:
+        # workflows/ is auto-discovered, so a meta this extractor cannot read is a real listing
+        # entry with an unknown cost — silently skipping it shrinks the sum toward a false pass.
+        root = self._tree(skills={"one": "short"}, label="broken-workflow")
+        (root / "workflows").mkdir()
+        (root / "workflows" / "wf.js").write_text(
+            "export const meta = {\n  name: 'wf',\n}\n", encoding="utf-8"
+        )
+        check = self._check(root)
+        self.assertEqual("inconclusive", check.status)
+        self.assertIn("workflows/wf.js", str(check.details["unreadable"]))
 
     def test_the_real_repository_computes_a_verdict(self) -> None:
         # Not pinned to warn or pass: the description diet this check exists to motivate will

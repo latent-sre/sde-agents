@@ -514,34 +514,56 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "execution or network access, and let the caller provide an outer isolation\n"
                 "boundary before treating that separation as enforced."
             )
-        text = re.sub(
+        # Every substitution here must land exactly once. A zero-match miss (the canonical
+        # paragraph reworded without this function updated) would regenerate "clean" adapters
+        # that still carry the Claude-only PreToolUse claim on hosts that cannot load that
+        # guard — and byte-drift validation cannot catch it, because the committed adapter was
+        # produced with the same silent miss (PR #141 review finding).
+        text, replaced = re.subn(
             r"Your context is deliberately local-only:.*?fetched external content\.",
             replacement,
             text,
             count=1,
             flags=re.DOTALL,
         )
+        if replaced != 1:
+            raise ValueError(
+                f"repository-investigator {host} rewrite: the local-only boundary paragraph "
+                f"anchor was not found ({replaced} matches). The canonical paragraph changed "
+                f"without updating adapt_agent_contract, so the generated adapter would "
+                f"silently keep a Claude-only enforcement claim this host cannot honor."
+            )
         if host == "copilot":
             # The method steps name git commands the guard allows on the source host; this
             # profile holds no shell at all, so an instruction to run them would contradict the
-            # boundary the paragraph above just drew.
-            text = text.replace(
-                "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
-                "   `git status` to detect a dirty tree.",
-                "Name the repository root and the revision supplied by the caller or exposed\n"
-                "   by the host context.",
-            )
-            text = text.replace(
-                "When the question is \"how did it get this way\" or \"why is this here\", "
-                "history is the evidence:\n"
-                "   `git log`/`git blame` on the region, citing the commit that introduced or "
-                "last changed it.",
-                "When the question is \"how did it get this way\" or \"why is this here\", "
-                "history is the evidence:\n"
-                "   use the host's read-only history context when available, and name the "
-                "commit-history\n"
-                "   evidence you could not reach.",
-            )
+            # boundary the paragraph above just drew. Same must-land rule as above.
+            for old, new in (
+                (
+                    "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
+                    "   `git status` to detect a dirty tree.",
+                    "Name the repository root and the revision supplied by the caller or exposed\n"
+                    "   by the host context.",
+                ),
+                (
+                    "When the question is \"how did it get this way\" or \"why is this here\", "
+                    "history is the evidence:\n"
+                    "   `git log`/`git blame` on the region, citing the commit that introduced or "
+                    "last changed it.",
+                    "When the question is \"how did it get this way\" or \"why is this here\", "
+                    "history is the evidence:\n"
+                    "   use the host's read-only history context when available, and name the "
+                    "commit-history\n"
+                    "   evidence you could not reach.",
+                ),
+            ):
+                if old not in text:
+                    raise ValueError(
+                        "repository-investigator copilot rewrite: a method-step anchor was not "
+                        "found; the canonical step changed without updating "
+                        "adapt_agent_contract, so the no-shell profile would instruct git "
+                        "commands it cannot run."
+                    )
+                text = text.replace(old, new)
 
     if host == "codex" and name == "verification-engineer":
         text = re.sub(

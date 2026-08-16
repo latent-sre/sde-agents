@@ -167,8 +167,8 @@ _SKILL_LISTING_BUDGET_CHARS = 8000
 _SKILL_LISTING_MAX_DESC_CHARS = 1536
 
 
-def _workflow_listing_entries(root: Path, plugin_name: str) -> list[tuple[str, str]]:
-    """(name, description) for each workflows/*.js meta literal.
+def _workflow_listing_entries(root: Path, plugin_name: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """((name, description) entries, unextractable-file paths) for workflows/*.js meta literals.
 
     Workflows appear in the model's skill listing exactly like skills (observed live on CLI
     2.1.233: `- sde-agents:deep-review: <meta description>`), so a budget sum that skipped them
@@ -178,9 +178,10 @@ def _workflow_listing_entries(root: Path, plugin_name: str) -> list[tuple[str, s
     raw slice between the quotes is the description as the runtime reads it.
     """
     entries: list[tuple[str, str]] = []
+    failed: list[str] = []
     workflows_dir = root / "workflows"
     if not workflows_dir.is_dir():
-        return entries
+        return entries, failed
     for path in sorted(workflows_dir.glob("*.js")):
         text = path.read_text(encoding="utf-8")
         blanked = validate_fleet._blank_js_strings_and_comments(text)
@@ -195,7 +196,12 @@ def _workflow_listing_entries(root: Path, plugin_name: str) -> list[tuple[str, s
             fields[key] = text[match.end():end]
         if "description" in fields:
             entries.append((fields.get("name", path.stem), fields["description"]))
-    return entries
+        else:
+            # workflows/ is auto-discovered, so every .js here IS a listed workflow and its meta
+            # must carry a description. Skipping it would shrink the sum toward a false pass —
+            # the caller turns this into an inconclusive verdict, never a smaller total.
+            failed.append(str(path.relative_to(root)))
+    return entries, failed
 
 
 def _skill_listing_budget_check(root: Path) -> Check:
@@ -204,23 +210,55 @@ def _skill_listing_budget_check(root: Path) -> Check:
             (root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
         plugin_name = manifest["name"]
+        if not isinstance(plugin_name, str) or not plugin_name:
+            # A non-string name would raise TypeError five frames deep in fleet_records and
+            # print a traceback exactly when the manifest is damaged; make it the documented
+            # inconclusive path instead.
+            raise ValueError(
+                ".claude-plugin/plugin.json 'name' is not a non-empty string: "
+                f"{plugin_name!r}"
+            )
         records = fleet_records.collect(root, plugin_name)
+        unreadable = sorted(
+            str(path.relative_to(root))
+            for path in records.unparseable
+            if path.name == "SKILL.md"
+        )
         listed: list[tuple[str, str]] = []
+        dmi_chars = 0
         for member in records.members:
             if member.kind != "skill":
                 continue
+            entry_cost = len(f"- {plugin_name}:{member.name}: ") + min(
+                len(member.description), _SKILL_LISTING_MAX_DESC_CHARS
+            )
             # disable-model-invocation removes the entry from the model's listing (absence
-            # verified live on CLI 2.1.233), so it costs the budget nothing.
+            # verified live on CLI 2.1.233), so it costs the budget nothing THERE — but CLIs of
+            # the 2.1.212 era listed flagged plugin skills anyway, so the excluded cost is
+            # reported rather than dropped: headroom on those hosts must cover it.
             if member.fields.get("disable-model-invocation", "").strip().lower() == "true":
+                dmi_chars += entry_cost
                 continue
             listed.append((member.name, member.description))
-        listed.extend(_workflow_listing_entries(root, plugin_name))
+        workflow_entries, workflow_failed = _workflow_listing_entries(root, plugin_name)
+        listed.extend(workflow_entries)
+        unreadable += workflow_failed
     except (OSError, ValueError, KeyError) as exc:
         return Check(
             "repository.skill-listing-budget",
             "inconclusive",
             "The model-visible skill listing could not be computed.",
             {"error": str(exc)},
+        )
+    if unreadable:
+        # An unparseable definition is omitted from the sum, so any verdict computed over the
+        # remainder would report headroom the model does not have. No verdict beats a wrong one.
+        return Check(
+            "repository.skill-listing-budget",
+            "inconclusive",
+            f"{len(unreadable)} skill/workflow definition(s) could not be parsed, so the "
+            f"listing sum would be an undercount and any pass would claim fictitious headroom.",
+            {"unreadable": unreadable},
         )
     entry_lengths = {
         f"{plugin_name}:{name}": len(f"- {plugin_name}:{name}: ")
@@ -235,7 +273,14 @@ def _skill_listing_budget_check(root: Path) -> Check:
         "budget_chars": _SKILL_LISTING_BUDGET_CHARS,
         "entries": len(entry_lengths),
         "largest_entries": [f"{name} ({length} chars)" for name, length in largest],
+        "dmi_excluded_chars": dmi_chars,
     }
+    dmi_note = (
+        f" Headroom excludes {dmi_chars} chars of disable-model-invocation entries that "
+        f"pre-2.1.233 CLIs still list."
+        if dmi_chars
+        else ""
+    )
     return Check(
         "repository.skill-listing-budget",
         "warn" if over else "pass",
@@ -249,7 +294,7 @@ def _skill_listing_budget_check(root: Path) -> Check:
             if over
             else f"Model-visible skill listing is ~{total} chars for {len(entry_lengths)} "
             f"entries, within the {_SKILL_LISTING_BUDGET_CHARS}-char worst-case budget "
-            f"({_SKILL_LISTING_BUDGET_CHARS - total} chars of headroom)."
+            f"({_SKILL_LISTING_BUDGET_CHARS - total} chars of headroom).{dmi_note}"
         ),
         details,
     )
