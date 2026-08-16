@@ -620,11 +620,16 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
   Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
-- **GUARD-001** — in a partial clone, allowlisted `git show <old>:path` lazily fetches missing
-  promisor objects (reviewer-reproduced on git 2.43) — an outbound fetch to the repo's own
-  configured remote, hash-verified so not content injection, but a hole in the investigator's
-  no-network slice. Evaluate `GIT_NO_LAZY_FETCH` support and document the residual in the guard
-  docstring and investigator prose either way. Source: PR #141 round-3 review.
+- **GUARD-001** — two same-family residuals in the investigator's git slice, both
+  reviewer-reproduced on git 2.43: in a partial clone, allowlisted `git show <old>:path` lazily
+  fetches missing promisor objects (outbound fetch to the repo's own configured remote,
+  hash-verified so not content injection, but a hole in the no-network slice — evaluate
+  `GIT_NO_LAZY_FETCH`); and `git status` executes a crafted `core.fsmonitor` from local
+  `.git/config`, so the agent prose's untrusted-provenance boundary must say **no git commands**
+  on a repo that arrived as a directory/archive — the current "no history commands" leaves step
+  2's `rev-parse`/`status` instructed before provenance is established. Document both residuals
+  in the guard docstring and fix the prose scope in the same pass. Source: PR #141 rounds 3–4
+  review, dispositioned past the two-round cap.
 
 ## Deferred decisions
 
