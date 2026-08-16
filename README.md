@@ -303,9 +303,10 @@ guard written into `agents/code-reviewer.md` would look exactly like armor and b
 strictly worse than no guard, because nobody would go looking.
 
 The guard therefore lives in `hooks/hooks.json`, which Claude Code registers **session-wide**, and
-scopes *itself*: it no-ops unless the pending call's `agent_type` names a guarded agent. The main
-session carries no `agent_type` at all, so your own Bash is never inspected — the hook costs one
-shell glob and never even starts an interpreter.
+scopes *itself*: it no-ops unless the pending call's `agent_type` names a guarded agent. A plain
+main session carries no `agent_type`, so your own Bash is never inspected — a session launched
+with `--agent` as a guarded agent is guarded on purpose — and the hook costs one shell glob and
+never even starts an interpreter.
 
 Two properties fall out of that, both load-bearing and both tested:
 
@@ -315,9 +316,9 @@ Two properties fall out of that, both load-bearing and both tested:
   leaving every other caller untouched. A broken install degrades the reviewer; it cannot brick your
   session.
 
-`agent_type` is documented upstream as of July 2026 — the sub-agents reference names it as the
-value hooks receive — but its namespaced form for plugin agents remains probe-verified rather than
-documented. If it is ever renamed upstream to another agent-named key
+`agent_type` and its plugin-namespaced values are documented in the upstream hooks reference; the
+scoping contract's owner is the `scripts/readonly-guard.py` docstring, and this section follows
+it. If it is ever renamed upstream to another agent-named key
 (`subagent_type`, `agentType`, …), the guard fails closed with an explicit message rather than
 quietly ceasing to guard. A rename to something that no longer says "agent" at all would escape that
 canary — the probe below is the backstop that catches it, which is why it must be re-run after CLI
