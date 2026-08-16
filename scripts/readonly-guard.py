@@ -67,7 +67,9 @@ plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. A 
 carries no `agent_type` key, which is what makes a session-wide hook safe: the user's own Bash in
 an ordinary session never matches GUARDED_AGENTS and is never inspected. A session launched with
 `--agent` does carry that agent's name (inside a subagent, the subagent's type takes precedence),
-so a main session deliberately run as a guarded agent is guarded on purpose, not as collateral.
+so a main session deliberately run as a guarded agent is guarded on purpose, not as collateral —
+this `--agent` clause is doc-sourced, not probe-verified: the probe drives subagent spawns only
+(extending it is PROBE-001 in docs/fleet-roadmap.md).
 The field and its plugin-scoped values are documented in the upstream hooks reference
 (code.claude.com/docs/en/hooks.md); this docstring owns the fleet's statement of the contract —
 other files point here rather than restating it. Documentation is not proof a newly pinned binary

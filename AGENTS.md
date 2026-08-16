@@ -261,10 +261,10 @@ Fill the conditional-gates rows your change tripped — the table names the situ
 change type owes. Keep "Deliberately not done" honest and the whole template short.
 
 The automated review is request-triggered; opening a PR does not request it, and requesting is an
-**operator step**: the reviewer bot resolves through neither `gh` nor the REST API — both fail
-silently — and is assigned only in the PR page's Reviewers box (the Codex connector follows
-Copilot's request). An agent opening a PR hands the request to its operator and says so, never
-reporting the PR as awaiting review.
+**operator step**: the reviewer bot resolves through neither `gh` (which fails to resolve the
+login) nor the REST API (which silently leaves the request unset) — it is assigned only in the PR
+page's Reviewers box (the Codex connector follows Copilot's request). An agent opening a PR hands
+the request to its operator and says so, never reporting the PR as awaiting review.
 
 Wait for both passes **on the current head** — a review-driven edit mints bytes the cleared
 passes never saw, so the last edit owes another wait — and disposition every comment: applied, or

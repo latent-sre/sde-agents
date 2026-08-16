@@ -606,20 +606,22 @@ write authority read-only roles do not hold.
 #### GUIDE-001 — finish the AGENTS.md audit remainder
 
 **Status:** `ready` — the 2026-08-16 three-scan audit of the repository guide (design/weight,
-accuracy against sources, consistency) landed its correctness fixes and the two largest rewrites
-on `claude/agents-md-review-jp2ly0` (contradiction fixes through Map deletion, `c2865eb`..`00f1649`,
-~7,940 → ~6,290 tokens); this item is the unlanded remainder, stated in full below so no external
-record is needed to scope it.
+accuracy against sources, consistency) landed its correctness fixes and its largest rewrites on
+`claude/agents-md-review-jp2ly0` (`c2865eb` through the Development-loop and engineering-program
+rewrites, ~7,940 → ~5,726 tokens); outcomes (1) and (2) below are **landed** — this item is the
+unlanded remainder, stated in full below so no external record is needed to scope it.
 
-**Outcome:** (1) The Development-loop manual-check bullets shrink to one line each plus pointers
+**Outcome:** (1) **Landed** (`6321635`, `2ba2681`, three-pass verified): the Development-loop
+manual-check bullets shrink to one line each plus pointers
 at `evals/README.md` and the script docstrings, while **keeping** the capability-graph and
 workflow-contract boundary statements ("advisory, never a T0/CI/PR gate"; "design-consistent,
 never runtime-enforced") — their Map copies are already deleted, so these subsections are the
-boundaries' only remaining ambient home. (2) The engineering-program section is restructured for
+boundaries' only remaining ambient home. (2) **Landed** (`79faa4c`, `9094e56`): the
+engineering-program section is restructured for
 LLM legibility per operator ruling: the stateless premise leads, one labeled bullet per strand in
 the owner's headline vocabulary, and the reading rule gains the owner's two-question trim
-procedure — a measured ~110-token growth (~424 → ~533) rather than the originally targeted
-~250-token cut; clarity was bought instead, at stated cost. (3) The incident narrations in "Validate
+procedure — a measured net growth (~424 → ~480 after tightening) rather than the originally
+targeted ~250-token cut; clarity was bought instead, at stated cost. (3) The incident narrations in "Validate
 before you push" and the one-writer hard rule become bare citations. (4) Four consistency-scan
 ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
 recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the
@@ -642,8 +644,8 @@ has no defined extent).
 boundary statements still present in the Development loop after its trim, and records the file's
 before/after token measure.
 
-**Next action:** land the Development-loop trim under the boundary-preservation constraint, then
-the remaining trims and one-liners; put the A1 and G5 rulings to the operator and apply whichever
+**Next action:** land the remaining trims (Validate before you push, Hard rules, preamble) and
+the A2/A3/A4/A6 + G3/G4 one-liners; put the A1 and G5 rulings to the operator and apply whichever
 arrive.
 
 ### Small items
@@ -668,6 +670,10 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   Windows, so the T2 windows-latest leg fails after merge while ubuntu-only PR CI stays green;
   normalize with `as_posix()` or platform-aware assertions. Source: 2026-08-16 multi-lens branch
   review.
+- **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
+  upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
+  clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
+  the clause earns the docstring's "probed, not assumed" header. Source: PR #142 Codex round 1.
 - **DOCTOR-004** — `_skill_listing_budget_check` keys its budget sum by `plugin:name` in one dict
   shared by skills and workflows, so a workflow meta name colliding with a skill name silently
   overwrites the skill's entry and undercounts with no inconclusive verdict; key by kind or guard
