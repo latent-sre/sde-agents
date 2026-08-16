@@ -625,7 +625,15 @@ targeted ~250-token cut; clarity was bought instead, at stated cost. (3) **Lande
 (`8d9dccf`): "Validate before you push" is rewritten for the stateless-session reader — each
 tier leads with its command roster, T2 is marked as requiring nothing from the reader, exit-3 is
 a linear read-repair-clear procedure — with its narrations reduced to citations (~818 → ~642
-tokens, file at ~5,563); the one-writer hard-rule narration is the unlanded half. The preamble
+tokens, file at ~5,563). The Hard-rules half is **landed**: three independent deep reviews
+(home-lab necessity, LLM executability, integrity against sources) drove the rewrite — every
+bullet now leads with a bounded trigger and imperative, the one-writer narration is a verified
+citation (learn-001 outcome; section ~880 → ~710 tokens, file ~5,390), the proportionality maxims are three before-X-do-Y imperatives
+that cannot fire on ordinary work, and two paraphrase-drift claims are corrected toward their
+owning sources ("cannot carry" → never add, since the keys are silently ignored; "does not
+error at load time" → not guaranteed to fail loudly, per the validator's UNDOCUMENTED ruling).
+No rule removed — five bullets are check-backed, three are prose-only and keep their rationale
+because prose is their only enforcement. The preamble
 trim is **landed** on the same branch (~269 → ~206 tokens, two-scan pass: dedup plus LLM-reader
 restructure), closing A3 as a ride-along — the `~/.claude` prohibition now names fleet
 definitions, not sessions. (4) **Landed** (A2, A6; A3 landed with the preamble):
@@ -652,8 +660,8 @@ has no defined extent).
 boundary statements still present in the Development loop after its trim, and records the file's
 before/after token measure.
 
-**Next action:** land the remaining trim (Hard rules including the one-writer narration); put
-the A1 and G5 rulings to the operator and apply whichever arrive.
+**Next action:** put the A1 and G5 rulings to the operator and apply whichever arrive — every
+trim, one-liner, and restructure is landed; the rulings are the item's only remainder.
 
 ### Small items
 

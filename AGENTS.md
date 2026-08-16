@@ -145,7 +145,7 @@ cancellation, reset) wait for GRAPH-004.
 ## Change playbooks
 
 **Any edit** — run T0. If you touched text that paraphrases another file,
-find the declared owner and fix in the right direction (see "Owned conventions" below).
+find the declared owner and fix in the right direction (see "The source wins on drift" below).
 
 **Editing any canonical agent or skill** — run
 `python3 scripts/generate_platform_adapters.py --write` after the canonical edit. Generated copies
@@ -271,46 +271,40 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions
 
-- **Standard library only.** The validators, generators, installers, guard, hook, and tests use only
-  the Python standard library. Do not add dependencies.
-- **Generated adapters are not a second source.** Never hand-edit `.claude/agents/`,
-  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, or
-  `plugins/sde-agents/skills/`. Change the
-  canonical file or generator, regenerate, and let byte-drift validation prove the result.
-- **One parser per fact.** `scripts/fleet_records.py` is the fleet's only parser for frontmatter,
-  `tools:` values, and namespaced references; every validator, generator, and report builds on its
-  records. A second parser would let two reports about the same tree disagree with nothing to
-  arbitrate them — extend the shared records, never parse alongside them.
-- **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
-  guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with
-  compatible-looking prose or load the Claude hook on a host whose payload cannot scope it.
-  `workflows/` is Claude-only for the same reason: Copilot, VS Code, and Codex have no workflow
-  runtime, so a ported reference would read as available and fail silently.
-- **Claude plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
-  silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
-  armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
-  not error at load time, it silently drops what it was meant to configure.
-- **Proportionality gates both directions.** Repeated work is a defect — evidence produced once is
-  reused, and a check that re-proves what another check proved does not ship. An optimization
-  without a paired same-machine measurement is equally a defect. And a mechanism without a
-  demonstrated consumer — a new abstraction, config surface, component, or gate with no real task
-  needing it now — waits trigger-bound, the way the roadmap's deferred items do.
-- **One writer per checkout.** Two concurrent sessions — or two background jobs in one session —
-  sharing this working tree have already cost a benchmark (captured against a moving tree,
-  unattributable) and an uncommitted edit (overwritten mid-flight). Concurrent work gets its own
-  git worktree, and a measurement (an eval capture, the probe, the suite's repository copies) runs
-  only against a tree nothing else is writing; neither failure announces itself, which is why this
-  is a rule and not a judgment call. The sanctioned parallel test runner is not a second writer
-  to the tree you are editing: its workers assert against isolated repository copies
-  (`tests/support.py`). The exception is narrow and deliberate — two adapter tests create and
-  delete ignored runtime byproducts (a `__pycache__` entry, a generated-tree payload) in the live
-  checkout to prove the drift check ignores them, so the suite still may not run against a tree
-  another job is writing.
-- **Owned conventions.** Several files deliberately paraphrase another — the `eng-ladder` altitude
-  references, the three-strikes rule owned by `skills/root-cause`, the canonical
-  fetched-content-is-data sentence carried verbatim by `sde-fullstack`. Each such file states which
-  side wins on conflict; when they drift, fix the paraphrase, never the source. The full ownership
-  list lives in `README.md` under "Working on the fleet itself".
+- **Standard library only.** Fleet Python — validators, generators, installers, guard, tests —
+  imports only the Python standard library. Never add a dependency, a requirements file, or an
+  install step.
+- **Never hand-edit a generated adapter.** The generated trees are `.claude/agents/`,
+  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, and
+  `plugins/sde-agents/skills/`. Edit the canonical file or the generator and regenerate —
+  byte-drift validation proves the result.
+- **One parser per fact.** A script that needs frontmatter, `tools:` values, or namespaced
+  references builds on the records from `scripts/fleet_records.py`; to read a new fact, extend
+  the records. A second parser lets two reports about the same tree disagree with nothing to
+  arbitrate them.
+- **Authority is the host's own control, never prose.** Claude's guard, Copilot/VS Code's
+  omission of `execute`, and Codex's `sandbox_mode` are distinct controls — express an agent's
+  authority with the target host's control. Never port the Claude hook (its payload cannot be
+  scoped elsewhere; see the guard playbook) and never reference `workflows/` from another host
+  (no runtime exists there, so the reference reads as available and fails silently).
+- **Never add `hooks:`, `mcpServers:`, or `permissionMode:` to a plugin agent.** Claude Code
+  silently ignores them there — a guard declared in frontmatter looks like armor and is
+  nothing. The validator rejects these and every unknown key, because the runtime is not
+  guaranteed to fail loudly on a typo.
+- **Proportionality gates both directions.** Before adding a check, confirm no existing check
+  proves the same fact — reuse its evidence. Before claiming an optimization, measure it
+  before/after on the same machine — or ship the change without the claim. Before building a
+  new mechanism — abstraction, config surface, component, gate — name the task that consumes it
+  now; with none, record it trigger-bound in `docs/fleet-roadmap.md` instead of building it.
+- **One writer per checkout.** Concurrent work — a second session, a background job — gets its
+  own git worktree, and a measurement (an eval capture, the probe, the test suite) runs only
+  against a tree nothing else is writing: a benchmark against a moving tree or an overwritten
+  edit never announces itself (learn-001 outcome, 2026-08-02). The parallel test runner is
+  sanctioned — its workers assert against isolated copies (`tests/support.py`) — but two
+  adapter tests touch the live checkout, so the suite itself obeys the same rule.
+- **The source wins on drift.** When a deliberate paraphrase disagrees with its owner, fix the
+  paraphrase; a defect in the source is fixed at the source and re-propagated to its copies.
+  The ownership list lives in `README.md` under "Working on the fleet itself".
 
 ## Style
 
