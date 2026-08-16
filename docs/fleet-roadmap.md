@@ -615,8 +615,11 @@ record is needed to scope it.
 at `evals/README.md` and the script docstrings, while **keeping** the capability-graph and
 workflow-contract boundary statements ("advisory, never a T0/CI/PR gate"; "design-consistent,
 never runtime-enforced") — their Map copies are already deleted, so these subsections are the
-boundaries' only remaining ambient home. (2) The engineering-program strands compress to one line
-each behind the reading rule, which stays in full. (3) The incident narrations in "Validate
+boundaries' only remaining ambient home. (2) The engineering-program section is restructured for
+LLM legibility per operator ruling: the stateless premise leads, one labeled bullet per strand in
+the owner's headline vocabulary, and the reading rule gains the owner's two-question trim
+procedure — a measured ~110-token growth (~424 → ~533) rather than the originally targeted
+~250-token cut; clarity was bought instead, at stated cost. (3) The incident narrations in "Validate
 before you push" and the one-writer hard rule become bare citations. (4) Four consistency-scan
 ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
 recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the

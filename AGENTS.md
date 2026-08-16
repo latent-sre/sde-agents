@@ -15,26 +15,33 @@ and the model-alias list are checked against the source and fail on drift.
 
 ## The engineering program
 
-This is not a prompt library. It is one program with four strands: **handoff engineering** —
-stateless sessions coordinate only through artifacts (packets, ledger rows, digest-bound work
-orders with receipt-only returns), so a handoff is complete only when the receiver can act on the
-artifact alone; **loop engineering** — audits, incidents, campaigns, and eval rounds must converge
-across memoryless sessions, which is what written exceptions, recurrence-merged ledger rows, and
-literal status transitions are for; **graph engineering** — authority is typed edges with
-host-specific enforcement, owned by `docs/decisions/2026-07-31-ai-graph-engineering.md`; and
-**self-learning** — `scripts/learning_ledger.py` gates lessons behind evidence-bound quarantine
-because a session replays a stored lesson uncritically. `docs/engineering-program.md` maps each
-strand to its implementing mechanisms and the checks that keep them honest, and is held to the
-same stale-path tripwire as this file.
+The fleet is one program built on one premise: **a session is stateless.** Whatever it learns,
+decides, or verifies dies at exit unless it lands in an artifact — and the next session reads
+that artifact with no memory of why it was written, trusting it more than it should. Each strand
+below is one engineered consequence. `docs/engineering-program.md` maps each strand to its
+mechanisms and checks — read it for the *why* behind a discipline before touching one; it is held
+to the same stale-path tripwire as this file.
 
-The reading rule to apply in any review of fleet prose: **the reader is the next session, not the
-operator's memory.** A fleet of stateless workers re-creates the conditions organizations invented
-ceremony for — no shared memory, artifact-only communication, claims that cannot be trusted
-unverified — so owner slots, status lifecycles, contemporaneous capture, and written
-justifications are often coordination mechanisms wearing organizational vocabulary. Identify the
-real reader and what consumes an artifact before trimming it. The counterweight binds equally:
-coordination is not free — prefer fewer handoffs over richer ones, one writer per artifact,
-structure only at the boundaries that remain.
+- **Handoff engineering — artifacts are the only carrier.** A handoff is complete only when the
+  receiver can act correctly with nothing but the artifact (packets, ledger rows, digest-bound
+  work orders with receipt-only returns).
+- **Loop engineering — convergence across memoryless sessions.** Audits, incidents, campaigns,
+  and eval rounds must converge even though every iteration starts amnesiac; written exceptions,
+  recurrence-merged rows, and literal status transitions make that possible.
+- **Graph engineering — authority is typed edges.** Who may write what, who hands to whom, where
+  approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
+  `docs/decisions/2026-07-31-ai-graph-engineering.md`.
+- **Self-learning — admission-gated memory.** `scripts/learning_ledger.py` quarantines every
+  lesson behind evidence-bound staged promotion: a stored lesson is replayed uncritically, so a
+  wrong one compounds instead of fading.
+
+The reading rule for any review of fleet prose: **the reader is the next session, not the
+operator's memory.** Owner slots, status lifecycles, and written justifications here are usually
+strand mechanisms wearing organizational vocabulary. Two questions decide any trim: who is the
+real reader, and what consumes the artifact — "only the operator" and "nothing" means trim it; a
+future session, script, grader, or guard as consumer means the trim is a regression. The
+counterweight binds equally: coordination is not free — fewer handoffs over richer ones, one
+writer per artifact, structure only at the boundaries that remain.
 
 ## Validate before you push
 
