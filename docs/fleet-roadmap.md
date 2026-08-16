@@ -612,6 +612,20 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **DOCTOR-001** — `_skill_listing_budget_check` indexes `manifest["name"]` before checking the
+  decoded JSON root is an object, so `[]`/`null` manifests traceback instead of reporting
+  inconclusive; validate the root (or catch TypeError) with a firing test. Source: PR #141
+  round-3 review, dispositioned past the two-round cap.
+- **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
+  fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
+  pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
+  Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
+- **GUARD-001** — in a partial clone, allowlisted `git show <old>:path` lazily fetches missing
+  promisor objects (reviewer-reproduced on git 2.43) — an outbound fetch to the repo's own
+  configured remote, hash-verified so not content injection, but a hole in the investigator's
+  no-network slice. Evaluate `GIT_NO_LAZY_FETCH` support and document the residual in the guard
+  docstring and investigator prose either way. Source: PR #141 round-3 review.
+
 ## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot
