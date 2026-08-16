@@ -187,9 +187,18 @@ EXTERNAL_RESEARCH_TOOLS = {"ToolSearch", "WebFetch", "WebSearch", *EVIDENCE_MCP_
 # and fetched external content can leak one into the other through prompt injection even when its
 # prose says not to. Pin both required and forbidden authority so a one-line frontmatter edit cannot
 # silently collapse that trust boundary.
+#
+# `repository-investigator` REQUIRES Bash — for git history and revision identity — and that grant
+# is admissible only because the read-only guard covers it (Bash with no write tool compels roster
+# membership, checked below) and the guard scopes the allowlist's one network family away from it:
+# the `gh` readers are GitHub fetches, granted via GH_AGENT_NAMES to the review/design roles and
+# deliberately withheld from this role (PR #141 review finding). The
+# application-security-auditor keeps Bash forbidden: its mandate is to be safe against a HOSTILE
+# repository, and the guard's own docstring names the git-config ext-diff vector that a shell —
+# even an allowlisted one — opens against a repo that arrives as a directory.
 REQUIRED_AGENT_TOOLS = {
     "application-security-auditor": set(LOCAL_REPOSITORY_TOOLS),
-    "repository-investigator": set(LOCAL_REPOSITORY_TOOLS),
+    "repository-investigator": {*LOCAL_REPOSITORY_TOOLS, "Bash"},
     "researcher": set(EXTERNAL_RESEARCH_TOOLS),
 }
 FORBIDDEN_AGENT_TOOLS = {
@@ -198,7 +207,7 @@ FORBIDDEN_AGENT_TOOLS = {
         *EVIDENCE_MCP_TOOLS,
     },
     "repository-investigator": {
-        "Agent", "Bash", "Edit", "NotebookEdit", "ToolSearch", "WebFetch", "WebSearch", "Write",
+        "Agent", "Edit", "NotebookEdit", "ToolSearch", "WebFetch", "WebSearch", "Write",
         *EVIDENCE_MCP_TOOLS,
     },
     "researcher": {

@@ -24,10 +24,17 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from scripts import validate_fleet
+
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
-# Guarded by choice rather than by the validator's rule: both hold Write (for documents) and both
-# promise an inspection-only Bash, which is the half a command allowlist can actually enforce.
-DESIGN_AGENTS = frozenset({"principal-engineer", "distinguished-architect"})
+# The full roster, loaded from the guard itself rather than restated here: a new roster member
+# must inherit the both-name-forms coverage below without anyone remembering to add it, or the
+# test would keep passing while the newest guarded agent went unexercised. (The design agents in
+# it are guarded by choice rather than by the validator's rule — they hold Write for documents
+# while promising an inspection-only Bash, the half a command allowlist can actually enforce.)
+GUARDED_AGENT_NAMES = validate_fleet.load_guard(
+    Path(__file__).resolve().parents[1]
+).GUARDED_AGENT_NAMES
 
 # Must match scripts/readonly-guard.py.
 EXIT_ALLOW = 42
@@ -466,10 +473,13 @@ class GuardScopingTest(unittest.TestCase):
         self.assertEqual(decision(proc), "deny")
 
     def test_every_guarded_agent_is_guarded_in_both_name_forms(self) -> None:
-        # The roster grew past the reviewer: the design agents' "inspection only" Bash is enforced
-        # too. Each name must be guarded under BOTH the namespaced and the bare agent_type, and a
-        # design agent must still be allowed the reads its own file promises it.
-        for name in DESIGN_AGENTS | {"code-reviewer"}:
+        # The roster grew past the reviewer: the design agents' "inspection only" Bash and the
+        # repository investigator's history-only Bash are enforced too. Each name must be guarded
+        # under BOTH the namespaced and the bare agent_type, and every guarded agent must still be
+        # allowed the reads its own file promises it. The roster comes from the guard module, so a
+        # future member cannot be added without walking through this test.
+        self.assertIn("code-reviewer", GUARDED_AGENT_NAMES)  # non-vacuity: the load worked
+        for name in GUARDED_AGENT_NAMES:
             for agent_type in (name, f"sde-agents:{name}"):
                 with self.subTest(agent_type=agent_type):
                     denied = run_guard(bash_call("pytest -q", agent_type=agent_type))
@@ -523,6 +533,74 @@ class GuardScopingTest(unittest.TestCase):
             )
         )
         self.assertEqual(decision(proc), "allow")
+
+
+class NetworkReadScoping(unittest.TestCase):
+    """The allowlist's network reads are a scoped grant, not a roster grant.
+
+    `repository-investigator`'s whole trust boundary is that private local source never shares a
+    subordinate context with fetched external content; a uniform roster grant handed it
+    `gh search code`, which fetches from arbitrary GitHub repositories (PR #141 review finding).
+    These tests pin the scoping in both agent_type name forms and prove the local slice still
+    works, because a scoping that broke the investigator's git history would just be a revert
+    with extra steps.
+    """
+
+    GUARD_MODULE = validate_fleet.load_guard(Path(__file__).resolve().parents[1])
+
+    def test_network_roles_are_a_strict_subset_of_the_roster(self) -> None:
+        module = self.GUARD_MODULE
+        self.assertTrue(set(module.NETWORK_AGENT_NAMES) < set(module.GUARDED_AGENT_NAMES))
+        self.assertNotIn("repository-investigator", module.NETWORK_AGENT_NAMES)
+
+    def test_investigator_is_denied_gh_in_both_name_forms(self) -> None:
+        for agent_type in ("repository-investigator", "sde-agents:repository-investigator"):
+            for command in ("gh pr view 12", "gh search code 'listing budget'"):
+                with self.subTest(agent_type=agent_type, command=command):
+                    proc = run_guard(bash_call(command, agent_type=agent_type))
+                    self.assertEqual(decision(proc), "deny")
+                    reason = json.loads(proc.stdout.decode("utf-8"))["hookSpecificOutput"][
+                        "permissionDecisionReason"
+                    ]
+                    # The tailored reason must teach the actual boundary; the generic reason
+                    # lists `gh pr view` as allowed, which for this role it deliberately is not.
+                    self.assertIn("network read", reason)
+
+    def test_network_entitled_roles_keep_the_network_readers(self) -> None:
+        for name in sorted(self.GUARD_MODULE.NETWORK_AGENT_NAMES):
+            for command in ("gh pr view 12", "git remote show origin"):
+                with self.subTest(agent=name, command=command):
+                    proc = run_guard(bash_call(command, agent_type=f"sde-agents:{name}"))
+                    self.assertEqual(decision(proc), "allow")
+
+    def test_investigator_git_remote_show_requires_the_no_query_form(self) -> None:
+        # `git remote show <name>` without `-n` queries the remote — a network fetch wearing a
+        # read verb. The no-query form and the config-only `get-url` stay available.
+        agent = "sde-agents:repository-investigator"
+        denied = run_guard(bash_call("git remote show origin", agent_type=agent))
+        self.assertEqual(decision(denied), "deny")
+        for command in ("git remote show -n origin", "git remote get-url origin"):
+            with self.subTest(command=command):
+                proc = run_guard(bash_call(command, agent_type=agent))
+                self.assertEqual(decision(proc), "allow")
+
+    def test_investigator_keeps_its_local_readers(self) -> None:
+        for command in ("git log --oneline -5", "git blame README.md", "rg budget scripts"):
+            with self.subTest(command=command):
+                proc = run_guard(
+                    bash_call(command, agent_type="sde-agents:repository-investigator")
+                )
+                self.assertEqual(decision(proc), "allow")
+
+    def test_gh_denied_for_investigator_is_still_denied_when_chained(self) -> None:
+        # A gh segment must not ride in behind an allowed local reader.
+        proc = run_guard(
+            bash_call(
+                "git log --oneline -3 && gh pr view 12",
+                agent_type="sde-agents:repository-investigator",
+            )
+        )
+        self.assertEqual(decision(proc), "deny")
 
 
 if __name__ == "__main__":

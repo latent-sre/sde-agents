@@ -349,6 +349,20 @@ class PlatformAdapterTests(unittest.TestCase):
                 self.assertTrue(tools)
                 self.assertLessEqual(tools, COPILOT_TOOL_ALIASES)
 
+    def test_investigator_host_rewrite_fails_loudly_when_its_anchor_is_missing(self) -> None:
+        # A zero-match rewrite would regenerate "clean" adapters that keep the Claude-only
+        # guard claim on hosts that cannot load the guard, and byte-drift validation cannot
+        # see it — the committed adapter carries the same silent miss. So a missed anchor must
+        # be a generation error, not a no-op.
+        for host in ("copilot", "codex"):
+            with self.subTest(host=host):
+                with self.assertRaisesRegex(ValueError, "repository-investigator"):
+                    generate_platform_adapters.adapt_agent_contract(
+                        "body text without the boundary paragraph",
+                        name="repository-investigator",
+                        host=host,
+                    )
+
     def test_guarded_copilot_agents_have_no_shell_tool(self) -> None:
         guard = validate_fleet.load_guard(REPO)
         for name in sorted(guard.GUARDED_AGENT_NAMES):

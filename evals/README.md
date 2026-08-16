@@ -392,3 +392,13 @@ not only of the description. Read the clusters accordingly:
   rate) and **regressions across runs** over an absolute agent-positive rate.
 - The native `claude plugin eval` (see below) delegates properly and will tighten the agent signal;
   these case files migrate to it unchanged.
+- **Skill positives are only as visible as the listing the eval model saw.** The skill listing is
+  character-budgeted per model context window (8,000 chars at 200k; see the skill-listing budget
+  entry in `skills/prompt-craft/references/claude-code-frontmatter.md`), and over-budget plugin
+  entries degrade to bare names — a state in which description-driven skill routing cannot fire at
+  all. Probed 2026-08-16 on CLI 2.1.233: a 200k-window model saw 18 of 19 fleet entries name-only
+  while larger-window models saw all in full. The recorded `models_observed` condition therefore
+  carries listing state implicitly: skill-routing rates measured on a 200k-window model are not
+  comparable with rates measured on a larger-window model, and a paired before/after run must hold
+  the model — and with it the listing state — fixed. `scripts/fleet_doctor.py` reports the fleet's
+  current footprint (`repository.skill-listing-budget`).
