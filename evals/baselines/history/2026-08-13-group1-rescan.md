@@ -1,5 +1,10 @@
 # Group 1 rescan — paired capture for the lab-incident edits (2026-08-13)
 
+Its `before/` and `after/` captures retired to Git history on 2026-08-17 under the retention rule
+in `../README.md`, and **this file is their record** — the checkout no longer contains them.
+Recover the whole directory with `git show f4b119c:evals/baselines/2026-08-13-group1-rescan/` (or
+a single file by appending its path); `f4b119c` is the last revision that carried it.
+
 One case, `incident-mitigate-first`, measured before and after two body edits to
 `skills/lab-incident/SKILL.md`: the Step 3 note-durability clause (the timestamped note is emitted
 as you go, because a session that ends mid-incident takes everything unwritten with it) and the

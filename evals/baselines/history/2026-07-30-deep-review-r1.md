@@ -1,5 +1,11 @@
 # 2026-07-30 deep-review round 1 — routing before/after
 
+Its `before/`, `after/`, `recheck-before/` and `recheck-after/` captures retired to Git history on
+2026-08-17 under the retention rule in `../README.md`, and **this file is their record** — the
+checkout no longer contains them.
+Recover the whole directory with `git show f4b119c:evals/baselines/2026-07-30-deep-review-r1/` (or
+a single file by appending its path); `f4b119c` is the last revision that carried it.
+
 Conditions (all runs): `--model opus --timeout 420 --clean-room`, CLI 2.1.220, threshold 0.5.
 `before/` is main @ `ab7660e`; `after/` is the deep-review wiring branch. Clusters measured:
 `investigation`, `verification-seam`, `homelab-ops` — the three whose members' descriptions the

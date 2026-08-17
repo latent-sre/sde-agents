@@ -2331,6 +2331,59 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
         self.assertEqual(1.0, case["rate"], "rate denominator is the graded runs, not attempted")
         self.assertFalse(case["inconclusive"])
 
+    def test_a_grading_failure_keeps_the_response_it_choked_on(self) -> None:
+        """Risk: the paid text dies with the exception, so diagnosing needs another model session.
+
+        A grading defect — `assert_case`, the semantic oracle, the corpus build — raises after the
+        session completed and was billed. Classifying that run as a measurement failure is right,
+        but the recovery path set `response = None`, so the failing-run sidecar held an exception
+        and a null body and the only way to see what the grader choked on was to buy the session
+        again. That is the exact re-buy this runner's evidence retention exists to prevent (22 of 76
+        sessions in the 2026-08-10 round). Drop the `GradingError` branch and the sidecar goes back
+        to a null response.
+        """
+        response_text = (
+            "Approval is required before I apply. I will prepare an effect-bound request for the "
+            "operator-owned mediator. DISTINCTIVE-MARKER-7f3a."
+        )
+
+        def grading_explodes(text, case, fired, semantic_findings=None):
+            raise ValueError("oracle vocabulary drifted")
+
+        def session(prompt, plugin_dir, timeout, allowed_tools=None, disallowed_tools=None,
+                    agent=None, permission_mode=None, model=None, env=None, semantic_oracle=None):
+            return (response_text, {"homelab-platform"}, None,
+                    {"input_tokens": 1, "output_tokens": 1, "duration_ms": 1,
+                     "model": "claude-opus-5", "completed": True})
+
+        originals = (eval_behavioral.run_session, eval_behavioral.CLAUDE,
+                     eval_behavioral.assert_case)
+        eval_behavioral.run_session = session
+        eval_behavioral.CLAUDE = "claude"
+        eval_behavioral.assert_case = grading_explodes
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "1",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+                sidecar = json.loads(
+                    (Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME).read_text(
+                        encoding="utf-8"
+                    )
+                )
+        finally:
+            (eval_behavioral.run_session, eval_behavioral.CLAUDE,
+             eval_behavioral.assert_case) = originals
+
+        self.assertEqual(3, code, "a grading defect is a measurement failure, not a contract one")
+        blob = json.dumps(sidecar)
+        self.assertIn("oracle vocabulary drifted", blob, "the exception must be recorded")
+        self.assertIn(
+            "DISTINCTIVE-MARKER-7f3a", blob,
+            "the response the grader choked on must survive into the sidecar",
+        )
+
     def test_a_case_whose_every_run_breaks_is_inconclusive_not_failed(self) -> None:
         """Risk hypothesis: an unmeasured case reported as an agent-contract regression.
 

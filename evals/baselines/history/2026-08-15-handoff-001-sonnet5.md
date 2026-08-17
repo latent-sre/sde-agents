@@ -1,5 +1,11 @@
 # 2026-08-15 HANDOFF-001 first-contact Claude diagnostic — sonnet 5
 
+Its per-case captures retired to Git history on 2026-08-17 under the retention rule in
+`../README.md`, and **this file is their record** — the checkout no longer contains them.
+Recover the whole directory with `git show
+f4b119c:evals/baselines/2026-08-15-handoff-001-sonnet5/` (or a single file by appending its path);
+`f4b119c` is the last revision that carried it.
+
 The plan's smallest live diagnostic
 ([`handoff-001-plan.md`](../../../docs/superpowers/plans/handoff-001-plan.md), "Verification and
 paid boundary"): three candidate-only sessions — producer, functional builder, digest-mismatch

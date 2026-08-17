@@ -657,6 +657,20 @@ RUNTIME_TOOLS = frozenset({
 _COMPONENT_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 
 
+class GradingError(Exception):
+    """A grading step raised AFTER the session completed, carrying the response it raised on.
+
+    The batch treats this as a measurement failure like any other runner defect, but the paid text
+    must not die with it: the failing-run sidecar is where the next session reads what the grader
+    choked on, and rebuying a model session to see it again is the cost this class exists to avoid.
+    """
+
+    def __init__(self, cause: BaseException, response: str) -> None:
+        super().__init__(f"{type(cause).__name__}: {cause}")
+        self.cause = cause
+        self.response = response
+
+
 def validate_behavioral_case(
     case: object, *, require_required: bool = True, allow_runtime_suite: bool = False,
     components: set[str] | frozenset[str] | None = None,
@@ -1484,16 +1498,24 @@ def main(argv: list[str] | None = None) -> int:
                 reasoning_effort=args.reasoning_effort,
                 executable=codex_runtime.CODEX,
             )
-        # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
-        # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
-        if case.get("agent"):
-            fired = fired | {case["agent"].split(":")[-1]}
-        if note and not text:
-            failures = [f"session produced nothing: {note}"]
-        else:
-            failures = assert_case(
-                text, case, fired, stats.get("semantic_findings")
-            )
+        # Everything from here on is GRADING, and the session is already paid for. An exception in
+        # it is still a measurement failure — the outer handler classifies it as one — but the
+        # response has to survive the trip, because the sidecar written for that run is the only
+        # place a later session can see what the grader choked on. Re-raised wrapped so the caller
+        # keeps both facts: what broke, and the text it broke on (PR #145 review).
+        try:
+            # A case pinned with `agent:` IS the component, so there is no Agent tool call to
+            # detect; treat the pin itself as the invocation evidence expect_fires would supply.
+            if case.get("agent"):
+                fired = fired | {case["agent"].split(":")[-1]}
+            if note and not text:
+                failures = [f"session produced nothing: {note}"]
+            else:
+                failures = assert_case(
+                    text, case, fired, stats.get("semantic_findings")
+                )
+        except Exception as exc:
+            raise GradingError(exc, text) from exc
         # The response is carried only while a consumer exists for it — a failing run (the
         # evidence sidecar) or --retain-run-evidence (benchmark.json embeds every run). Dropping
         # failing text was the original defect (22 of 76 sessions in the 2026-08-10 calibration
@@ -1606,7 +1628,11 @@ def main(argv: list[str] | None = None) -> int:
                         failures = [f"runner error: {runner_error}"]
                         note = "run failed inside the runner, not in the graded session"
                         stats = eval_routing.transcript_stats("")
-                        response = None
+                        # A GradingError carries the response it raised on; anything else broke
+                        # before or around the session and has no text to keep. Discarding it
+                        # unconditionally made the sidecar an exception with a null body, so
+                        # diagnosing a grader defect meant re-buying the session (PR #145 review).
+                        response = exc.response if isinstance(exc, GradingError) else None
                     completed[case_id][run_index] = (
                         failures, note, stats, response, runner_error
                     )
