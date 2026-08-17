@@ -20,8 +20,9 @@ record carried alongside the two roles): the adversary sweep exists as its own r
 named — hygiene stays with `lab-audit`, fixes stay with `homelab-platform`, vulnerability output
 feeds `upgrade-campaign`, and evidence of active compromise stops the sweep. Implemented the same
 day; `LABSEC-002` (the guard-enforced inspector that could run either checklist under
-enforcement) remains blocked on `DEPLOY-001`, since a guard-enforced agent must not ship into a
-deployment where the guard never runs.
+enforcement) was blocked on `DEPLOY-001` at the time of this record, since a guard-enforced agent
+must not ship into a deployment where the guard never runs. That prerequisite has since been
+satisfied — the roadmap owns its current status.
 
 2026-07-29, fresh-look session, operator answered directly: **accept both** decidable roles as
 proposed — ROLE-001 (visible rebrand to Home-Lab SRE / Platform Engineer with the
@@ -166,6 +167,13 @@ Start with `Read, Grep, Glob, WebSearch, WebFetch`. Static source analysis and a
 external evidence do not require Bash. Add history or execution authority only after a
 demonstrated need and after the malformed-input guard defect is fixed.
 
+**Departure as shipped (recorded 2026-08-17):** `agents/application-security-auditor.md` holds
+`Read, Grep, Glob` only — the auditor is local-only and static-first, and its description now
+routes external CVE and vendor research to `sde-agents:researcher`. No decision record captured
+that narrowing when it happened; the shipped tool list governs, and this note is the audit trail.
+Authority narrower than the accepted decision is the safe direction, but it should not have gone
+unrecorded — a later reader comparing the two would otherwise read the omission as drift to repair.
+
 ### Required output
 
 - scope and threat model;
@@ -267,31 +275,38 @@ The first Linux addition should be explicit-only `host-onboard`, covering:
 Because onboarding changes a live host, `host-onboard` should set
 `disable-model-invocation: true`; `homelab-platform` retains the change authority.
 
-## Governance prerequisites discovered during the review
+## Governance prerequisites discovered during the review — both since fixed
 
-### Malformed guarded input returns ALLOW
+**Both defects below landed fixes in PR #40 (GOV-001 and EVAL-001) and are recorded here as the
+reason those items existed, not as live defects.** The reproductions describe the reviewed
+revision `be2af4c8`, not current behavior.
 
-[`readonly-guard.py`](../../scripts/readonly-guard.py) catches JSON decoding failure and returns
-the exit-42 allow sentinel. [`hooks.json`](../../hooks/hooks.json) treats 42 as authoritative and
-exits before the raw guarded-agent fallback.
+### Malformed guarded input returned ALLOW (fixed)
 
-Reproduction:
+At the reviewed revision, [`readonly-guard.py`](../../scripts/readonly-guard.py) caught JSON
+decoding failure and returned the exit-42 allow sentinel, and
+[`hooks.json`](../../hooks/hooks.json) treated 42 as authoritative, exiting before the raw
+guarded-agent fallback.
 
-| Input | Result |
+Reproduction at that revision:
+
+| Input | Result then |
 |---|---|
 | Valid guarded payload with a state-changing Git command | Denied, exit 43 |
 | Same guarded payload truncated into malformed JSON | Allowed, exit 42 |
 | Malformed unscoped payload | Allowed, exit 42 |
 
-Fix before adding another guarded or execution-capable role. The roadmap owns the regression and
-acceptance requirements as `GOV-001`.
+**Resolution:** GOV-001 (PR #40) gave the guard a distinct `EXIT_INDETERMINATE = 44` answer, so
+unparseable input can no longer be laundered into an authoritative allow. The guard's own docstring
+owns the current exit-code contract.
 
-### A routing case can pass outside its declared cluster
+### A routing case could pass outside its declared cluster (fixed)
 
-`evals/routing/craft-vs-fullstack.json` accepts `code-reviewer` for
-`pos-ci-actions-harden`, although `code-reviewer` is not a declared member. The scorer can therefore
-pass the case while reporting zero cluster fire rate. The roadmap owns schema enforcement as
-`EVAL-001`.
+At the reviewed revision, `evals/routing/craft-vs-fullstack.json` accepted `code-reviewer` for
+`pos-ci-actions-harden`, although `code-reviewer` was not a declared member, so the scorer could
+pass the case while reporting zero cluster fire rate.
+
+**Resolution:** EVAL-001 (PR #40) landed cluster-membership schema enforcement.
 
 ### Current baselines are not one comparable anchor
 

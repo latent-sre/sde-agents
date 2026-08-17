@@ -19,8 +19,8 @@
   },
   "observation": "Field report: a task that is overwhelmingly builder-scope but contains one embedded principal-altitude decision gets routed wholesale to principal ownership, inflating ceremony for the whole task instead of escalating the single decision.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Change ALREADY LANDED upstream: PR #68 (commit 6fa2be3) merged ownership-vs-required-consult as distinct eng-ladder outputs and named the builder-owned-with-one-embedded-decision pattern, verbatim in the current tree; builders' scoped consult request is already canonical (sde-fullstack Ladder position, references/builder.md). Roadmap import stays with the operator per docs/README.md rule 7.",
+  "promotion_state": "promoted",
+  "reason": "Promoted on landed evidence: skills/eng-ladder/SKILL.md Mode 1 states that ownership and consult are distinct outputs and that builder-owned work with one embedded higher-altitude decision stays builder-owned, routed as a required principal consult on the named decision rather than by re-owning the whole item. Escalate-the-decision-not-the-task is shipped behavior, so no further fleet change is owed by this record. Deliberately not claimed: the paired routing positive under-fires in the documented headless shape, which is LADDER-002's measurement question rather than a gap in this lesson.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Change ALREADY LANDED upstream: PR #68 (commit 6fa2be3) merged ownership-vs-required-consult as distinct eng-ladder outputs and named the builder-owned-with-one-embedded-decision pattern, verbatim in the current tree; builders' scoped consult request is already canonical (sde-fullstack Ladder position, references/builder.md). Roadmap import stays with the operator per docs/README.md rule 7.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-17T11:53:38.497449Z",
+      "destination": "skills/eng-ladder/SKILL.md Mode 1",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Approved for promotion: the rule this record proposes is present in canonical text at skills/eng-ladder/SKILL.md Mode 1, and the routing cluster carries the matching positive named pos-embedded-principal-fork-consult-required, which together cover both halves this record's applicability asked for (body guidance plus a cluster case). Recording approval separately from promotion because the ledger gates promotion behind an explicit approval step.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-17T11:53:50.921112Z",
+      "destination": "skills/eng-ladder/SKILL.md Mode 1",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Promoted on landed evidence: skills/eng-ladder/SKILL.md Mode 1 states that ownership and consult are distinct outputs and that builder-owned work with one embedded higher-altitude decision stays builder-owned, routed as a required principal consult on the named decision rather than by re-owning the whole item. Escalate-the-decision-not-the-task is shipped behavior, so no further fleet change is owed by this record. Deliberately not claimed: the paired routing positive under-fires in the documented headless shape, which is LADDER-002's measurement question rather than a gap in this lesson.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-10T06:16:11.187312Z"
+  "updated_at": "2026-08-17T11:53:50.921112Z"
 }

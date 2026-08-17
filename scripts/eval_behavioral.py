@@ -533,7 +533,10 @@ def run_session(
                 transcript=proc.stdout or "",
             )
     except subprocess.TimeoutExpired as exc:
-        partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
+        # decode_stream, not an isinstance(str) test: TimeoutExpired.stdout is bytes even under
+        # encoding=, so testing for str discarded every timed-out run's partial transcript and
+        # reported None usage for a session already paid for.
+        partial = eval_routing.decode_stream(exc.stdout)
         return "", set(), f"timed out after {timeout}s before the session concluded", \
             eval_routing.transcript_stats(partial)
     except Exception as exc:
@@ -575,10 +578,18 @@ def run_session(
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        # Both message reads go through _event_message_field, and the event itself is shape-checked:
+        # `event.get("message", {}).get(...)` raises AttributeError on an event whose `message` is a
+        # plain string, and on a bare `null`/number/string line. That is the exact class that took
+        # the whole batch down with no benchmark written on 2026-08-10 (see the helper's docstring);
+        # the fix reached components_fired and transcript_stats but not this reader, which runs on
+        # every line of every session too.
+        if not isinstance(event, dict):
+            continue
         if event.get("type") == "result" and isinstance(event.get("result"), str):
             final = event["result"]
         elif event.get("type") == "assistant":
-            for block in event.get("message", {}).get("content", []):
+            for block in eval_routing._event_message_field(event, "content") or []:
                 if not isinstance(block, dict):
                     continue
                 if block.get("type") == "text":
@@ -586,7 +597,7 @@ def run_session(
                 elif block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
                     agent_calls.add(block.get("id", ""))
         elif event.get("type") == "user":
-            for block in event.get("message", {}).get("content", []):
+            for block in eval_routing._event_message_field(event, "content") or []:
                 if not isinstance(block, dict) or block.get("type") != "tool_result":
                     continue
                 if block.get("tool_use_id") not in agent_calls:
@@ -644,6 +655,26 @@ RUNTIME_TOOLS = frozenset({
     "WaitForMcpServers", "WebFetch", "WebSearch", "Workflow", "Write",
 })
 _COMPONENT_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+
+
+class GradingError(Exception):
+    """A grading step raised AFTER the session completed, carrying the response it raised on.
+
+    The batch treats this as a measurement failure like any other runner defect, but the paid text
+    must not die with it: the failing-run sidecar is where the next session reads what the grader
+    choked on, and rebuying a model session to see it again is the cost this class exists to avoid.
+    """
+
+    def __init__(self, cause: BaseException, response: str, stats: dict) -> None:
+        super().__init__(f"{type(cause).__name__}: {cause}")
+        self.cause = cause
+        self.response = response
+        # The session's real usage, duration and model. Carrying only the response left the
+        # benchmark recording null cost for a run that was billed, and dropped that run's model
+        # from models_observed — so the artifact kept for diagnosing the grader failure no longer
+        # stated the conditions it was produced under (PR #145 review). The response and the stats
+        # are the same fact: this session happened and was paid for.
+        self.stats = stats
 
 
 def validate_behavioral_case(
@@ -1435,6 +1466,11 @@ def main(argv: list[str] | None = None) -> int:
 
     jobs = [(case, run) for case in cases for run in range(args.runs)]
     results: dict[str, list[list[str]]] = {case["id"]: [] for case in cases}
+    # Parallel to `results`: the reason this run measured nothing, or None when it did. A run with
+    # a reason here is EXCLUDED from the case's rate — a defect in the runner is not evidence about
+    # the agent it was pointed at, and scoring it as one publishes a contract regression that never
+    # happened (PR #145 review).
+    runner_errors: dict[str, list[str | None]] = {case["id"]: [] for case in cases}
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
@@ -1468,16 +1504,24 @@ def main(argv: list[str] | None = None) -> int:
                 reasoning_effort=args.reasoning_effort,
                 executable=codex_runtime.CODEX,
             )
-        # A case pinned with `agent:` IS the component, so there is no Agent tool call to detect;
-        # treat the pin itself as the invocation evidence expect_fires would otherwise supply.
-        if case.get("agent"):
-            fired = fired | {case["agent"].split(":")[-1]}
-        if note and not text:
-            failures = [f"session produced nothing: {note}"]
-        else:
-            failures = assert_case(
-                text, case, fired, stats.get("semantic_findings")
-            )
+        # Everything from here on is GRADING, and the session is already paid for. An exception in
+        # it is still a measurement failure — the outer handler classifies it as one — but the
+        # response has to survive the trip, because the sidecar written for that run is the only
+        # place a later session can see what the grader choked on. Re-raised wrapped so the caller
+        # keeps both facts: what broke, and the text it broke on (PR #145 review).
+        try:
+            # A case pinned with `agent:` IS the component, so there is no Agent tool call to
+            # detect; treat the pin itself as the invocation evidence expect_fires would supply.
+            if case.get("agent"):
+                fired = fired | {case["agent"].split(":")[-1]}
+            if note and not text:
+                failures = [f"session produced nothing: {note}"]
+            else:
+                failures = assert_case(
+                    text, case, fired, stats.get("semantic_findings")
+                )
+        except Exception as exc:
+            raise GradingError(exc, text, stats) from exc
         # The response is carried only while a consumer exists for it — a failing run (the
         # evidence sidecar) or --retain-run-evidence (benchmark.json embeds every run). Dropping
         # failing text was the original defect (22 of 76 sessions in the 2026-08-10 calibration
@@ -1553,7 +1597,7 @@ def main(argv: list[str] | None = None) -> int:
         for _ in range(min(args.concurrency, len(jobs))):
             submit_next()
         completed: dict[
-            str, dict[int, tuple[list[str], str | None, dict, str | None]]
+            str, dict[int, tuple[list[str], str | None, dict, str | None, str | None]]
         ] = {
             case["id"]: {} for case in cases
         }
@@ -1565,7 +1609,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 succeeded = 0
                 for future in finished:
-                    futures.pop(future)
+                    job_case, job_run_index = futures.pop(future)
+                    runner_error = None
                     try:
                         run_index, case_id, failures, note, stats, response = future.result()
                     except availability_errors as exc:
@@ -1573,7 +1618,33 @@ def main(argv: list[str] | None = None) -> int:
                         for pending in futures:
                             pending.cancel()
                         break
-                    completed[case_id][run_index] = (failures, note, stats, response)
+                    except Exception as exc:
+                        # run_session guards its own subprocess call, but everything after it —
+                        # auth classification, transcript_stats, components_fired, the corpus
+                        # build — ran unprotected, so a single unexpected exception escaped
+                        # future.result(), passed the pool shutdown, and left main() by traceback
+                        # with no benchmark written for a batch already paid for. The run is
+                        # recorded as a MEASUREMENT failure instead — excluded from the case's
+                        # rate, exactly as routing excludes a run that produced no usable
+                        # transcript — so the sessions that did complete keep their evidence
+                        # without the runner's own defect being published as an agent-contract
+                        # regression.
+                        run_index, case_id = job_run_index, job_case["id"]
+                        runner_error = f"{type(exc).__name__}: {exc}"
+                        failures = [f"runner error: {runner_error}"]
+                        note = "run failed inside the runner, not in the graded session"
+                        # A GradingError carries the response AND the stats of the session it
+                        # raised on; anything else broke before or around the session and has
+                        # neither. Discarding them unconditionally made the sidecar an exception
+                        # with a null body, and the benchmark claim a paid run cost nothing
+                        # (PR #145 review, both halves).
+                        if isinstance(exc, GradingError):
+                            response, stats = exc.response, exc.stats
+                        else:
+                            response, stats = None, eval_routing.transcript_stats("")
+                    completed[case_id][run_index] = (
+                        failures, note, stats, response, runner_error
+                    )
                     succeeded += 1
                     done += 1
                     print(f"  [{done}/{total}] complete", end="\r", flush=True)
@@ -1623,8 +1694,11 @@ def main(argv: list[str] | None = None) -> int:
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
             for run_index in range(args.runs):
-                failures, note, stats, response = completed[case["id"]][run_index]
+                failures, note, stats, response, runner_error = (
+                    completed[case["id"]][run_index]
+                )
                 results[case["id"]].append(failures)
+                runner_errors[case["id"]].append(runner_error)
                 if note:
                     notes[case["id"]].append(note)
                 # Usage is per RUN, None when the transcript carried none — a labeled absence,
@@ -1659,24 +1733,47 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n{'case':32s} {'verdict':8s} {'pass':>6s}  detail")
     print("-" * 100)
     passed_cases = 0
+    inconclusive_cases: list[str] = []
+    excluded_runs_total = 0
     payload: list[dict] = []
     for case in cases:
-        runs = results[case["id"]]
-        passes = sum(1 for failures in runs if not failures)
-        rate = passes / len(runs) if runs else 0.0
-        # Every run must satisfy the contract -- AND at least one run must exist. Without the
-        # second clause an empty result list passes vacuously, which is how a suite reports success
-        # for work it never did.
-        ok = bool(runs) and passes == len(runs)
+        attempted = results[case["id"]]
+        # A run the runner broke on measured nothing about the contract, so it is excluded from the
+        # rate the same way routing excludes a run with no usable transcript. Without this the
+        # every-run-must-pass rule below converts one runner defect into a published contract
+        # regression — the note said the graded session did not fail, and the verdict said it did.
+        graded = [failures for failures, error
+                  in zip(attempted, runner_errors[case["id"]]) if not error]
+        excluded = len(attempted) - len(graded)
+        excluded_runs_total += excluded
+        passes = sum(1 for failures in graded if not failures)
+        rate = passes / len(graded) if graded else 0.0
+        # Every graded run must satisfy the contract -- AND at least one graded run must exist.
+        # Without the second clause an empty result list passes vacuously, which is how a suite
+        # reports success for work it never did.
+        inconclusive = not graded
+        ok = bool(graded) and passes == len(graded)
         passed_cases += ok
-        first_failure = next((f for failures in runs if failures for f in failures), "")
-        detail = "all assertions held" if ok else first_failure[:60]
-        print(f"{case['id'][:32]:32s} {'PASS' if ok else 'FAIL':8s} "
-              f"{passes}/{len(runs):<4} {detail}")
+        if inconclusive:
+            inconclusive_cases.append(case["id"])
+        first_failure = next((f for failures in graded if failures for f in failures), "")
+        suffix = f" [{excluded} run(s) excluded: runner error]" if excluded else ""
+        if inconclusive:
+            detail = (f"INCONCLUSIVE — every run failed inside the runner "
+                      f"({len(attempted)} attempted)")
+        else:
+            detail = ("all assertions held" if ok else first_failure[:60]) + suffix
+        mark = "INCONC" if inconclusive else ("PASS" if ok else "FAIL")
+        print(f"{case['id'][:32]:32s} {mark:8s} "
+              f"{passes}/{len(graded):<4} {detail}")
         case_payload = {
             "id": case["id"], "suite": case["suite"], "passes": passes,
-            "runs": len(runs), "rate": rate,
-            "failures": sorted({f for failures in runs for f in failures}),
+            # `runs` counts every run attempted, so it stays the length of the per-run arrays
+            # below; `runs_graded` is the denominator of `rate`, and the two differ exactly when
+            # the runner itself broke.
+            "runs": len(attempted), "runs_graded": len(graded),
+            "runs_excluded": excluded, "inconclusive": inconclusive, "rate": rate,
+            "failures": sorted({f for failures in attempted for f in failures}),
             "notes": notes[case["id"]],
             "usage_per_run": usage[case["id"]],
             "duration_ms_per_run": durations[case["id"]],
@@ -1688,7 +1785,16 @@ def main(argv: list[str] | None = None) -> int:
         payload.append(case_payload)
 
     print("-" * 100)
-    print(f"{passed_cases}/{len(cases)} cases passed every run")
+    print(f"{passed_cases}/{len(cases) - len(inconclusive_cases)} graded cases passed every run "
+          f"({len(cases)} selected)")
+    if inconclusive_cases:
+        # Loud, for the same reason routing says it loudly: an unmeasured case counted as a failure
+        # is how a runner problem gets mistaken for an agent problem.
+        print(f"! {len(inconclusive_cases)} case(s) INCONCLUSIVE (every run failed inside the "
+              f"runner): {', '.join(inconclusive_cases)}")
+        print("  Re-run those; they are not evidence about the contract in either direction.")
+    if excluded_runs_total:
+        print(f"! {excluded_runs_total} individual run(s) excluded from rates for the same reason.")
 
     failing_payload = [
         {
@@ -1797,7 +1903,18 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        args.output_dir.mkdir(parents=True, exist_ok=True)
+        # Inside the same fail-closed discipline as the two writes below: an --output-dir whose
+        # path is an existing regular file raised FileExistsError straight out of main() AFTER the
+        # batch was paid for, so the operator got a traceback where every other artifact failure
+        # returns 2 with a reason.
+        try:
+            args.output_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(
+                f"error: could not create {args.output_dir}: {exc}; no artifacts were written",
+                file=sys.stderr,
+            )
+            return 2
         # Sidecar before benchmark, deliberately: if the evidence file cannot be written (its
         # path is occupied by a directory, the disk is full), the batch aborts BEFORE a
         # benchmark exists whose failing_run_evidence field claims text that was never produced.
@@ -1863,25 +1980,32 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        (args.output_dir / "benchmark.json").write_text(
-            json.dumps({
-                "runs_per_case": args.runs,
-                "conditions": conditions,
-                # An outcome, deliberately OUTSIDE conditions: two paired runs under identical
-                # inputs must not read as condition-divergent merely because one failed and one
-                # passed — that would corrupt the comparability contract exactly when a repair
-                # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
-                # able to tell "nothing failed" from "the text was dropped".
-                "failing_run_evidence": failing_run_evidence,
-                # The digest of the exact sidecar this batch wrote (null when none was written):
-                # provenance and conditions are shared by identical batches, so only this binds a
-                # sidecar to its own benchmark rather than to any same-input run.
-                "failing_run_evidence_sha256": sidecar_sha256,
-                "provenance": provenance,
-                "cases": payload,
-            }, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            (args.output_dir / "benchmark.json").write_text(
+                json.dumps({
+                    "runs_per_case": args.runs,
+                    "conditions": conditions,
+                    # An outcome, deliberately OUTSIDE conditions: two paired runs under identical
+                    # inputs must not read as condition-divergent merely because one failed and one
+                    # passed — that would corrupt the comparability contract exactly when a repair
+                    # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
+                    # able to tell "nothing failed" from "the text was dropped".
+                    "failing_run_evidence": failing_run_evidence,
+                    # The digest of the exact sidecar this batch wrote (null when none was written):
+                    # provenance and conditions are shared by identical batches, so only this binds a
+                    # sidecar to its own benchmark rather than to any same-input run.
+                    "failing_run_evidence_sha256": sidecar_sha256,
+                    "provenance": provenance,
+                    "cases": payload,
+                }, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            print(
+                f"error: could not write {args.output_dir / 'benchmark.json'}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
         if failing_payload and not args.retain_run_evidence:
             print(
@@ -1889,7 +2013,18 @@ def main(argv: list[str] | None = None) -> int:
                 "committing or sharing)"
             )
 
-    return 0 if passed_cases == len(cases) else 1
+    # Same three-way split as the routing runner, and for the same reason: 1 is a contract verdict
+    # to investigate, 3 is a measurement that did not happen and wants a re-run. A real failure
+    # outranks an inconclusive because it is the actionable one. (2 stays usage/auth errors.)
+    #
+    # ANY excluded run reaches exit 3, not just a wholly inconclusive case — behavioral is
+    # all-or-nothing per case, so `--runs 3` losing one run leaves a verdict computed over a
+    # denominator the operator never asked for. Reporting that as exit 0 would publish an
+    # incomplete measurement as a clean result, which is the same conflation the exclusion was
+    # added to prevent, one level up (PR #145 review).
+    if passed_cases != len(cases) - len(inconclusive_cases):
+        return 1
+    return 3 if (inconclusive_cases or excluded_runs_total) else 0
 
 
 def _main_entry() -> int:

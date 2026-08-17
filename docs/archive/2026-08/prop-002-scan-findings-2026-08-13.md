@@ -333,7 +333,7 @@ A later session must not re-apply these as findings:
    LEARN-002's 2026-08-10 calibration found the `Learning: candidate — <observed -> expected>`
    literal living only in `references/retro-protocol.md:97` and `references/discovery-routing.md:99`,
    ruled the graders right and the text wrong, and chose *moving the literal into the body* as the
-   fix (`evals/baselines/2026-08-10-learn-002/decisions.md`, "The systemic finding"). That round
+   fix (`evals/baselines/history/2026-08-10-learn-002.md`, "The systemic finding"). That round
    also considered and rejected the cheaper inverse — granting `Read` to the cases — because it
    "would leave every other skill-only caller in the same position". Relocating the runbook grammar
    would recreate exactly that position for a contract currently at 2/3 whose one remaining failure

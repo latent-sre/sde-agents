@@ -9,32 +9,6 @@
   "notes": "Seeded 2026-07-30 after the fleet review found no routing coverage for multi-agent-architect. Agent positives are weak absolute signals under the caveat in ../README.md; negatives are intentional sibling disambiguators and forbid only the wrong members so the correct sibling may fire.",
   "cases": [
     {
-      "id": "pos-multi-agent-roster",
-      "prompt": "Design a five-agent research and verification system with an orchestrator, explicit handoff schemas, context budgets, and failure handling.",
-      "polarity": "positive",
-      "expect_fires": [
-        "multi-agent-architect"
-      ],
-      "expected_output": "A system of agents with orchestration and handoff contracts is multi-agent-architect's core design remit.",
-      "tags": [
-        "multi-agent-architect",
-        "system-design"
-      ]
-    },
-    {
-      "id": "pos-wrapper-regression",
-      "prompt": "My direct LLM call is correct, but the answer becomes wrong after prompt assembly, memory retrieval, summarization, and delivery. Diagnose the agent application stack.",
-      "polarity": "positive",
-      "expect_fires": [
-        "multi-agent-architect"
-      ],
-      "expected_output": "A wrapper-layer regression and delivery mutation is multi-agent-architect diagnostic work, even when the system has one model.",
-      "tags": [
-        "multi-agent-architect",
-        "wrapper-regression"
-      ]
-    },
-    {
       "id": "neg-single-prompt-not-multi-agent",
       "prompt": "My one classifier system prompt ignores the instruction to return JSON. Baseline it across repeated runs and tune the prompt.",
       "polarity": "negative",

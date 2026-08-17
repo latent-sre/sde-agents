@@ -59,7 +59,7 @@ the closed contracts or the skill text carried the defect. No grader is silently
 `verifier-envelope-mismatch-fails-closed`, `reviewer-formal-approval-emits-envelope`) has a
 three-run clean-room baseline under recorded conditions and either holds its acceptance rate
 or has a grammar/text repair with a recorded rationale — the first-contact single runs in
-`evals/baselines/2026-08-10-learn-002/decisions.md` are diagnostic only and do not close this
+`evals/baselines/history/2026-08-10-learn-002.md` are diagnostic only and do not close this
 half. Closing the original seven without settling these six is not closing LEARN-002.
 
 **Source:** [`LEARN-001 outcome record`](archive/2026-08/learn-001-outcome-2026-08-02.md);
@@ -80,7 +80,7 @@ a hold at the acceptance rate or a grammar/text repair with rationale — first-
 runs and deferred repairs do not satisfy this clause.
 
 **Next action:** The 2026-08-10 calibration round
-(`evals/baselines/2026-08-10-learn-002/`, 76 sessions, decisions.md per case) settled the
+(`evals/baselines/history/2026-08-10-learn-002.md`, 76 sessions, decisions.md per case) settled the
 pattern-setter question for the original seven: **the closed contracts are right and the skill
 text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
 by a Skill-only session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three
@@ -91,7 +91,7 @@ failing run under `--output-dir` now writes its final text to `failing-run-evide
 the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
 artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
 (2) **landed 2026-08-15** — the canonical `self-improve-loop` SKILL.md edits and their paired
-measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/), 114 sessions,
+measurement ([`2026-08-15-learn-002`](../evals/baselines/history/2026-08-15-learn-002.md), 114 sessions,
 `decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
 `Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
 capture template taught `local` as a Provenance value while the canonical block requires the triad
@@ -148,6 +148,18 @@ What this item still owes, all of it now narrow:
    it disables tool execution. That rule currently rests on a property the harness does not enforce.
    Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
    the runner should reject the combination outright.
+   **Measured 2026-08-17 (PR #145), recounted after main merged.** 47 cases declare `allowed_tools: []`; **42** leave at
+   least
+   one granted tool reachable, and **26** leave `WebFetch`/`WebSearch` reachable — so the gap is
+   the norm rather than an outlier, and no case's 'planning-only' should be read as proof no tool
+   was available. The bounded check now exists as a **floor**, not a gate: `test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable` in
+   `tests/test_eval_behavioral.py` fails when a NEW case joins the class, and fails again if a
+   listed case is fixed without being removed from the list, so the list can only shrink. Two
+   pieces stay owed here. (1) Deciding each of the 25 cases' real denylist changes what that case
+   measures, which is this item's work. (2) The runner cannot express MCP denial at all — `eval_behavioral.RUNTIME_TOOLS` is built-ins only — so `researcher-unestablished-claim-stays-unverified`
+   denies its built-in retrieval surface and states the MCP residue in its own `expected` field
+   rather than shipping a denylist entry whose CLI handling nothing here has probed. Closing that
+   needs either a probed vocabulary extension or a grader assertion on observed tool calls.
 7. **Two SKILL.md sentences ship unmeasured.** Every after-side artifact binds
    `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it: the no-signal
    literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the linter rejects)
@@ -201,7 +213,7 @@ no `Read`.
 
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
 
-**Outcome:** The fleet's 30 canonical definitions are audited against the six published shifts for
+**Outcome:** The fleet's 31 canonical definitions are audited against the six published shifts for
 Claude 5-generation models (rules→judgment, examples→interface design, upfront→progressive
 disclosure, repetition→tool definitions, manual memory→auto-memory, simple specs→rich references),
 and any edit is justified by paired before/after routing and behavioral evidence — or the audit
@@ -380,7 +392,7 @@ release stamp is REL-173's evidence, not a gate on this item.
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
 **Current evidence:** The first Terra/medium round remains preserved under
-[`evals/baselines/2026-08-11-handoff-001`](../evals/baselines/2026-08-11-handoff-001/): it proved the
+[`evals/baselines/history/2026-08-11-handoff-001.md`](../evals/baselines/history/2026-08-11-handoff-001.md): it proved the
 producer at 3/3 but left five strict cases unresolved, which triggered this amendment. Those
 artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
 evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
@@ -391,12 +403,12 @@ digest-negative oracle now requires one exact hash command and correlated result
 seeded workspace, closing the prior receipt-only false green. Red-before-green controls, T0, the
 behavioral-evaluator module, the full suite, and `claude plugin validate . --strict` all passed at
 `dc02bed` (107 evaluator tests, 666 across 30 modules **at that commit** — GRAPH-002 and this
-round's additions have since moved the suite to 837 across 33 modules, so re-run rather than
-compare against those figures).
+round's additions have since grown the suite, so re-run T1 rather than compare against that
+figure; a restated count here would only mint the next stale one).
 
 The plan's three-session Claude diagnostic **has now run** — operator-approved model
 `claude-sonnet-5`, candidate `7074d8d`, CLI 2.1.233, one run each, artifacts and full reading in
-[`evals/baselines/2026-08-15-handoff-001-sonnet5/`](../evals/baselines/2026-08-15-handoff-001-sonnet5/decisions.md).
+[`evals/baselines/history/2026-08-15-handoff-001-sonnet5.md`](../evals/baselines/history/2026-08-15-handoff-001-sonnet5.md).
 One of the three returned a usable result: the producer passed 1/1. Both builder cases are
 recorded **VOID, not FAIL** — `scripts/eval_behavioral.py:502` grants case tools with `--tools`,
 which bounds the tool *surface* while granting no *permission*, so on CLI 2.1.233 the session's
@@ -412,7 +424,7 @@ evidence", which does not exist.
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
 proven to fail without it by mutation; an empty allowlist deliberately gets no permission flag,
-since `--tools ""` leaves nothing to permit. T0, the module, T1 (836 tests, 33 modules), and
+since `--tools ""` leaves nothing to permit. T0, the module, T1 (full offline suite), and
 `claude plugin validate . --strict` are green. What remains is the paid half: **re-run the two
 void cases** — `handoff-builder-applies-work-order` and `handoff-builder-rejects-digest-mismatch`
 — under recorded conditions, and confirm the mandated `python -I` commands now execute
@@ -429,7 +441,7 @@ capture be proposed. Do not compare Claude results with the archived Terra appro
 
 **Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
 re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
-suppression both hold). A host-neutral implementation candidate is open as PR #107 — a
+suppression both hold). The host-neutral implementation **landed** in PR #107, merged 2026-08-11 — a
 model-visible `onboarding-map` skill with its cluster cases, README lane section, and decision
 amendment — and its deterministic gates and adapter parity are green. That is packaging evidence,
 not lane evidence: nothing on that branch measures a Codex host, the spec's Phase-0 host evidence
@@ -467,13 +479,17 @@ amendment, not a roadmap sentence.
 2. The paired `homelab-ops` before/after captures. `eval_baseline.py` returns `STALE` for this
    cluster, so the 'before' side is a fresh capture at merge base `4fef0ce`, not a stored reuse.
 3. The recorded Codex smoke run (spec line 92), which must exercise a **released** artifact. The
-   1.7.3 release records 19 skills (`evals/baselines/2026-08-10-rel-173/conditions.md`) and this
-   map would be the twentieth, so the run waits on a 1.7.4 release tail and is filed through the
-   ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source PASS is never
-   reportable as released-artifact PASS, is exactly this case.
+   last release to record its skill inventory captured 19 skills
+   (`evals/baselines/2026-08-10-rel-173/conditions.md`, taken under the pre-correction `1.7.3`
+   label) and this map would be the twentieth, so the run waits on the **next release tail** and is
+   filed through the ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source
+   PASS is never reportable as released-artifact PASS, is exactly this case. Name the version from
+   the manifests at that time, not from this entry: the fleet corrected its numbering to the
+   `0.7.x` line, so the `1.7.x` labels in older evidence and in the ledger's stored release stamps
+   are historical, not a series that continues.
 
 **Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then captures
-the paired routing run; the smoke run follows the 1.7.4 release.
+the paired routing run; the smoke run follows the next release.
 
 **Rides this item (PROP-002 deferral, 2026-08-13).** `onboarding-map`'s description restates "this
 authorizes nothing" a fourth time; the body's three other copies were reconciled in `eb53758`, but
@@ -505,12 +521,15 @@ half (b) validates the *verdict's content* once the component runs — reachabil
 suite's question, so no behavioral result confirms why the routing positive failed. The Group 4
 rescan's upheld Mode 3 finding rides here unchanged.
 
-**Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
---model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
-`REUSABLE` there. The reuse is identity-bound, not unconditional: the stored evaluator identity
-pins the runtime (CPython 3.11.15 recorded), so a host on another Python reports
-`STALE: diverged on evaluator` and owes either that runtime or a fresh 'before' capture before
-any paired comparison.
+**Prerequisites:** A fresh 'before' capture is owed — the stored capture no longer resolves.
+`eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` reports
+`STALE: diverged on evaluator, plugin` for `evals/baselines/2026-08-14-ladder/benchmark.json`,
+verified 2026-08-17 on CPython 3.11.15 — the capture's *own* recorded runtime, so the
+runtime is no longer the binding cause. Two identities moved since the capture:
+`scripts/eval_clean_room.py` (a `routing_evaluator_paths()` member, edited by `4bddd9d`/`8253f2c`
+the day after) and the plugin hash. Reuse remains identity-bound in general — the evaluator
+identity does pin the runtime, so another Python would also diverge — but on every host today
+this cluster owes a fresh capture, not a reuse.
 
 **Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
 description **plus** body: remove the growth-feedback clause from the description and the body's
@@ -519,12 +538,14 @@ duplicate stateless remit survives in the body). Electing this half is a values 
 dead-code removal: review named the candidate reader the upheld finding does not cover — the
 human operator, whose own diffs Mode 3 could assess at a ladder bar, a consumer neither
 `self-improve-loop` nor `prompt-engineer` serves — so the ruling weighs that route's worth
-against its per-session description surface. **The cluster cannot witness this trim as it
-stands**: `evals/routing/ladder.json` carries no Mode 3 growth-feedback positive, so a paired run
-on today's cases would report identical rates while never exercising the removed route. The
-trim's measurement therefore starts by authoring a targeted Mode 3 positive (a body-of-work
-growth-feedback prompt), capturing a fresh 'before' that includes it, then making the
-description-plus-body edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
+against its per-session description surface. **The cluster could not witness this trim, and now can**:
+`evals/routing/ladder.json` carried no Mode 3 growth-feedback positive, so a paired run on those
+cases would have reported identical rates while never exercising the removed route.
+`pos-engladder-growth-feedback` landed 2026-08-17 (PR #145) and closes that prerequisite — a
+body-of-work prompt carrying eight embedded artifacts, six PRs and two design notes, so the case
+grades Mode 3 rather than the harness's empty working directory. **Do not author another one.** The
+next step is therefore the fresh 'before' capture that includes it, then the description-plus-body
+edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
 half's 'before' (its case bytes lack the route) and stands only as the historical anchor. In the
 after run, negatives hold their forbidden sets at 0% fire, the new Mode 3 positive's silence is
 the *expected* result of the trim, **and the surviving positive modes show no unexplained
@@ -537,8 +558,10 @@ positive it would grade every future ladder run permanently red and blur real re
 are elected:** every elected case-bytes change (the Mode 3 positive here, the assess rewrite in
 half (b)) lands **before** the single fresh 'before' capture on the revised cases, and the
 description-plus-body edit lands between that 'before' and the 'after' — case edits after the
-'before' stale it through `eval_baseline.py`'s exact `eval_sources` identity, and an unordered
-session can spend the full T3 batch and produce no valid comparison. (b) **Instrument repairs** —
+'before' stale it through `eval_baseline.py`'s exact `selection` identity (which pins the graded
+fields of the selected cases; `eval_sources` stopped being compared in PR #145 and no longer
+stales anything), and an unordered session can spend the full T3 batch and produce no valid
+comparison. (b) **Instrument repairs** —
 rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
 content — builder-owned, the named principal consult marked **required** (optional/advisory
@@ -602,6 +625,69 @@ no coordinator transcript artifact exists here to consume, and a mechanism witho
 consumer waits. (3) Agents writing packets to a well-known scratch file — **recommended: decline**;
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
+
+#### LEDGER-001 — the promoted set has no absorption or drift coverage
+
+**Status:** `ready` — diagnosis complete from a full 53-record audit; each repair below is
+independently landable.
+
+**Outcome:** A lesson recorded as `promoted` is one a reader can trust landed, because something
+other than a manual audit checks that claim. Three specific records are reconciled with the tree,
+and the coverage gap that hid them is either closed or stated where a reader of "promoted" sees it.
+
+**Source:** 2026-08-17 ledger audit (this session), verifying all 28 then-promoted and 4 retired
+records against their destinations. Four findings, each verified at revision `a83b66c`:
+
+1. **`lc_6216159a` — the host-specific half never landed.** Its destination is the researcher's
+   Method 3 and its expected behavior names a concrete redirect fact (one vendor docs host is a
+   redirect shell for another, so callers should target the real host). `agents/researcher.md` has
+   never contained that host name — `git log -S` over that path returns empty — while the
+   *generalized* clause (read the raw artifact when a claim hinges on a literal string) did ship in
+   the same promotion commit. So the promotion was partial. Its retest reference additionally
+   asserts the destination text shipped, which the tree contradicts. Complication to settle first:
+   a later investigation records that same domain as egress-blocked here, which may make the
+   original lesson unactionable as written — resolve which fact is current before writing prose.
+2. **`lc_546acdcc` — the rule is in no live governing artifact.** Its lesson (a change to
+   workflow-shape bytes is exercised by at least one live workflow load before the release
+   containing it closes; validator-green is never reported as loadable) has the strongest field
+   evidence in the store — the same file shipped validator-green and unloadable twice, in opposite
+   directions — and no standing rule behind it. Its declared destination, LOOP-001, closed to an
+   archive record, and `AGENTS.md` has no "Editing a workflow" playbook. `probe_plugin.py` drives a
+   live workflow but writes its own throwaway file, so it cannot catch this class. Note the named
+   consumer: `lc_b96e0c0a` (now `proposed`) wants that same missing playbook for the complementary
+   half — which offline instrument is *invalid* — so one playbook entry closes both.
+3. **`lc_36adb3d0` — promoted, failure class still reachable.** Its lesson is that a red check
+   which can be silently merged over is no gate. `.github/workflows/validate.yml` runs only
+   `ubuntu-latest` on `pull_request` (all three OSes on push and the weekly sweep), so a
+   macOS-only regression merges green, goes red on main's push run, and later PRs merge over it
+   because their own required checks are ubuntu-only. That is the deliberate T2 cost split, not an
+   accident — but it means the record's own first transition ("Gap MOVED rather than closed") was
+   right and it advanced to `promoted` anyway. Not a rejection: the enforcement half genuinely
+   shipped. Owed is a scope narrowing or a `review` renewal so `promoted` does not read as "this
+   class is closed".
+4. **The coverage gap that hid all three.** `scripts/ledger_drift.py` is a required CI check, but
+   it filters to `PENDING_STATES`, so every `promoted` and `retired` record has zero automated
+   destination-drift coverage. This is scoped deliberately (its docstring says "pending"), which is
+   why findings 1–3 needed a manual audit and why `lc_0fe6c3d1`'s line-pin could drift unnoticed.
+
+**Prerequisites:** None. Finding 1 owes the egress-versus-redirect question first; findings 2–4 are
+independent.
+
+**Acceptance:** Findings 1 and 2 land their prose with the reader check the doc-side rule requires,
+or are dropped with a stated reason. Finding 3 records its narrowing. Finding 4 either extends
+drift coverage to terminal states with a firing test, or states the limitation in
+`learning/README.md` where a reader of `promoted` would see it — proportionality decides which, and
+the audit-shaped alternative is a scheduled manual pass, not silence.
+
+**Next action:** Settle finding 1's egress-versus-redirect question, then write the single
+"Editing a workflow" playbook entry that closes finding 2 and `lc_b96e0c0a` together.
+
+**Known un-correctable by CLI:** `lc_0fe6c3d1`'s destination pins
+`agents/homelab-platform.md:27`, where the rule now sits near line 55. The ledger enforces
+`destination` equal to the latest transition's, and `promoted` may only move to `rejected` or
+`retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
+Leave it until that record next transitions legitimately; the correct stable reference is the
+Tier 0 "read-only is not capture-safe" bullet.
 
 ### Small items
 
@@ -703,6 +789,13 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
   Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
+- **EVAL-004** — `scripts/eval_behavioral.py` validates `--output-dir` only AFTER the batch, so a
+  mistyped or occupied path loses a fully paid run of real model sessions: the guard returns 2 with
+  a reason (tested), but the money is already spent. Move the check before the first session, and
+  decide what it may create — a preflight that mkdirs eagerly leaves a directory behind when the run
+  aborts for another reason, which is why this was not just moved. `tests/test_eval_behavioral.py::
+  test_an_unusable_output_dir_returns_two_before_spending` pins the current ordering and is where the
+  new one gets asserted. Source: PR #145 round 15.
 - **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
@@ -712,7 +805,10 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
   undocumented guarantee this fleet depends on, so the failure is either a real regression or
   canary-quoting variance the oracle cannot separate — settle which with one repeat run before
-  treating either answer as known. Source: PR #143 probe run.
+  treating either answer as known. A third hypothesis is already reproduced: the
+  [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) documents
+  the same both-canaries-absent signature caused by async agent launches the probe's
+  `tool_use_id` correlation does not consume. Source: PR #143 probe run.
 - **PROBE-003** — `probe_plugin.py`'s five workflow assertions cannot run as root: the workflow
   launch needs `--dangerously-skip-permissions`, which Claude Code refuses under root/sudo, so all
   five fail as a cascade of one environment condition and read as five fleet defects. Detect the
@@ -738,8 +834,8 @@ absorbed generated-prompt provenance control.
 
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
-[`WF-001 pilot note`](archive/2026-08/wf-001-pilot-run-2026-08.md) are the baseline for that
-call). SAFE-003 (closed 2026-08-10,
+[`WF-001 outcome record`](archive/2026-08/wf-001-outcome-2026-08-01.md)'s pilot-acceptance-run
+section are the baseline for that call). SAFE-003 (closed 2026-08-10,
 [outcome record](archive/2026-08/safe-003-outcome-2026-08-10.md)) is no longer a trigger: its
 2026-08-09 ruling chose document-and-enforce over the resolver path, so nothing there now needs
 a contract document to resolve to.
@@ -759,13 +855,14 @@ second workflow conversion is now the only live ignition.
 
 **Source:** Adaptation backlog's parked re-baseline analysis.
 
-**Prerequisites:** ROUND1-001 measurement path is healthy; run small watched foreground batches;
-fix case-design defects before treating numbers as description evidence.
+**Prerequisites:** Run small watched foreground batches; fix case-design defects before treating
+numbers as description evidence. (The measurement path ROUND1-001 established is healthy; that
+item closed 2026-07-29 and is not a gate.)
 
 **Acceptance:** Every artifact records requested/observed model, timeout, CLI version, threshold,
 and per-run evidence; no known-invalid artifact is called an anchor.
 
-**Two facts established 2026-07-29 that shape this item:**
+**Three facts established 2026-07-29 that shape this item:**
 
 1. **The native `claude plugin eval` is still gated** — the subcommand now exists with ablation,
    graders, and JSON output, but invoking it returns "`plugin eval` is currently in early access"
@@ -786,7 +883,8 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
    (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent
    positives still fired **0/6** under otherwise-identical conditions
-   (`baselines/2026-07-29-isolation/appsec-cleanroom` vs the same day's contaminated 0/6). The
+   (both captures recorded in `baselines/history/2026-07-29-verification-round.md`: the clean-room
+   0/6 against the same day's contaminated 0/6). The
    under-fire is a property of headless one-shot mode on this tier, not of the operator's
    configuration. Both runners now record `clean_room` in `conditions`, and artifacts differing on
    it must not be diffed against each other.
@@ -880,7 +978,7 @@ The initial and deep reviews are consolidated in
 | Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
 | `homelab-platform` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
 | `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
-| Eval coverage stops at one routing cluster with no behavioral checks | Six routing clusters, the behavioral runner, packet linter, and 21 deterministic contracts exist | Machinery landed; additional contract coverage survives below |
+| Eval coverage stops at one routing cluster with no behavioral checks | Ten routing clusters, the behavioral runner, packet linter, and 67 deterministic contracts exist (counts as of 2026-08-17; `evals/` owns the current figures) | Machinery landed; additional contract coverage survives below |
 | Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
 | Body cross-reference namespacing is inconsistent | Descriptions are validator-enforced; body text follows the namespaced-when-invocable convention, with bare names reserved for content already in context | No current broken route found; close |
 | `sre-tool` keeps multi-component detail in its always-loaded core | `skills/sre-tool/references/multi-component.md` now owns that conditional material | Landed; exclude |
@@ -906,7 +1004,7 @@ must not seed new work.
 | Historical item | Current evidence | Disposition |
 |---|---|---|
 | `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
-| `restore-drill` and `upgrade-campaign` | Both appear in the generated 19-skill inventory | Landed; exclude despite the backlog's stale “remain open” sentence |
+| `restore-drill` and `upgrade-campaign` | Both appear in the generated skill inventory (20 skills as of 2026-08-17; `README.md` owns the current count) | Landed; exclude despite the backlog's stale “remain open” sentence |
 | `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
 | `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-platform` | Landed; exclude |
 | `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
@@ -915,7 +1013,7 @@ must not seed new work.
 | Prompt-craft eval wiring | The retest step now requires the repository harness before/after | Landed; exclude |
 | Runbook worked example | `skills/runbook/references/example.md` exists | Landed; exclude |
 | Root-cause intermittence reference | No file exists, but the proposal was explicitly optional and no repeated failure demonstrates a consumer | Close; reopen after an observed probabilistic-debugging miss |
-| PowerShell craft reference | No file exists; the operator decided it is needed and active Round 1 Items A/B own it | Survives as active Round 1 work |
+| PowerShell craft reference | `skills/code-craft/references/powershell.md` ships it; Round 1 closed 2026-07-29 | Landed; exclude |
 | Full routing re-baseline | No comparable current anchor exists; prior attempts are invalid or incomplete | Survives as deferred measurement work |
 
 ### ECC residue
@@ -935,20 +1033,23 @@ The two source reviews are consolidated in
 
 ### Role and governance review
 
-The proposed
+The accepted
 [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) preserves the
 2026-07-28 review's method, role boundaries, evidence, and reopen triggers. Static inspection and
-direct reproduction left these candidates for the live roadmap:
+direct reproduction raised six candidates for the live roadmap, and **all six have since landed**
+— they are recorded here as the review's outcome, not as work:
 
-- malformed guarded JSON returns the authoritative allow sentinel;
-- one routing positive accepts a component outside its declared cluster;
-- rebrand the visible homelab role and add Linux-host triggers without renaming its key;
-- add the action-shaped `host-onboard` skill;
-- add an application-security auditor with a non-PR remit;
-- design test-execution authority, then add an independent verification engineer.
+- malformed guarded JSON returns the authoritative allow sentinel → GOV-001, PR #40 (the guard now
+  answers `EXIT_INDETERMINATE`);
+- one routing positive accepts a component outside its declared cluster → EVAL-001, PR #40;
+- rebrand the visible homelab role and add Linux-host triggers without renaming its key → ROLE-001;
+- add the action-shaped `host-onboard` skill → `skills/host-onboard/`;
+- add an application-security auditor with a non-PR remit → `agents/application-security-auditor.md`;
+- design test-execution authority, then add an independent verification engineer → ROLE-003/ROLE-004,
+  `agents/verification-engineer.md`, PR #43.
 
-The current-work sections above carry these survivors, the active Round 1 work, the deferred
-routing measurement, ECC behavioral residue, and the trigger-bound compose asset.
+What still survives from this review sits in the current-work sections above: the deferred routing
+measurement, ECC behavioral residue, and the trigger-bound compose asset.
 
 ### Roster-expansion design branch
 
@@ -957,11 +1058,11 @@ The detailed source design is preserved at
 
 | Historical proposal | Current disposition |
 |---|---|
-| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; no second testing agent yet |
+| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; shipped as `agents/verification-engineer.md` (PR #43) |
 | Running-lab `security-audit` | Survives as LABSEC-001, distinct from repository application security |
-| Guard-enforced `lab-inspector` | Survives as blocked LABSEC-002 behind GOV-001 and command-level validation |
+| Guard-enforced `lab-inspector` | Survives as LABSEC-002, now `ready` — GOV-001 and DEPLOY-001 landed, so its prerequisites are satisfied |
 | `release` | Survives as trigger-bound RELEASE-001 |
-| `porting-method` | Survives as trigger-bound PORT-001 |
+| `porting-method` | Landed as PORT-001 (PR #45) and left this tracker; the convention is documented in `README.md` |
 | Home-lab SRE description line | Folded into ROLE-001's rebrand without changing the component key |
 | Standalone secrets component | Remains rejected; lab posture belongs inside LABSEC-001 if accepted |
 | Generic Linux references | Superseded by ROLE-001's action-shaped `host-onboard` boundary |

@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -545,6 +546,165 @@ class CaseFileTest(unittest.TestCase):
                                 f"{sorted(forbidden - members)} — they can never fire, so the case "
                                 f"would pass without measuring anything")
                 self.assertTrue(forbidden, f"{path.name}:{case['id']} forbids nothing")
+
+    # A prompt that points at something must carry it. Every run executes in a fresh empty working
+    # directory, so "here are the findings" with no findings makes the CORRECT behavior — asking for
+    # the missing artifact — score as a routing miss.
+    _DEICTIC = re.compile(
+        r"\b(?:here (?:are|is) (?:the|my|one)|this (?:change|diff|branch|PR|patch)\b"
+        r"|the attached|below\b)",
+        re.IGNORECASE,
+    )
+    # What "carrying the referent" looks like: enough prose to BE the artifact, or a structural
+    # marker that one is inlined.
+    _CARRIES = ("```", "diff --git", "@@", "PR #", "DRAFT", "FINDINGS")
+
+    # Words that mark a case reference as historical. A note may name a retired case — explaining
+    # what stopped being covered is better than deleting the sentence — but it has to SAY so.
+    _RETIREMENT_WORDS = re.compile(
+        r"retir\w*|remov\w*|deleted|no longer|uncovered|historical|past tense|used to|"
+        r"was asserted|cut on|left with",
+        re.IGNORECASE,
+    )
+    _CASE_REF = re.compile(r"\b((?:pos|neg)-[a-z0-9]+(?:-[a-z0-9]+)*)(-\*)?\b")
+
+    def test_cluster_prose_does_not_present_a_deleted_case_as_live_coverage(self) -> None:
+        """Risk: a retirement deletes the cases and leaves the prose vouching for them.
+
+        `craft-vs-fullstack` said its load-bearing assertion was that cross-layer work routes to
+        sde-fullstack "(pos-fullstack-*)" — cases this PR retired. `ladder` said `pos-builder-scoped`
+        guards an over-trigger it no longer guards. A later description review reading either note
+        would treat that reachability as covered and skip measuring it, which is the same silent
+        failure as a doc that still lists landed work as pending.
+
+        A note MAY name a retired case; it may not imply the case is live. So a reference to an id
+        that no longer exists must sit within the same sentence as a retirement word.
+        """
+        clusters = sorted((REPO / "evals" / "routing").glob("*.json"))
+        existing = {
+            case["id"]
+            for path in clusters
+            for case in json.loads(path.read_text(encoding="utf-8"))["cases"]
+        }
+        stale = []
+        for path in clusters:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+            prose = [value for value in spec.values() if isinstance(value, str)]
+            prose += [case.get("expected_output", "") or "" for case in spec["cases"]]
+            for text in prose:
+                for sentence in re.split(r"(?<=[.;])\s+", text):
+                    if self._RETIREMENT_WORDS.search(sentence):
+                        continue
+                    for stem, glob_suffix in self._CASE_REF.findall(sentence):
+                        # `pos-foo-*` is satisfied by any surviving id under that stem.
+                        alive = (
+                            any(name.startswith(stem) for name in existing)
+                            if glob_suffix else stem in existing
+                        )
+                        if not alive:
+                            stale.append(f"{path.name}: {stem}{glob_suffix} in {sentence[:70]!r}")
+        self.assertEqual(
+            [], stale,
+            "cluster prose names a case that no longer exists without saying it retired; a future "
+            "description review will read that as live coverage and skip measuring it",
+        )
+
+    def test_no_prompt_points_at_an_artifact_it_does_not_carry(self) -> None:
+        """Risk: a case measures the harness's empty cwd instead of the description.
+
+        `evals/README.md` claims this class is empty. It was not, twice: PR #145 retired seven such
+        cases and inlined two, then ADDED `pos-engladder-growth-feedback` saying "here are the last
+        six months of pull requests" with none attached — and the sweep that found it also turned up
+        `pos-iterate-draft`, which predates the branch. A claim of emptiness in prose is worth what
+        the last person's grep was worth; this makes it worth what the tree says.
+        """
+        bare = []
+        for path in sorted((REPO / "evals" / "routing").glob("*.json")):
+            for case in json.loads(path.read_text(encoding="utf-8"))["cases"]:
+                prompt = case["prompt"]
+                match = self._DEICTIC.search(prompt)
+                if match and len(prompt) <= 500 and not any(m in prompt for m in self._CARRIES):
+                    bare.append(f"{path.name}:{case['id']} ({match.group(0)!r})")
+        self.assertEqual(
+            [], bare,
+            "prompt(s) refer to an artifact they do not supply; every run starts in an empty "
+            "directory, so the correct 'send me the artifact' answer scores as a routing miss — "
+            "inline a representative artifact the way pos-engladder-assess does",
+        )
+
+    def test_readme_inventory_figures_match_the_shipped_suites(self) -> None:
+        """Risk: a case lands or leaves and the prose that sizes the suite quietly stops being true.
+
+        These are not decorative numbers — an operator reads them to decide whether a paid sweep is
+        affordable, and a future session reads the narrowing fraction to judge how much over-trigger
+        coverage the suite still has. Both were wrong at once in PR #145: three far-miss retirements
+        left the narrowing denominator at 65 against an actual 62, and a merge took the behavioral
+        count to 70 while the prose still said 69 and "64 of the 69" (wrong on both halves). Two
+        review rounds were spent correcting figures by hand; this is the check that makes the third
+        unnecessary.
+
+        Each row asserts its regex MATCHED as well as what it captured, so rewording the sentence
+        fails loudly instead of silently skipping the assertion.
+        """
+        readme = (REPO / "evals" / "README.md").read_text(encoding="utf-8")
+        clusters = sorted((REPO / "evals" / "routing").glob("*.json"))
+        positives = negatives = narrowed = 0
+        for path in clusters:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+            members = set(spec["members"])
+            for case in spec["cases"]:
+                if case["polarity"] == "positive":
+                    positives += 1
+                    continue
+                negatives += 1
+                if case.get("expect_not_fires") and set(case["expect_not_fires"]) != members:
+                    narrowed += 1
+        behavioral = json.loads(
+            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
+        )["cases"]
+        no_tool = sum(1 for case in behavioral if case.get("allowed_tools") == [])
+        # The baselines inventory is quoted in the same file and drifted the same way — it was
+        # written once after the retirement commits and not recomputed after the later ones, so it
+        # claimed 9,262 lines across 20 directories against an actual 9,378 across 13. An operator
+        # reads these to judge whether the cleanup did what it says (PR #145 review).
+        baselines = REPO / "evals" / "baselines"
+        # NEWLINE counts, matching `wc -l`, over every file in the directory. The first version of
+        # this check used `splitlines()`, which adds one for a file with no trailing newline, so it
+        # agreed with itself and disagreed with the tree by 16 lines — a check bound to a
+        # computation no reader would run is not a check (PR #145 round 16). The README states the
+        # exact command beside the figure for the same reason.
+        def newline_count(paths) -> int:
+            return sum(path.read_bytes().count(b"\n") for path in paths if path.is_file())
+
+        baseline_lines = newline_count(baselines.rglob("*"))
+        baseline_dirs = len([path for path in baselines.iterdir() if path.is_dir()])
+        # Every file under history/, not just Markdown: the restored tool-event evidence is part of
+        # the distilled record it sits beside.
+        summary_lines = newline_count((baselines / "history").rglob("*"))
+
+        rows = (
+            (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),
+            (r"(\d+) routing cases across the ten clusters \((\d+) positives, (\d+)",
+             (positives + negatives, positives, negatives)),
+            (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
+            (r"(\d+) of the (\d+) cases are no-tool planning-only", (no_tool, len(behavioral))),
+            (r"Behavioral holds (\d+)", (len(behavioral),)),
+            (r"\*\*([\d,]+) lines across (\d+) top-level directories\*\*",
+             (f"{baseline_lines:,}", baseline_dirs)),
+            (r"What remains: ([\d,]+) lines of distilled record", (f"{summary_lines:,}",)),
+        )
+        for pattern, expected in rows:
+            found = re.search(pattern, readme)
+            with self.subTest(pattern=pattern):
+                self.assertIsNotNone(
+                    found,
+                    "evals/README.md no longer states this figure in the shape this test reads; "
+                    "reword the test with the prose, do not delete the assertion",
+                )
+                self.assertEqual(
+                    tuple(str(value) for value in expected), found.groups(),
+                    "evals/README.md figure is stale against the shipped suites",
+                )
 
     def test_coverage_table_lists_every_cluster_file(self) -> None:
         readme = (REPO / "evals" / "README.md").read_text(encoding="utf-8")

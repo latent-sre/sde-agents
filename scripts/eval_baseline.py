@@ -12,8 +12,12 @@ a STALE verdict names what diverged so the operator knows why a fresh capture is
 
 Match policy (TIER-001, operator-approved 2026-08-08; the spec retired with its outcome
 record, which now carries the lasting policy — docs/archive/2026-08/tier-001-outcome-2026-08-08.md):
-provenance exact on schema, eval_sources, selection, evaluator, and the plugin content hash;
-conditions exact on model_requested, clean_room, threshold, timeout_s. cli_version is advisory
+provenance exact on schema, selection, evaluator, and the plugin content hash; conditions exact on
+model_requested, clean_room, threshold, timeout_s. `selection` covers the graded fields of the
+selected cases plus the cluster's `members` — membership is a grading input, since a negative with
+no `expect_not_fires` is graded against the whole member list. `eval_sources` is recorded but no
+longer compared: it hashes each cluster file whole, so it stales a capture on bytes the scorer
+cannot read (a `notes` edit, an unselected case). cli_version is advisory
 — the probe, not the eval suite, owns CLI drift — so the recorded value is printed as a note,
 never compared, and never stales the verdict.
 
@@ -48,6 +52,11 @@ def _validated_cluster(spec: object) -> dict:
         raise eval_routing.ProvenanceError("cluster error: top-level JSON value must be an object")
     if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
         raise eval_routing.ProvenanceError("cluster error: 'cluster' must be a non-empty string")
+    # `eval_routing.validated_members` rather than a restatement: `members` reaches `sorted(set(...))`
+    # inside selection_identity, so a mixed-type list raises TypeError where this tool documents
+    # exit 2 — and the rule had three copies, one of which (the runner's post-session reread) simply
+    # did not have it. One owner now (PR #145 review).
+    raw_members = eval_routing.validated_members(spec.get("members"))
     raw_cases = spec.get("cases")
     if not isinstance(raw_cases, list) or not raw_cases:
         raise eval_routing.ProvenanceError("cluster error: 'cases' must be a non-empty list")
@@ -59,6 +68,16 @@ def _validated_cluster(spec: object) -> dict:
             raise eval_routing.ProvenanceError(f"cluster error: case #{index} must have a non-empty 'id'")
         if not isinstance(case.get("prompt"), str) or not case["prompt"].strip():
             raise eval_routing.ProvenanceError(f"cluster error: case {case_id!r} must have a non-empty 'prompt'")
+        # The scoring targets are validated by REUSING the routing runner's own validator rather
+        # than restating its rules here — one parser per fact, and the resolver's whole premise is
+        # that it answers the question the runner would ask. Concretely needed because
+        # `_graded_definition` now canonicalizes those lists with `set()`, so an unhashable target
+        # (`"expect_fires": [{}]`) raised a TypeError where this tool documents exit 2 (PR #145
+        # review). Membership is passed as a set because that is the shape `_scoring_targets` takes.
+        try:
+            eval_routing._scoring_targets(case, set(raw_members))
+        except ValueError as exc:
+            raise eval_routing.ProvenanceError(f"cluster error: {exc}") from exc
     return spec
 
 
@@ -73,6 +92,9 @@ def desired_provenance(root: Path, cluster_path: Path, expression: str, limit: i
     return eval_routing.benchmark_provenance(
         [cluster_path], cases, expression, root, limit,
         evaluator_paths=eval_routing.routing_evaluator_paths(),
+        # Compared, not context: a membership change moves what the same case bytes assert, and
+        # dropping the whole-file `eval_sources` check removed the side effect that used to catch it.
+        members=spec.get("members"),
     )
 
 
@@ -80,7 +102,13 @@ def provenance_divergences(stored: dict, desired: dict) -> list[str]:
     if stored.get("schema") != desired["schema"]:
         # Older schemas lack identities the policy compares; nothing else is worth naming.
         return [f"schema ({stored.get('schema')!r}, current is {desired['schema']!r})"]
-    diverged = [key for key in ("eval_sources", "selection", "evaluator")
+    # `eval_sources` is deliberately NOT compared: it hashes each cluster file whole, while
+    # `selection` pins the graded fields of the exact selected cases. So eval_sources is strictly
+    # broader and its extra reach is all bytes the scorer cannot read — a cluster `notes` edit, a
+    # top-level description, or an unselected case under `--case` narrowing. Comparing it defeated
+    # the purpose of having a case-exact selection identity. It stays recorded, so a reader can
+    # still see which file bytes produced the capture.
+    diverged = [key for key in ("selection", "evaluator")
                 if stored.get(key) != desired[key]]
     stored_plugin = stored.get("plugin")
     if (

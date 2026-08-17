@@ -2,8 +2,8 @@
   "applicability": "questions that turn on presence or absence of literal entries; excludes deterministic raw-byte reads",
   "candidate_id": "lc_9bcad633bb124c77b92ba1f651cead2e",
   "created_at": "2026-08-12T10:38:03.308972Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "learning:candidate:lc_854a12b53a16434f81128a9ca256fbc0",
+  "disposition": "supersede",
   "evidence": {
     "environment": "claude-code-remote/web-research",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-11T10:38:03.308972Z"
   },
   "observation": "A summarizing WebFetch of the Claude Code changelog reported no workflow-specific changes for versions that a verbatim-quote re-fetch showed contained workflow entries (the 2.1.223 workflow-sandbox import() fix).",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "retired",
+  "reason": "The governing rule is already landed in the researcher method: when a claim hinges on a literal string, quote, count or version, read the raw artifact deterministically rather than trusting a summarized fetch. That text predates this observation by eight days, so the failure occurred under the existing rule rather than in its absence. The residual delta is one clause, that a summarizing read is not evidence of absence, so a negative conclusion about a changelog entry needs a verbatim re-fetch. Retired into the survivor that owns the single retrieval-path edit; that edit must carry the absence clause or the lesson is lost.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,25 @@
     "last_attested_at": "2026-08-12T10:38:03.308972Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-12T10:38:03.308972Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:57:04.905911Z",
+      "destination": "learning:candidate:lc_854a12b53a16434f81128a9ca256fbc0",
+      "disposition": "supersede",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Valid claim, routed into the research-fidelity survivor rather than carrying its own edit. Recorded as proposed first because the lifecycle does not allow quarantined to reach a subtractive state directly.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-17T11:57:05.017831Z",
+      "destination": "learning:candidate:lc_854a12b53a16434f81128a9ca256fbc0",
+      "disposition": "supersede",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "The governing rule is already landed in the researcher method: when a claim hinges on a literal string, quote, count or version, read the raw artifact deterministically rather than trusting a summarized fetch. That text predates this observation by eight days, so the failure occurred under the existing rule rather than in its absence. The residual delta is one clause, that a summarizing read is not evidence of absence, so a negative conclusion about a changelog entry needs a verbatim re-fetch. Retired into the survivor that owns the single retrieval-path edit; that edit must carry the absence clause or the lesson is lost.",
+      "to": "retired"
+    }
+  ],
+  "updated_at": "2026-08-17T11:57:05.017831Z"
 }

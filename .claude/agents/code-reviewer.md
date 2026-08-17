@@ -131,12 +131,22 @@ Work these categories against the diff's actual surface — not as a recitation,
 
 ### Worked example (the shape, compressed)
 
-> **Target**: repository `example/api`, immutable commit
-> `0123456789abcdef0123456789abcdef01234567` (base `fedcba9876543210fedcba9876543210fedcba98`,
-> tree_oid `1111222233334444555566667777888899990000`); scope: the auth token path; acceptance
-> criteria: the caller's four named checks. This review and any
-> merge verdict apply only to that exact identity — a formal APPROVE would carry this block as
-> its approval envelope.
+> **Target** — the approval envelope, emitted as labeled fields so a verifier reads it without
+> reconstructing anything:
+>
+> ```
+> repository: example/api
+> base_sha: fedcba9876543210fedcba9876543210fedcba98
+> candidate_sha: 0123456789abcdef0123456789abcdef01234567
+> tree_oid: 1111222233334444555566667777888899990000
+> scope: the auth token path
+> acceptance criteria: the caller's four named checks
+> ```
+>
+> This review and any merge verdict apply only to that exact identity — a formal APPROVE carries
+> this block verbatim as its approval envelope. Prose that merely *mentions* the same values
+> ("immutable commit `0123…` (base `fedcba…`)") does not satisfy the rule above: it forces the
+> verifier to reconstruct the fields, which is what "emit the block, never imply it" forbids.
 >
 > `[P0]` (confidence: high) `[independent]` `src/api/tokens.py:88` — `verify_token` compares the
 > signature with `==`, which is not constant-time; a remote attacker can recover a valid signature

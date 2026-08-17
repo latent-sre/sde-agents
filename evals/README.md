@@ -41,12 +41,55 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 `expect_not_fires` is what a negative is graded against, and it defaults to the whole cluster — so
 an ordinary near-miss passes only when nothing in the cluster fires. A case may **narrow** it to
 name a *disambiguation* boundary instead: the components that must not fire, while a named sibling
-legitimately may. `neg-resolved-not-incident` is the one in the tree — an already-resolved outage
+legitimately may. `neg-resolved-not-incident` is the clearest one — an already-resolved outage
 must not reach the mitigation skills, but `postmortem` (a cluster member) is the correct
 destination, so grading it cluster-wide failed the case for its sibling doing the right thing. Keep
 the narrowing rare and visible: it is a declared exemption, the runner prints the forbidden set it
 actually used, and every name in it must be a cluster member (a typo would forbid nothing and pass
 vacuously).
+
+**Narrowing is no longer rare, and that is a measured coverage cost** (counted 2026-08-17:
+**18** of 62 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
+verdict for one disambiguation and gives up over-trigger detection for every member it stops
+forbidding, so a cluster that narrows most of its negatives stops watching most of its members:
+`continuous-improvement` narrows **6 of 6** negatives to a single forbidden component each,
+leaving five of its six members with no over-trigger coverage in that cluster at all, and
+`agent-systems` narrows 3 of 3, leaving `principal-engineer` uncovered. Read a narrowed
+cluster's clean negative side as "no member named in these exemptions over-fired", never as
+"nothing in this cluster over-fires". Before adding a narrowing, prefer reshaping the prompt —
+that is what the `ladder` cluster's `neg-embedded-decision-not-principal-owned` repair did, and
+its note records why firing-based grading cannot express "may fire, for the right reason".
+
+**A negative earns its session by being *near*.** The definition above is load-bearing: a near-miss
+*shares vocabulary* with the components it must not reach. A prompt that shares nothing with any
+member is a **far**-miss — it passes almost by construction, and it proves less than the tight cases
+in the same cluster already do, because a description broad enough to catch a far-miss would be
+catching every near-miss too. Three such cases were retired from `prompt-tooling` on 2026-08-17
+(a PR-review request, a lab-audit request, and a build-a-dashboard request, none of which shares
+vocabulary with `prompt-craft` or `prompt-engineer`); the six that remain each name their shared
+term in `expected_output` — "'optimize' is shared vocabulary, but a query is not a prompt", and
+`neg-reword-error-message`, which the file itself calls the tightest near-miss in the set. When you
+add a negative, state the vocabulary it shares. If you cannot, it is a far-miss and the sessions are
+better spent elsewhere. The exception is a cluster whose *whole purpose* is distance:
+`proportionality` is negative-only and deliberately fires trivial asks at heavy components, so low
+overlap there is the measurement rather than a defect.
+
+**A prompt with a deictic reference must carry its referent.** Every run executes in a fresh empty
+working directory, so "assess this change" or "review this branch" has nothing to point at, and the
+*correct* behavior — asking for the missing artifact — scores zero. Eleven such cases existed as of
+2026-08-17: seven left with the agent-only positives and four now inline their artifact
+(`pos-engladder-assess`, `craft-vs-fullstack`'s `neg-review`, `pos-engladder-growth-feedback` with a
+body of eight PRs and design notes, and `pos-iterate-draft` with its draft, findings, and checklist).
+Supplying the artifact in the prompt is the pattern the behavioral suite already uses. On the
+negative side the defect is quieter and worse: a near-miss with no referent has nothing to route to,
+so its pass was never evidence of a correctly narrow description.
+
+This paragraph used to claim the class was empty at nine cases, and it was wrong twice over — the
+same change that retired seven added `pos-engladder-growth-feedback` with the defect, and the sweep
+that caught it also found `pos-iterate-draft`, which predated the change. So the claim is no longer
+prose: `test_no_prompt_points_at_an_artifact_it_does_not_carry` fails any short prompt that points at
+an artifact it does not supply. Emptiness asserted in a README is worth what the last author's grep
+was worth.
 
 The runner rejects any polarity other than literal `positive` or `negative`, a positive case with
 no valid `expect_fires` member, an explicitly empty or invalid negative target set, and a threshold
@@ -91,7 +134,7 @@ concurrency, Python runtime, and non-secret authentication/provider mode. Its pr
 hashes the exact eval definitions, selected cases, plugin under test, and executing evaluator and
 grader files. Both runners self-bootstrap from one checked source buffer and compile imported
 graders from likewise registered buffers, so those hashes name what executed rather than a later
-read of the same paths. Provenance schema v3 executes a private copy of the identified plugin bytes,
+read of the same paths. Provenance schema v4 executes a private copy of the identified plugin bytes,
 so an A -> B -> A edit to the source checkout cannot make concurrent sessions load mixed content
 while leaving equal endpoint hashes. Persistent mutation of the private snapshot aborts the artifact. A
 same-user session can transiently mutate and restore that snapshot unless the host sandbox denies
@@ -151,7 +194,31 @@ that survive that noise:
   description edit. That is the eval-first check `prompt-engineer` asks for: run it before and after.
 - **Over-trigger** — a negative that fires *at all*. A near-miss landing on the cluster means the
   description is too broad, and it's a defect regardless of variance (which is why negatives pass
-  only at a 0% fire rate).
+  only at a 0% fire rate). Read that asymmetrically: **one fire is proof of a defect, but zero
+  fires is weak proof of its absence** — "0% fire rate" describes the three runs, not the
+  component. At `--runs 3` a negative whose true over-trigger rate is 10% passes about 73% of the
+  time (20% → about 51%), so a clean negative side bounds over-triggering loosely rather than
+  refuting it.
+
+### What `--runs 3` can and cannot resolve
+
+Three runs express exactly four rates — 0, 1/3, 2/3, 1 — so the default `--threshold 0.5` means
+"at least 2 of 3", and **the pass boundary is a single run**. Consequences to hold on to before
+reading any positive rate as signal:
+
+- At the ~50% fire rate this section describes as normal for a clear match, a correctly described
+  component **coin-flips its verdict** (P(pass) = 0.5). At a true 0.3 it still passes 22% of the
+  time; at 0.7 it fails 22% of the time.
+- A **1/3 ↔ 2/3 movement is not signal.** Between two runs of an unchanged tree at p=0.5, the
+  chance of observing some strict rate increase is about 1 in 3. Treat single-step movement as
+  noise unless a mechanism explains it.
+- A `1/3` positive is a **failing** positive, not a partial success — the roadmap states this for
+  the ladder cluster and it generalizes.
+- Never diff an `n=1` capture against an `n=3` one. Stored rows of that shape exist in
+  `baselines/history/2026-08-10-learn-002.md`, and that record retracts two of them itself.
+
+When a paired comparison must actually support a conclusion, raise `--runs` on the specific cases
+in the diff rather than trusting a boundary crossing at three.
 
 Because of that variance, this suite is meant to be run **manually, on demand** — before and after a
 prompt change — not as a hard CI gate that would flake-fail honest PRs. It is intentionally *not*
@@ -167,6 +234,16 @@ claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
 python3 scripts/eval_behavioral.py                       # all cases, five runs each
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
+
+Behavioral is **all-or-nothing per case**: every graded run must satisfy every assertion, because a
+contract that holds four runs in five is a contract that does not hold. "Graded" excludes a run the
+runner itself broke on — those are recorded as `runs_excluded` with the exception text, and a case
+whose every run broke is `INCONCLUSIVE`, never a failure. The exit codes carry that distinction the
+way routing's do: `0` every graded case passed with every requested run graded, `1` a case failed (a
+contract verdict to investigate), `3` nothing failed but the measurement is incomplete — a case was
+`INCONCLUSIVE`, **or any single run was excluded**, because a verdict computed over four of five
+requested runs holds over a denominator the operator did not ask for, `2` a usage, authentication, or
+provenance error for which no benchmark was written.
 
 The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
 bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
@@ -303,6 +380,66 @@ from `benchmark.json` is what makes that possible — the benchmark cannot be ig
 because it *is* the artifact, which is why `--retain-run-evidence`, whose text lands inside it,
 stays opt-in and requires inspecting the result before you commit or share it.
 
+### Writing a `must_not_match` — prefer a positive requirement
+
+A forbidden pattern reads as "the model must not do X", but a keyword regex cannot tell an assertion
+of X from X named in order to be rejected. Both failure directions are real, and they cost
+differently: a **trap** fails the right answer loudly (a contract regression that never happened, and
+the next session goes off to rewrite an agent that was behaving), while a **hole** passes the wrong
+one silently. PR #145 shipped ten traps in one file, and then, repairing them, two holes — the
+line-wide negator scan that exempted a whole line whenever any "no" appeared on it let the exact
+refusal a contract rejected grade as a pass.
+
+So, in order of preference:
+
+1. **State the contract positively.** If the requirement is "do not present an unestablished claim as
+   fact", require the `[unverified]` label in the claim's own clause in `must_match`. There is no
+   negation to invert, so neither direction has anywhere to hide, and a response that settles the
+   claim fails a missing requirement rather than slipping past a guard. This is what
+   `researcher-unestablished-claim-stays-unverified` does, after four rounds of the alternative.
+
+   **Positive-first is not positive-only.** A positive requirement is satisfied by ONE conforming
+   mention, so it cannot see a second, contradicting assertion: that case passed `The default connect
+   timeout is [unverified]. The default connect timeout is unchanged.` — label present, claim settled
+   anyway. When the contract forbids a contradiction rather than merely requiring a statement, the
+   positive requirement is the primary instrument and a forbidden pattern still guards the
+   contradiction. The same applies to `reviewer-committed-bytes-remain-approvable`: requiring the
+   affirmative "approval remains available" closes the refusal class, and the forbidden forms stay as
+   the backstop for a response that says both.
+2. **Bind the verb to its object.** "We should break up the monolith" is only a decision when the
+   monolith is what is being broken up; "move the identity provider" is only absorption when the
+   thing moved is the service rather than the decision about it.
+3. **Anchor structurally** — a verdict line at line start beats the same words in prose.
+4. **Scope every exemption to the claim's own clause**, never the whole line. This is the rule with
+   the worst track record here: a line-wide `(?![^\r\n]*\b(?:handoff|words)\b)` reads as "don't
+   fail a compliant handoff" and behaves as "don't fail a line that MENTIONS one", so `I will report
+   the fork to principal-engineer, but we should break up our monolith` — report and absorb in one
+   sentence, the exact thing the case separates — passes. Six patterns in PR #145 had it, in four
+   separate rounds, because each repair was written for one pattern instead of the idiom. Use
+   `(?:(?!\b(?:but|however|yet|though|although)\b)[^;.!?\r\n])*?` between the exemption's vocabulary
+   and the phrase it exempts. An adversative, a semicolon, or **sentence punctuation** ends the
+   clause; a comma does not, because it appears inside idioms the exemption must see through ("not
+   yes, we should …"). The sentence terminator is the part that took three rounds to get right: a
+   guard that crossed a period exempted `I will report the fork to principal-engineer. We should
+   break up our monolith.` — two sentences on one physical line, which is how models actually write.
+   `test_no_forbidden_pattern_exempts_a_whole_line` requires that exact construct, byte for byte —
+   not merely a pattern mentioning `but|however`. The looser check passed a hand-rolled variant whose
+   separators were the adversatives alone, so its exemption still crossed a semicolon and `I do not
+   approve promotion; promotion is approved.` graded clean. One spelling means one behavior: a
+   pattern needing a different scope needs a different rule, argued for, not a quietly weaker copy.
+
+   Second half of the same rule: make the exemption's **vocabulary** as narrow as its scope. Listing
+   `code-reviewer` as a disclaimer word meant `Merge Verdict: APPROVE because code-reviewer missed
+   the issue` exempted itself — a mention is not a disclaimer. Name the wording that actually assigns
+   the decision away (`belongs to`, `is not mine`, `I do not issue`), never the party it is assigned
+   to. If a guard needs more nesting than this to be right,
+   it is the wrong instrument: go back to 1.
+
+Whatever you land, pin **both** directions in `tests/test_eval_behavioral.py` — the compliant
+sentence must not trip, and the asserted violation must still trip. Narrowing is exactly the edit
+that turns a guard into decoration, and every trap in this file's history was in a sentence a
+competent agent would naturally write.
+
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
 wrongly typed lists, unknown components or denied-tool names, unqualified agent names, invalid
@@ -350,6 +487,139 @@ without measuring what it claimed. Every full case declares exactly one of the f
   positive allowlist. The tier-gate case is the reason: it must never be able to perform the apply
   it exists to prove was refused. An eval that can cause the incident it tests for is not a test.
 
+## Baseline retention: what a stored capture is still for
+
+A capture under `baselines/` has exactly two possible jobs, and they retire on different schedules.
+Keeping this straight is the difference between an archive and a graveyard.
+
+1. **Reuse** — serving as the 'before' side of a paired run, which is what `eval_baseline.py`
+   resolves. This job is **fragile by design** and usually already over: the resolver compares the
+   provenance schema, the selection identity, the evaluator identity, and the plugin hash exactly,
+   so any of a schema bump, a case edit, an evaluator change, or a fleet edit ends it permanently.
+   **As of 2026-08-17 no stored capture holds this job** — all ten clusters resolve `STALE`, and
+   the v3→v4 schema move plus the case retirement made that final rather than incidental. Every
+   paired round from here starts with a fresh capture on both sides.
+2. **Evidence** — being the record of a number some doc, decision, or roadmap item relies on. This
+   job does not expire, but it is served by the *distilled summary*, not the raw capture, once one
+   exists.
+
+**The retention rule.** A capture keeps its raw `benchmark.json` files while it can still be
+reused, or while its numbers exist nowhere else. Once neither holds, the summary stays and the raw
+files retire to Git history. Three consequences worth stating, because each has bitten:
+
+- **Distil before you delete, never after.** 14 of the 28 baseline directories have no summary
+  file, so for those the raw capture is the only record and removing it destroys the measurement
+  rather than compressing it. Writing the summary is authoring work and belongs to whoever
+  understands the round — it is not a cleanup step.
+- **"Nothing cites it" is necessary but not sufficient.** A directory no doc names may still hold
+  the only derivation of a number quoted elsewhere. The quoted claim survives deletion; the ability
+  to check it does not.
+- **A before/after pair retires together or not at all.** Dropping one side while keeping the
+  other's summary leaves a delta nobody can re-derive. `2026-07-29-roles-before` and
+  `-roles-after` are the live example: the 'after' directory's only prose is a note explaining a
+  regrade, not a delta record, so neither side is retirable until the pair's rates are written down.
+
+**Applied so far:** `2026-07-30-deep-review-r1`'s raw captures were retired on 2026-08-17 (2,914
+lines across five run directories) because its `README.md` carries the complete verdict — negatives
+18/18 clean both sides, `pos-incident-after-update` 33%→67%, the two recheck recoveries to 5/5,
+`pos-audit-security` 8/8→4/8, and the ablation's explicit no-causal-claim caveat — and nothing in
+the tree cited the directory.
+
+`2026-08-01-self-improve` then went through the distil-first path the rule requires: its seven
+generations were summarized into that directory's new `README.md` — every rate verified against the
+captures before anything was removed — and six uncited generations retired (4,986 lines).
+`final-live/` is **retained in full**, because `docs/fleet-roadmap.md` cites it as LEARN-002's live
+rates, and the rule does not authorize retiring a capture a live item rests on. That summary also
+preserves something no single capture held: three conditions moved mid-round (opus → sonnet, the
+600s → 420s behavioral timeout, provenance none → v1 → v3), so only within-generation pairs are
+like-for-like — and `self-improve-lifecycle-merge` reached 3/3, fell to 0/3, and is still 0/3, which
+is a different problem from never having passed and is visible only across generations.
+
+Then two whole **families** were combined, which is the cheaper move where one round was split across
+many paths. `2026-07-27-{before,after,diagnose}` became
+`2026-07-27-craft-vs-fullstack/README.md`, and the seven directories of the 2026-07-29 verification
+and role-expansion round (`2026-07-29/`, `-isolation/`, `-labsec/`, `-roles-before/`,
+`-roles-after/`, `-verification-seam/`, `-verifier-contracts/`) became
+`2026-07-29-verification-round/README.md`. Ten directories to two, 2,966 lines retired, fifteen
+rates verified against the captures first, and the four citations that pointed into the old paths
+repointed in the same commit. The roles pair's rates are now written down, which is what the
+pair rule required before either side could go.
+
+Combining is usually better than deleting one directory at a time, because a round's finding often
+lives *between* its captures. The 2026-07-29 family is the example: routing could not see the agents
+firing (0/6 twice, and 0.0 on every host and verification-seam positive) while the behavioral
+captures from the same day, same model, confirmed those agents' contracts held once pinned. No single
+directory contains that sentence, and it is the whole argument for the agent-only-positive
+retirement carried out three weeks later.
+
+Finally the rule was applied at scale, with one correction to it. The rule's caution — distil before
+you delete — protects against losing a number. **Git history already provides that protection**: a
+retired capture's exact rates come back with one `git show`, verified. So the rule only needs to bite
+where **no summary exists at all**; where one does, holding the raw as well protects nothing.
+
+What decides it per directory is therefore not "does a summary exist" but **does the summary carry
+the raw's outcomes**. Measured on 2026-08-17: six directories named every one of their cases *and*
+every outcome value — `2026-08-10-learn-002`, `2026-08-11-handoff-001`, `2026-08-13-group1-rescan`,
+`2026-08-13-prop-001`, `2026-08-15-handoff-001-sonnet5`, `2026-08-15-learn-002` — and their raw
+retired (79 files, 11,679 lines), leaving each directory as its summary alone. Six others have a
+summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
+summary that mentions a round without recording its rates is not a substitute for one.
+
+Baselines now total **9,362 lines across 13 top-level directories**, down from 31,656 across 28 —
+a 70% cut with nothing a reader consumes removed. What remains: 1,360 lines of distilled record
+under `history/`, the raw of the partially-summarized directories, and four directories with no
+summary at all
+(`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
+`2026-08-10-gate-001-first-live`) where the raw *is* the record.
+
+Reproduce both totals with `git ls-files -z evals/baselines | xargs -0 wc -l | tail -1`, and the
+same over `evals/baselines/history` for the distilled figure — newline counts over tracked files,
+which is exactly what `test_readme_inventory_figures_match_the_shipped_suites` recomputes. The
+command is stated because two earlier attempts at this number disagreed with each other and with
+the tree: one counted `splitlines()`, which adds one for a file with no trailing newline, so the
+check agreed with itself while being 16 lines off. A figure bound to a computation no reader would
+run is not bound to anything. `2026-07-31-p0-p1` matters most of
+those: it holds the only Codex CLI run this repository has ever recorded.
+
+### Why the behavioral suite has no cuts
+
+Swept for redundancy on 2026-08-17 against the standard that two cases are redundant only when one's
+failure necessarily implies the other's. **Result: zero cuttable cases**, and the reasoning is worth
+keeping so it is not re-litigated each time the suite looks expensive:
+
+- **Behavioral is now the coverage of record for agents.** Routing carries no agent-only positives
+  any more, so cutting here removes the only instrument observing an agent — the zero-instrument hole
+  that `researcher` and `application-security-auditor` were just repaired out of.
+- **Identical oracles across pinned agents are an instrument, not duplication.** The six
+  `learning-owner-*` cases assert two invariants across `sde-fullstack`,
+  `verification-engineer`, and `prompt-engineer` with byte-identical patterns — and the retained
+  capture in `baselines/2026-08-01-self-improve/final-live/` shows the three agents at **different
+  rates with different failure classes**, including one (`verification-engineer` emitting the
+  Learning label twice or empty) that neither other agent produced. Identical text, divergent
+  obedience: that is exactly what per-agent parity exists to catch.
+- **A static check is not a substitute.** `validate_fleet.py` already pins the canonical Learning
+  stanza *text* in those three agents' packet sections. That is a fact about the definition files;
+  these cases measure whether the agent obeys it at runtime, and the capture shows obedience varies
+  while the text does not. Replacing them with a validator rule would rebuild a check that already
+  exists and never observed behavior.
+- **Subset oracles usually isolate a variable.** Where one case's assertions are a strict subset of
+  another's, the pair is normally deliberate: `homelab-visible-effect-survives-long-session` shares
+  its grading with `homelab-right-size-native-tier2` so a divergence is attributable to session
+  length; `runbook-disposition-update` is the reading that survives when the composing skill does not
+  fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
+  shape no case declares is a control nothing runs.
+
+**Where the cost actually is.** 47 of the 70 cases are no-tool planning-only sessions. The expense
+concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
+Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
+per-contract work.
+
+**What the sweep did change:** two oracles that could not fail their own contract were strengthened
+rather than cut, both being their agent's only instrument.
+`distinguished-evolution-plan-has-valuable-stop-points` passed a plan saying "Do not stop partway;
+there are no interim milestones", and `ladder-report-not-absorb` passed a response that named the
+escalation and then made the call anyway — a limit its own `expected` field had conceded in writing.
+
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
@@ -378,8 +648,16 @@ simple-stays-simple, and read-only-investigation seams:
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
 there); the capture under `baselines/2026-07-24/` records the later 5-member / 18-case shape. Both
-are *historical* anchors, not like-for-like comparisons with the current 12-member / 37-case
+are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
+
+**Suite size, as of 2026-08-17:** 111 routing cases across the ten clusters (49 positives, 62
+negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
+The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 70
+deterministic contracts. Both numbers are worth knowing before starting a paired round: the
+'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
+capture reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 
@@ -396,6 +674,19 @@ not only of the description. Read the clusters accordingly:
 - **Agent positives** (`homelab-platform`, the `ladder` and `craft-vs-fullstack` agent members) are
   a weaker signal one run at a time; trust the **negatives** (over-trigger is a real defect at any
   rate) and **regressions across runs** over an absolute agent-positive rate.
+- **This is now the suite's design, not just a caveat.** Routing carries **no agent-only
+  positives** — 26 were retired on 2026-08-17, because a case only a delegation can score measures
+  the harness's reluctance to delegate rather than the description, and nothing in the scoring
+  compensated: `--threshold` is one global value applied identically to every positive regardless
+  of component kind. Of the 49 positives that remain, 31 are skill-only and 18 are mixed (a skill
+  route can score them). **An agent's coverage of record is its pinned behavioral contract**, and
+  its over-trigger coverage stays here — cutting agent positives cost nothing on that axis, because
+  a negative's forbidden set defaults to the whole member list, so every agent in `members` is
+  still guarded against firing on a near-miss.
+- **Adding an agent-only positive is therefore a regression**, not extra coverage: it re-buys three
+  sessions per run to publish a rate that is a property of one-shot headless mode. If an agent's
+  reachability genuinely needs measuring, that is what the native `claude plugin eval` lane below
+  is for.
 - The native `claude plugin eval` (see below) delegates properly and will tighten the agent signal;
   these case files migrate to it unchanged.
 - **Skill positives are only as visible as the listing the eval model saw.** The skill listing is

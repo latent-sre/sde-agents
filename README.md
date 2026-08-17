@@ -114,7 +114,7 @@ The Codex lane is supported but limited, and its limits are about *discovery*, n
 host behaviors change how the fleet is reached here. Both were read from the upstream source at
 HEAD `a16863f8` (re-verified 2026-08-09), not measured against an installed CLI. The repository's
 newest actual Codex run used `codex-cli 0.147.0`
-(`evals/baselines/2026-08-11-handoff-001/`), but that behavioral capture did not test these two
+(`evals/baselines/history/2026-08-11-handoff-001.md`), but that behavioral capture did not test these two
 discovery claims. Treat the claims as source-established and re-check them on a version bump:
 
 - **Explicit-only skills are invisible to the model.** `service-onboard` and `host-onboard` ship

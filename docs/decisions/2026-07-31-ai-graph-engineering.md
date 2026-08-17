@@ -390,7 +390,8 @@ consumer is the operator, not the T0 validator -- both tools ship as on-demand o
 resolution, is GRAPH-004's when a committed contract and runtime consumer exist. Schema v1 is
 deliberately narrower than the retained contract design (no cycles, `all` joins only); the
 retained envelope remains the target for the deferred execution phases, reachable only through a
-schema-version change. The "Consequences if accepted" list is read under this ruling.
+schema-version change. The "Consequences, as realized" list below states the outcome of this
+ruling directly, so it needs no discounting.
 
 ### Accepted -- effect-broker unknown-outcome reconciliation (SAFE-002)
 
@@ -506,7 +507,7 @@ and the original acceptance-evidence list govern the spec.
 - **Exactly-once claims for arbitrary effects:** rejected because the broker and an external target
   cannot commit atomically without target support.
 
-## Consequences if accepted
+## Consequences, as realized
 
 - `agents/` and `skills/` remain the only authored fleet-member definitions.
 - The capability graph is generated evidence; workflow contracts, when any are authored, may only
@@ -514,7 +515,10 @@ and the original acceptance-evidence list govern the spec.
 - `run_state.py` is **not** migrated in this round; its schema changes only if a reopen trigger
   fires and a spec defines migration and rollback.
 - The effect broker gains the unknown-outcome reconciliation contract now.
-- The fleet validator gains graph semantic checks and negative fixtures.
+- The fleet validator gains **no** graph semantic checks (2026-08-12 amendment above): both graph
+  tools ship as on-demand operator CLIs, and that wiring is GRAPH-004's if a runtime consumer
+  appears. GRAPH-002 additionally *removed* a test pinning live counts, because an advisory report
+  that gates merges makes every topology observation a blocker.
 - CTX-001 edits canonical definitions only behind paired eval evidence.
 - Host adapters remain host-specific; unsupported runtime controls stay labeled cooperative.
 

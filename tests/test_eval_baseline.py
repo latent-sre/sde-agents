@@ -20,6 +20,7 @@ from tests.support import REPO, run_main
 sys.path.insert(0, str(REPO / "scripts"))
 
 import eval_baseline  # noqa: E402
+import eval_routing  # noqa: E402  (sibling module; scripts/ is not a package)
 
 CLUSTER = REPO / "evals" / "routing" / "prompt-tooling.json"
 CONDITIONS = {"model_requested": "sonnet", "clean_room": True, "threshold": 0.5,
@@ -51,6 +52,212 @@ class EvalBaselineTests(unittest.TestCase):
         self.assertEqual(0, code, out)
         self.assertIn("REUSABLE", out)
         self.assertIn(path.parent.name, out)
+
+    def test_cluster_bytes_the_scorer_cannot_read_stay_reusable(self) -> None:
+        """Risk: a comment-only cluster edit re-buys a capture that measured identical routing.
+
+        `eval_sources` hashes each cluster file whole, so editing `notes`, the top-level
+        `description`, or an unselected case invalidated every stored baseline for it — while
+        `selection` already pinned the graded fields of the exact selected cases. Restore
+        `eval_sources` to the compared set in eval_baseline.provenance_divergences and this fails.
+        """
+        mutated = copy.deepcopy(self.desired)
+        mutated["eval_sources"] = [
+            {"path": "evals/routing/prompt-tooling.json", "sha256": "0" * 64}
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_benchmark(Path(tmp), mutated, dict(CONDITIONS))
+            code, out = self._run(Path(tmp))
+        self.assertEqual(0, code, out)
+        self.assertIn("REUSABLE", out)
+
+    def test_selection_identity_ignores_documentation_only_case_fields(self) -> None:
+        """`expected_output` and `tags` are intent, not inputs: the scorer never reads them."""
+        base = {
+            "id": "pos-x", "polarity": "positive", "prompt": "p",
+            "expect_fires": ["prompt-craft"],
+        }
+        documented = dict(base, expected_output="a prose note", tags=["near-miss"])
+        self.assertEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [documented])["sha256"],
+        )
+        # A graded field still moves it.
+        regraded = dict(base, expect_fires=["prompt-engineer"])
+        self.assertNotEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [regraded])["sha256"],
+        )
+
+    def test_a_malformed_target_list_is_a_provenance_error_not_a_traceback(self) -> None:
+        """Risk: canonicalizing with `set()` made a bad target list a traceback, not exit 2.
+
+        The sibling of the `members` finding, and it arrived because that repair validated `members`
+        and left the per-case target lists — the same half-fix as sorting one and not the other.
+        `"expect_fires": [{}]` is unhashable, so `set()` raised `TypeError` out of a tool whose
+        docstring documents three exit codes. `_validated_cluster` now reuses the routing runner's
+        `_scoring_targets` rather than restating its rules, so anything the runner refuses before
+        spending is refused here too. Delete that call and this raises instead of asserting.
+        """
+        spec = json.loads(CLUSTER.read_text(encoding="utf-8"))
+        for label, mutation in (
+            ("unhashable target", {"expect_fires": [{}]}),
+            ("non-member target", {"expect_fires": ["not-a-cluster-member"]}),
+            ("empty target list", {"expect_fires": []}),
+            ("target list is not a list", {"expect_fires": "prompt-craft"}),
+            ("unknown polarity", {"polarity": "maybe"}),
+        ):
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as tmp:
+                broken = Path(tmp) / "broken-cluster.json"
+                mutated = json.loads(json.dumps(spec))
+                mutated["cases"][0].update(mutation)
+                broken.write_text(json.dumps(mutated), encoding="utf-8")
+                code, out = run_main(
+                    eval_baseline.main, "--baselines-dir", str(tmp),
+                    "--model", "sonnet", "--timeout", "420", str(broken),
+                )
+                self.assertEqual(2, code, out)
+                with self.assertRaises(eval_routing.ProvenanceError):
+                    eval_baseline.desired_provenance(REPO, broken, "*", 0)
+
+    def test_reordering_a_target_list_does_not_stale_a_baseline(self) -> None:
+        """Risk: the scorer sets these lists, so array order can't change a verdict — only a hash.
+
+        `_scoring_targets` returns `set(raw_targets)`, so reordering `expect_fires` or dropping a
+        duplicate produces byte-identical grading. While the identity preserved array order, that
+        edit reported STALE and demanded a fresh paid capture for a change no verdict could see —
+        the same class of protects-nothing invalidation this narrowing exists to remove. Remove
+        `expect_fires`/`expect_not_fires` from `_UNORDERED_TARGET_FIELDS` and the first two
+        assertions fail.
+        """
+        base = {"id": "pos-x", "polarity": "positive", "prompt": "p",
+                "expect_fires": ["prompt-craft", "prompt-engineer"]}
+        original = eval_routing.selection_identity("*", [base])["sha256"]
+        for label, targets in (
+            ("reordered", ["prompt-engineer", "prompt-craft"]),
+            ("duplicated", ["prompt-craft", "prompt-engineer", "prompt-craft"]),
+        ):
+            with self.subTest(edit=label):
+                self.assertEqual(
+                    original,
+                    eval_routing.selection_identity(
+                        "*", [dict(base, expect_fires=targets)]
+                    )["sha256"],
+                )
+        # The set's CONTENTS are graded, so changing them must still move the hash.
+        self.assertNotEqual(
+            original,
+            eval_routing.selection_identity(
+                "*", [dict(base, expect_fires=["prompt-craft", "code-reviewer"])]
+            )["sha256"],
+        )
+        # A negative's forbidden set is graded the same way and gets the same treatment.
+        negative = {"id": "neg-x", "polarity": "negative", "prompt": "p",
+                    "expect_not_fires": ["prompt-craft", "prompt-engineer"]}
+        self.assertEqual(
+            eval_routing.selection_identity("*", [negative])["sha256"],
+            eval_routing.selection_identity(
+                "*", [dict(negative, expect_not_fires=["prompt-engineer", "prompt-craft"])]
+            )["sha256"],
+        )
+
+    def test_a_case_level_threshold_does_not_stale_a_baseline(self) -> None:
+        """Risk: the narrowing that removed re-buys reintroduced one via an inert field.
+
+        `score_case` takes the threshold as an argument and `main` passes `args.threshold`, so
+        nothing reads `case["threshold"]` — a per-case value grades exactly as its absence does.
+        While it was listed in `GRADED_CASE_FIELDS`, adding one staled every stored baseline for a
+        cluster whose grading had not moved. Put "threshold" back in that tuple and this fails.
+        """
+        base = {"id": "pos-x", "polarity": "positive", "prompt": "p",
+                "expect_fires": ["prompt-craft"]}
+        self.assertEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [dict(base, threshold=0.9)])["sha256"],
+        )
+        # Guard against the fix being wrong in the other direction: if the scorer ever DOES read a
+        # per-case threshold, this test is what says the identity must start hashing it again.
+        self.assertNotIn(
+            "threshold", eval_routing.GRADED_CASE_FIELDS,
+            "if score_case now reads case['threshold'], restore it here and delete this assertion",
+        )
+
+    def test_membership_is_part_of_the_selection_identity(self) -> None:
+        """Risk: dropping the whole-file `eval_sources` check also dropped membership from identity.
+
+        A cluster's `members` list is a grading input, not documentation — a negative with no
+        `expect_not_fires` is scored against the whole member list, so adding or removing a member
+        changes what identical case bytes assert. `eval_sources` used to catch that as a side effect
+        of hashing the file whole; once it stopped being compared, only `selection` can. Drop
+        `members` from `selection_identity` and this fails in both directions.
+        """
+        case = {"id": "neg-x", "polarity": "negative", "prompt": "p"}
+        two = eval_routing.selection_identity("*", [case], members=["prompt-craft", "sde-fullstack"])
+        three = eval_routing.selection_identity(
+            "*", [case], members=["prompt-craft", "sde-fullstack", "code-reviewer"]
+        )
+        self.assertNotEqual(two["sha256"], three["sha256"])
+        # Order is not a grading fact — the scorer intersects against a set — and neither is a
+        # repeat, for the same reason: routing does `set(raw_members)` before grading, required-agent
+        # calculation, and serialization. `members` got the sort one round before the target lists
+        # and not the dedupe, which is how the sibling half stayed broken (PR #145 review).
+        for label, variant in (
+            ("reordered", ["sde-fullstack", "prompt-craft"]),
+            ("duplicated", ["prompt-craft", "sde-fullstack", "prompt-craft"]),
+        ):
+            with self.subTest(members=label):
+                self.assertEqual(
+                    two["sha256"],
+                    eval_routing.selection_identity("*", [case], members=variant)["sha256"],
+                )
+        # And the resolver's own desired identity must actually carry membership. A None here is the
+        # silent failure: the field exists, the hash is stable, and the check enforces nothing.
+        self.assertIsNotNone(self.desired["selection"]["members"])
+
+    def test_a_membership_change_stales_a_stored_benchmark(self) -> None:
+        """The resolver end of the rule above: identity must reach the REUSABLE/STALE verdict."""
+        mutated = copy.deepcopy(self.desired)
+        mutated["selection"]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_benchmark(Path(tmp), mutated, dict(CONDITIONS))
+            code, out = self._run(Path(tmp))
+        self.assertEqual(1, code, out)
+        self.assertIn("selection", out)
+
+    def test_a_malformed_members_list_is_a_provenance_error_not_a_traceback(self) -> None:
+        """Risk: hashing `members` sent a bad cluster to `sorted()` instead of to exit 2.
+
+        The resolver documents three exits and nothing else, so a mixed-type member list — which the
+        routing runner refuses outright before spending anything — must not leave this tool by
+        traceback. Delete the `members` branch in `_validated_cluster` and this raises `TypeError`
+        rather than asserting.
+        """
+        spec = json.loads(CLUSTER.read_text(encoding="utf-8"))
+        for label, members in (
+            ("mixed types", ["prompt-craft", 1]),
+            ("empty", []),
+            ("blank string", ["prompt-craft", "   "]),
+            ("not a list", "prompt-craft"),
+            ("absent", None),
+        ):
+            with self.subTest(members=label), tempfile.TemporaryDirectory() as tmp:
+                broken = Path(tmp) / "broken-cluster.json"
+                mutated = dict(spec)
+                if members is None:
+                    mutated.pop("members", None)
+                else:
+                    mutated["members"] = members
+                broken.write_text(json.dumps(mutated), encoding="utf-8")
+                code, out = run_main(
+                    eval_baseline.main, "--baselines-dir", str(tmp),
+                    "--model", "sonnet", "--timeout", "420", str(broken),
+                )
+                self.assertEqual(2, code, out)
+                # The message is asserted at the unit that raises it: run_main swallows stderr by
+                # house convention, so the exit code alone cannot say WHY the resolver refused.
+                with self.assertRaises(eval_routing.ProvenanceError) as raised:
+                    eval_baseline.desired_provenance(REPO, broken, "*", 0)
+                self.assertIn("members", str(raised.exception))
 
     def test_changed_plugin_bytes_are_stale_and_named(self) -> None:
         mutated = copy.deepcopy(self.desired)

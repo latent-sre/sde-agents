@@ -2,8 +2,8 @@
   "applicability": "Every future external-research dispatch from this environment",
   "candidate_id": "lc_854a12b53a16434f81128a9ca256fbc0",
   "created_at": "2026-08-13T17:42:59.391397Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "agents/researcher.md Method section 3 retrieval-path fidelity clause",
+  "disposition": "merge",
   "evidence": {
     "environment": "Claude Code remote container, agent-proxy egress per /root/.ccr README",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-12T17:42:59.391397Z"
   },
   "observation": "Direct WebFetch of arxiv.org, anthropic.com, cognition.com, and simonwillison.net is egress-blocked behind the agent proxy, so researcher packets citing those domains carry search-excerpt-mediated quotes rather than deterministic page reads",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Two independent verified occurrences share the behavior and boundary, so this is recurrence rather than an anecdote: several primary domains block direct fetch behind the agent proxy while search excerpts still return, so packets citing those pages carry excerpt-mediated quotes that read as deterministic reads. Method 3 covers an unavailable evidence service but not a reachable-but-blocked primary domain. The clause must be path-conditional, never an enumerated domain list, which would be false for environments without this proxy. Carries the residual deltas of the two records superseded into it.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -55,6 +55,16 @@
     "last_attested_at": "2026-08-14T17:55:19.695574Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-14T17:55:19.695574Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:56:39.129272Z",
+      "destination": "agents/researcher.md Method section 3 retrieval-path fidelity clause",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Two independent verified occurrences share the behavior and boundary, so this is recurrence rather than an anecdote: several primary domains block direct fetch behind the agent proxy while search excerpts still return, so packets citing those pages carry excerpt-mediated quotes that read as deterministic reads. Method 3 covers an unavailable evidence service but not a reachable-but-blocked primary domain. The clause must be path-conditional, never an enumerated domain list, which would be false for environments without this proxy. Carries the residual deltas of the two records superseded into it.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-17T11:56:39.129272Z"
 }

@@ -64,7 +64,22 @@ FLEET_SKILLS = frozenset(p.name for p in (REPO / "skills").iterdir() if p.is_dir
 FLEET = FLEET_AGENTS | FLEET_SKILLS
 NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENTS)
 
-PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v3"
+# v4 (2026-08-17): the identity narrowed to what the scorer reads. `selection.definitions` now
+# hashes only the graded case fields (GRADED_CASE_FIELDS) instead of whole case dicts, and
+# `eval_baseline.py` no longer compares `eval_sources`, which hashed each cluster file whole and so
+# invalidated captures on comment-only edits. Both changes remove invalidations that protected
+# nothing. The version moves because a v3 selection hash was computed over different bytes and
+# cannot be compared with a v4 one — reporting that as "selection diverged" would misattribute a
+# schema change to a routing change.
+#
+# Two later hashing changes in the same PR deliberately did NOT take a v5, and the reason is the
+# rule for the next one: the version exists so a STORED capture computed under older rules is
+# reported as a schema difference rather than a routing one. Every stored capture is v3 (8) or
+# unversioned (17) — no v4 capture has ever been written — and `provenance_divergences` returns on a
+# schema mismatch before it compares `selection`, so those captures can never reach the changed
+# hashing at all. A v5 would therefore rename something no reader can observe. Bump when a capture
+# exists that the change would misreport; not merely because the hash moved.
+PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v4"
 
 # `claude --plugin-dir` discovers these authored/runtime surfaces. The allowlist is deliberate:
 # test fixtures, eval outputs, repository docs, generated host adapters, and operator scratch state
@@ -310,14 +325,83 @@ def evaluator_identity(paths: list[Path]) -> dict:
     }
 
 
-def selection_identity(expression: str, cases: list[dict], limit: int | None = None) -> dict:
-    """Hash selected definitions and the exact selection operation as canonical JSON."""
+GRADED_CASE_FIELDS = ("id", "polarity", "prompt", "expect_fires", "expect_not_fires")
+# Graded as SETS by `_scoring_targets`, so their array order and any duplicate are invisible
+# to every verdict and must be invisible to the identity too.
+_UNORDERED_TARGET_FIELDS = frozenset({"expect_fires", "expect_not_fires"})
+
+
+def _graded_definition(case: dict) -> dict:
+    """The fields of a case the scorer actually reads.
+
+    `expected_output` and `tags` are documentation of intent: `score_case` never reads either, so
+    hashing them made a comment edit invalidate a stored baseline that measured byte-identical
+    routing. Narrowing the identity to the graded fields removes invalidations that protect
+    nothing — it does not weaken the identity, because a field the grader cannot see cannot change
+    a rate. Add a field here in the same change that makes the scorer read it.
+
+    A case-level `threshold` was listed here and is not: `score_case` takes the threshold as an
+    ARGUMENT and `main` passes `args.threshold`, so nothing reads `case["threshold"]` and a
+    per-case value grades identically to its absence. Listing it meant an inert field could stale
+    every stored baseline for a cluster whose grading had not moved — the exact re-buy this
+    narrowing exists to stop, reintroduced by the narrowing itself. If per-case thresholds are ever
+    implemented, this entry returns in that same change (PR #145 review).
+    """
+    return {
+        # `expect_fires` / `expect_not_fires` are hashed as sorted unique values because
+        # `_scoring_targets` returns `set(raw_targets)` — order and duplicates are both discarded
+        # before anything is graded, so preserving array order here made a pure reorder read as a
+        # routing change and demanded a fresh paid capture. Same reason `members` is sorted above
+        # (PR #145 review). Every other graded field keeps its literal value: `prompt` and `id` are
+        # compared as written, and `polarity` is a scalar.
+        field: sorted(set(case[field])) if field in _UNORDERED_TARGET_FIELDS else case[field]
+        for field in GRADED_CASE_FIELDS
+        if field in case
+    }
+
+
+def validated_members(raw: object) -> list[str]:
+    """The ONE place the `members` rule lives, because three paths hash that value.
+
+    A cluster's members reach `sorted(set(...))` in `selection_identity`, so a malformed list
+    (`["prompt-craft", 1]`) raises an uncaught TypeError wherever it is hashed. The rule was stated
+    inline in `main()`, restated in `eval_baseline._validated_cluster`, and absent from the
+    post-session reread — so the reread crashed on a cluster edited mid-run while the other two
+    refused it cleanly. Three copies of a rule is how a path ends up without it (PR #145 review).
+    """
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(not isinstance(member, str) or not member.strip() for member in raw)
+    ):
+        raise ProvenanceError("cluster error: 'members' must be a non-empty list of component names")
+    return list(raw)
+
+
+def selection_identity(
+    expression: str, cases: list[dict], limit: int | None = None,
+    *, members: list[str] | None = None,
+) -> dict:
+    """Hash selected definitions, the cluster's members, and the exact selection operation.
+
+    `members` is a grading input, not context: a negative with no `expect_not_fires` is graded
+    against the WHOLE member list (`_scoring_targets`), and `required_agents` is derived from it, so
+    a membership change moves what the same case bytes assert. It is hashed here because narrowing
+    the identity to graded case fields would otherwise let a membership change pass unnoticed —
+    `eval_sources` used to catch it only as a side effect of hashing the whole cluster file.
+    """
     case_ids = [case["id"] for case in cases]
     selected = {
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
-        "definitions": cases,
+        # sorted UNIQUE, for the same reason the target lists are: routing does `set(raw_members)`
+        # before grading, required-agent calculation, and serialization, so a repeated member
+        # changes no measurement — and preserving the duplicate here staled a capture for an edit
+        # no verdict could see. `members` was sorted one round before the target lists and did not
+        # get the dedupe half of the same fact (PR #145 review).
+        "members": sorted(set(members)) if members is not None else None,
+        "definitions": [_graded_definition(case) for case in cases],
     }
     canonical = json.dumps(
         selected, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
@@ -326,6 +410,7 @@ def selection_identity(expression: str, cases: list[dict], limit: int | None = N
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
+        "members": sorted(set(members)) if members is not None else None,
         "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
         "sha256": _sha256(canonical),
     }
@@ -575,12 +660,12 @@ def verify_frozen_plugin(plugin_dir: Path, expected_identity: dict) -> None:
 def benchmark_provenance(
     source_paths: list[Path], cases: list[dict], expression: str, plugin_dir: Path,
     limit: int | None = None, *, evaluator_paths: list[Path],
-    plugin_identity_value: dict | None = None,
+    plugin_identity_value: dict | None = None, members: list[str] | None = None,
 ) -> dict:
     return {
         "schema": PROVENANCE_SCHEMA,
         "eval_sources": source_identity(source_paths),
-        "selection": selection_identity(expression, cases, limit),
+        "selection": selection_identity(expression, cases, limit, members=members),
         # This is deliberately separate from the plugin under test. A copied or external plugin
         # directory does not identify the local runner and deterministic graders that interpreted
         # its transcripts.
@@ -626,6 +711,23 @@ def _event_message_field(event: object, field: str):
         return None
     message = event.get("message")
     return message.get(field) if isinstance(message, dict) else None
+
+
+def decode_stream(value: object) -> str:
+    """Text for a captured stream, whatever the failure path handed us.
+
+    Not a convenience wrapper: `subprocess.TimeoutExpired.stdout` is **bytes even when the call
+    passed `encoding=`**, so an `isinstance(value, str)` test silently yields "" and throws away
+    the partial transcript of a session that was already paid for. Every timed-out run then
+    reports no tokens, no model, and no duration into a `conditions` block whose whole purpose is
+    stating what was measured. Readers of both Claude-side runners route through here so the
+    bytes/str asymmetry is answered in one place.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return ""
 
 
 def components_fired(transcript: str) -> set[str]:
@@ -786,12 +888,8 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
             if proc.returncode != 0:
                 note = f"exit {proc.returncode}: {stderr[:150]}"
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode("utf-8", "replace")
-        stderr = exc.stderr or ""
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode("utf-8", "replace")
+        stdout = decode_stream(exc.stdout)
+        stderr = decode_stream(exc.stderr)
         returncode = 1
         note = f"timed out after {timeout}s (partial transcript graded)"
     except Exception as exc:  # a broken spawn must not crash the suite
@@ -1097,13 +1195,10 @@ def main(argv: list[str] | None = None) -> int:
     if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
         print("cluster error: 'cluster' must be a non-empty string", file=sys.stderr)
         return 2
-    raw_members = spec.get("members")
-    if (
-        not isinstance(raw_members, list)
-        or not raw_members
-        or any(not isinstance(member, str) or not member.strip() for member in raw_members)
-    ):
-        print("cluster error: 'members' must be a non-empty list of component names", file=sys.stderr)
+    try:
+        raw_members = validated_members(spec.get("members"))
+    except ProvenanceError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
     raw_cases = spec.get("cases")
     if not isinstance(raw_cases, list) or not raw_cases:
@@ -1142,7 +1237,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             provenance = benchmark_provenance(
                 [cluster_path], cases, args.case, args.plugin_dir, args.limit,
-                evaluator_paths=routing_evaluator_paths(),
+                evaluator_paths=routing_evaluator_paths(), members=raw_members,
             )
         except ProvenanceError as exc:
             print(f"provenance error: {exc}", file=sys.stderr)
@@ -1311,6 +1406,7 @@ def main(argv: list[str] | None = None) -> int:
             latest_provenance = benchmark_provenance(
                 [cluster_path], latest_cases, args.case, args.plugin_dir, args.limit,
                 evaluator_paths=routing_evaluator_paths(),
+                members=validated_members(latest_spec.get("members")),
             )
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)
