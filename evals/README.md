@@ -422,9 +422,21 @@ files retire to Git history. Three consequences worth stating, because each has 
 lines across five run directories) because its `README.md` carries the complete verdict — negatives
 18/18 clean both sides, `pos-incident-after-update` 33%→67%, the two recheck recoveries to 5/5,
 `pos-audit-security` 8/8→4/8, and the ablation's explicit no-causal-claim caveat — and nothing in
-the tree cited the directory. Everything else is still held under the rule above; the largest
-outstanding candidate is `2026-08-01-self-improve` (6,403 lines, seven generations) where only
-`final-live/` is cited and no summary exists, so it owes a distillation pass, not a deletion.
+the tree cited the directory.
+
+`2026-08-01-self-improve` then went through the distil-first path the rule requires: its seven
+generations were summarized into that directory's new `README.md` — every rate verified against the
+captures before anything was removed — and six uncited generations retired (4,986 lines).
+`final-live/` is **retained in full**, because `docs/fleet-roadmap.md` cites it as LEARN-002's live
+rates, and the rule does not authorize retiring a capture a live item rests on. That summary also
+preserves something no single capture held: three conditions moved mid-round (opus → sonnet, the
+600s → 420s behavioral timeout, provenance none → v1 → v3), so only within-generation pairs are
+like-for-like — and `self-improve-lifecycle-merge` reached 3/3, fell to 0/3, and is still 0/3, which
+is a different problem from never having passed and is visible only across generations.
+
+Baselines now total 23,907 lines, down from 31,730. Everything else is still held under the rule
+above; the remaining candidates all owe a summary first, and `2026-07-29-roles-before`/`-roles-after`
+additionally owe the pair treatment described above.
 
 ## Relationship to `claude plugin eval`
 
