@@ -360,6 +360,24 @@ def _graded_definition(case: dict) -> dict:
     }
 
 
+def validated_members(raw: object) -> list[str]:
+    """The ONE place the `members` rule lives, because three paths hash that value.
+
+    A cluster's members reach `sorted(set(...))` in `selection_identity`, so a malformed list
+    (`["prompt-craft", 1]`) raises an uncaught TypeError wherever it is hashed. The rule was stated
+    inline in `main()`, restated in `eval_baseline._validated_cluster`, and absent from the
+    post-session reread — so the reread crashed on a cluster edited mid-run while the other two
+    refused it cleanly. Three copies of a rule is how a path ends up without it (PR #145 review).
+    """
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(not isinstance(member, str) or not member.strip() for member in raw)
+    ):
+        raise ProvenanceError("cluster error: 'members' must be a non-empty list of component names")
+    return list(raw)
+
+
 def selection_identity(
     expression: str, cases: list[dict], limit: int | None = None,
     *, members: list[str] | None = None,
@@ -377,7 +395,12 @@ def selection_identity(
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
-        "members": sorted(members) if members is not None else None,
+        # sorted UNIQUE, for the same reason the target lists are: routing does `set(raw_members)`
+        # before grading, required-agent calculation, and serialization, so a repeated member
+        # changes no measurement — and preserving the duplicate here staled a capture for an edit
+        # no verdict could see. `members` was sorted one round before the target lists and did not
+        # get the dedupe half of the same fact (PR #145 review).
+        "members": sorted(set(members)) if members is not None else None,
         "definitions": [_graded_definition(case) for case in cases],
     }
     canonical = json.dumps(
@@ -387,7 +410,7 @@ def selection_identity(
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
-        "members": sorted(members) if members is not None else None,
+        "members": sorted(set(members)) if members is not None else None,
         "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
         "sha256": _sha256(canonical),
     }
@@ -1172,13 +1195,10 @@ def main(argv: list[str] | None = None) -> int:
     if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
         print("cluster error: 'cluster' must be a non-empty string", file=sys.stderr)
         return 2
-    raw_members = spec.get("members")
-    if (
-        not isinstance(raw_members, list)
-        or not raw_members
-        or any(not isinstance(member, str) or not member.strip() for member in raw_members)
-    ):
-        print("cluster error: 'members' must be a non-empty list of component names", file=sys.stderr)
+    try:
+        raw_members = validated_members(spec.get("members"))
+    except ProvenanceError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
     raw_cases = spec.get("cases")
     if not isinstance(raw_cases, list) or not raw_cases:
@@ -1386,7 +1406,7 @@ def main(argv: list[str] | None = None) -> int:
             latest_provenance = benchmark_provenance(
                 [cluster_path], latest_cases, args.case, args.plugin_dir, args.limit,
                 evaluator_paths=routing_evaluator_paths(),
-                members=latest_spec.get("members"),
+                members=validated_members(latest_spec.get("members")),
             )
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)

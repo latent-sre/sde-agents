@@ -20,7 +20,13 @@ provenance schema has since gone v3 → v4 as well. Treat the capture as evidenc
 measured, never as a before-side: any paired ladder run owes a fresh capture. It was in any case
 not the Mode 3 trim's before-side,
 which requires a targeted Mode 3 case authored first and a fresh capture including it (the case
-edit changes the exact `eval_sources` identity; LADDER-002 carries the protocol). The reuse is
+edit changes the exact `eval_sources` identity; LADDER-002 carries the protocol).
+**Correction, 2026-08-17 (PR #145):** the identity named there is now `selection`, not
+`eval_sources` — the latter hashes each cluster file whole and stopped being compared, because its
+extra reach was all bytes the scorer cannot read. The conclusion is unchanged, and for a stronger
+reason: a new case is a graded-field change, so `selection` stales the capture directly rather
+than as a side effect of the file's bytes moving. The Mode 3 case itself landed the same day, so
+the remaining step is the fresh capture. The reuse is
 also identity-bound, not unconditional: the evaluator identity pins the runtime (CPython 3.11.15
 recorded), so a host on another Python reports `STALE: diverged on evaluator` and owes that
 runtime or a fresh capture.

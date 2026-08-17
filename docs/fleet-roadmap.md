@@ -538,12 +538,14 @@ duplicate stateless remit survives in the body). Electing this half is a values 
 dead-code removal: review named the candidate reader the upheld finding does not cover — the
 human operator, whose own diffs Mode 3 could assess at a ladder bar, a consumer neither
 `self-improve-loop` nor `prompt-engineer` serves — so the ruling weighs that route's worth
-against its per-session description surface. **The cluster cannot witness this trim as it
-stands**: `evals/routing/ladder.json` carries no Mode 3 growth-feedback positive, so a paired run
-on today's cases would report identical rates while never exercising the removed route. The
-trim's measurement therefore starts by authoring a targeted Mode 3 positive (a body-of-work
-growth-feedback prompt), capturing a fresh 'before' that includes it, then making the
-description-plus-body edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
+against its per-session description surface. **The cluster could not witness this trim, and now can**:
+`evals/routing/ladder.json` carried no Mode 3 growth-feedback positive, so a paired run on those
+cases would have reported identical rates while never exercising the removed route.
+`pos-engladder-growth-feedback` landed 2026-08-17 (PR #145) and closes that prerequisite — a
+body-of-work prompt carrying eight embedded artifacts, six PRs and two design notes, so the case
+grades Mode 3 rather than the harness's empty working directory. **Do not author another one.** The
+next step is therefore the fresh 'before' capture that includes it, then the description-plus-body
+edit and the 'after' — the stored 2026-08-14 baseline cannot serve as this
 half's 'before' (its case bytes lack the route) and stands only as the historical anchor. In the
 after run, negatives hold their forbidden sets at 0% fire, the new Mode 3 positive's silence is
 the *expected* result of the trim, **and the surviving positive modes show no unexplained
@@ -556,8 +558,10 @@ positive it would grade every future ladder run permanently red and blur real re
 are elected:** every elected case-bytes change (the Mode 3 positive here, the assess rewrite in
 half (b)) lands **before** the single fresh 'before' capture on the revised cases, and the
 description-plus-body edit lands between that 'before' and the 'after' — case edits after the
-'before' stale it through `eval_baseline.py`'s exact `eval_sources` identity, and an unordered
-session can spend the full T3 batch and produce no valid comparison. (b) **Instrument repairs** —
+'before' stale it through `eval_baseline.py`'s exact `selection` identity (which pins the graded
+fields of the selected cases; `eval_sources` stopped being compared in PR #145 and no longer
+stales anything), and an unordered session can spend the full T3 batch and produce no valid
+comparison. (b) **Instrument repairs** —
 rewrite `pos-engladder-assess` to carry a small concrete diff inline so the mode can fire in an
 empty cwd, and port the consult-fork calibration to a behavioral contract grading the verdict's
 content — builder-owned, the named principal consult marked **required** (optional/advisory

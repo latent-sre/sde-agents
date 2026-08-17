@@ -197,11 +197,19 @@ class EvalBaselineTests(unittest.TestCase):
             "*", [case], members=["prompt-craft", "sde-fullstack", "code-reviewer"]
         )
         self.assertNotEqual(two["sha256"], three["sha256"])
-        # Order is not a grading fact — the scorer intersects against a set.
-        reordered = eval_routing.selection_identity(
-            "*", [case], members=["sde-fullstack", "prompt-craft"]
-        )
-        self.assertEqual(two["sha256"], reordered["sha256"])
+        # Order is not a grading fact — the scorer intersects against a set — and neither is a
+        # repeat, for the same reason: routing does `set(raw_members)` before grading, required-agent
+        # calculation, and serialization. `members` got the sort one round before the target lists
+        # and not the dedupe, which is how the sibling half stayed broken (PR #145 review).
+        for label, variant in (
+            ("reordered", ["sde-fullstack", "prompt-craft"]),
+            ("duplicated", ["prompt-craft", "sde-fullstack", "prompt-craft"]),
+        ):
+            with self.subTest(members=label):
+                self.assertEqual(
+                    two["sha256"],
+                    eval_routing.selection_identity("*", [case], members=variant)["sha256"],
+                )
         # And the resolver's own desired identity must actually carry membership. A None here is the
         # silent failure: the field exists, the hash is stable, and the check enforces nothing.
         self.assertIsNotNone(self.desired["selection"]["members"])

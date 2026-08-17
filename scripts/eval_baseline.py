@@ -52,19 +52,11 @@ def _validated_cluster(spec: object) -> dict:
         raise eval_routing.ProvenanceError("cluster error: top-level JSON value must be an object")
     if not isinstance(spec.get("cluster"), str) or not spec["cluster"].strip():
         raise eval_routing.ProvenanceError("cluster error: 'cluster' must be a non-empty string")
-    raw_members = spec.get("members")
-    # Validated here for the same reason the cases are: `members` now reaches `sorted()` inside
-    # selection_identity, and a mixed-type list (`["foo", 1]`) raises an uncaught TypeError —
-    # a traceback where this tool documents exit 2. The routing runner applies the identical rule
-    # before its own batch, so a cluster it refuses must not resolve here either.
-    if (
-        not isinstance(raw_members, list)
-        or not raw_members
-        or any(not isinstance(member, str) or not member.strip() for member in raw_members)
-    ):
-        raise eval_routing.ProvenanceError(
-            "cluster error: 'members' must be a non-empty list of non-empty strings"
-        )
+    # `eval_routing.validated_members` rather than a restatement: `members` reaches `sorted(set(...))`
+    # inside selection_identity, so a mixed-type list raises TypeError where this tool documents
+    # exit 2 — and the rule had three copies, one of which (the runner's post-session reread) simply
+    # did not have it. One owner now (PR #145 review).
+    raw_members = eval_routing.validated_members(spec.get("members"))
     raw_cases = spec.get("cases")
     if not isinstance(raw_cases, list) or not raw_cases:
         raise eval_routing.ProvenanceError("cluster error: 'cases' must be a non-empty list")
