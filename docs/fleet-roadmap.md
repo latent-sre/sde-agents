@@ -625,7 +625,10 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
   undocumented guarantee this fleet depends on, so the failure is either a real regression or
   canary-quoting variance the oracle cannot separate — settle which with one repeat run before
-  treating either answer as known. Source: PR #143 probe run.
+  treating either answer as known. A third hypothesis is already reproduced: the
+  [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) documents
+  the same both-canaries-absent signature caused by async agent launches the probe's
+  `tool_use_id` correlation does not consume. Source: PR #143 probe run.
 - **PROBE-003** — `probe_plugin.py`'s five workflow assertions cannot run as root: the workflow
   launch needs `--dangerously-skip-permissions`, which Claude Code refuses under root/sudo, so all
   five fail as a cascade of one environment condition and read as five fleet defects. Detect the
@@ -651,8 +654,8 @@ absorbed generated-prompt provenance control.
 
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
-[`WF-001 pilot note`](archive/2026-08/wf-001-pilot-run-2026-08.md) are the baseline for that
-call). SAFE-003 (closed 2026-08-10,
+[`WF-001 outcome record`](archive/2026-08/wf-001-outcome-2026-08-01.md)'s pilot-acceptance-run
+section are the baseline for that call). SAFE-003 (closed 2026-08-10,
 [outcome record](archive/2026-08/safe-003-outcome-2026-08-10.md)) is no longer a trigger: its
 2026-08-09 ruling chose document-and-enforce over the resolver path, so nothing there now needs
 a contract document to resolve to.
