@@ -10,9 +10,15 @@ escalation", the accurate call was builder-owned with a required consult) with a
 `claude-sonnet-5` observed, clean-room, one run excluded on a structured error, four graded on
 timeout-partial transcripts. Capture at
 [`evals/baselines/2026-08-14-ladder/`](../../../evals/baselines/2026-08-14-ladder/decisions.md)
-(benchmark + decisions note); `eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` resolves it
-`REUSABLE` on the capture host, so it stands as the cluster's stored 'before' for a future
-description edit **whose case bytes are unchanged** — it is not the Mode 3 trim's before-side,
+(benchmark + decisions note). **Correction, 2026-08-17:** this record originally said the capture
+resolves `REUSABLE` on the capture host and therefore stands as the cluster's stored 'before'. It
+does not, and did not when written — `eval_baseline.py evals/routing/ladder.json --model sonnet
+--clean-room` reports `STALE: diverged on evaluator, plugin`, verified on CPython 3.11.15, the
+capture's own recorded runtime, so the runtime caveat the record gave was never the binding cause
+(`scripts/eval_clean_room.py` changed the day after the capture, and the plugin hash moved). The
+provenance schema has since gone v3 → v4 as well. Treat the capture as evidence of what LADDER-001
+measured, never as a before-side: any paired ladder run owes a fresh capture. It was in any case
+not the Mode 3 trim's before-side,
 which requires a targeted Mode 3 case authored first and a fresh capture including it (the case
 edit changes the exact `eval_sources` identity; LADDER-002 carries the protocol). The reuse is
 also identity-bound, not unconditional: the evaluator identity pins the runtime (CPython 3.11.15
