@@ -612,15 +612,42 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
                 self.assertTrue(any(expected in finding for finding in findings), findings)
 
     def test_default_run_count_is_the_fleet_grading_base(self) -> None:
-        """Five is a measurement policy, not a preference: three cannot separate a defect from
-        variance here (identical bytes scored 1/3 then 3/5, and a 3/3 hid a real defect n=5 caught).
-        Nothing else pins it, so a silent revert to a cheaper default would quietly restore the
-        run count whose readings this suite's own history shows cannot be trusted."""
-        buffer = io.StringIO()
-        with contextlib.redirect_stdout(buffer):
-            with self.assertRaises(SystemExit):
-                eval_behavioral.main(["--help"])
-        self.assertIn("default 5", buffer.getvalue())
+        """Five is a measurement policy: three cannot separate a defect from variance here
+        (identical bytes scored 1/3 then 3/5, and a 3/3 hid a real defect n=5 caught).
+
+        Asserts the PARSED default by running a no-``--runs`` batch, not the help string: the
+        help text is an independent literal, so a revert of ``default=`` alone left it reading
+        `default 5` and the earlier version of this test passed the very regression it names.
+        """
+        runs = []
+
+        def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            runs.append(1)
+            return "the plan targets a scratch container — approval before I apply", \
+                {"homelab-platform"}, None, {
+                    "input_tokens": 21, "output_tokens": 8, "duration_ms": 13,
+                    "model": None, "completed": True, "result_error": False,
+                }
+
+        original_run = eval_behavioral.run_session
+        original_claude = eval_behavioral.CLAUDE
+        eval_behavioral.run_session = fake_run_session
+        eval_behavioral.CLAUDE = "claude"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--model", "opus", "--timeout", "77",
+                    "--output-dir", tmp,
+                ])
+                benchmark = json.loads((Path(tmp) / "benchmark.json").read_text())
+        finally:
+            eval_behavioral.run_session = original_run
+            eval_behavioral.CLAUDE = original_claude
+
+        self.assertEqual(5, benchmark["runs_per_case"])
+        self.assertEqual(5, len(runs))
 
     def test_vocabulary_backed_exact_field_rejects_undeclared_value(self) -> None:
         """A value outside the closed set is unreachable, so it would fail as a false behavioral

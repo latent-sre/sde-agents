@@ -259,6 +259,11 @@ EFFECT_CLASSES = (
     "irreversible or custody boundary",
     "optional hardening",
 )
+# agents/homelab-platform.md owns these three vocabularies; this is a deliberate mirror, kept
+# standalone so an eval-time linter does not import an agent parser. tests/test_packet_lint.py
+# reads the canonical declaration and fails on drift: on disagreement the agent file wins and
+# this copy is the defect. Renaming a class there without updating here would reject compliant
+# output as a behavioral failure.
 # Only labels listed here are graded against a closed set; everything else keeps exact comparison.
 EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
     "Gate": GATE_STATES,
@@ -460,9 +465,14 @@ def _collapse_display_echoes(
     seen: dict[str, bool] = {}
     collapsed: list[tuple[int, str]] = []
     for index, value, decorated in valued:
-        if value in seen and seen[value] != decorated:
+        # Case and trailing sentence punctuation are display, exactly as the decoration markers
+        # are: ``**Gate: Consolidated**`` echoing ``Gate: consolidated`` is one contract rendered
+        # twice. Comparing them byte-exact left the pair uncollapsed, and a closed-vocabulary slot
+        # then read it as two declarations and failed an otherwise compliant transcript.
+        key = _strip_sentence_punctuation(value).casefold()
+        if key in seen and seen[key] != decorated:
             continue
-        seen.setdefault(value, decorated)
+        seen.setdefault(key, decorated)
         collapsed.append((index, value))
     return collapsed
 

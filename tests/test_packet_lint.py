@@ -7,6 +7,7 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
+import re
 import unittest
 
 from scripts import learning_ledger
@@ -562,6 +563,36 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             ["Learning: closeout has no disposition value"],
             packet_lint.lint_learning_closeout("Learning:\n", "lifecycle-owner"),
         )
+
+    def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
+        """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
+
+        Nothing else binds the two, so renaming or extending a class there would silently make
+        compliant agent output fail `lint_exact_fields` as if the AGENT had regressed — a
+        source-drift defect wearing a behavioral failure's clothes. On disagreement the agent
+        file wins and the constant here is what must change.
+        """
+        canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        section = canonical.split(
+            "five-class list is the fleet's canonical risk/effect classification", 1
+        )[1]
+        declared_classes = re.findall(
+            r"^- \*\*([^*]+)\*\*\s+—", section.split("\n\n\n")[0], re.M
+        )[:5]
+        self.assertEqual(
+            [value.casefold() for value in packet_lint.EFFECT_CLASSES],
+            [name.casefold() for name in declared_classes],
+        )
+        for label, constant in (
+            ("Gate", packet_lint.GATE_STATES),
+            ("Instrument", packet_lint.INSTRUMENT_STATES),
+        ):
+            with self.subTest(label=label):
+                declared = re.search(rf"`{label}: <([^>]+)>`", canonical).group(1)
+                self.assertEqual(
+                    [value.casefold() for value in constant],
+                    [part.casefold() for part in declared.split("|")],
+                )
 
     def test_gate_slots_grade_case_insensitively_but_free_text_stays_exact(self) -> None:
         """The gate slots replace prose matching, so case and a trailing stop must not decide a
