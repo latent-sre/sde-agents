@@ -259,7 +259,7 @@ EXACT_FIELD_LABELS = (
 # closing it, with every graded transcript behaviorally correct (ORACLE-001). A closed value set
 # has no paraphrase surface to chase.
 GATE_STATES = ("consolidated", "new")
-INSTRUMENT_STATES = ("fresh request required", "n/a")
+INSTRUMENT_STATES = ("fresh request required",)
 EFFECT_CLASSES = (
     "artifact preparation",
     "repository publication",

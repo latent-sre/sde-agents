@@ -175,17 +175,20 @@ not the cover.
 ### Two places the agent was told something it could not act on
 
 **GATE-004**: the broker requires an absolute `argv[0]`, and the agent turned that into one
-hardcoded path. It also rejects an executable that is not a regular file, so on macOS, NixOS,
-Homebrew or rootless hosts a session following the instruction literally builds a request that
-cannot be signed — and finds out at approval time. It now resolves the executable on the
-execution host.
+hardcoded path. It also rejects an executable that is not a regular file, so a session following
+the instruction literally builds a request that cannot be signed on any host keeping Docker
+elsewhere. Corrected to resolve on the execution host — and trimmed twice, because the first
+version spent 530 chars on a host list and a worked-example caveat that were illustration.
 
-**GATE-003**: `Instrument: <fresh request required|n/a>` was offered with only the first defined.
-`n/a` now means the gate has no broker instrument *because it belongs to another owner*, and is
-explicitly about the gate's kind rather than whether a request is obtainable. That distinction is
-load-bearing: when the transport is absent the value stays `fresh request required`, because
-`n/a` there would record "this effect needs no signed request" — the one claim that state must
-not make.
+**GATE-003**: `Instrument: <fresh request required|n/a>` was offered with only the first defined,
+so two sessions could emit contradictory machine-readable decisions for one state. It closed by
+**deleting `n/a`**, on the second pass — the first defined it, in a 952-char paragraph, which was
+the wrong repair. The declaration block is scoped per *effect*, every effect it gates is
+broker-mediated, and `n/a` had never been emitted by any case, fixture, or test in the
+repository's history. A value with no reachable state and no consumer is removed, not documented;
+the surviving sentence says the instrument is always owed, transport outage included. Deleting it
+also closes the item more completely than defining it could: you cannot emit contradictory
+decisions for a value that does not exist.
 
 ### Two guards that ran too late to mean anything
 
@@ -291,3 +294,7 @@ that this is enforced rather than declared.
   cases' negatives; a new case using the gate slots owes its own.
 - Do not buy a second probe run to disambiguate PROBE-002. One is enough now, and the two lines
   to read are named in its roadmap entry.
+- Do not re-add `Instrument: n/a` to define a state someone imagines needing. It was removed for
+  having no reachable state under the block's per-effect scoping and no consumer in the
+  repository's history; re-adding it takes a named effect whose gate carries no broker
+  instrument, and its conditions written beside the other value's.

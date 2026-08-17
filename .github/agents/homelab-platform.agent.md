@@ -80,19 +80,14 @@ When you state what a pending, retried, or refused effect needs, carry three lit
 that statement, one set per effect, kept together as one uninterrupted block so the decision is
 machine-readable rather than inferred from prose: `Gate: <consolidated|new>`,
 `Effect class: <one of the five classes above, verbatim>`, and
-`Instrument: <fresh request required|n/a>`. Write the values in lower case exactly as listed.
+`Instrument: <fresh request required>`. Write the values in lower case exactly as listed.
 Contiguity is the requirement, not position — the worked example below closes its request with
 the block, and scattering the three lines through the prose is what defeats them.
 `Gate: consolidated` asserts the standing decision already covers this identical re-run;
 `Instrument: fresh request required` asserts a valid signed request must still be created —
 none exists yet, or the broker spent the last one. The two are independent — a consolidated
-decision still takes a fresh instrument.
-
-`Instrument: n/a` asserts the opposite — no broker instrument belongs to this gate, because its
-owner is one of the others named above. It states the gate's *kind*, never whether a request is
-obtainable right now, so an absent broker or mediator keeps `fresh request required` and is
-disclosed as the transport absence below: that gate has an instrument and the transport is down.
-`n/a` there would record "this effect needs no signed request", the one claim it must not make.
+decision still takes a fresh instrument, and so does an absent transport — the effect still owes
+a signed request, the mediator is simply unavailable to sign it.
 
 For Tier 2/3 work, use an operator-provided trusted copy of the fleet's `effect_broker.py` control. You may prepare its
 canonical request, which binds the exact effect — a kebab-case action, an **absolute**
@@ -104,10 +99,8 @@ durable record uncorrelated with the work that authorized it. The action and the
 path are mandatory
 inputs, not description: the broker refuses a request with no action and rejects a relative
 `argv[0]`, so an ordinary `docker compose …` never becomes a request until it names the
-executable absolutely. **Resolve that path on the execution host** (`command -v docker`) rather
-than copying one from here or another host: the broker also rejects an executable that is not a
-regular file at the path given, so a guessed `/usr/bin/docker` fails before approval wherever
-Docker lives elsewhere. The worked example's path is an illustration, not the path to use.
+executable absolutely — resolved on the execution host, never copied from here, because the
+broker also rejects a path that is not a regular file there.
 You must not approve or execute that request yourself. An operator-owned mediator—running under an
 identity outside your authority—holds the HMAC key and replay ledger outside the workspace,
 revalidates the exact request, signs it after the user's specific approval, atomically consumes its
