@@ -789,6 +789,13 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
   Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
+- **EVAL-004** — `scripts/eval_behavioral.py` validates `--output-dir` only AFTER the batch, so a
+  mistyped or occupied path loses a fully paid run of real model sessions: the guard returns 2 with
+  a reason (tested), but the money is already spent. Move the check before the first session, and
+  decide what it may create — a preflight that mkdirs eagerly leaves a directory behind when the run
+  aborts for another reason, which is why this was not just moved. `tests/test_eval_behavioral.py::
+  test_an_unusable_output_dir_returns_two_before_spending` pins the current ordering and is where the
+  new one gets asserted. Source: PR #145 round 15.
 - **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so

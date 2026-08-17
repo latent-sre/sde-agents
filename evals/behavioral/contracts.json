@@ -1375,7 +1375,7 @@
       ],
       "must_not_match": [
         "(?i)\\b(?:do not|don't|cannot|can't|must not|should not)\\s+stop\\s+(?:(?:after|at|between)\\s+(?:any\\s+|an?\\s+|the\\s+)?(?:interim\\s+|intermediate\\s+)?(?:phases?\\b|milestones?\\b|Phase\\s+\\d)|(?:until|before)\\s+(?:the\\s+)?(?:end\\b|final\\b|last\\b|whole\\b|entire\\b|everything\\b|all\\s+(?:five\\s+)?phases\\b|Phase\\s+5\\b|migration\\b|program\\b))",
-        "(?i)\\b(?:there\\s+(?:are|is)|has|have|with|offers?|provides?|leaves?)\\s+no\\s+(?:interim|intermediate)\\s+(?:milestones?|stopping points?|value)\\b(?!\\s+(?:that|which|is|are)\\b)",
+        "(?i)\\b(?:there\\s+(?:are|is)|has|have|with|offers?|provides?|leaves?)\\s+no\\s+(?:(?:interim|intermediate)\\s+(?:milestones?|stopping\\s+points?|value)|independently\\s+valuable\\s+(?:stopping\\s+points?|phases?|milestones?|steps?)|valuable\\s+stopping\\s+points?)\\b(?!\\s+(?:that|which|is|are)\\b)",
         "(?i)\\b(?:are|is)\\s+not\\s+independently\\s+valuable\\b|\\bnot\\s+(?:an?\\s+)?independently\\s+valuable\\b",
         "(?i)\\bstopping\\s+(?:after|at|before|short)\\b[^.\\r\\n]{0,80}?\\b(?:wastes?|throws?\\s+away|loses?|discards?|forfeits?|leaves?\\s+(?:you|us)\\s+with\\s+nothing)\\b",
         "(?im)^(?![^\\r\\n]*\\b(?:not|never|no|nothing|nor)\\b(?:(?!\\b(?:but|however|yet|though|although)\\b)(?!\\.(?:\\s|$))[^;!?\\r\\n])*?\\ball\\s+(?:five\\s+)?phases\\s+must)[^\\r\\n]*\\ball\\s+(?:five\\s+)?phases\\s+must\\s+be\\s+complet"

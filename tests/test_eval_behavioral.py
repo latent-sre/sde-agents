@@ -1286,6 +1286,15 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "This plan has no interim value.",
         ),
         (
+            # Same pattern, the direct denial: `interim|intermediate` was standing in for "a
+            # stopping point exists at all", so a plan naming the PROPERTY instead of the position
+            # — "no independently valuable stopping point" — passed the sole distinguished-architect
+            # contract while denying exactly what the prompt asks for (PR #145 round 15).
+            "distinguished-evolution-plan-has-valuable-stop-points", r"valuable\s+stopping\s+points?",
+            "Each phase is independently valuable and is a valid stopping point.",
+            "There is no independently valuable stopping point; complete the program.",
+        ),
+        (
             # Second control on each reviewer pattern, for the hole the first repair opened: a
             # line-wide negator scan exempted the whole line whenever any "no" appeared on it, so
             # the exact refusal this contract rejects passed. The negator must sit in the phrase's
@@ -1318,7 +1327,7 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "Yes, you should break out the billing service first.",
         ),
         (
-            "distinguished-evolution-plan-has-valuable-stop-points", "stopping points?",
+            "distinguished-evolution-plan-has-valuable-stop-points", r"leaves?)\s+no",
             "Every phase lands value, so there is no interim milestone that is merely preparatory.",
             "There are no interim milestones; the value lands at the end.",
         ),
@@ -2903,6 +2912,65 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
             # execute bit, leaving it non-traversable after the error exit — harder to inspect
             # exactly when inspection is needed. Only a regular file gets tightened.
             self.assertEqual(mode_before, mode_after)
+
+    def test_an_unusable_output_dir_returns_two_before_spending(self) -> None:
+        """Risk: a traceback where every other artifact failure returns 2 with a reason.
+
+        `--output-dir` pointing at an existing REGULAR FILE raised FileExistsError straight out of
+        `main()`. The guard for it landed in this PR without a firing test, which is the rule it was
+        written under — a defensive branch and its test are one change (PR #145 review).
+
+        The guard runs AFTER the batch, so this test pins that too: the sessions are paid for and
+        then the artifact cannot land. That is the current contract, not an ideal one — validating
+        the path before spending would save the batch, and is filed as EVAL-004 rather than changed
+        here, because moving the check creates a directory as a side effect of runs that may still
+        abort for another reason. If that item lands, this test is where the new ordering is
+        asserted.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            occupied = Path(tmp) / "not-a-directory"
+            occupied.write_text("in the way", encoding="utf-8")
+
+            def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                                 disallowed_tools=None, agent=None, permission_mode=None,
+                                 model=None, env=None, semantic_oracle=None):
+                return self._PASSING, {"homelab-platform"}, None, self._stats()
+
+            with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
+                    mock.patch.object(eval_behavioral, "CLAUDE", "claude"):
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "1",
+                    "--model", "opus", "--timeout", "77", "--output-dir", str(occupied),
+                ])
+            self.assertEqual(2, code)
+            self.assertTrue(occupied.is_file(), "the blocking file must be left as it was found")
+            self.assertEqual("in the way", occupied.read_text(encoding="utf-8"))
+
+    def test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed(self) -> None:
+        """The other half of same-batch-or-neither, and the other untested guard.
+
+        The sidecar is written first precisely so a benchmark can never claim evidence text that
+        does not exist; this is the reverse direction — the sidecar lands and then `benchmark.json`
+        cannot be written. That path returns 2 rather than leaving the operator with a traceback,
+        and it was the second guard this PR added without a firing test.
+        """
+        def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            return self._FAILING, {"homelab-platform"}, None, self._stats()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # A directory at the benchmark path makes write_text raise IsADirectoryError.
+            (Path(tmp) / "benchmark.json").mkdir()
+            with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
+                    mock.patch.object(eval_behavioral, "CLAUDE", "claude"):
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "1",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+            self.assertEqual(2, code)
+            self.assertTrue((Path(tmp) / "benchmark.json").is_dir(),
+                            "the blocker stays a directory; nothing overwrote it")
 
     def test_run_evidence_retention_requires_an_output_directory(self) -> None:
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
