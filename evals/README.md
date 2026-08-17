@@ -474,8 +474,25 @@ captures from the same day, same model, confirmed those agents' contracts held o
 directory contains that sentence, and it is the whole argument for the agent-only-positive
 retirement carried out three weeks later.
 
-Baselines now total 20,941 lines across 20 directories, down from 31,730 across 28. Everything
-remaining is held under the rule above, and each further candidate owes a summary first.
+Finally the rule was applied at scale, with one correction to it. The rule's caution — distil before
+you delete — protects against losing a number. **Git history already provides that protection**: a
+retired capture's exact rates come back with one `git show`, verified. So the rule only needs to bite
+where **no summary exists at all**; where one does, holding the raw as well protects nothing.
+
+What decides it per directory is therefore not "does a summary exist" but **does the summary carry
+the raw's outcomes**. Measured on 2026-08-17: six directories named every one of their cases *and*
+every outcome value — `2026-08-10-learn-002`, `2026-08-11-handoff-001`, `2026-08-13-group1-rescan`,
+`2026-08-13-prop-001`, `2026-08-15-handoff-001-sonnet5`, `2026-08-15-learn-002` — and their raw
+retired (79 files, 11,679 lines), leaving each directory as its summary alone. Six others have a
+summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
+summary that mentions a round without recording its rates is not a substitute for one.
+
+Baselines now total **9,262 lines across 20 directories**, down from 31,730 across 28 — a 71% cut
+with nothing a reader consumes removed. What remains: 1,798 lines of summary, the raw of six
+partially-summarized directories, and four directories with no summary at all
+(`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
+`2026-08-10-gate-001-first-live`) where the raw *is* the record. `2026-07-31-p0-p1` matters most of
+those: it holds the only Codex CLI run this repository has ever recorded.
 
 ### Why the behavioral suite has no cuts
 
