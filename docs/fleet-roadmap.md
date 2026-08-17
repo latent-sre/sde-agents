@@ -773,7 +773,8 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
    (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent
    positives still fired **0/6** under otherwise-identical conditions
-   (`baselines/2026-07-29-isolation/appsec-cleanroom` vs the same day's contaminated 0/6). The
+   (both captures recorded in `baselines/2026-07-29-verification-round/README.md`: the clean-room
+   0/6 against the same day's contaminated 0/6). The
    under-fire is a property of headless one-shot mode on this tier, not of the operator's
    configuration. Both runners now record `clean_room` in `conditions`, and artifacts differing on
    it must not be diffed against each other.

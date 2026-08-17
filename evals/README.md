@@ -457,9 +457,25 @@ preserves something no single capture held: three conditions moved mid-round (op
 like-for-like — and `self-improve-lifecycle-merge` reached 3/3, fell to 0/3, and is still 0/3, which
 is a different problem from never having passed and is visible only across generations.
 
-Baselines now total 23,907 lines, down from 31,730. Everything else is still held under the rule
-above; the remaining candidates all owe a summary first, and `2026-07-29-roles-before`/`-roles-after`
-additionally owe the pair treatment described above.
+Then two whole **families** were combined, which is the cheaper move where one round was split across
+many paths. `2026-07-27-{before,after,diagnose}` became
+`2026-07-27-craft-vs-fullstack/README.md`, and the seven directories of the 2026-07-29 verification
+and role-expansion round (`2026-07-29/`, `-isolation/`, `-labsec/`, `-roles-before/`,
+`-roles-after/`, `-verification-seam/`, `-verifier-contracts/`) became
+`2026-07-29-verification-round/README.md`. Ten directories to two, 2,966 lines retired, fifteen
+rates verified against the captures first, and the four citations that pointed into the old paths
+repointed in the same commit. The roles pair's rates are now written down, which is what the
+pair rule required before either side could go.
+
+Combining is usually better than deleting one directory at a time, because a round's finding often
+lives *between* its captures. The 2026-07-29 family is the example: routing could not see the agents
+firing (0/6 twice, and 0.0 on every host and verification-seam positive) while the behavioral
+captures from the same day, same model, confirmed those agents' contracts held once pinned. No single
+directory contains that sentence, and it is the whole argument for the agent-only-positive
+retirement carried out three weeks later.
+
+Baselines now total 20,941 lines across 20 directories, down from 31,730 across 28. Everything
+remaining is held under the rule above, and each further candidate owes a summary first.
 
 ### Why the behavioral suite has no cuts
 
