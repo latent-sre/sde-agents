@@ -25,7 +25,7 @@ from scripts import eval_routing as _eval_routing_bootstrap
 
 eval_routing = _eval_routing_bootstrap.load_current_evaluator()
 
-from tests.support import REPO, git
+from tests.support import REPO, git, run_main
 
 
 class ExactSourceEntrypointTest(unittest.TestCase):
@@ -835,6 +835,50 @@ class ProvenanceTest(unittest.TestCase):
         self.assertRegex(before["files"][0]["sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue(before["runtime"]["implementation"])
         self.assertRegex(before["runtime"]["python_version"], r"^\d+\.\d+")
+
+    def test_a_cluster_edited_mid_batch_into_a_bad_target_exits_two(self) -> None:
+        """Risk: the post-session reread hashes what it never validated, and exits by traceback.
+
+        `main()` re-reads the cluster after the sessions to prove the measured bytes did not move.
+        That path validated `members` and not the scoring targets, so an `expect_fires: [{}]`
+        introduced mid-batch reached `set()` inside `_graded_definition` and raised TypeError
+        straight past the `except ProvenanceError` handler — a traceback where this runner documents
+        exit 2, after a batch was paid for.
+
+        The edit is staged from inside the mocked session, which is what makes it a *mid-batch*
+        edit: the initial read already happened, and the reread has not. Remove the `_scoring_targets`
+        loop from the post-session path and this raises TypeError instead of asserting.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            cluster = root / "cluster.json"
+            spec = {
+                "cluster": "mid-batch-edit",
+                "members": ["prompt-craft"],
+                "cases": [{"id": "pos-one", "polarity": "positive", "prompt": "do a thing",
+                           "expect_fires": ["prompt-craft"]}],
+            }
+            cluster.write_text(json.dumps(spec), encoding="utf-8")
+
+            def edit_then_run(prompt, plugin_dir, timeout=180, model=None, env=None,
+                              required_agents=None):
+                # The cluster changes underneath the batch, exactly as an operator editing a file
+                # during a long paid run would do.
+                broken = json.loads(json.dumps(spec))
+                broken["cases"][0]["expect_fires"] = [{}]
+                cluster.write_text(json.dumps(broken), encoding="utf-8")
+                return {"fired": {"prompt-craft"}, "tokens": None, "duration_ms": 1,
+                        "model": "claude-opus-5", "error": None, "note": None}
+
+            with mock.patch.object(eval_routing, "run_once", edit_then_run), \
+                    mock.patch.object(eval_routing, "CLAUDE", "claude"), \
+                    mock.patch.object(eval_routing, "verify_frozen_plugin", lambda *a, **k: None), \
+                    mock.patch.object(eval_routing, "cli_version", lambda *a, **k: "test"):
+                code, out = run_main(
+                    eval_routing.main, str(cluster), "--runs", "1", "--model", "opus",
+                    "--output-dir", str(root / "out"),
+                )
+        self.assertEqual(2, code, out)
 
     def test_evaluator_change_makes_batch_provenance_incomparable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

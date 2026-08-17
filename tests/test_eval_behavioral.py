@@ -2436,6 +2436,66 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
         self.assertEqual([31], case["duration_ms_per_run"])
         self.assertEqual(["claude-opus-5"], benchmark["conditions"]["models_observed"])
 
+    def test_a_runner_defect_stops_the_batch_instead_of_buying_the_rest(self) -> None:
+        """Risk: one systematic grader defect spends the entire sweep proving it 350 more times.
+
+        The runner and the graders are shared by every case, so an exception in them is systematic
+        until proven otherwise. Recording it as a measurement failure and continuing — which is what
+        the first version of this classification did — meant a broken `assert_case` observed on run
+        one still launched every remaining paid session. In-flight work is kept because it is
+        already bought; nothing further is scheduled, and the unlaunched runs are reported as
+        unbought rather than failed.
+
+        Remove the `runner_failure` guard around `submit_next()` and this buys all nine.
+        """
+        launched = {"n": 0}
+
+        def counting_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            launched["n"] += 1
+            return ("some response", {"sde-fullstack"}, None,
+                    {"input_tokens": 1, "output_tokens": 1, "duration_ms": 1,
+                     "model": "claude-opus-5", "completed": True})
+
+        def grading_explodes(text, case, fired, semantic_findings=None):
+            raise ValueError("systematic oracle defect")
+
+        originals = (eval_behavioral.run_session, eval_behavioral.CLAUDE,
+                     eval_behavioral.assert_case)
+        eval_behavioral.run_session = counting_session
+        eval_behavioral.CLAUDE = "claude"
+        eval_behavioral.assert_case = grading_explodes
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                code = eval_behavioral.main([
+                    "--case", "loop-*", "--runs", "3", "--concurrency", "1",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+                benchmark = json.loads(
+                    (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
+                )
+        finally:
+            (eval_behavioral.run_session, eval_behavioral.CLAUDE,
+             eval_behavioral.assert_case) = originals
+
+        # Three cases x three runs = nine jobs. At concurrency 1 the defect surfaces on the first,
+        # so exactly one session is bought rather than nine.
+        self.assertEqual(1, launched["n"], "the batch kept spending after a systematic defect")
+        self.assertEqual(3, code, "an unmeasured batch is not a contract verdict")
+        self.assertEqual(3, len(benchmark["cases"]))
+        for case in benchmark["cases"]:
+            with self.subTest(case=case["id"]):
+                self.assertTrue(case["inconclusive"])
+                self.assertEqual(0, case["runs_graded"])
+                self.assertEqual(3, case["runs_excluded"])
+        # The one run that DID happen is attributed to the defect; the eight never launched say so
+        # in their own words, because "failed" and "never bought" are different facts for anyone
+        # reading the artifact to decide what to re-run.
+        blob = json.dumps(benchmark)
+        self.assertIn("systematic oracle defect", blob)
+        self.assertIn("not run: batch stopped after a runner defect", blob)
+
     def test_a_case_whose_every_run_breaks_is_inconclusive_not_failed(self) -> None:
         """Risk hypothesis: an unmeasured case reported as an agent-contract regression.
 

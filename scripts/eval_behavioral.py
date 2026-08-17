@@ -1602,6 +1602,13 @@ def main(argv: list[str] | None = None) -> int:
             case["id"]: {} for case in cases
         }
         auth_failure: Exception | None = None
+        # An unexpected exception in the runner or the graders is SYSTEMATIC until proven
+        # otherwise: both are shared by every case, so the defect that broke run 1 will break the
+        # remaining ones too. Recording it as a measurement failure and carrying on meant a broken
+        # `assert_case` still launched the rest of a default sweep — roughly 350 paid sessions — to
+        # produce nothing but the same exception 350 times. Sessions already in flight are kept,
+        # because they are already bought; nothing new is scheduled (PR #145 review).
+        runner_failure: Exception | None = None
         try:
             while futures:
                 finished, _pending = concurrent.futures.wait(
@@ -1618,6 +1625,12 @@ def main(argv: list[str] | None = None) -> int:
                         for pending in futures:
                             pending.cancel()
                         break
+                    except concurrent.futures.CancelledError:
+                        # Cancelled before it started: no session ran and nothing was paid for, so
+                        # it is left ABSENT from `completed` and the ordering loop below marks it
+                        # not-run. Recording it as a runner error would double-count one defect as
+                        # many.
+                        continue
                     except Exception as exc:
                         # run_session guards its own subprocess call, but everything after it —
                         # auth classification, transcript_stats, components_fired, the corpus
@@ -1642,6 +1655,12 @@ def main(argv: list[str] | None = None) -> int:
                             response, stats = exc.response, exc.stats
                         else:
                             response, stats = None, eval_routing.transcript_stats("")
+                        if runner_failure is None:
+                            runner_failure = exc
+                            # Only work that has not begun; `cancel()` returns False for a running
+                            # future, and those are collected by this same loop.
+                            for pending in futures:
+                                pending.cancel()
                     completed[case_id][run_index] = (
                         failures, note, stats, response, runner_error
                     )
@@ -1650,12 +1669,15 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  [{done}/{total}] complete", end="\r", flush=True)
                 if auth_failure is not None:
                     break
-                for _ in range(succeeded):
-                    submit_next()
+                if runner_failure is None:
+                    for _ in range(succeeded):
+                        submit_next()
         finally:
             # subprocess.run cannot interrupt work already started; pending sessions can still be
             # cancelled, limiting the outage to at most the configured concurrency.
-            pool.shutdown(wait=True, cancel_futures=auth_failure is not None)
+            pool.shutdown(
+                wait=True, cancel_futures=auth_failure is not None or runner_failure is not None
+            )
         if args.runtime == "claude":
             try:
                 eval_routing.verify_frozen_plugin(
@@ -1694,9 +1716,18 @@ def main(argv: list[str] | None = None) -> int:
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
             for run_index in range(args.runs):
-                failures, note, stats, response, runner_error = (
-                    completed[case["id"]][run_index]
-                )
+                record = completed[case["id"]].get(run_index)
+                if record is None:
+                    # Never launched, because the batch stopped after a runner defect. Excluded
+                    # from the rate for the same reason a broken run is — it measured nothing —
+                    # but labelled apart from one, since no session ran and no money was spent.
+                    failures = ["not run: batch stopped after a runner defect"]
+                    note = "run was never launched; no session was paid for"
+                    stats = eval_routing.transcript_stats("")
+                    response = None
+                    runner_error = "not run"
+                else:
+                    failures, note, stats, response, runner_error = record
                 results[case["id"]].append(failures)
                 runner_errors[case["id"]].append(runner_error)
                 if note:
@@ -1785,16 +1816,29 @@ def main(argv: list[str] | None = None) -> int:
         payload.append(case_payload)
 
     print("-" * 100)
+    if runner_failure is not None:
+        # Loud and first, because the batch is deliberately short: the operator needs to know the
+        # remaining sessions were WITHHELD, not that the suite got quieter.
+        print(f"! BATCH STOPPED after an unexpected runner/grading error: {runner_failure}")
+        print("  Sessions already in flight were kept; nothing further was scheduled. Fix the "
+              "runner and re-run — the missing runs are unbought, not failed.")
     print(f"{passed_cases}/{len(cases) - len(inconclusive_cases)} graded cases passed every run "
           f"({len(cases)} selected)")
     if inconclusive_cases:
         # Loud, for the same reason routing says it loudly: an unmeasured case counted as a failure
         # is how a runner problem gets mistaken for an agent problem.
-        print(f"! {len(inconclusive_cases)} case(s) INCONCLUSIVE (every run failed inside the "
-              f"runner): {', '.join(inconclusive_cases)}")
+        print(f"! {len(inconclusive_cases)} case(s) INCONCLUSIVE (no graded run): "
+              f"{', '.join(inconclusive_cases)}")
         print("  Re-run those; they are not evidence about the contract in either direction.")
     if excluded_runs_total:
-        print(f"! {excluded_runs_total} individual run(s) excluded from rates for the same reason.")
+        never_run = sum(
+            1 for case in cases for error in runner_errors[case["id"]] if error == "not run"
+        )
+        broke = excluded_runs_total - never_run
+        detail = f"{broke} broke inside the runner"
+        if never_run:
+            detail += f", {never_run} never launched because the batch stopped"
+        print(f"! {excluded_runs_total} individual run(s) excluded from rates ({detail}).")
 
     failing_payload = [
         {

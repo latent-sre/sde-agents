@@ -1403,10 +1403,21 @@ def main(argv: list[str] | None = None) -> int:
             ]
             if args.limit:
                 latest_cases = latest_cases[:args.limit]
+            latest_members = validated_members(latest_spec.get("members"))
+            # The targets need the same revalidation as the membership, and for the same reason:
+            # `_graded_definition` canonicalizes them with `set()`, so an unhashable target in a
+            # cluster edited mid-batch raises TypeError straight past the `except ProvenanceError`
+            # below. The membership half of this was fixed one round before the target half, which
+            # is exactly how the resolver's copy of the rule went wrong too (PR #145 review).
+            for latest_case in latest_cases:
+                try:
+                    _scoring_targets(latest_case, set(latest_members))
+                except ValueError as exc:
+                    raise ProvenanceError(f"cluster error after sessions: {exc}") from exc
             latest_provenance = benchmark_provenance(
                 [cluster_path], latest_cases, args.case, args.plugin_dir, args.limit,
                 evaluator_paths=routing_evaluator_paths(),
-                members=validated_members(latest_spec.get("members")),
+                members=latest_members,
             )
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)
