@@ -627,6 +627,20 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   graded as an affirmative claim — `_NEGATION_TOKENS` directly above accepts both forms.
   Reverting resolves both directions at once; narrowing resolves neither. Source: PR #144
   round-6 and round-7 reviews.
+- **ORACLE-006** — `_vocabulary_head` accepts only `— – - : ( ,` between a closed-set term and its
+  rationale, so an explanatory echo punctuated with a semicolon or a full stop
+  (`Gate: consolidated; the standing approval covers this retry`) is classified as a *corrupted*
+  assertion and fails, while the comma and em-dash renderings pass. Ordinary punctuation alone
+  decides the verdict on identical meaning. Widen the set, or better, stop enumerating punctuation:
+  this is the third false RED in this PR traced to a hand-listed character set (typographic
+  apostrophe in `_UNCHECKABLE`, this separator list), which is the shape of the defect rather than
+  its instances. Source: PR #144 round-8 review.
+- **ORACLE-007** — the vocabulary drift test slices the parsed canonical list to `[:5]`, so a class
+  APPENDED to `agents/homelab-platform.md` is discarded before comparison and the guard passes while
+  `EFFECT_CLASSES` goes stale — the evaluator would then reject compliant output naming the new
+  class. Confirmed both ways: inserting a class fails the test, appending one passes it, so the
+  guard covers renames and removals but not additions. Drop the slice and compare the full list.
+  Source: PR #144 round-8 review.
 - **ORACLE-005** — `_lint_declaration_block` grades the SPAN of the gate declarations, not that they
   open the statement, so a response can argue the decision first and append the block after, or
   interleave prose between each slot, and still pass. The contract word is "open", so the gap is
