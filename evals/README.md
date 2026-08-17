@@ -235,6 +235,16 @@ python3 scripts/eval_behavioral.py                       # all cases, five runs 
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
+**An unexpected runner or grading error stops the batch.** The runner and the graders are shared by
+every case, so an exception in them is systematic until proven otherwise — and the first version of
+the measurement-failure classification recorded the broken run and carried on, which meant a
+defective `assert_case` observed on run one still launched the rest of a default sweep (~350 paid
+sessions) to reproduce the same exception. Sessions already in flight are kept, because they are
+already bought; nothing further is scheduled. The artifact distinguishes the two: a run that broke
+carries its exception, a run that was never launched says so, and `exit 3` reports the whole batch
+as an incomplete measurement rather than a verdict. Fix the runner and re-run — the missing runs are
+unbought, not failed.
+
 Behavioral is **all-or-nothing per case**: every graded run must satisfy every assertion, because a
 contract that holds four runs in five is a contract that does not hold. "Graded" excludes a run the
 runner itself broke on — those are recorded as `runs_excluded` with the exception text, and a case
