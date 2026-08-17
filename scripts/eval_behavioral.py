@@ -1431,6 +1431,11 @@ def main(argv: list[str] | None = None) -> int:
 
     jobs = [(case, run) for case in cases for run in range(args.runs)]
     results: dict[str, list[list[str]]] = {case["id"]: [] for case in cases}
+    # Parallel to `results`: the reason this run measured nothing, or None when it did. A run with
+    # a reason here is EXCLUDED from the case's rate — a defect in the runner is not evidence about
+    # the agent it was pointed at, and scoring it as one publishes a contract regression that never
+    # happened (PR #145 review).
+    runner_errors: dict[str, list[str | None]] = {case["id"]: [] for case in cases}
     notes: dict[str, list[str]] = {case["id"]: [] for case in cases}
     usage: dict[str, list[dict | None]] = {case["id"]: [] for case in cases}
     durations: dict[str, list[int | None]] = {case["id"]: [] for case in cases}
@@ -1549,7 +1554,7 @@ def main(argv: list[str] | None = None) -> int:
         for _ in range(min(args.concurrency, len(jobs))):
             submit_next()
         completed: dict[
-            str, dict[int, tuple[list[str], str | None, dict, str | None]]
+            str, dict[int, tuple[list[str], str | None, dict, str | None, str | None]]
         ] = {
             case["id"]: {} for case in cases
         }
@@ -1562,6 +1567,7 @@ def main(argv: list[str] | None = None) -> int:
                 succeeded = 0
                 for future in finished:
                     job_case, job_run_index = futures.pop(future)
+                    runner_error = None
                     try:
                         run_index, case_id, failures, note, stats, response = future.result()
                     except availability_errors as exc:
@@ -1574,17 +1580,21 @@ def main(argv: list[str] | None = None) -> int:
                         # auth classification, transcript_stats, components_fired, the corpus
                         # build — ran unprotected, so a single unexpected exception escaped
                         # future.result(), passed the pool shutdown, and left main() by traceback
-                        # with no benchmark written for a batch already paid for. One bad run is
-                        # recorded as a run-level failure instead; the sessions that did complete
-                        # keep their evidence. Giving this its own measurement-failure state (as
-                        # routing has) would change published verdict semantics and is deliberately
-                        # not done here.
+                        # with no benchmark written for a batch already paid for. The run is
+                        # recorded as a MEASUREMENT failure instead — excluded from the case's
+                        # rate, exactly as routing excludes a run that produced no usable
+                        # transcript — so the sessions that did complete keep their evidence
+                        # without the runner's own defect being published as an agent-contract
+                        # regression.
                         run_index, case_id = job_run_index, job_case["id"]
-                        failures = [f"runner error: {type(exc).__name__}: {exc}"]
+                        runner_error = f"{type(exc).__name__}: {exc}"
+                        failures = [f"runner error: {runner_error}"]
                         note = "run failed inside the runner, not in the graded session"
                         stats = eval_routing.transcript_stats("")
                         response = None
-                    completed[case_id][run_index] = (failures, note, stats, response)
+                    completed[case_id][run_index] = (
+                        failures, note, stats, response, runner_error
+                    )
                     succeeded += 1
                     done += 1
                     print(f"  [{done}/{total}] complete", end="\r", flush=True)
@@ -1634,8 +1644,11 @@ def main(argv: list[str] | None = None) -> int:
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
             for run_index in range(args.runs):
-                failures, note, stats, response = completed[case["id"]][run_index]
+                failures, note, stats, response, runner_error = (
+                    completed[case["id"]][run_index]
+                )
                 results[case["id"]].append(failures)
+                runner_errors[case["id"]].append(runner_error)
                 if note:
                     notes[case["id"]].append(note)
                 # Usage is per RUN, None when the transcript carried none — a labeled absence,
@@ -1670,24 +1683,47 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n{'case':32s} {'verdict':8s} {'pass':>6s}  detail")
     print("-" * 100)
     passed_cases = 0
+    inconclusive_cases: list[str] = []
+    excluded_runs_total = 0
     payload: list[dict] = []
     for case in cases:
-        runs = results[case["id"]]
-        passes = sum(1 for failures in runs if not failures)
-        rate = passes / len(runs) if runs else 0.0
-        # Every run must satisfy the contract -- AND at least one run must exist. Without the
-        # second clause an empty result list passes vacuously, which is how a suite reports success
-        # for work it never did.
-        ok = bool(runs) and passes == len(runs)
+        attempted = results[case["id"]]
+        # A run the runner broke on measured nothing about the contract, so it is excluded from the
+        # rate the same way routing excludes a run with no usable transcript. Without this the
+        # every-run-must-pass rule below converts one runner defect into a published contract
+        # regression — the note said the graded session did not fail, and the verdict said it did.
+        graded = [failures for failures, error
+                  in zip(attempted, runner_errors[case["id"]]) if not error]
+        excluded = len(attempted) - len(graded)
+        excluded_runs_total += excluded
+        passes = sum(1 for failures in graded if not failures)
+        rate = passes / len(graded) if graded else 0.0
+        # Every graded run must satisfy the contract -- AND at least one graded run must exist.
+        # Without the second clause an empty result list passes vacuously, which is how a suite
+        # reports success for work it never did.
+        inconclusive = not graded
+        ok = bool(graded) and passes == len(graded)
         passed_cases += ok
-        first_failure = next((f for failures in runs if failures for f in failures), "")
-        detail = "all assertions held" if ok else first_failure[:60]
-        print(f"{case['id'][:32]:32s} {'PASS' if ok else 'FAIL':8s} "
-              f"{passes}/{len(runs):<4} {detail}")
+        if inconclusive:
+            inconclusive_cases.append(case["id"])
+        first_failure = next((f for failures in graded if failures for f in failures), "")
+        suffix = f" [{excluded} run(s) excluded: runner error]" if excluded else ""
+        if inconclusive:
+            detail = (f"INCONCLUSIVE — every run failed inside the runner "
+                      f"({len(attempted)} attempted)")
+        else:
+            detail = ("all assertions held" if ok else first_failure[:60]) + suffix
+        mark = "INCONC" if inconclusive else ("PASS" if ok else "FAIL")
+        print(f"{case['id'][:32]:32s} {mark:8s} "
+              f"{passes}/{len(graded):<4} {detail}")
         case_payload = {
             "id": case["id"], "suite": case["suite"], "passes": passes,
-            "runs": len(runs), "rate": rate,
-            "failures": sorted({f for failures in runs for f in failures}),
+            # `runs` counts every run attempted, so it stays the length of the per-run arrays
+            # below; `runs_graded` is the denominator of `rate`, and the two differ exactly when
+            # the runner itself broke.
+            "runs": len(attempted), "runs_graded": len(graded),
+            "runs_excluded": excluded, "inconclusive": inconclusive, "rate": rate,
+            "failures": sorted({f for failures in attempted for f in failures}),
             "notes": notes[case["id"]],
             "usage_per_run": usage[case["id"]],
             "duration_ms_per_run": durations[case["id"]],
@@ -1699,7 +1735,16 @@ def main(argv: list[str] | None = None) -> int:
         payload.append(case_payload)
 
     print("-" * 100)
-    print(f"{passed_cases}/{len(cases)} cases passed every run")
+    print(f"{passed_cases}/{len(cases) - len(inconclusive_cases)} graded cases passed every run "
+          f"({len(cases)} selected)")
+    if inconclusive_cases:
+        # Loud, for the same reason routing says it loudly: an unmeasured case counted as a failure
+        # is how a runner problem gets mistaken for an agent problem.
+        print(f"! {len(inconclusive_cases)} case(s) INCONCLUSIVE (every run failed inside the "
+              f"runner): {', '.join(inconclusive_cases)}")
+        print("  Re-run those; they are not evidence about the contract in either direction.")
+    if excluded_runs_total:
+        print(f"! {excluded_runs_total} individual run(s) excluded from rates for the same reason.")
 
     failing_payload = [
         {
@@ -1918,7 +1963,12 @@ def main(argv: list[str] | None = None) -> int:
                 "committing or sharing)"
             )
 
-    return 0 if passed_cases == len(cases) else 1
+    # Same three-way split as the routing runner, and for the same reason: 1 is a contract verdict
+    # to investigate, 3 is a measurement that did not happen and wants a re-run. A real failure
+    # outranks an inconclusive because it is the actionable one. (2 stays usage/auth errors.)
+    if passed_cases != len(cases) - len(inconclusive_cases):
+        return 1
+    return 3 if inconclusive_cases else 0
 
 
 def _main_entry() -> int:

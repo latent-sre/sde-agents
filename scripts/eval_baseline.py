@@ -12,8 +12,12 @@ a STALE verdict names what diverged so the operator knows why a fresh capture is
 
 Match policy (TIER-001, operator-approved 2026-08-08; the spec retired with its outcome
 record, which now carries the lasting policy — docs/archive/2026-08/tier-001-outcome-2026-08-08.md):
-provenance exact on schema, eval_sources, selection, evaluator, and the plugin content hash;
-conditions exact on model_requested, clean_room, threshold, timeout_s. cli_version is advisory
+provenance exact on schema, selection, evaluator, and the plugin content hash; conditions exact on
+model_requested, clean_room, threshold, timeout_s. `selection` covers the graded fields of the
+selected cases plus the cluster's `members` — membership is a grading input, since a negative with
+no `expect_not_fires` is graded against the whole member list. `eval_sources` is recorded but no
+longer compared: it hashes each cluster file whole, so it stales a capture on bytes the scorer
+cannot read (a `notes` edit, an unselected case). cli_version is advisory
 — the probe, not the eval suite, owns CLI drift — so the recorded value is printed as a note,
 never compared, and never stales the verdict.
 
@@ -73,6 +77,9 @@ def desired_provenance(root: Path, cluster_path: Path, expression: str, limit: i
     return eval_routing.benchmark_provenance(
         [cluster_path], cases, expression, root, limit,
         evaluator_paths=eval_routing.routing_evaluator_paths(),
+        # Compared, not context: a membership change moves what the same case bytes assert, and
+        # dropping the whole-file `eval_sources` check removed the side effect that used to catch it.
+        members=spec.get("members"),
     )
 
 

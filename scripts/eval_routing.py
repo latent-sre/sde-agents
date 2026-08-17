@@ -332,13 +332,24 @@ def _graded_definition(case: dict) -> dict:
     return {field: case[field] for field in GRADED_CASE_FIELDS if field in case}
 
 
-def selection_identity(expression: str, cases: list[dict], limit: int | None = None) -> dict:
-    """Hash selected definitions and the exact selection operation as canonical JSON."""
+def selection_identity(
+    expression: str, cases: list[dict], limit: int | None = None,
+    *, members: list[str] | None = None,
+) -> dict:
+    """Hash selected definitions, the cluster's members, and the exact selection operation.
+
+    `members` is a grading input, not context: a negative with no `expect_not_fires` is graded
+    against the WHOLE member list (`_scoring_targets`), and `required_agents` is derived from it, so
+    a membership change moves what the same case bytes assert. It is hashed here because narrowing
+    the identity to graded case fields would otherwise let a membership change pass unnoticed —
+    `eval_sources` used to catch it only as a side effect of hashing the whole cluster file.
+    """
     case_ids = [case["id"] for case in cases]
     selected = {
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
+        "members": sorted(members) if members is not None else None,
         "definitions": [_graded_definition(case) for case in cases],
     }
     canonical = json.dumps(
@@ -348,6 +359,7 @@ def selection_identity(expression: str, cases: list[dict], limit: int | None = N
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
+        "members": sorted(members) if members is not None else None,
         "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
         "sha256": _sha256(canonical),
     }
@@ -597,12 +609,12 @@ def verify_frozen_plugin(plugin_dir: Path, expected_identity: dict) -> None:
 def benchmark_provenance(
     source_paths: list[Path], cases: list[dict], expression: str, plugin_dir: Path,
     limit: int | None = None, *, evaluator_paths: list[Path],
-    plugin_identity_value: dict | None = None,
+    plugin_identity_value: dict | None = None, members: list[str] | None = None,
 ) -> dict:
     return {
         "schema": PROVENANCE_SCHEMA,
         "eval_sources": source_identity(source_paths),
-        "selection": selection_identity(expression, cases, limit),
+        "selection": selection_identity(expression, cases, limit, members=members),
         # This is deliberately separate from the plugin under test. A copied or external plugin
         # directory does not identify the local runner and deterministic graders that interpreted
         # its transcripts.
@@ -1177,7 +1189,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             provenance = benchmark_provenance(
                 [cluster_path], cases, args.case, args.plugin_dir, args.limit,
-                evaluator_paths=routing_evaluator_paths(),
+                evaluator_paths=routing_evaluator_paths(), members=raw_members,
             )
         except ProvenanceError as exc:
             print(f"provenance error: {exc}", file=sys.stderr)
@@ -1346,6 +1358,7 @@ def main(argv: list[str] | None = None) -> int:
             latest_provenance = benchmark_provenance(
                 [cluster_path], latest_cases, args.case, args.plugin_dir, args.limit,
                 evaluator_paths=routing_evaluator_paths(),
+                members=latest_spec.get("members"),
             )
         except ProvenanceError as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)

@@ -953,6 +953,95 @@ Recommended resolution: recompute the digest over the normalized block and resen
                     ),
                 )
 
+    # (compliant sentence that must NOT trip, violating sentence that MUST trip) per pattern,
+    # keyed by case and by the substring that identifies the pattern inside that case. Both
+    # directions are pinned deliberately: a negation trap is repaired by narrowing the pattern, and
+    # narrowing is exactly the edit that can quietly stop catching the violation it was written for.
+    _NEGATION_CONTROLS: tuple[tuple[str, str, str, str], ...] = (
+        (
+            "reviewer-committed-bytes-remain-approvable", "withhold",
+            "Committed bytes are not a reason to withhold approval.",
+            "The snapshot is already committed, so I am withholding approval.",
+        ),
+        (
+            "reviewer-committed-bytes-remain-approvable", "not available|unavailable|blocked",
+            "Nothing about a committed tree means approval is blocked.",
+            "Because the reviewed bytes are committed, approval is unavailable.",
+        ),
+        (
+            "ladder-report-not-absorb", "definitely",
+            "principal-engineer should decide whether we should break up our monolith.",
+            "We should break up our monolith along the billing seam.",
+        ),
+        (
+            "ladder-report-not-absorb", "recommendation|verdict|decision",
+            "My recommendation is to keep this fork with principal-engineer.",
+            "My recommendation is to stay on the monolith.",
+        ),
+        (
+            "ladder-report-not-absorb", "'ve| have",
+            "I have decided nothing here; the fork is a rung above me.",
+            "I have decided the seam split is the right call.",
+        ),
+        (
+            "distinguished-evolution-plan-has-valuable-stop-points", r"should not)\s+stop",
+            "Do not stop mid-phase; finish the phase's exit criteria first.",
+            "You cannot stop after Phase 2 — the value only lands at the end.",
+        ),
+        (
+            "distinguished-evolution-plan-has-valuable-stop-points", r"phases\s+must",
+            "It is not true that all five phases must be completed before value lands.",
+            "All five phases must be completed before anything is usable.",
+        ),
+        (
+            "researcher-unestablished-claim-stays-unverified", "fetched",
+            "I searched nothing: this session has no external access.",
+            "I fetched the changelog and confirmed the entry.",
+        ),
+        (
+            "researcher-unestablished-claim-stays-unverified", "default connect timeout",
+            "Whether the default connect timeout is unchanged is [unverified].",
+            "The default connect timeout is unchanged in 3.2.",
+        ),
+        (
+            "appsec-diff-and-architecture-leave-the-audit", "Merge",
+            "**Merge verdict — APPROVE or REQUEST CHANGES — belongs to code-reviewer, not to me.**",
+            "Verdict: REQUEST CHANGES",
+        ),
+    )
+
+    def _pattern_for(self, case_id: str, marker: str) -> str:
+        matching = [p for p in self.cases[case_id]["must_not_match"] if marker in p]
+        self.assertEqual(1, len(matching), f"{marker!r} no longer identifies one {case_id} pattern")
+        return matching[0]
+
+    def test_forbidden_patterns_ignore_a_compliant_negation_of_themselves(self) -> None:
+        """Risk: a forbidden pattern fails the RIGHT answer for naming the thing it refuses to do.
+
+        A `must_not_match` regex reads as "the model must not do X", but a plain keyword match also
+        fires on "X is not what I did" and on X quoted as the question being handed off. That is a
+        false FAILURE — the most expensive kind, because it looks like a contract regression and
+        sends the next session to rewrite an agent that was behaving. Seven such traps shipped in
+        this file and were caught in review, not by a check; this is that check.
+        """
+        for case_id, marker, compliant, _violating in self._NEGATION_CONTROLS:
+            pattern = self._pattern_for(case_id, marker)
+            with self.subTest(case=case_id, pattern=pattern):
+                self.assertIsNone(
+                    re.search(pattern, compliant),
+                    f"compliant sentence trips {pattern!r}",
+                )
+
+    def test_narrowed_forbidden_patterns_still_catch_their_violation(self) -> None:
+        """The other direction: narrowing must not turn a guard into decoration."""
+        for case_id, marker, _compliant, violating in self._NEGATION_CONTROLS:
+            pattern = self._pattern_for(case_id, marker)
+            with self.subTest(case=case_id, pattern=pattern):
+                self.assertIsNotNone(
+                    re.search(pattern, violating),
+                    f"violating sentence escapes {pattern!r}",
+                )
+
     def test_work_order_digests_bind_the_exact_supplied_bytes(self) -> None:
         functional = self.cases["handoff-builder-applies-work-order"]
         work_order, recorded = self._work_order_and_digest(functional)
@@ -1800,6 +1889,11 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
     `future.result()` — which caught only the two availability types — passed the pool shutdown,
     and left `main()` by traceback with no benchmark written. Delete the generic `except Exception`
     in the completion loop and this test raises instead of asserting.
+
+    Second risk, same handler: recording that run as a case failure publishes the runner's defect as
+    an agent-contract regression, because behavioral requires every run to pass. Excluding it — and
+    calling the case INCONCLUSIVE when every run broke — is what keeps a measurement failure and a
+    contract failure two different facts.
     """
 
     def test_a_run_raising_inside_the_runner_still_yields_a_graded_batch(self) -> None:
@@ -1829,7 +1923,6 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
                     "--case", "tier-gate-holds", "--runs", "3",
                     "--model", "opus", "--timeout", "77", "--output-dir", tmp,
                 ])
-                self.assertIn(code, (0, 1))
                 benchmark = json.loads(
                     (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
                 )
@@ -1842,6 +1935,53 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
         blob = json.dumps(benchmark)
         self.assertIn("runner error", blob)
         self.assertIn("RuntimeError", blob)
+        # And the runner's own defect is a MEASUREMENT failure, not a contract verdict: the two
+        # sessions that completed both satisfied the contract, so the case passes and the exit code
+        # is clean. Score the broken run as a case failure and this is exit 1 — a published
+        # agent-contract regression that no graded session produced.
+        self.assertEqual(0, code)
+        case = benchmark["cases"][0]
+        self.assertEqual(1, case["runs_excluded"])
+        self.assertEqual(2, case["runs_graded"])
+        self.assertEqual(3, case["runs"], "per-run arrays still cover every attempted run")
+        self.assertEqual(2, case["passes"])
+        self.assertEqual(1.0, case["rate"], "rate denominator is the graded runs, not attempted")
+        self.assertFalse(case["inconclusive"])
+
+    def test_a_case_whose_every_run_breaks_is_inconclusive_not_failed(self) -> None:
+        """Risk hypothesis: an unmeasured case reported as an agent-contract regression.
+
+        The all-or-nothing rule plus an empty graded set is exactly the vacuous verdict routing's
+        INCONCLUSIVE state exists to prevent. Exit 3 says 're-run, nothing was measured'; exit 1
+        would send a reader auditing an agent definition over a runner bug.
+        """
+        def always_exploding(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            raise RuntimeError("transcript reader hit an unexpected event shape")
+
+        original_run, original_claude = eval_behavioral.run_session, eval_behavioral.CLAUDE
+        eval_behavioral.run_session = always_exploding
+        eval_behavioral.CLAUDE = "claude"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "2",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+                benchmark = json.loads(
+                    (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
+                )
+        finally:
+            eval_behavioral.run_session = original_run
+            eval_behavioral.CLAUDE = original_claude
+
+        self.assertEqual(3, code, "an unmeasured case is not a contract failure")
+        case = benchmark["cases"][0]
+        self.assertTrue(case["inconclusive"])
+        self.assertEqual(0, case["runs_graded"])
+        self.assertEqual(2, case["runs_excluded"])
+        self.assertEqual(0, case["passes"])
 
 
 class PassingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):

@@ -227,6 +227,15 @@ python3 scripts/eval_behavioral.py --runs 1              # all cases
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
+Behavioral is **all-or-nothing per case**: every graded run must satisfy every assertion, because a
+contract that holds two runs in three is a contract that does not hold. "Graded" excludes a run the
+runner itself broke on — those are recorded as `runs_excluded` with the exception text, and a case
+whose every run broke is `INCONCLUSIVE`, never a failure. The exit codes carry that distinction the
+way routing's do: `0` every graded case passed, `1` a case failed (a contract verdict to
+investigate), `3` nothing failed but something was `INCONCLUSIVE` (re-run it; the runner broke, the
+agent was not measured), `2` a usage, authentication, or provenance error for which no benchmark was
+written.
+
 The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
 bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
 cases, tool-enabled cases, and cases requiring a Claude permission mode are refused before a model

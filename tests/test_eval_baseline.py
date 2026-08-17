@@ -91,6 +91,43 @@ class EvalBaselineTests(unittest.TestCase):
             eval_routing.selection_identity("*", [regraded])["sha256"],
         )
 
+    def test_membership_is_part_of_the_selection_identity(self) -> None:
+        """Risk: dropping the whole-file `eval_sources` check also dropped membership from identity.
+
+        A cluster's `members` list is a grading input, not documentation — a negative with no
+        `expect_not_fires` is scored against the whole member list, so adding or removing a member
+        changes what identical case bytes assert. `eval_sources` used to catch that as a side effect
+        of hashing the file whole; once it stopped being compared, only `selection` can. Drop
+        `members` from `selection_identity` and this fails in both directions.
+        """
+        sys.path.insert(0, str(REPO / "scripts"))
+        import eval_routing  # noqa: PLC0415
+
+        case = {"id": "neg-x", "polarity": "negative", "prompt": "p"}
+        two = eval_routing.selection_identity("*", [case], members=["prompt-craft", "sde-fullstack"])
+        three = eval_routing.selection_identity(
+            "*", [case], members=["prompt-craft", "sde-fullstack", "code-reviewer"]
+        )
+        self.assertNotEqual(two["sha256"], three["sha256"])
+        # Order is not a grading fact — the scorer intersects against a set.
+        reordered = eval_routing.selection_identity(
+            "*", [case], members=["sde-fullstack", "prompt-craft"]
+        )
+        self.assertEqual(two["sha256"], reordered["sha256"])
+        # And the resolver's own desired identity must actually carry membership. A None here is the
+        # silent failure: the field exists, the hash is stable, and the check enforces nothing.
+        self.assertIsNotNone(self.desired["selection"]["members"])
+
+    def test_a_membership_change_stales_a_stored_benchmark(self) -> None:
+        """The resolver end of the rule above: identity must reach the REUSABLE/STALE verdict."""
+        mutated = copy.deepcopy(self.desired)
+        mutated["selection"]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_benchmark(Path(tmp), mutated, dict(CONDITIONS))
+            code, out = self._run(Path(tmp))
+        self.assertEqual(1, code, out)
+        self.assertIn("selection", out)
+
     def test_changed_plugin_bytes_are_stale_and_named(self) -> None:
         mutated = copy.deepcopy(self.desired)
         mutated["plugin"]["sha256"] = "0" * 64
