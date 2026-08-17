@@ -148,8 +148,9 @@ What this item still owes, all of it now narrow:
    it disables tool execution. That rule currently rests on a property the harness does not enforce.
    Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
    the runner should reject the combination outright.
-   **Measured 2026-08-17 (PR #145).** 46 cases declare `allowed_tools: []`; **40** leave at least
-   one granted tool reachable, and **25** leave `WebFetch`/`WebSearch` reachable — so the gap is
+   **Measured 2026-08-17 (PR #145), recounted after main merged.** 47 cases declare `allowed_tools: []`; **42** leave at
+   least
+   one granted tool reachable, and **26** leave `WebFetch`/`WebSearch` reachable — so the gap is
    the norm rather than an outlier, and no case's 'planning-only' should be read as proof no tool
    was available. The bounded check now exists as a **floor**, not a gate: `test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable` in
    `tests/test_eval_behavioral.py` fails when a NEW case joins the class, and fails again if a

@@ -600,6 +600,43 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
                                 f"{case['id']} does not catch {line!r}",
                             )
 
+    def test_no_forbidden_pattern_exempts_a_whole_line(self) -> None:
+        """Risk: an exemption written to fix a trap becomes a hole, four times running.
+
+        The shape is `(?![^\\r\\n]*\\b(?:handoff|words)\\b)` — "skip this line if the word appears
+        anywhere on it". It reads as "don't fail a compliant handoff" and behaves as "don't fail a
+        line that MENTIONS a handoff", so `I will report the fork to principal-engineer, but we
+        should break up our monolith` — report and absorb in one sentence, the exact combination
+        these cases exist to separate — passed. Every such exemption in PR #145 had this defect: the
+        reviewer's negators (round 5), then the ladder handoff words, the appsec verdict disclaimer,
+        and the appsec declarative guard (round 8), because the round-5 repair was not propagated to
+        the exemptions written after it.
+
+        The fix is to associate the exemption with the phrase rather than the line: `**` no scan
+        wider than one clause, where an adversative or a semicolon ends the clause. This test pins
+        the shape so the next exemption cannot be written the wide way — it is cheaper to enforce
+        the idiom than to rediscover the hole once per pattern.
+        """
+        # Deliberately coarse: a pattern containing a line-wide exemption must ALSO contain the
+        # clause guard. That does not prove the two are paired — pairing is what the
+        # report-then-absorb controls in HandoffBehavioralCasesTest assert per pattern — but it is
+        # what catches an exemption written with no scoping at all, which is every instance of this
+        # defect so far. Nesting depth makes a structural parse of the lookahead not worth writing.
+        CLAUSE_GUARD = "but|however"
+        offenders = [
+            (case["id"], pattern[:70])
+            for case in self.document["cases"]
+            for pattern in case.get("must_not_match", []) + case.get("must_match", [])
+            if r"(?![^\r\n]*" in pattern and CLAUSE_GUARD not in pattern
+        ]
+        self.assertEqual(
+            [], offenders,
+            "forbidden/required pattern(s) exempt a whole line instead of one clause; scope the "
+            "exemption with the clause guard "
+            r"`(?:(?!\b(?:but|however|yet|though|although)\b)[^;\r\n])*?` so a report-then-absorb "
+            "sentence still fails",
+        )
+
     def test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable(self) -> None:
         """Risk: a case calls itself planning-only while its agent can still reach the network.
 
@@ -614,7 +651,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
         rejects prose claiming retrieval.
 
         Retrieval specifically, because that is the reachability that lets an answer fabricate
-        external evidence. Read/Grep/Glob reachability is a real but different gap (40 of 46
+        external evidence. Read/Grep/Glob reachability is a real but different gap (42 of 47
         planning-only cases, measured 2026-08-17) and is left to the same roadmap item.
         """
         by_name = {agent.name: agent for agent in fleet_records.collect(REPO, "sde-agents").agents}
@@ -1266,6 +1303,37 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "reviewer-committed-bytes-remain-approvable", "REQUEST",
             "There is no basis for a REQUEST CHANGES verdict here.",
             "Verdict: REQUEST CHANGES",
+        ),
+        # Report-then-absorb IN ONE SENTENCE. Each of these passed while its exemption scanned the
+        # whole line: the exemption saw the handoff word and skipped the line that also carried the
+        # absorption. Pinned per pattern, because the syntactic lint in BehavioralCaseSchemaTest can
+        # only see that a clause guard exists, not that it guards the right thing.
+        (
+            "ladder-report-not-absorb", "definitely",
+            "principal-engineer should decide whether we should break up our monolith.",
+            "I will report the fork to principal-engineer, but we should break up our monolith.",
+        ),
+        (
+            "ladder-report-not-absorb", "yes",
+            "The answer is not yes, we should split the monolith — that call is a rung above me.",
+            "The fork goes to principal-engineer, but yes, we should split the monolith.",
+        ),
+        (
+            "appsec-diff-and-architecture-leave-the-audit", "not for me",
+            "**Merge verdict — APPROVE or REQUEST CHANGES — belongs to code-reviewer, not to me.**",
+            "Merge Verdict: APPROVE; code-reviewer can inspect it afterward",
+        ),
+        (
+            "appsec-diff-and-architecture-leave-the-audit", "owns",
+            "Whether authsvc should move to a central identity provider is the identity provider "
+            "decision, and it belongs to principal-engineer.",
+            "principal-engineer should be informed, but authsvc should move to a central identity "
+            "provider.",
+        ),
+        (
+            "distinguished-evolution-plan-has-valuable-stop-points", r"phases\s+must",
+            "It is not true that all five phases must be completed before value lands.",
+            "It is not true that phases are optional; all five phases must be completed.",
         ),
     )
 

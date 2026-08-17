@@ -393,9 +393,17 @@ So, in order of preference:
    monolith is what is being broken up; "move the identity provider" is only absorption when the
    thing moved is the service rather than the decision about it.
 3. **Anchor structurally** — a verdict line at line start beats the same words in prose.
-4. **Scope a negator check to the claim's own clause**, never the whole line, and remember a comma or
-   an adversative ends that clause. If the guard needs more nesting than that to be right, it is the
-   wrong instrument: go back to 1.
+4. **Scope every exemption to the claim's own clause**, never the whole line. This is the rule with
+   the worst track record here: a line-wide `(?![^\r\n]*\b(?:handoff|words)\b)` reads as "don't
+   fail a compliant handoff" and behaves as "don't fail a line that MENTIONS one", so `I will report
+   the fork to principal-engineer, but we should break up our monolith` — report and absorb in one
+   sentence, the exact thing the case separates — passes. Six patterns in PR #145 had it, in four
+   separate rounds, because each repair was written for one pattern instead of the idiom. Use
+   `(?:(?!\b(?:but|however|yet|though|although)\b)[^;\r\n])*?` between the exemption's vocabulary
+   and the phrase it exempts; an adversative or a semicolon ends the clause, a comma does not (it
+   appears inside idioms the exemption must see through). `test_no_forbidden_pattern_exempts_a_whole_
+   line` fails a pattern written the wide way. If a guard needs more nesting than this to be right,
+   it is the wrong instrument: go back to 1.
 
 Whatever you land, pin **both** directions in `tests/test_eval_behavioral.py` — the compliant
 sentence must not trip, and the asserted violation must still trip. Narrowing is exactly the edit
@@ -562,7 +570,7 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 64 of the 69 cases are no-tool planning-only sessions. The expense
+**Where the cost actually is.** 47 of the 70 cases are no-tool planning-only sessions. The expense
 concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
 Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
 per-contract work.
@@ -607,7 +615,7 @@ cluster. Re-baseline whenever membership changes.
 **Suite size, as of 2026-08-17:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 69
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 70
 deterministic contracts. Both numbers are worth knowing before starting a paired round: the
 'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
 capture reusable.
