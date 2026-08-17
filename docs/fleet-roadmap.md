@@ -603,51 +603,6 @@ consumer waits. (3) Agents writing packets to a well-known scratch file — **re
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
 
-#### GUIDE-001 — finish the AGENTS.md audit remainder
-
-**Status:** `ready` — the 2026-08-16 three-scan audit of the repository guide (design/weight,
-accuracy against sources, consistency) landed its correctness fixes and its largest rewrites on
-`claude/agents-md-review-jp2ly0` (`c2865eb` through the Development-loop and engineering-program
-rewrites, ~7,940 → ~5,726 tokens); outcomes (1) and (2) below are **landed** — this item is the
-unlanded remainder, stated in full below so no external record is needed to scope it.
-
-**Outcome:** (1) **Landed** (`6321635`, `2ba2681`, three-pass verified): the Development-loop
-manual-check bullets shrink to one line each plus pointers
-at `evals/README.md` and the script docstrings, while **keeping** the capability-graph and
-workflow-contract boundary statements ("advisory, never a T0/CI/PR gate"; "design-consistent,
-never runtime-enforced") — their Map copies are already deleted, so these subsections are the
-boundaries' only remaining ambient home. (2) **Landed** (`79faa4c`, `9094e56`): the
-engineering-program section is restructured for
-LLM legibility per operator ruling: the stateless premise leads, one labeled bullet per strand in
-the owner's headline vocabulary, and the reading rule gains the owner's two-question trim
-procedure — a measured net growth (~424 → ~480 after tightening) rather than the originally
-targeted ~250-token cut; clarity was bought instead, at stated cost. (3) The incident narrations in "Validate
-before you push" and the one-writer hard rule become bare citations. (4) Four consistency-scan
-ambiguities close with one-line edits: A2 (name the artifact where tripwire-retirement doubt is
-recorded), A3 (scope the `~/.claude` prohibition to definitions, not sessions), A4 (add the
-description-edit trigger beside the T3 eval line), A6 ("the tests" → the owning test module).
-(5) Two gaps close with one sentence each: G3 (a session inheriting a red check fixes it if
-trivial, otherwise records it — never proceeds silently past it), G4 (a host without the `claude`
-CLI says so and defers the plugin-contract check to CI's pinned job).
-
-**Source:** the 2026-08-16 audit session; landed halves recorded in the branch commits and
-`docs/decisions/2026-08-16-pr-review-gate.md`.
-
-**Prerequisites:** none for the trims and one-liners. Two operator rulings gate only their own
-edits: **A1** — whether the two-round static deep-review cap widens from "agent or skill text" to
-all fleet prose (the six-round failure mode it was written for is currently uncapped on `docs/`
-and this guide itself); **G5** — whether a release or CLI-pin bump owes every routing cluster or
-only affected ones (`evals/README.md` documents no all-clusters mode, so today "the eval suites"
-has no defined extent).
-
-**Acceptance:** validator and full suite green on each commit; the closing commit shows the two
-boundary statements still present in the Development loop after its trim, and records the file's
-before/after token measure.
-
-**Next action:** land the remaining trims (Validate before you push, Hard rules, preamble) and
-the A2/A3/A4/A6 + G3/G4 one-liners; put the A1 and G5 rulings to the operator and apply whichever
-arrive.
-
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
@@ -657,38 +612,25 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **DOCTOR-001** — `_skill_listing_budget_check` indexes `manifest["name"]` before checking the
-  decoded JSON root is an object, so `[]`/`null` manifests traceback instead of reporting
-  inconclusive; validate the root (or catch TypeError) with a firing test. Source: PR #141
-  round-3 review, dispositioned past the two-round cap.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
   Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
-- **DOCTOR-003** — two listing-budget tests assert forward-slash relative paths against
-  `str(Path.relative_to())` output (`tests/test_fleet_doctor.py`), which renders backslashes on
-  Windows, so the T2 windows-latest leg fails after merge while ubuntu-only PR CI stays green;
-  normalize with `as_posix()` or platform-aware assertions. Source: 2026-08-16 multi-lens branch
-  review.
 - **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
   the clause earns the docstring's "probed, not assumed" header. Source: PR #142 Codex round 1.
-- **DOCTOR-004** — `_skill_listing_budget_check` keys its budget sum by `plugin:name` in one dict
-  shared by skills and workflows, so a workflow meta name colliding with a skill name silently
-  overwrites the skill's entry and undercounts with no inconclusive verdict; key by kind or guard
-  the collision, with a firing test. Latent today — no colliding names exist. Source: 2026-08-16
-  multi-lens branch review.
-- **GUARD-001** — two same-family residuals in the investigator's git slice, both
-  reviewer-reproduced on git 2.43: in a partial clone, allowlisted `git show <old>:path` lazily
-  fetches missing promisor objects (outbound fetch to the repo's own configured remote,
-  hash-verified so not content injection, but a hole in the no-network slice — evaluate
-  `GIT_NO_LAZY_FETCH`); and `git status` executes a crafted `core.fsmonitor` from local
-  `.git/config`, so the agent prose's untrusted-provenance boundary must say **no git commands**
-  on a repo that arrived as a directory/archive — the current "no history commands" leaves step
-  2's `rev-parse`/`status` instructed before provenance is established. Document both residuals
-  in the guard docstring and fix the prose scope in the same pass. Source: PR #141 rounds 3–4
-  review, dispositioned past the two-round cap.
+- **PROBE-002** — the 2026-08-17 probe run scored 12/19 with the two `skills:` preload canaries
+  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
+  in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
+  undocumented guarantee this fleet depends on, so the failure is either a real regression or
+  canary-quoting variance the oracle cannot separate — settle which with one repeat run before
+  treating either answer as known. Source: PR #143 probe run.
+- **PROBE-003** — `probe_plugin.py`'s five workflow assertions cannot run as root: the workflow
+  launch needs `--dangerously-skip-permissions`, which Claude Code refuses under root/sudo, so all
+  five fail as a cascade of one environment condition and read as five fleet defects. Detect the
+  condition and report those assertions `INCONCLUSIVE` (the probe's own documented verdict for
+  "not this guard's doing") instead of FAIL. Source: PR #143 probe run.
 
 ## Deferred decisions
 

@@ -225,7 +225,7 @@ def _workflow_listing_entries(root: Path, plugin_name: str) -> tuple[list[tuple[
             # workflows/ is auto-discovered, so every .js here IS a listed workflow and its meta
             # must carry a description. Skipping it would shrink the sum toward a false pass —
             # the caller turns this into an inconclusive verdict, never a smaller total.
-            failed.append(str(path.relative_to(root)))
+            failed.append(path.relative_to(root).as_posix())
     return entries, failed
 
 
@@ -234,6 +234,14 @@ def _skill_listing_budget_check(root: Path) -> Check:
         manifest = json.loads(
             (root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
+        if not isinstance(manifest, dict):
+            # json.loads happily returns a list/string/null, and the name lookup below would
+            # raise TypeError — outside the except clause — exactly when the manifest is
+            # damaged. Same documented inconclusive path as the non-string name.
+            raise ValueError(
+                ".claude-plugin/plugin.json root is not an object: "
+                f"{type(manifest).__name__}"
+            )
         plugin_name = manifest["name"]
         if not isinstance(plugin_name, str) or not plugin_name:
             # A non-string name would raise TypeError five frames deep in fleet_records and
@@ -245,7 +253,7 @@ def _skill_listing_budget_check(root: Path) -> Check:
             )
         records = fleet_records.collect(root, plugin_name)
         unreadable = sorted(
-            str(path.relative_to(root))
+            path.relative_to(root).as_posix()
             for path in records.unparseable
             if path.name == "SKILL.md"
         )
@@ -285,14 +293,21 @@ def _skill_listing_budget_check(root: Path) -> Check:
             f"listing sum would be an undercount and any pass would claim fictitious headroom.",
             {"unreadable": unreadable},
         )
-    entry_lengths = {
-        f"{plugin_name}:{name}": len(f"- {plugin_name}:{name}: ")
-        + min(len(description), _SKILL_LISTING_MAX_DESC_CHARS)
+    # A list, not a dict: skills and workflow metas share this namespace, and keying a dict by
+    # name would let a collision silently overwrite one entry — an undercount toward a false
+    # pass, the direction every other branch of this check refuses. The model's listing shows
+    # both colliding entries, so the sum counts both.
+    entry_lengths = [
+        (
+            f"{plugin_name}:{name}",
+            len(f"- {plugin_name}:{name}: ")
+            + min(len(description), _SKILL_LISTING_MAX_DESC_CHARS),
+        )
         for name, description in listed
-    }
-    total = sum(entry_lengths.values()) + max(0, len(entry_lengths) - 1)
+    ]
+    total = sum(length for _, length in entry_lengths) + max(0, len(entry_lengths) - 1)
     over = total > _SKILL_LISTING_BUDGET_CHARS
-    largest = sorted(entry_lengths.items(), key=lambda item: -item[1])[:3]
+    largest = sorted(entry_lengths, key=lambda item: -item[1])[:3]
     details = {
         "total_chars": total,
         "budget_chars": _SKILL_LISTING_BUDGET_CHARS,

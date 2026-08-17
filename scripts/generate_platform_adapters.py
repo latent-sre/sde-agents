@@ -511,8 +511,20 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "reader-allowlist command guard does not exist on this host — so every boundary\n"
                 "here is cooperative: use the shell only for read-only repository inspection\n"
                 "(`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code\n"
-                "execution or network access, and let the caller provide an outer isolation\n"
-                "boundary before treating that separation as enforced."
+                "execution or deliberate network access — against a partial clone any reader that\n"
+                "materializes an absent object (`git show`, `git log -p`, `git blame`) still\n"
+                "lazily fetches it from the repository's own remote, so never report no-network as\n"
+                "a verified fact without naming the commands you ran — and let the caller provide\n"
+                "an outer isolation\n"
+                "boundary before treating that separation as enforced. The provenance rule is\n"
+                "part of that cooperation, and it binds harder here than on the source host:\n"
+                "git executes code named by a repository's local config — diff drivers under\n"
+                "`git log`/`git show`, a `core.fsmonitor` command under even `git status` — so a\n"
+                "repository that *arrived* as a directory, archive, or mounted volume gets no git\n"
+                "commands at all, step 2's `rev-parse`/`status` included, until your caller states\n"
+                "the isolation boundary; inspect it with read/search tools and say why. No command\n"
+                "guard backs this on Codex, so nothing but this instruction stands between an\n"
+                "arrived repository and its own diff driver."
             )
         # Every substitution here must land exactly once. A zero-match miss (the canonical
         # paragraph reworded without this function updated) would regenerate "clean" adapters
@@ -540,7 +552,9 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             for old, new in (
                 (
                     "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
-                    "   `git status` to detect a dirty tree.",
+                    "   `git status` to detect a dirty tree; on untrusted provenance both wait "
+                    "for the isolation\n"
+                    "   boundary above.",
                     "Name the repository root and the revision supplied by the caller or exposed\n"
                     "   by the host context.",
                 ),

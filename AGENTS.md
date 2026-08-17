@@ -1,17 +1,18 @@
 # Repository guide for coding agents
 
 This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent
-Plugins. The definitions in `agents/` and `skills/` are the only authored source and exactly what
-Claude Code loads. Codex, Copilot, and VS Code load generated host adapters. Edit the canonical
-files directly and regenerate; never edit a generated copy or resolve a Claude fleet file under
-`~/.claude`, which does not contain this fleet once it ships as a plugin. Every script under
-`scripts/` states its own contract in its docstring — read it before touching or invoking one.
+Plugins: `agents/` and `skills/` are the only authored source, loaded directly by Claude Code;
+the other hosts load generated adapters. Edit canonical files and regenerate — never a generated
+copy, never a fleet definition resolved under `~/.claude` (the shipped plugin does not live
+there). Every script under `scripts/` states its contract in its docstring — read it before
+touching or invoking one.
 
-This file is the fleet's own instance of the project context convention that `README.md` defines
-for target repositories. Where it paraphrases the README or a script's docstring, that source wins
-on conflict — fix the paraphrase here, never the source. The validator holds this file to that
-rule: the `@AGENTS.md` bridge in `CLAUDE.md`, every concrete multi-segment repo path named here,
-and the model-alias list are checked against the source and fail on drift.
+Where this file paraphrases `README.md` or a script's docstring, the source wins — fix the
+paraphrase here, never the source. The validator pins the checkable facts (the `@AGENTS.md`
+bridge in `CLAUDE.md`, concrete multi-segment repo paths, the model-alias list) and fails them
+on drift. This file is written for the LLM session that loads it on every task: when editing
+it, lead each rule with its trigger and imperative, compress rationale to a clause or a
+citation, and keep incident narration in its archive or decision record — never here.
 
 ## The engineering program
 
@@ -43,43 +44,40 @@ one writer per artifact, structure only at the boundaries that remain.
 ## Validate before you push
 
 Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence
-instead of recomputing it.
+instead of recomputing it. A check already red when you arrive is never passed silently: fix it
+if trivial, otherwise record it in `docs/fleet-roadmap.md` and continue.
 
-- **T0 — edit loop** (seconds): `python3 scripts/validate_fleet.py` plus the test module that
-  owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
-  validator byte-compares every generated adapter itself, so a separate
-  `generate_platform_adapters.py --check` adds nothing here; `--write` (below) remains the
-  regeneration command after canonical edits.
-- **T1 — before push / PR**: the full offline suite via `python3 scripts/run_tests.py` (one
-  process per module, in parallel — a serial `python3 -m unittest discover -s tests -v` proves
-  the same thing at the sum of the module times instead of roughly the longest one), plus
-  `claude plugin validate . --strict` for the platform contract. CI runs the validator, the
-  tests, and the ledger-drift report on Ubuntu for every PR, and the plugin contract check on
-  Linux. Also run `python3 scripts/fleet_doctor.py` — it is **local-only and CI can never
-  substitute for it**, because the drift it finds lives in your host installation rather than in
-  the checkout every other tier reads. Exit 3 means at least one warning — read the report to see
-  which; host drift from what the repository ships is the common case, and its repair is
-  `python3 scripts/install_codex_agents.py --user`. Treat a warning as owed work before you
-  measure anything: a session running against a stale installed profile is not testing the fleet
-  you edited, which is how a superseded, materially stricter `homelab-platform` profile drove a
-  whole Codex-host session and cost roughly ten hours (issue #126).
-- **T2 — merge and weekly** (CI-owned): pushes to main, the Monday sweep, and manual dispatch
-  run the full Linux/macOS/Windows matrix, so platform-specific guard and hook paths are
-  exercised without billing every PR for them (see the matrix comment in
+- **T0 — edit loop** (seconds): run `python3 scripts/validate_fleet.py` and the test module
+  that owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
+  validator byte-compares every generated adapter itself, so no separate `--check` run is
+  needed; `generate_platform_adapters.py --write` (below) is the regeneration command after
+  canonical edits.
+- **T1 — before push or PR**: run `python3 scripts/run_tests.py` (full offline suite),
+  `claude plugin validate . --strict` (platform contract; a host without the `claude` CLI says
+  so and defers this check to CI's pinned job), and `python3 scripts/fleet_doctor.py`.
+  CI repeats the first two on every PR but can never substitute for fleet_doctor — the drift it
+  finds lives in your host installation, not in the checkout. Exit 3 means warnings: read the
+  report, repair host drift (the common case) with
+  `python3 scripts/install_codex_agents.py --user`, and clear every warning before measuring
+  anything — a stale installed profile means you are measuring something other than the fleet
+  you edited (issue #126).
+- **T2 — merge and weekly** (CI-owned, nothing for you to run): pushes to main, the weekly
+  sweep, and manual dispatch run the full three-OS matrix, so platform-specific guard and hook
+  paths are exercised without billing every PR for them (see the matrix comment in
   `.github/workflows/validate.yml`).
-- **T3 — release / CLI pin bump** (manual, real API): `scripts/probe_plugin.py` and the eval
-  suites, per the section below. Before a paired routing run, `scripts/eval_baseline.py`
-  reports whether a stored benchmark already covers the 'before' side — reuse it when it does;
-  the 'after' side is always fresh.
+- **T3 — release or CLI pin bump** (manual, real API): run `scripts/probe_plugin.py`, every
+  routing cluster, and the behavioral evals, per the next section — a global trigger owes
+  global coverage, so there is no affected-only subset. Before a paired routing run, check
+  `scripts/eval_baseline.py` — a stored benchmark it reports reusable covers the 'before' side;
+  the 'after' side is always a fresh run.
 
-Static review has a convergence bound. A prose-behavior change (agent or skill text) gets at
-most **two** deep-review rounds: when a later round's criticals land in sentences the previous
-round's fix introduced, the loop is diverging — natural-language rules have unbounded
-hypothetical attack surface, so each rewrite mints the next round's findings. Close with the
-instrument that measures behavior instead (a live behavioral-contract run, or an executed
-verification pass); a third static round happens only on an explicit operator ruling. This rule
-exists because one branch spent six rounds and ~1.5M review tokens finding defects only in its
-own successive fixes.
+Static review has a convergence bound: at most **two** deep-review rounds per prose-behavior
+change (agent or skill text), **three** for any other fleet prose — docs and this guide
+included. The divergence signal: a round's criticals land in sentences the previous round's
+fix introduced — each rewrite mints the next round's findings. Close with an instrument that
+measures behavior instead (a behavioral-contract run, or an executed verification pass); a
+round past the cap happens only on an explicit operator ruling (provenance: six rounds and
+~1.5M review tokens on one branch).
 
 After **any** canonical agent or skill edit, regenerate the host adapters:
 
@@ -150,8 +148,8 @@ cancellation, reset) wait for GRAPH-004.
 
 ## Change playbooks
 
-**Any edit** — run the validator and the tests. If you touched text that paraphrases another file,
-find the declared owner and fix in the right direction (see "Owned conventions" below).
+**Any edit** — run T0. If you touched text that paraphrases another file,
+find the declared owner and fix in the right direction (see "The source wins on drift" below).
 
 **Editing any canonical agent or skill** — run
 `python3 scripts/generate_platform_adapters.py --write` after the canonical edit. Generated copies
@@ -235,7 +233,8 @@ suite is evidence, not a ledger of past fears: a test whose hypothesis can no lo
 re-proves nothing (the proportionality rule already bans that) while still taxing every edit
 that touches its fixtures. The bar is structural impossibility, not "hasn't fired lately" — a
 quiet tripwire watching a still-possible failure stays, and when the two readings are arguable
-the test stays and the doubt is recorded where the retirement would have been.
+the test stays and the doubt is recorded in the test's docstring, beside the risk hypothesis it
+questions.
 
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
@@ -268,54 +267,48 @@ the request to its operator and says so, never reporting the PR as awaiting revi
 
 Wait for both passes **on the current head** — a review-driven edit mints bytes the cleared
 passes never saw, so the last edit owes another wait — and disposition every comment: applied, or
-declined with the reason. At most **two** review-driven edit rounds per PR; a later finding is
+declined with the reason. At most **three** review-driven edit rounds per PR; a later finding is
 dispositioned in the thread without new bytes (declined with the reason, or recorded as owed work
 in `docs/fleet-roadmap.md`) unless an explicit operator ruling buys one further round, the same
-one-round escape as the deep-review bound's third static round. The cap bounds edits, never
+one-round escape as the deep-review bound's round past the cap. The cap bounds edits, never
 waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions
 
-- **Standard library only.** The validators, generators, installers, guard, hook, and tests use only
-  the Python standard library. Do not add dependencies.
-- **Generated adapters are not a second source.** Never hand-edit `.claude/agents/`,
-  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, or
-  `plugins/sde-agents/skills/`. Change the
-  canonical file or generator, regenerate, and let byte-drift validation prove the result.
-- **One parser per fact.** `scripts/fleet_records.py` is the fleet's only parser for frontmatter,
-  `tools:` values, and namespaced references; every validator, generator, and report builds on its
-  records. A second parser would let two reports about the same tree disagree with nothing to
-  arbitrate them — extend the shared records, never parse alongside them.
-- **Authority is host-specific.** Claude's guard, Copilot/VS Code's omission of `execute` from
-  guarded roles, and Codex's `sandbox_mode` are distinct controls. Never replace one with
-  compatible-looking prose or load the Claude hook on a host whose payload cannot scope it.
-  `workflows/` is Claude-only for the same reason: Copilot, VS Code, and Codex have no workflow
-  runtime, so a ported reference would read as available and fail silently.
-- **Claude plugin agents cannot carry `hooks:`, `mcpServers:`, or `permissionMode:`.** Claude Code
-  silently ignores those keys on plugin-shipped agents, so a guard declared there would look like
-  armor and be nothing. Unknown frontmatter keys fail validation for the same reason: a typo does
-  not error at load time, it silently drops what it was meant to configure.
-- **Proportionality gates both directions.** Repeated work is a defect — evidence produced once is
-  reused, and a check that re-proves what another check proved does not ship. An optimization
-  without a paired same-machine measurement is equally a defect. And a mechanism without a
-  demonstrated consumer — a new abstraction, config surface, component, or gate with no real task
-  needing it now — waits trigger-bound, the way the roadmap's deferred items do.
-- **One writer per checkout.** Two concurrent sessions — or two background jobs in one session —
-  sharing this working tree have already cost a benchmark (captured against a moving tree,
-  unattributable) and an uncommitted edit (overwritten mid-flight). Concurrent work gets its own
-  git worktree, and a measurement (an eval capture, the probe, the suite's repository copies) runs
-  only against a tree nothing else is writing; neither failure announces itself, which is why this
-  is a rule and not a judgment call. The sanctioned parallel test runner is not a second writer
-  to the tree you are editing: its workers assert against isolated repository copies
-  (`tests/support.py`). The exception is narrow and deliberate — two adapter tests create and
-  delete ignored runtime byproducts (a `__pycache__` entry, a generated-tree payload) in the live
-  checkout to prove the drift check ignores them, so the suite still may not run against a tree
-  another job is writing.
-- **Owned conventions.** Several files deliberately paraphrase another — the `eng-ladder` altitude
-  references, the three-strikes rule owned by `skills/root-cause`, the canonical
-  fetched-content-is-data sentence carried verbatim by `sde-fullstack`. Each such file states which
-  side wins on conflict; when they drift, fix the paraphrase, never the source. The full ownership
-  list lives in `README.md` under "Working on the fleet itself".
+- **Standard library only.** Fleet Python — validators, generators, installers, guard, tests —
+  imports only the Python standard library. Never add a dependency, a requirements file, or an
+  install step.
+- **Never hand-edit a generated adapter.** The generated trees are `.claude/agents/`,
+  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, and
+  `plugins/sde-agents/skills/`. Edit the canonical file or the generator and regenerate —
+  byte-drift validation proves the result.
+- **One parser per fact.** A script that needs frontmatter, `tools:` values, or namespaced
+  references builds on the records from `scripts/fleet_records.py`; to read a new fact, extend
+  the records. A second parser lets two reports about the same tree disagree with nothing to
+  arbitrate them.
+- **Authority is the host's own control, never prose.** Claude's guard, Copilot/VS Code's
+  omission of `execute`, and Codex's `sandbox_mode` are distinct controls — express an agent's
+  authority with the target host's control. Never port the Claude hook (its payload cannot be
+  scoped elsewhere; see the guard playbook) and never reference `workflows/` from another host
+  (no runtime exists there, so the reference reads as available and fails silently).
+- **Never add `hooks:`, `mcpServers:`, or `permissionMode:` to a plugin agent.** Claude Code
+  silently ignores them there — a guard declared in frontmatter looks like armor and is
+  nothing. The validator rejects these and every unknown key, because the runtime is not
+  guaranteed to fail loudly on a typo.
+- **Proportionality gates both directions.** Before adding a check, confirm no existing check
+  proves the same fact — reuse its evidence. Before claiming an optimization, measure it
+  before/after on the same machine — or ship the change without the claim. Before building a
+  new mechanism — abstraction, config surface, component, gate — name the task that consumes it
+  now; with none, record it trigger-bound in `docs/fleet-roadmap.md` instead of building it.
+- **One writer per checkout.** Concurrent work — a second session, a background job — gets its
+  own git worktree, and a measurement (an eval capture, the probe, the test suite) runs only
+  against a tree nothing else is writing: a benchmark against a moving tree or an overwritten
+  edit never announces itself (learn-001 outcome, 2026-08-02). The parallel test runner is
+  sanctioned — its workers assert against isolated copies (`tests/support.py`) — but two
+  adapter tests touch the live checkout, so the suite itself obeys the same rule.
+- **The source wins on drift.** When a deliberate paraphrase disagrees with its owner, fix the
+  paraphrase; a defect in the source is fixed at the source and re-propagated to its copies.
+  The ownership list lives in `README.md` under "Working on the fleet itself".
 
 ## Style
 

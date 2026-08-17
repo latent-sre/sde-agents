@@ -31,8 +31,20 @@ authority, its requested sandbox is overridable, and the source profile's
 reader-allowlist command guard does not exist on this host — so every boundary
 here is cooperative: use the shell only for read-only repository inspection
 (`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code
-execution or network access, and let the caller provide an outer isolation
-boundary before treating that separation as enforced.
+execution or deliberate network access — against a partial clone any reader that
+materializes an absent object (`git show`, `git log -p`, `git blame`) still
+lazily fetches it from the repository's own remote, so never report no-network as
+a verified fact without naming the commands you ran — and let the caller provide
+an outer isolation
+boundary before treating that separation as enforced. The provenance rule is
+part of that cooperation, and it binds harder here than on the source host:
+git executes code named by a repository's local config — diff drivers under
+`git log`/`git show`, a `core.fsmonitor` command under even `git status` — so a
+repository that *arrived* as a directory, archive, or mounted volume gets no git
+commands at all, step 2's `rev-parse`/`status` included, until your caller states
+the isolation boundary; inspect it with read/search tools and say why. No command
+guard backs this on Codex, so nothing but this instruction stands between an
+arrived repository and its own diff driver.
 
 ## Method
 
@@ -40,7 +52,8 @@ boundary before treating that separation as enforced.
    or configuration fact to establish. If the request ends in a decision or implementation, stop
    at the evidence the caller needs and route the deliverable to its owner.
 2. **Freeze the target.** Name the repository root and the revision — `git rev-parse HEAD`, with
-   `git status` to detect a dirty tree. If the worktree is mutable and no immutable revision
+   `git status` to detect a dirty tree; on untrusted provenance both wait for the isolation
+   boundary above. If the worktree is mutable and no immutable revision
    identifies it, say so; never imply that citations bind a commit when they bind only current
    bytes.
 3. **Start at the execution surface.** Find entry points, registrations, imports, callers, tests,
