@@ -374,7 +374,7 @@ fixture that fails without it, so listing regrowth fails T0 instead of failing s
 runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
 warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-platform.agent.md` is at
 24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
-host rejecting the profile.
+host rejecting the profile. (Re-measured 2026-08-17 after the GATE-003/GATE-004 prose repairs: 25,759 chars, 86%. The body grew 1,128 chars in one small round, which is the point of the tripwire.)
 
 **Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
 (mitigation calibration table; the Copilot cap under "Preload and body footprint").
@@ -754,21 +754,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   pre-existing gap. Needs an oracle that groups repeated slot blocks by effect before a combined
   case can be restored — the exactly-once rule and multi-effect grading are incompatible as written.
   Source: PR #144 round-10 review.
-- **GATE-004** — `agents/homelab-platform.md` tells the agent a bare `docker compose …` "must be
-  written `/usr/bin/docker compose …`", prescribing one path where the broker contract requires
-  only an ABSOLUTE one. `effect_broker.py` rejects a non-existent executable before approval
-  (`effect executable is not a regular file`), so on macOS, NixOS, Homebrew or rootless hosts —
-  where Docker is not in `/usr/bin` — a session following this instruction literally builds a
-  request that cannot be signed. Instruct resolving the trusted executable on the execution host
-  and using that absolute result; keep `/usr/bin/docker` only as the worked example's illustration.
-  Introduced by this PR's round-1 fix, which restored the absolute-path requirement by hardcoding
-  one path. Source: PR #144 round-11 review.
-- **GATE-003** — `agents/homelab-platform.md` requires an `Instrument` line on every gate statement
-  and offers `fresh request required|n/a`, but defines only the first. A session facing a gate with
-  no broker instrument — a repository or reviewer gate, or the documented broker-absent continuation
-  this same agent describes — cannot tell whether that is `n/a` or a fresh request that cannot be
-  created, so two sessions can emit contradictory machine-readable decisions for one state. Define
-  `n/a`'s exact conditions beside the fresh-request definition. Source: PR #144 round-10 review.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.

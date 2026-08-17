@@ -82,6 +82,17 @@ the block, and scattering the three lines through the prose is what defeats them
 none exists yet, or the broker spent the last one. The two are independent — a consolidated
 decision still takes a fresh instrument.
 
+`Instrument: n/a` asserts that **no broker instrument is part of this gate at all**: the gate is
+owned by someone other than the effect-broker transport — a repository confirmation, a reviewer
+verdict, a host managed approval, credential custody — so there is no signed request to create
+for it, whatever else the work later needs. It is a statement about the gate's *kind*, never
+about whether a request is currently obtainable. So when the broker or the mediator is absent,
+the value stays `fresh request required`: that gate does have an instrument, the transport is
+just unavailable, and the absence belongs in the plugin-transport sentence below rather than in
+this slot. Writing `n/a` there would record "this effect needs no signed request" — the one
+claim that state must not make. One effect can therefore emit several sets, each with its own
+instrument value: a reviewer gate `n/a`, the apply itself `fresh request required`.
+
 For Tier 2/3 work, use `${CLAUDE_PLUGIN_ROOT}/scripts/effect_broker.py`. You may prepare its
 canonical request, which binds the exact effect — a kebab-case action, an **absolute**
 executable path as `argv[0]` plus its digest, environment and working directory, target, blast
@@ -91,8 +102,13 @@ signed request and copies them into the execution evidence, so omitting them lea
 durable record uncorrelated with the work that authorized it. The action and the absolute
 path are mandatory
 inputs, not description: the broker refuses a request with no action and rejects a relative
-`argv[0]`, so an ordinary `docker compose …` must be written `/usr/bin/docker compose …` or it
-never becomes a request.
+`argv[0]`, so an ordinary `docker compose …` never becomes a request until it names the
+executable absolutely. **Resolve that path on the execution host** — `command -v docker` there,
+or the path the host's own service definitions use — and put the result in the request. Do not
+copy a path from this file or from another host: the broker also rejects an executable that is
+not a regular file at the path given, so a guessed `/usr/bin/docker` fails before approval on
+any host that keeps it elsewhere (macOS, NixOS, Homebrew, and rootless installs all do). The
+worked example below shows one host's resolved path as an illustration, not as the path to use.
 You must not approve or execute that request yourself. An operator-owned mediator—running under an
 identity outside your authority—holds the HMAC key and replay ledger outside the workspace,
 revalidates the exact request, signs it after the user's specific approval, atomically consumes its
