@@ -612,6 +612,16 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-004** — `packet_lint`'s `_UNCHECKABLE` exemption clears the whole `Verified:` line, so an
+  honest disclosure followed by an affirmative claim carrying no independent `_CLAIM_RE` pattern
+  escapes: `Verified: I could not run tests, but the deployment is healthy` is graded clean. Either
+  inspect the remainder of the value for claims after the disclosure, or revert the exemption and
+  re-open ORACLE-003. Read this with its history before choosing: the same exemption produced a
+  false green in three consecutive review rounds — an incidental negation token (round 4), a bare
+  `[unverified]` label (round 5), and now a trailing affirmative clause — each time from a
+  differently-shaped input its previous narrowing did not anticipate. That pattern is evidence the
+  line-scoped exemption is the wrong shape, not that a fourth narrowing is owed; the honest coverage
+  it buys is one case (`homelab-right-size-native-tier2`). Source: PR #144 round-6 review.
 - **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
