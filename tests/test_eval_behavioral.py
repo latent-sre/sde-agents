@@ -989,6 +989,15 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "You cannot stop after Phase 2 — the value only lands at the end.",
         ),
         (
+            # Same pattern, the distinction it exists to draw: a PREREQUISITE for reaching an early
+            # stopping point is the contract being honored; refusing to stop short of the end is the
+            # violation. "do not stop before X" is the phrasing both use, so the object decides.
+            "distinguished-evolution-plan-has-valuable-stop-points", r"until|before",
+            "Do not stop before Phase 1's acceptance checks pass; after that, Phase 1 is an "
+            "independently valuable stopping point.",
+            "Do not stop until the end; nothing is usable before then.",
+        ),
+        (
             "distinguished-evolution-plan-has-valuable-stop-points", r"phases\s+must",
             "It is not true that all five phases must be completed before value lands.",
             "All five phases must be completed before anything is usable.",
