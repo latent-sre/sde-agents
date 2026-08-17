@@ -82,7 +82,7 @@
     },
     {
       "id": "neg-review",
-      "prompt": "Review this branch for correctness and security bugs before I merge.",
+      "prompt": "Review the diff below for correctness and security bugs before I merge.\n\n```diff\n--- a/api/session.py\n+++ b/api/session.py\n@@\n-def verify(token, secret):\n-    return hmac.new(secret, token, \"sha256\").hexdigest() == token.signature\n+def verify(token, secret):\n+    expected = hmac.new(secret, token.body, \"sha256\").hexdigest()\n+    return expected == token.signature\n```",
       "polarity": "negative",
       "expect_not_fires": [
         "backend-craft",
@@ -91,7 +91,7 @@
         "code-craft",
         "ci-actions"
       ],
-      "expected_output": "Reviewing a diff \u2014 code-reviewer, not a builder.",
+      "expected_output": "Reviewing a diff \u2014 code-reviewer, not a builder. The diff is embedded deliberately: the prompt previously said \"this branch\" with nothing present, and a negative whose referent is absent has nothing to route to, so its pass was not evidence of correctly narrow builder descriptions. With a real diff to judge, a builder firing is a genuine over-trigger.",
       "tags": [
         "near-miss",
         "review"

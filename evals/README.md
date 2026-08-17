@@ -60,6 +60,29 @@ cluster's clean negative side as "no member named in these exemptions over-fired
 that is what the `ladder` cluster's `neg-embedded-decision-not-principal-owned` repair did, and
 its note records why firing-based grading cannot express "may fire, for the right reason".
 
+**A negative earns its session by being *near*.** The definition above is load-bearing: a near-miss
+*shares vocabulary* with the components it must not reach. A prompt that shares nothing with any
+member is a **far**-miss — it passes almost by construction, and it proves less than the tight cases
+in the same cluster already do, because a description broad enough to catch a far-miss would be
+catching every near-miss too. Three such cases were retired from `prompt-tooling` on 2026-08-17
+(a PR-review request, a lab-audit request, and a build-a-dashboard request, none of which shares
+vocabulary with `prompt-craft` or `prompt-engineer`); the six that remain each name their shared
+term in `expected_output` — "'optimize' is shared vocabulary, but a query is not a prompt", and
+`neg-reword-error-message`, which the file itself calls the tightest near-miss in the set. When you
+add a negative, state the vocabulary it shares. If you cannot, it is a far-miss and the sessions are
+better spent elsewhere. The exception is a cluster whose *whole purpose* is distance:
+`proportionality` is negative-only and deliberately fires trivial asks at heavy components, so low
+overlap there is the measurement rather than a defect.
+
+**A prompt with a deictic reference must carry its referent.** Every run executes in a fresh empty
+working directory, so "assess this change" or "review this branch" has nothing to point at, and the
+*correct* behavior — asking for the missing artifact — scores zero. Nine such cases existed as of
+2026-08-17; seven left with the agent-only positives and the remaining two (`pos-engladder-assess`,
+`craft-vs-fullstack`'s `neg-review`) now embed a real diff inline. Supplying the artifact in the
+prompt is the pattern the behavioral suite already uses. On the negative side the defect is quieter
+and worse: a near-miss with no referent has nothing to route to, so its pass was never evidence of a
+correctly narrow description.
+
 The runner rejects any polarity other than literal `positive` or `negative`, a positive case with
 no valid `expect_fires` member, an explicitly empty or invalid negative target set, and a threshold
 outside `(0, 1]`. These are configuration errors, not low scores: each could otherwise make a case
@@ -469,9 +492,10 @@ there); the capture under `baselines/2026-07-24/` records the later 5-member / 1
 are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
 
-**Suite size, as of 2026-08-17:** 114 routing cases across the ten clusters (49 positives, 65
-negatives), so a full sweep at the methodology's `--runs 3` is **342 sessions** — down from 426
-before the agent-only positives and three duplicate cases were retired. Behavioral holds 69
+**Suite size, as of 2026-08-17:** 111 routing cases across the ten clusters (49 positives, 62
+negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
+The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 69
 deterministic contracts. Both numbers are worth knowing before starting a paired round: the
 'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
 capture reusable.

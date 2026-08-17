@@ -6,25 +6,19 @@
   "cases": [
     {
       "id": "pos-engladder-assess",
-      "prompt": "Assess this change at the principal level — is it principal-quality work, and what would make it so?",
+      "prompt": "Assess the change below at the principal level — is it principal-quality work, and what would make it so?\n\n```diff\n--- a/billing/invoice.py\n+++ b/billing/invoice.py\n@@\n-def charge(customer_id, cents):\n-    resp = gateway.post(\"/charge\", {\"cid\": customer_id, \"amount\": cents})\n-    return resp.json()[\"id\"]\n+def charge(customer_id, cents, idempotency_key):\n+    resp = gateway.post(\n+        \"/charge\",\n+        {\"cid\": customer_id, \"amount\": cents},\n+        headers={\"Idempotency-Key\": idempotency_key},\n+        timeout=5,\n+    )\n+    resp.raise_for_status()\n+    return resp.json()[\"id\"]\n```",
       "polarity": "positive",
       "expect_fires": ["eng-ladder"],
-      "expected_output": "Explicit assessment against a seniority bar — eng-ladder Mode 2. Distinct from code-reviewer, which finds defects rather than scoring altitude.",
+      "expected_output": "Explicit assessment against a seniority bar — eng-ladder Mode 2. Distinct from code-reviewer, which finds defects rather than scoring altitude. The diff is embedded deliberately: the prompt previously said \"this change\" with nothing to assess, and every run executes in a fresh empty working directory, so the correct behavior — asking for the artifact — scored zero. It measured 0/3 in both the 2026-07 anchor and the 2026-08-14 capture, was diagnosed as an instrument artifact rather than a routing failure, and still summed into every ladder aggregate. Supplying the artifact inline is the pattern the behavioral suite already uses for the same problem.",
       "tags": ["eng-ladder", "assess"]
     },
     {
       "id": "pos-engladder-growth-feedback",
       "prompt": "Here are the last six months of one engineer's merged pull requests and design notes. What patterns keep showing up, what are they already strong at for their level, and what single behavior should they practice to work at the next level?",
       "polarity": "positive",
-      "expect_fires": [
-        "eng-ladder"
-      ],
+      "expect_fires": ["eng-ladder"],
       "expected_output": "eng-ladder Mode 3 (growth feedback) over a BODY of work rather than one artifact: recurring patterns, current-level strengths, and the single highest-leverage next-level behavior. Seeded because the cluster could not witness Mode 3 at all — its three eng-ladder positives covered Mode 1 altitude, Mode 2 assess, and the embedded-consult fork, so a Mode 3 edit or trim had no case that would detect it landing or regressing (LADDER-002 prerequisite). Deliberately says 'six months of pull requests and design notes' and asks for one behavior: the body-of-work scope and the one-behavior bar are what separate Mode 3 from Mode 2's single-artifact assessment.",
-      "tags": [
-        "eng-ladder",
-        "growth-feedback",
-        "mode-3"
-      ]
+      "tags": ["eng-ladder", "growth-feedback", "mode-3"]
     },
     {
       "id": "pos-engladder-altitude",

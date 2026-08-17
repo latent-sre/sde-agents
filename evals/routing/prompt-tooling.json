@@ -62,28 +62,12 @@
       "tags": ["near-miss", "backend"]
     },
     {
-      "id": "neg-review-pr",
-      "prompt": "Review my pull request for correctness and security bugs before I merge it.",
-      "polarity": "negative",
-      "expect_not_fires": ["prompt-craft", "prompt-engineer"],
-      "expected_output": "Routes to code review, not prompt tooling.",
-      "tags": ["near-miss", "review"]
-    },
-    {
       "id": "neg-write-runbook",
       "prompt": "Write a runbook for restarting nginx and recovering it when it fails health checks.",
       "polarity": "negative",
       "expect_not_fires": ["prompt-craft", "prompt-engineer"],
       "expected_output": "Routes to runbook authoring — 'write' is shared vocabulary, but an ops doc is not an LLM prompt.",
       "tags": ["near-miss", "ops-doc"]
-    },
-    {
-      "id": "neg-lab-audit",
-      "prompt": "What's wrong with my home lab? Do a health and hygiene sweep and tell me what needs attention.",
-      "polarity": "negative",
-      "expect_not_fires": ["prompt-craft", "prompt-engineer"],
-      "expected_output": "Routes to a lab audit, not prompt tooling.",
-      "tags": ["near-miss", "lab"]
     },
     {
       "id": "neg-optimize-sql",
@@ -108,14 +92,6 @@
       "expect_not_fires": ["prompt-craft", "prompt-engineer"],
       "expected_output": "Both cluster descriptions explicitly redirect multi-agent SYSTEM design to multi-agent-architect, so neither should fire.",
       "tags": ["near-miss", "multi-agent"]
-    },
-    {
-      "id": "neg-status-page-ui",
-      "prompt": "Build a small web dashboard that reads services.json and shows each service's health as a status page.",
-      "polarity": "negative",
-      "expect_not_fires": ["prompt-craft", "prompt-engineer"],
-      "expected_output": "Routes to frontend/implementation work, not prompt tooling.",
-      "tags": ["near-miss", "frontend"]
     },
     {
       "id": "neg-quick-draft-not-prompt-engineer",
