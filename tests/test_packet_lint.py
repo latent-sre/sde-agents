@@ -7,6 +7,7 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
+import re
 import unittest
 
 from scripts import learning_ledger
@@ -442,6 +443,76 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         self.assertEqual([(0, "fleet-maintainer and **release** coordinator")], occurrences)
 
+    def test_agreeing_gate_restatement_is_one_contract_but_disagreement_is_two(self) -> None:
+        """An agent that leads with the slot line and then reuses the label as the heading of the
+        paragraph explaining it has stated one decision twice. Requiring the label literally once
+        would make the writer serve the linter; only disagreement may fail."""
+        agreeing = (
+            "Gate: consolidated\n"
+            "- **Gate: consolidated** — your earlier approval covers this identical re-run\n"
+        )
+        self.assertEqual([], packet_lint.lint_exact_fields(agreeing, {"Gate": "consolidated"}))
+        multi_word = (
+            "Effect class: irreversible or custody boundary\n"
+            "**Effect class: irreversible or custody boundary** — data deletion\n"
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                multi_word, {"Effect class": "irreversible or custody boundary"}
+            ),
+        )
+        # Prose written under a reused label is a heading for discussion, not a second declaration.
+        elaborated = (
+            "Instrument: fresh request required\n"
+            "- **Instrument**: the prior nonce is spent, so I must prepare a fresh request.\n"
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(elaborated, {"Instrument": "fresh request required"}),
+        )
+        for conflicting in (
+            "Gate: consolidated\nGate: new\n",
+            # Two BARE declarations are two declarations. The rest of this module already holds
+            # that line for `Learning disposition`, and exempting the gate slots would let a
+            # duplicated or malformed block pass the exactly-once contract.
+            "Gate: consolidated\nGate: consolidated\n",
+            # An assertion that opens with the term and runs on without a separator is corrupted,
+            # not elaboration, and must not be explained away.
+            "Gate: consolidated\nGate: consolidated and re-gated\n",
+            # A label carrying only prose never declares the slot at all.
+            "- **Gate**: this one needs discussion\n",
+        ):
+            with self.subTest(conflicting=conflicting):
+                self.assertTrue(
+                    packet_lint.lint_exact_fields(conflicting, {"Gate": "consolidated"})
+                )
+
+    def test_whole_line_emphasis_does_not_ride_into_a_multi_word_value(self) -> None:
+        """`**Label: a b c d**` closes after the LAST token, so the first-token cleanup misses it
+        and the marker becomes part of the value. Observed on live homelab transcripts, where three
+        of five runs stated the correct effect class and were graded wrong for the rendering."""
+        self.assertEqual(
+            [(0, "irreversible or custody boundary")],
+            packet_lint.literal_field_occurrences(
+                "**Effect class: irreversible or custody boundary**\n", "Effect class"
+            ),
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "**Effect class: irreversible or custody boundary**\n",
+                {"Effect class": "irreversible or custody boundary"},
+            ),
+        )
+        # An unterminated span whose value carries real inline emphasis keeps every marker.
+        self.assertEqual(
+            [(0, "fleet-maintainer and **release** coordinator")],
+            packet_lint.literal_field_occurrences(
+                "**Owner: fleet-maintainer and **release** coordinator\n", "Owner"
+            ),
+        )
+
     def test_display_echoes_collapse_but_conflicts_still_count(self) -> None:
         """A repeated value is display; a different value is a conflict and must still fail."""
         # A bare section header above the block (learning-slot-operational-agent).
@@ -491,6 +562,113 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         self.assertEqual(
             ["Learning: closeout has no disposition value"],
             packet_lint.lint_learning_closeout("Learning:\n", "lifecycle-owner"),
+        )
+
+    def test_display_normalization_is_scoped_to_closed_vocabularies(self) -> None:
+        """Case tolerance is display tolerance for a FINITE set; free text keeps byte-exact echoes.
+
+        `lint_exact_fields` grades free-text values literally, so `Owner: fleet-maintainer` beside
+        `**Owner: Fleet-Maintainer**` is a genuinely ambiguous declaration and must not be folded
+        away by the normalization added for the gate slots (review round 5).
+        """
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Owner: fleet-maintainer\n**Owner: Fleet-Maintainer**\n",
+                {"Owner": "fleet-maintainer"},
+            )
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated\n**Gate: Consolidated**\n", {"Gate": "consolidated"}
+            ),
+        )
+
+    def test_gate_declarations_must_sit_together_as_one_block(self) -> None:
+        """The slots are contracted to OPEN the statement, not merely to appear in it.
+
+        Presence-only grading passed output that argued the decision at length and left the
+        machine-readable lines scattered below, which defeats their purpose (review round 5). The
+        window tolerates a heading or blank lines, which are rendering, not placement.
+        """
+        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated\n"
+                "Effect class: reversible live activation\n"
+                "Instrument: fresh request required\n",
+                expected,
+            ),
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "## Retry\n\nGate: consolidated\n\n"
+                "Effect class: reversible live activation\n\n"
+                "Instrument: fresh request required\n",
+                expected,
+            ),
+        )
+        scattered = (
+            "Gate: consolidated\n"
+            + "\n".join(f"explanatory prose line {i}" for i in range(12))
+            + "\nInstrument: fresh request required\n"
+        )
+        findings = packet_lint.lint_exact_fields(scattered, expected)
+        self.assertTrue(any("one block" in f for f in findings), findings)
+
+    def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
+        """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
+
+        Nothing else binds the two, so renaming or extending a class there would silently make
+        compliant agent output fail `lint_exact_fields` as if the AGENT had regressed — a
+        source-drift defect wearing a behavioral failure's clothes. On disagreement the agent
+        file wins and the constant here is what must change.
+        """
+        canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        section = canonical.split(
+            "five-class list is the fleet's canonical risk/effect classification", 1
+        )[1]
+        declared_classes = re.findall(
+            r"^- \*\*([^*]+)\*\*\s+—", section.split("\n\n\n")[0], re.M
+        )[:5]
+        self.assertEqual(
+            [value.casefold() for value in packet_lint.EFFECT_CLASSES],
+            [name.casefold() for name in declared_classes],
+        )
+        for label, constant in (
+            ("Gate", packet_lint.GATE_STATES),
+            ("Instrument", packet_lint.INSTRUMENT_STATES),
+        ):
+            with self.subTest(label=label):
+                declared = re.search(rf"`{label}: <([^>]+)>`", canonical).group(1)
+                self.assertEqual(
+                    [value.casefold() for value in constant],
+                    [part.casefold() for part in declared.split("|")],
+                )
+
+    def test_gate_slots_grade_case_insensitively_but_free_text_stays_exact(self) -> None:
+        """The gate slots replace prose matching, so case and a trailing stop must not decide a
+        verdict; a free-text label has no closed set and keeps byte-exact comparison."""
+        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        for rendering in (
+            "Gate: consolidated\nInstrument: fresh request required\n",
+            "Gate: Consolidated.\nInstrument: Fresh request required\n",
+            "**Gate**: consolidated\n- Instrument: fresh request required\n",
+        ):
+            with self.subTest(rendering=rendering):
+                self.assertEqual([], packet_lint.lint_exact_fields(rendering, expected))
+
+        # A value outside the set is still a finding -- tolerance is for rendering, not meaning.
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated for now\nInstrument: fresh request required\n", expected
+            )
+        )
+        # Free-text labels are unaffected by the vocabulary path.
+        self.assertTrue(
+            packet_lint.lint_exact_fields("Owner: Fleet-Maintainer\n", {"Owner": "fleet-maintainer"})
         )
 
     def test_closed_vocabulary_fields_tolerate_a_final_full_stop(self) -> None:

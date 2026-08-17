@@ -115,7 +115,7 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
   before **and** after any description edit (the description playbook owns the recipe). Read
   `evals/README.md` first — it owns the negative-case and narrowing semantics and the headless
   caveat.
-- `python3 scripts/eval_behavioral.py --runs 3` — deterministic contract evals, using Claude by
+- `python3 scripts/eval_behavioral.py` — deterministic contract evals, using Claude by
   default. The narrower Codex subscription lane (`--runtime codex`; transport
   `scripts/eval_codex_runtime.py`) is documented — invocation and eligibility limits — in
   `evals/README.md`; read it before running that lane.

@@ -228,7 +228,37 @@ EXACT_FIELD_LABELS = (
     "Destination",
     "Owner",
     "Runbook disposition",
+    "Gate",
+    "Instrument",
+    "Effect class",
 )
+# Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These three
+# labels exist because the gate decision used to be graded by matching prose paraphrases, and an
+# open-ended pattern set goes stale the way lint_runbook_proposal's docstring describes: every
+# honest rewording needs another branch, and the branch admitting it becomes the next round's false
+# negative. Three repair rounds on `gate-same-effect-consolidation` each moved the miss instead of
+# closing it, with every graded transcript behaviorally correct (ORACLE-001). A closed value set
+# has no paraphrase surface to chase.
+GATE_STATES = ("consolidated", "new")
+INSTRUMENT_STATES = ("fresh request required", "n/a")
+EFFECT_CLASSES = (
+    "artifact preparation",
+    "repository publication",
+    "reversible live activation",
+    "irreversible or custody boundary",
+    "optional hardening",
+)
+# agents/homelab-platform.md owns these three vocabularies; this is a deliberate mirror, kept
+# standalone so an eval-time linter does not import an agent parser. tests/test_packet_lint.py
+# reads the canonical declaration and fails on drift: on disagreement the agent file wins and
+# this copy is the defect. Renaming a class there without updating here would reject compliant
+# output as a behavioral failure.
+# Only labels listed here are graded against a closed set; everything else keeps exact comparison.
+EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
+    "Gate": GATE_STATES,
+    "Instrument": INSTRUMENT_STATES,
+    "Effect class": EFFECT_CLASSES,
+}
 LEARNING_NONE_VALUE = "none — no reusable signal"
 LEARNING_DISPOSITIONS = ("skip", "add", "merge", "supersede", "drop")
 LEARNING_PROVENANCE = ("verified", "sourced", "unverified")
@@ -386,15 +416,24 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
                 first = first[:-len(opener)]
                 value = " ".join((first, split[1])) if len(split) == 2 else first
                 value = value.strip()
+            elif value.endswith(opener) and value.count(opener) == 1:
+                # Whole-line emphasis, ``**Effect class: irreversible or custody boundary**``:
+                # the partner closer sits after the LAST token, not the first, so the branch above
+                # never sees it and the marker rides into the value. Requiring the marker to be
+                # unpaired keeps an unterminated span with genuine inline emphasis
+                # (``**Owner: x and **release** y``) untouched, since there the marker recurs.
+                value = value[: -len(opener)].strip()
         decorated = any(
             match.group(name) for name in ("outside", "inside", "span")
         )
         occurrences.append((index, value, bool(decorated)))
-    return _collapse_display_echoes(occurrences)
+    return _collapse_display_echoes(
+        occurrences, normalize=label in EXACT_FIELD_VOCABULARIES
+    )
 
 
 def _collapse_display_echoes(
-    occurrences: list[tuple[int, str, bool]]
+    occurrences: list[tuple[int, str, bool]], *, normalize: bool = False
 ) -> list[tuple[int, str]]:
     """Drop occurrences that carry no value a reader could mistake for a second contract.
 
@@ -417,9 +456,14 @@ def _collapse_display_echoes(
     seen: dict[str, bool] = {}
     collapsed: list[tuple[int, str]] = []
     for index, value, decorated in valued:
-        if value in seen and seen[value] != decorated:
+        # Case and trailing sentence punctuation are display, exactly as the decoration markers
+        # are: ``**Gate: Consolidated**`` echoing ``Gate: consolidated`` is one contract rendered
+        # twice. Comparing them byte-exact left the pair uncollapsed, and a closed-vocabulary slot
+        # then read it as two declarations and failed an otherwise compliant transcript.
+        key = _strip_sentence_punctuation(value).casefold() if normalize else value
+        if key in seen and seen[key] != decorated:
             continue
-        seen.setdefault(value, decorated)
+        seen.setdefault(key, decorated)
         collapsed.append((index, value))
     return collapsed
 
@@ -439,11 +483,101 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
     return _literal_field_occurrences(label, text.splitlines())
 
 
+_DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
+
+
+def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | None, bool]:
+    """Classify a slot value against its closed set as ``(term, corrupted)``.
+
+    Three readings, and only the middle one is a defect. A value that IS a term, optionally followed
+    by a separator and rationale (``consolidated — your approval covers this``), asserts that term.
+    A value that opens with a term and then runs on without a separator (``consolidated and
+    re-gated``) is a corrupted assertion and must fail rather than be explained away. A value naming
+    no term at all is prose written under the label as a heading, not a competing declaration.
+    """
+    # Emphasis is display only and can sit between the term and its separator
+    # (``**Effect class: irreversible or custody boundary** — data deletion``), so it is removed
+    # for term detection. The value itself is compared elsewhere and keeps its own rendering.
+    undecorated = _DECORATION_RE.sub("", value)
+    normalized = _strip_sentence_punctuation(undecorated).casefold().strip()
+    for term in sorted(vocabulary, key=len, reverse=True):
+        folded = term.casefold()
+        if normalized == folded:
+            return folded, False
+        if normalized.startswith(folded):
+            rest = normalized[len(folded):].lstrip()
+            if rest[:1] in {"\u2014", "\u2013", "-", ":", "(", ","}:
+                return folded, False
+            return None, True
+    return None, False
+
+
+def _is_bare_declaration(value: str, term: str) -> bool:
+    """True when a value is the closed-set term itself, carrying no rationale."""
+    undecorated = _DECORATION_RE.sub("", value)
+    return _strip_sentence_punctuation(undecorated).casefold().strip() == term
+
+
+def _collapse_agreeing_vocabulary_restatements(
+    occurrences: list[tuple[int, str]], vocabulary: tuple[str, ...]
+) -> list[tuple[int, str]]:
+    """Fold repeats of one closed-set term into the single contract they all state.
+
+    An agent that leads with ``Gate: consolidated`` and then reuses the label as the heading of the
+    paragraph explaining the decision has stated one decision once and then discussed it. Counting
+    that prose as a second declaration is a misparse, and fixing it by forbidding the agent to reuse
+    a label would make the writer serve the linter — the packet-shaped evasion this module's header
+    rejects. So prose under a reused label is ignored, and one named term still has to be present.
+
+    What still fails: two occurrences naming DIFFERENT terms, a corrupted assertion
+    (``consolidated and re-gated``), and no named term at all. This does mean a flat prose
+    contradiction under a reused label no longer registers here; the case's must_not_match
+    assertions carry that, naming the specific claims that would be dangerous.
+    """
+    if len(occurrences) < 2:
+        return occurrences
+    classified = [
+        (index, value, *_vocabulary_head(value, vocabulary))
+        for index, value in occurrences
+    ]
+    if any(corrupted for *_, corrupted in classified):
+        return occurrences
+    # Two BARE declarations are two declarations, not a statement and its explanation. The rest of
+    # this module already holds that line (`Learning disposition: merge` twice is two fields), and
+    # exempting the gate slots from it would let a duplicated or malformed block pass the
+    # exactly-once contract. Only a rendered or explanatory echo — a term carrying rationale, or
+    # prose under the reused label — is folded.
+    bare = [
+        value
+        for _, value, term, _ in classified
+        if term is not None and _is_bare_declaration(value, term)
+    ]
+    if len(bare) > 1:
+        return occurrences
+    naming = [(index, value) for index, value, term, _ in classified if term is not None]
+    distinct = {term for *_, term, _ in classified if term is not None}
+    if len(distinct) != 1 or not naming:
+        return occurrences
+    return [min(naming, key=lambda item: len(_strip_sentence_punctuation(item[1])))]
+
+
 def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
-    """Require each declared literal field exactly once with its exact declared value."""
+    """Require each declared literal field exactly once with its exact declared value.
+
+    A label carrying a closed vocabulary (``EXACT_FIELD_VOCABULARIES``) compares casefolded and
+    without trailing sentence punctuation, because a finite value set has no ambiguity for case to
+    carry: ``Gate: Consolidated`` at the start of a line states the same contract as ``consolidated``
+    and rejecting it would re-import the paraphrase brittleness these labels exist to remove. Every
+    other label keeps byte-exact comparison, where free-text values make case load-bearing.
+    """
     findings: list[str] = []
+    declared_at: dict[str, int] = {}
     for label, exact_value in expected.items():
         occurrences = literal_field_occurrences(text, label)
+        if vocabulary := EXACT_FIELD_VOCABULARIES.get(label):
+            occurrences = _collapse_agreeing_vocabulary_restatements(
+                occurrences, vocabulary
+            )
         if len(occurrences) != 1:
             findings.append(
                 f"{label}: must appear exactly once for exact-field grading; "
@@ -451,11 +585,43 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
             )
             continue
         actual = occurrences[0][1]
-        if actual != exact_value:
+        if label in EXACT_FIELD_VOCABULARIES:
+            declared_at[label] = occurrences[0][0]
+            matched = (
+                _strip_sentence_punctuation(actual).casefold() == exact_value.casefold()
+            )
+        else:
+            matched = actual == exact_value
+        if not matched:
             findings.append(
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"
             )
+    findings.extend(_lint_declaration_block(declared_at))
     return findings
+
+
+# The gate slots are contracted to OPEN the statement as one block, not to appear somewhere in it
+# (agents/homelab-platform.md). Presence-only grading passed output that explained the decision at
+# length and left the machine-readable lines scattered below, which defeats the point of having
+# them. The window is deliberately loose rather than strict adjacency: a heading or blank line
+# between declarations is rendering, while a block split across paragraphs of prose is not.
+_DECLARATION_BLOCK_MAX_SPAN = 6
+
+
+def _lint_declaration_block(declared_at: dict[str, int]) -> list[str]:
+    """Require co-graded closed-vocabulary declarations to sit together as one block."""
+    if len(declared_at) < 2:
+        return []
+    span = max(declared_at.values()) - min(declared_at.values())
+    if span <= _DECLARATION_BLOCK_MAX_SPAN:
+        return []
+    ordered = ", ".join(
+        label for label, _ in sorted(declared_at.items(), key=lambda item: item[1])
+    )
+    return [
+        f"declarations must open the statement as one block; {ordered} span {span} lines "
+        f"(limit {_DECLARATION_BLOCK_MAX_SPAN})"
+    ]
 
 
 def _strip_sentence_punctuation(value: str) -> str:

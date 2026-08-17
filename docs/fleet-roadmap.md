@@ -550,9 +550,9 @@ cannot test — retiring it takes an explicit recorded decision accepting that u
 reachability failure. Case authoring is offline, the re-measure is T3 and starts a new
 case-bytes lineage. Success is defined per instrument, not by having run the sessions: the rewritten assess
 case passes at the recorded threshold (0.5 — at three runs, 2/3 or better; a 1/3 "nonzero" is
-still a failing positive), and the new behavioral contract holds across **three runs**
-(`--runs 3` stated because `eval_behavioral.py` defaults to one — a single lucky pass is a
-smoke test, not the promised measured repair) — or the
+still a failing positive), and the new behavioral contract holds across **five runs**
+(the `eval_behavioral.py` default and the fleet's grading base — three cannot separate a defect
+from variance, and a single lucky pass is a smoke test, not the promised measured repair) — or the
 experiment that falsified the proposed repair is recorded as its explicit disposition. A repeat
 0/3 or a red contract closed silently would satisfy the letter of a run-only acceptance while
 delivering none of this item's promised outcome. A description rewrite for the assess mode is explicitly **not** indicated — the
@@ -612,6 +612,93 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-006** — `_vocabulary_head` accepts only `— – - : ( ,` between a closed-set term and its
+  rationale, so an explanatory echo punctuated with a semicolon or a full stop
+  (`Gate: consolidated; the standing approval covers this retry`) is classified as a *corrupted*
+  assertion and fails, while the comma and em-dash renderings pass. Ordinary punctuation alone
+  decides the verdict on identical meaning. Widen the set, or better, stop enumerating punctuation:
+  this is the third false RED in this PR traced to a hand-listed character set (typographic
+  apostrophe in `_UNCHECKABLE`, this separator list), which is the shape of the defect rather than
+  its instances. Source: PR #144 round-8 review.
+- **ORACLE-007** — the vocabulary drift test slices the parsed canonical list to `[:5]`, so a class
+  APPENDED to `agents/homelab-platform.md` is discarded before comparison and the guard passes while
+  `EFFECT_CLASSES` goes stale — the evaluator would then reject compliant output naming the new
+  class. Confirmed both ways: inserting a class fails the test, appending one passes it, so the
+  guard covers renames and removals but not additions. Drop the slice and compare the full list.
+  Source: PR #144 round-8 review.
+- **ORACLE-005** — `_lint_declaration_block` grades the SPAN of the gate declarations, not that they
+  open the statement, so a response can argue the decision first and append the block after, or
+  interleave prose between each slot, and still pass. The contract word is "open", so the gap is
+  real; the reason it was not closed with the span check is that "the statement" has no machine
+  boundary in a long answer, and requiring empty or heading-only preceding lines is a new false-RED
+  surface on prose the agent writes freely. Decide the boundary before implementing: either the
+  agent declares one (a heading the block must follow) or the check stays span-only and this line
+  closes as accepted. Source: PR #144 round-7 review.
+- **ORACLE-003** — `packet_lint`'s claim pattern fires on a packet's own `Verified` slot, so an
+  honest negative verification (`Verified: the path does not exist, so I could not check the format`)
+  is graded as an unevidenced claim — there is no command to cite because nothing ran. Reopened
+  deliberately: the line-scoped exemption that closed it produced three false greens and one false
+  RED across four review rounds (PR #144), so it was reverted rather than narrowed a fourth time. A
+  false RED is the safer failure — it shows as a failing case someone investigates, where a false
+  green reports compliance that is not there. The repair must be clause-scoped, not line-scoped:
+  distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
+  something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
+  1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
+- **ORACLE-009** — the duplicate-bare-declaration guard added in PR #144 round 2 is
+  ORDER-DEPENDENT, so it is a false green in one arrangement. `_collapse_display_echoes` keys
+  `seen` by value and drops a later occurrence whose decoration differs from the first, so a
+  decorated echo appearing FIRST consumes the key and both following bare declarations are
+  discarded: `**Gate: consolidated**` then `Gate: consolidated` twice yields one occurrence and
+  passes, while the same three lines with a bare declaration first correctly fail. The exactly-once
+  contract therefore holds only when the canonical line precedes its echo. Count duplicate bare
+  declarations independently of echo order, with a firing test per ordering. This is the only known
+  false green on the branch — it fails in the unsafe direction, unlike the other open items.
+  Source: PR #144 round-10 review.
+- **ORACLE-010** — `agents/homelab-platform.md` requires "one set per effect", and no case tests it.
+  PR #144 split the combined retry-plus-deletion prompt into two single-effect cases so exact-field
+  grading (each label exactly once, globally) could work, which means the suite cannot express a
+  two-effect answer at all: an agent can pass both isolated cases while collapsing two simultaneous
+  effects into one block, omitting a block, or attaching the wrong class or instrument to the wrong
+  effect. The clause was ADDED by that PR, so this is a contract shipped with no instrument, not a
+  pre-existing gap. Needs an oracle that groups repeated slot blocks by effect before a combined
+  case can be restored — the exactly-once rule and multi-effect grading are incompatible as written.
+  Source: PR #144 round-10 review.
+- **GATE-004** — `agents/homelab-platform.md` tells the agent a bare `docker compose …` "must be
+  written `/usr/bin/docker compose …`", prescribing one path where the broker contract requires
+  only an ABSOLUTE one. `effect_broker.py` rejects a non-existent executable before approval
+  (`effect executable is not a regular file`), so on macOS, NixOS, Homebrew or rootless hosts —
+  where Docker is not in `/usr/bin` — a session following this instruction literally builds a
+  request that cannot be signed. Instruct resolving the trusted executable on the execution host
+  and using that absolute result; keep `/usr/bin/docker` only as the worked example's illustration.
+  Introduced by this PR's round-1 fix, which restored the absolute-path requirement by hardcoding
+  one path. Source: PR #144 round-11 review.
+- **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
+  (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
+  emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
+  `Gate: \`consolidated\`` and `Gate: _consolidated_` are graded as wrong values. Emphasising the
+  value is the more natural rendering of the two, so this is likely to fire rather than latent — it
+  has simply not appeared in a graded run yet. Apply the same normalization in the comparison, with
+  a firing test per rendering. Note when fixing: this is the fourth defect in this construct traced
+  to decoration or punctuation handling, so prefer one normalization applied everywhere over another
+  local strip. Source: PR #144 round-10 review.
+- **GATE-003** — `agents/homelab-platform.md` requires an `Instrument` line on every gate statement
+  and offers `fresh request required|n/a`, but defines only the first. A session facing a gate with
+  no broker instrument — a repository or reviewer gate, or the documented broker-absent continuation
+  this same agent describes — cannot tell whether that is `n/a` or a fresh request that cannot be
+  created, so two sessions can emit contradictory machine-readable decisions for one state. Define
+  `n/a`'s exact conditions beside the fresh-request definition. Source: PR #144 round-10 review.
+- **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
+  a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
+  approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
+  term, or no term at all still fails. The trade was deliberate — counting explanatory prose as a
+  second contract false-RED'd behaviorally correct answers. The mitigation first recorded here was
+  too strong: the per-case `must_not_match` assertions do NOT cover it — the retry case carries no
+  new-approval negative, and the deletion case's negative does not match `Gate: the prior approval
+  covers the deletion`, so both shapes pass their complete oracle today. Concrete phrasings a repair
+  must fail: `Gate: despite that label, this retry needs a new approval`, and the deletion variant
+  above. Either restore conflict detection for contradicting prose under a declared slot, or accept
+  the exposure explicitly — not by assuming a cover that is not there. Source: ORACLE-001 close,
+  this branch; framing corrected by PR #144 round-7 review.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
