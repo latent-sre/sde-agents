@@ -374,7 +374,7 @@ fixture that fails without it, so listing regrowth fails T0 instead of failing s
 runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
 warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-platform.agent.md` is at
 24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
-host rejecting the profile. (Re-measured 2026-08-17 after the GATE-003/GATE-004 prose repairs: 25,759 chars, 86%. The body grew 1,128 chars in one small round, which is the point of the tripwire.)
+host rejecting the profile. (Re-measured 2026-08-17: 25,100 chars, 84%. The GATE-003 and GATE-004 prose repairs first took it to 86% — two small items moved an always-loaded body 1,701 chars, 952 of them one over-written definition that re-enumerated a list already in the file. Trimmed back on review to +1,042. Nobody measured until the number was asked for, which is the point of the tripwire.)
 
 **Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
 (mitigation calibration table; the Copilot cap under "Preload and body footprint").
