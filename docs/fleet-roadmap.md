@@ -755,16 +755,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
   something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
   1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
-- **ORACLE-009** — the duplicate-bare-declaration guard added in PR #144 round 2 is
-  ORDER-DEPENDENT, so it is a false green in one arrangement. `_collapse_display_echoes` keys
-  `seen` by value and drops a later occurrence whose decoration differs from the first, so a
-  decorated echo appearing FIRST consumes the key and both following bare declarations are
-  discarded: `**Gate: consolidated**` then `Gate: consolidated` twice yields one occurrence and
-  passes, while the same three lines with a bare declaration first correctly fail. The exactly-once
-  contract therefore holds only when the canonical line precedes its echo. Count duplicate bare
-  declarations independently of echo order, with a firing test per ordering. This is the only known
-  false green on the branch — it fails in the unsafe direction, unlike the other open items.
-  Source: PR #144 round-10 review.
 - **ORACLE-010** — `agents/homelab-platform.md` requires "one set per effect", and no case tests it.
   PR #144 split the combined retry-plus-deletion prompt into two single-effect cases so exact-field
   grading (each label exactly once, globally) could work, which means the suite cannot express a
@@ -783,15 +773,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   and using that absolute result; keep `/usr/bin/docker` only as the worked example's illustration.
   Introduced by this PR's round-1 fix, which restored the absolute-path requirement by hardcoding
   one path. Source: PR #144 round-11 review.
-- **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
-  (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
-  emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
-  `Gate: \`consolidated\`` and `Gate: _consolidated_` are graded as wrong values. Emphasising the
-  value is the more natural rendering of the two, so this is likely to fire rather than latent — it
-  has simply not appeared in a graded run yet. Apply the same normalization in the comparison, with
-  a firing test per rendering. Note when fixing: this is the fourth defect in this construct traced
-  to decoration or punctuation handling, so prefer one normalization applied everywhere over another
-  local strip. Source: PR #144 round-10 review.
 - **GATE-003** — `agents/homelab-platform.md` requires an `Instrument` line on every gate statement
   and offers `fresh request required|n/a`, but defines only the first. A session facing a gate with
   no broker instrument — a repository or reviewer gate, or the documented broker-absent continuation

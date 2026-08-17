@@ -501,14 +501,21 @@ def _collapse_display_echoes(
         groups.setdefault(_echo_group_key(key, groups, vocabulary), []).append(item)
     collapsed: list[tuple[int, str]] = []
     for members in groups.values():
-        if len({decorated for *_, decorated in members}) < 2:
-            # Every member is rendered the same way, so none of them is a rendering of another:
-            # `Learning disposition: merge` written twice really is two fields.
-            collapsed.extend((index, value) for index, value, _ in members)
-            continue
+        # An UNDECORATED occurrence is a declaration, and every one of them counts: the same field
+        # written plainly twice is two fields, which is what the exactly-once rule exists to catch.
+        # A decorated one is a rendering of a declaration, so it collapses into its plain twin —
+        # and only when such a twin exists, since a group of nothing but decorated lines has no
+        # canonical line to be a rendering OF and is two declarations that happen to be emphasized.
+        #
+        # Counting declarations rather than tracking which rendering was seen first is what makes
+        # this order-independent (ORACLE-009). Keying on "collapse a repeat whose decoration
+        # differs from the line it echoes" let whichever rendering appeared FIRST claim the key:
+        # `**Gate: consolidated**` followed by two bare declarations collapsed to one and passed,
+        # while the same three lines with a bare declaration first correctly failed. Ordinary
+        # rendering order decided a verdict on identical content, in the unsafe direction.
         undecorated = [item for item in members if not item[2]]
-        index, value, _ = (undecorated or members)[0]
-        collapsed.append((index, value))
+        keep = undecorated or members
+        collapsed.extend((index, value) for index, value, _ in keep)
     return sorted(collapsed)
 
 
@@ -696,13 +703,21 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
             )
             continue
         actual = occurrences[0][1]
-        if label in EXACT_FIELD_VOCABULARIES:
+        # One normalization, the same one the echo comparison uses. Decoration was stripped when
+        # DETECTING a closed-set term and not when comparing the value, so emphasis around the
+        # LABEL passed (`**Gate: consolidated**`) while emphasis around the VALUE failed
+        # (`Gate: **consolidated**`, `Gate: \`consolidated\``) — and emphasising the value is the
+        # more natural of the two renderings. That was the fourth defect in this construct traced
+        # to decoration or punctuation handling, so it is closed by routing both sides through
+        # `_echo_key` rather than by adding a fifth local strip (ORACLE-008). Case and trailing
+        # punctuation stay scoped to the closed sets, where a finite value set leaves them nothing
+        # to carry; free text keeps them load-bearing.
+        normalize = label in EXACT_FIELD_VOCABULARIES
+        if normalize:
             declared_at[label] = occurrences[0][0]
-            matched = (
-                _strip_sentence_punctuation(actual).casefold() == exact_value.casefold()
-            )
-        else:
-            matched = actual == exact_value
+        matched = _echo_key(actual, normalize=normalize) == _echo_key(
+            exact_value, normalize=normalize
+        )
         if not matched:
             findings.append(
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"

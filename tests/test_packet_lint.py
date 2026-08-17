@@ -858,6 +858,58 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
                     )
                 )
 
+    def test_duplicate_declarations_are_counted_whatever_order_they_render_in(self) -> None:
+        """ORACLE-009: rendering order decided this verdict, in the unsafe direction.
+
+        The collapse keyed on "a repeat whose decoration differs from the line it echoes", so
+        whichever rendering appeared FIRST claimed the key and everything after it was discarded.
+        A decorated line followed by two bare declarations collapsed to one and PASSED, while the
+        same three lines with a bare declaration first correctly failed — the only known false
+        green on this branch, and the one direction that matters, since a false green reports
+        compliance that is not there.
+
+        The rule is now stated as counting declarations: an undecorated occurrence is one, every
+        time, and a decorated occurrence is a rendering that collapses only into a plain twin.
+        """
+        expected = {"Gate": "consolidated"}
+        bare, decorated = "Gate: consolidated\n", "**Gate: consolidated**\n"
+        for name, text in (
+            ("decorated echo first", decorated + bare + bare),
+            ("decorated echo last", bare + bare + decorated),
+            ("decorated echo between", bare + decorated + bare),
+            ("two plain declarations", bare + bare),
+            ("two emphasized declarations", decorated + decorated),
+        ):
+            with self.subTest(order=name):
+                self.assertTrue(
+                    packet_lint.lint_exact_fields(text, expected),
+                    "duplicate declarations must be counted regardless of rendering order",
+                )
+        # The other direction, unchanged: one declaration and one rendering of it is one contract.
+        self.assertEqual([], packet_lint.lint_exact_fields(bare + decorated, expected))
+        self.assertEqual([], packet_lint.lint_exact_fields(decorated + bare, expected))
+
+    def test_emphasis_around_the_value_grades_like_emphasis_around_the_label(self) -> None:
+        """ORACLE-008: decoration was stripped when detecting a term, not when comparing it.
+
+        So `**Gate: consolidated**` was accepted while `Gate: **consolidated**` was graded as the
+        wrong value — and emphasising the value is the more natural of the two renderings, so this
+        was likely to fire rather than latent. Closed by routing both sides of the comparison
+        through one normalization instead of adding a fifth local strip; it was the fourth defect
+        in this construct traced to decoration or punctuation handling.
+        """
+        expected = {"Gate": "consolidated"}
+        for rendering in (
+            "consolidated", "**consolidated**", "`consolidated`", "_consolidated_",
+            "__consolidated__", "*consolidated*", "Consolidated.",
+        ):
+            with self.subTest(rendering=rendering):
+                self.assertEqual(
+                    [], packet_lint.lint_exact_fields(f"Gate: {rendering}\n", expected)
+                )
+        # A different term is still a different term, however it is rendered.
+        self.assertTrue(packet_lint.lint_exact_fields("Gate: **new**\n", expected))
+
     def test_ordinary_punctuation_does_not_decide_a_closed_set_verdict(self) -> None:
         """ORACLE-006: the separator set was hand-listed, so a semicolon read as corruption.
 
