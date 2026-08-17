@@ -193,10 +193,6 @@ def adapt_text(text: str, host: str) -> str:
         "the target repo's own `.claude/skills/service-onboard/SKILL.md` if it has one",
         "the target repo's own project-scoped `service-onboard` skill if this host discovers one",
     )
-    text = text.replace(
-        "(this plugin's copy — the variable is substituted with an absolute path)",
-        "(this plugin's copy)",
-    )
     text = re.sub(
         r"once the plugin is installed \(that variable is substituted for you with an absolute "
         r"path\)",
@@ -332,16 +328,6 @@ def adapt_text(text: str, host: str) -> str:
         r"(?:`skills/[a-z0-9-]+/SKILL\.md`|the installed `[a-z0-9-]+` skill)\)",
         "",
         text,
-    )
-    text = text.replace(
-        "The path read is a convention, not an authority boundary: consult the fleet's "
-        "platform-facts owner, the installed `prompt-craft` skill's "
-        "`references/claude-code-frontmatter.md` resource, for the flag's current enforcement "
-        "status; regardless of that status, the checklist's content defers change authority to "
-        "you.",
-        "The path read is a convention, not an authority boundary. The generated host package "
-        "carries its own explicit-invocation control, and the checklist's content still defers "
-        "change authority to you.",
     )
     text = text.replace(
         "## Frontmatter quick reference\n\n"
