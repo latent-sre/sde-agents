@@ -745,16 +745,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-003** — `packet_lint`'s claim pattern fires on a packet's own `Verified` slot, so an
-  honest negative verification (`Verified: the path does not exist, so I could not check the format`)
-  is graded as an unevidenced claim — there is no command to cite because nothing ran. Reopened
-  deliberately: the line-scoped exemption that closed it produced three false greens and one false
-  RED across four review rounds (PR #144), so it was reverted rather than narrowed a fourth time. A
-  false RED is the safer failure — it shows as a failing case someone investigates, where a false
-  green reports compliance that is not there. The repair must be clause-scoped, not line-scoped:
-  distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
-  something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
-  1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
 - **ORACLE-010** — `agents/homelab-platform.md` requires "one set per effect", and no case tests it.
   PR #144 split the combined retry-plus-deletion prompt into two single-effect cases so exact-field
   grading (each label exactly once, globally) could work, which means the suite cannot express a
@@ -779,18 +769,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   this same agent describes — cannot tell whether that is `n/a` or a fresh request that cannot be
   created, so two sessions can emit contradictory machine-readable decisions for one state. Define
   `n/a`'s exact conditions beside the fresh-request definition. Source: PR #144 round-10 review.
-- **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
-  a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
-  approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
-  term, or no term at all still fails. The trade was deliberate — counting explanatory prose as a
-  second contract false-RED'd behaviorally correct answers. The mitigation first recorded here was
-  too strong: the per-case `must_not_match` assertions do NOT cover it — the retry case carries no
-  new-approval negative, and the deletion case's negative does not match `Gate: the prior approval
-  covers the deletion`, so both shapes pass their complete oracle today. Concrete phrasings a repair
-  must fail: `Gate: despite that label, this retry needs a new approval`, and the deletion variant
-  above. Either restore conflict detection for contradicting prose under a declared slot, or accept
-  the exposure explicitly — not by assuming a cover that is not there. Source: ORACLE-001 close,
-  this branch; framing corrected by PR #144 round-7 review.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
