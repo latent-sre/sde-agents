@@ -1292,7 +1292,10 @@ def main(argv: list[str] | None = None) -> int:
         return load_current_evaluator().main(argv)
 
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--runs", type=int, default=1, help="runs per case (default 1)")
+    # Five is the fleet's grading base, not a nicety. Three cannot separate a real defect from
+    # variance on these cases: identical committed bytes scored 1/3 and 3/5 on consecutive
+    # batches, and a 3/3 hid a duplicate-slot defect that n=5 caught on the next run.
+    parser.add_argument("--runs", type=int, default=5, help="runs per case (default 5)")
     parser.add_argument("--case", default="*", help="glob over case ids (default all)")
     parser.add_argument("--timeout", type=int, default=600, help="per-session timeout in seconds")
     parser.add_argument("--concurrency", type=int, default=3)

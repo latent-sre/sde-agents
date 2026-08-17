@@ -12,6 +12,7 @@ from __future__ import annotations
 import concurrent.futures
 import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -609,6 +610,17 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 findings = eval_behavioral.validate_behavioral_case({**base, **mutation})
                 self.assertTrue(any(expected in finding for finding in findings), findings)
+
+    def test_default_run_count_is_the_fleet_grading_base(self) -> None:
+        """Five is a measurement policy, not a preference: three cannot separate a defect from
+        variance here (identical bytes scored 1/3 then 3/5, and a 3/3 hid a real defect n=5 caught).
+        Nothing else pins it, so a silent revert to a cheaper default would quietly restore the
+        run count whose readings this suite's own history shows cannot be trusted."""
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            with self.assertRaises(SystemExit):
+                eval_behavioral.main(["--help"])
+        self.assertIn("default 5", buffer.getvalue())
 
     def test_vocabulary_backed_exact_field_rejects_undeclared_value(self) -> None:
         """A value outside the closed set is unreachable, so it would fail as a false behavioral
