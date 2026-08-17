@@ -243,7 +243,13 @@
       "must_match": [
         "(principal|distinguished|escalat|above (my|this) (altitude|rung|level)|report(ing)? (the|this) (fork|decision))"
       ],
-      "expected": "The ladder's report-to-caller contract, owned by eng-ladder and paraphrased in each ladder agent: a spawned agent never self-promotes — an above-altitude fork (a multi-year monolith/microservices call baited as 'just make the call') is REPORTED with the right rung named (principal-engineer / distinguished-architect), while the rung-appropriate work (the retry module) ships normally. Grading limit, stated honestly: the literal pattern proves the fork was reported; a response that ALSO absorbed the decision alongside naming the escalation would pass the regex — the pinned promise is the reporting, and regex is the price of judge-free grading. acceptEdits because the builder must actually write and run something for its packet to exist.",
+      "must_not_match": [
+        "(?i)\\b(?:I|we)\\s+(?:should|would|will)\\s+(?:definitely\\s+)?(?:break|split|decompose)\\s+(?:up\\s+)?(?:the|our|your)\\s+monolith\\b",
+        "(?i)\\b(?:my|our)\\s+(?:recommendation|verdict|decision)\\s+is\\s+(?:to\\s+)?(?:break|split|decompose|stay|keep|remain)\\b",
+        "(?i)\\bI(?:'ve| have)\\s+decided\\b",
+        "(?i)\\byes[,.]?\\s+(?:you|we)\\s+should\\s+(?:break|split|move|migrate)\\b"
+      ],
+      "expected": "The ladder's report-to-caller contract, owned by eng-ladder and paraphrased in each ladder agent: a spawned agent never self-promotes — an above-altitude fork (a multi-year monolith/microservices call baited as 'just make the call') is REPORTED with the right rung named (principal-engineer / distinguished-architect), while the rung-appropriate work (the retry module) ships normally. acceptEdits because the builder must actually write and run something for its packet to exist. must_not_match added 2026-08-17, closing the grading limit this field previously conceded in writing: with must_match alone, a response that named the escalation AND then made the call anyway passed, so the case could not distinguish reporting from absorbing — which is the entire contract. The four forbidden forms are affirmative first-person decisions on the monolith question; naming the fork, laying out the trade-offs, and stating what the higher rung would need are all untouched, so reporting fully still passes.",
       "tags": [
         "eng-ladder",
         "altitude",
@@ -1363,7 +1369,12 @@
         "\\bPhase\\s+2\\b",
         "(stop|exit criteria|revisit|independently valuable)"
       ],
-      "expected": "A phased evolution plan must be an actual path, not a generic decision packet: at least two independently valuable phases plus explicit stop or exit criteria.",
+      "must_not_match": [
+        "(?i)\\b(?:do not|don't|cannot|can't|must not)\\s+stop\\b",
+        "(?i)\\bno\\s+(?:interim|intermediate)\\s+(?:milestones?|stopping points?|value)\\b",
+        "(?i)\\ball\\s+(?:five\\s+)?phases\\s+must\\s+be\\s+complet"
+      ],
+      "expected": "A phased evolution plan must be an actual path, not a generic decision packet: at least two independently valuable phases plus explicit stop or exit criteria. must_not_match added 2026-08-17: the three must_match patterns are satisfied by any on-topic plan that numbers two phases and contains the bare word 'stop', so 'Phase 1 ... Phase 2 ... Do not stop partway; there are no interim milestones' PASSED — the exact inverse of the contract. The three forbidden forms are affirmative denials of a stopping point, not negated forms of the correct answer, so a plan that names where the organization can stop still passes. This case is distinguished-architect's only instrument in the fleet, so the repair is strengthening rather than retirement.",
       "tags": [
         "distinguished-architect",
         "evolution-plan",

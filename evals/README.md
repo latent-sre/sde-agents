@@ -461,6 +461,45 @@ Baselines now total 23,907 lines, down from 31,730. Everything else is still hel
 above; the remaining candidates all owe a summary first, and `2026-07-29-roles-before`/`-roles-after`
 additionally owe the pair treatment described above.
 
+### Why the behavioral suite has no cuts
+
+Swept for redundancy on 2026-08-17 against the standard that two cases are redundant only when one's
+failure necessarily implies the other's. **Result: zero cuttable cases**, and the reasoning is worth
+keeping so it is not re-litigated each time the suite looks expensive:
+
+- **Behavioral is now the coverage of record for agents.** Routing carries no agent-only positives
+  any more, so cutting here removes the only instrument observing an agent — the zero-instrument hole
+  that `researcher` and `application-security-auditor` were just repaired out of.
+- **Identical oracles across pinned agents are an instrument, not duplication.** The six
+  `learning-owner-*` cases assert two invariants across `sde-fullstack`,
+  `verification-engineer`, and `prompt-engineer` with byte-identical patterns — and the retained
+  capture in `baselines/2026-08-01-self-improve/final-live/` shows the three agents at **different
+  rates with different failure classes**, including one (`verification-engineer` emitting the
+  Learning label twice or empty) that neither other agent produced. Identical text, divergent
+  obedience: that is exactly what per-agent parity exists to catch.
+- **A static check is not a substitute.** `validate_fleet.py` already pins the canonical Learning
+  stanza *text* in those three agents' packet sections. That is a fact about the definition files;
+  these cases measure whether the agent obeys it at runtime, and the capture shows obedience varies
+  while the text does not. Replacing them with a validator rule would rebuild a check that already
+  exists and never observed behavior.
+- **Subset oracles usually isolate a variable.** Where one case's assertions are a strict subset of
+  another's, the pair is normally deliberate: `homelab-visible-effect-survives-long-session` shares
+  its grading with `homelab-right-size-native-tier2` so a divergence is attributable to session
+  length; `runbook-disposition-update` is the reading that survives when the composing skill does not
+  fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
+  shape no case declares is a control nothing runs.
+
+**Where the cost actually is.** 64 of the 69 cases are no-tool planning-only sessions. The expense
+concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
+Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
+per-contract work.
+
+**What the sweep did change:** two oracles that could not fail their own contract were strengthened
+rather than cut, both being their agent's only instrument.
+`distinguished-evolution-plan-has-valuable-stop-points` passed a plan saying "Do not stop partway;
+there are no interim milestones", and `ladder-report-not-absorb` passed a response that named the
+escalation and then made the call anyway — a limit its own `expected` field had conceded in writing.
+
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
