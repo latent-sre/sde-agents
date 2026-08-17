@@ -1,7 +1,8 @@
-# LEARN-002 offline repair round, and three ORACLE closes (2026-08-17)
+# LEARN-002 offline repair round, and eleven small-item closes (2026-08-17)
 
 **What this is.** The record of one session that worked every LEARN-002 sub-item not requiring a
-paid model run, plus the three small items its repairs reached. LEARN-002 itself stays open —
+paid model run, then closed eleven of the twelve small items — every one that could be settled
+without buying a model session. LEARN-002 itself stays open —
 `docs/fleet-roadmap.md` is the live tracker and owns what is still owed. This file exists because
 closing a small item means deleting its line, and a deleted line takes its reasoning with it.
 
@@ -118,7 +119,106 @@ Note the interaction with the denial fix above: these cases now run fully tool-d
 session in this suite can open a `references/` file**. This repair's consumer is a `Read`-capable
 session in ordinary use, not a contract here.
 
-## The three small items
+## The small items
+
+Eleven of the twelve closed. Each is recorded here because closing a small item means deleting
+its line, and a deleted line takes its reasoning with it. Grouped by what they turned out to be.
+
+### Four defects in one construct, and the false green among them
+
+`lint_exact_fields` and the echo collapse produced four of these, which is itself the finding —
+each was repaired locally, and the next one arrived in the same code.
+
+**ORACLE-009 was the only known false green, and it was worse than filed.** The collapse keyed on
+"a repeat whose decoration differs from the line it echoes", so whichever rendering appeared
+*first* claimed the key: `**Gate: consolidated**` followed by two bare declarations collapsed to
+one and passed, while the same three lines in the other order correctly failed. The LEARN-002
+rewrite above had made that order-*independent* in the wrong direction — both orders passed — so
+the hole was wider on arrival than the roadmap described. The rule is now stated as what the
+exactly-once contract counts: an undecorated occurrence is a declaration every time; a decorated
+one is a rendering and collapses only into a plain twin. Order cannot enter the answer because
+nothing reads it.
+
+**ORACLE-008**: decoration was stripped when *detecting* a closed-set term and not when comparing
+the value, so `**Gate: consolidated**` passed while `Gate: **consolidated**` — the more natural
+rendering — graded as the wrong value. Closed by routing both sides through the same
+normalization the echo grouping uses, rather than a fifth local strip.
+
+**ORACLE-006** (above) and **ORACLE-003** complete the set. ORACLE-003 made the honest answer
+grade worse than a terse one: `Verified: nothing` was exempt while `Verified: the path does not
+exist, so I could not check the format` was reported as an unevidenced claim, costing
+`homelab-right-size-native-tier2` roughly half its runs for oracle reasons. The exemption is now
+bounded to the first clause after the delimiter, so the disclosure has to *lead* the slot — a
+comma ends it. That is deliberately stricter than the clause construct `evals/README.md`
+prescribes, for the reason that document gives for wanting a different scope argued for rather
+than copied: ending at an adversative would exempt `Verified: the format is correct, no issues
+found`, which is the shape the repair exists to keep failing.
+
+### Two contracts with no instrument
+
+**ORACLE-010**: `agents/homelab-platform.md` contracts "one set per effect", and the change that
+added the clause split the combined retry-plus-deletion case in two — because `exact_fields`
+requires each label exactly once across the whole answer, and a two-effect answer carries each
+twice. The suite could not express the shape the new clause described. `lint_effect_sets` grades
+it by comparing whole declaration blocks, which is what catches the swap: an answer pairing the
+retry's gate with the deletion's class holds every individual value the contract wants and is
+wrong in the way that matters. The combined case is restored, and is unmeasured.
+
+**ORACLE-002** is the inverse and is **accepted, not closed**, at the linter. Deciding whether
+free prose contradicts a closed-set term is the paraphrase matching those terms exist to escape.
+What was wrong rather than merely open is that this file recorded the *cases* as already covering
+it: the retry case carried no new-approval negative, and the deletion case's negative reached
+only "the deletion is covered/approved/included", never "the prior approval covers the deletion".
+Both now do, each verb bound to its object. A new case relying on the slot inherits the exposure,
+not the cover.
+
+### Two places the agent was told something it could not act on
+
+**GATE-004**: the broker requires an absolute `argv[0]`, and the agent turned that into one
+hardcoded path. It also rejects an executable that is not a regular file, so on macOS, NixOS,
+Homebrew or rootless hosts a session following the instruction literally builds a request that
+cannot be signed — and finds out at approval time. It now resolves the executable on the
+execution host.
+
+**GATE-003**: `Instrument: <fresh request required|n/a>` was offered with only the first defined.
+`n/a` now means the gate has no broker instrument *because it belongs to another owner*, and is
+explicitly about the gate's kind rather than whether a request is obtainable. That distinction is
+load-bearing: when the transport is absent the value stays `fresh request required`, because
+`n/a` there would record "this effect needs no signed request" — the one claim that state must
+not make.
+
+### Two guards that ran too late to mean anything
+
+**DOCTOR-002**: a per-check `inconclusive` reached no exit status, so a check the doctor tried to
+compute and could not exited 0. The ladder is now ordered by how definite the answer is — 1 for a
+failed check, 2 for one that could not be computed, 3 for warnings. An existing test asserted the
+old behavior on the reading that skip and inconclusive are both non-attention states; conflating
+them is what let it through.
+
+**EVAL-004**: `--output-dir` was validated after the batch, so a mistyped path cost a paid run and
+then refused to write it. Moving the `mkdir` forward was the obvious repair and the wrong one —
+it would leave an empty directory behind for every run that aborts elsewhere — so the preflight
+inspects and creates nothing.
+
+### Two the probe owns
+
+**PROBE-003**: the five workflow assertions need a permission mode Claude Code refuses under
+root, so one environment condition produced five FAIL lines reading as five fleet defects.
+Reported once as INCONCLUSIVE, detected by identity so no model session is spent on a launch that
+cannot succeed.
+
+**PROBE-001**: the guard's `--agent` scoping clause was quoted from the upstream hooks reference
+under a docstring header reading "probed, not assumed". The probe now drives it. The clause is
+*instrumented*, and becomes observed when a run records it — the docstring says exactly that.
+
+### The one that stays open
+
+**PROBE-002** cannot close offline: only a probe run can say whether the two preload canaries
+failed for real or because the oracle never consumed an async agent launch's result. What changed
+is that the next run settles it — an uncorrelated spawn now reports INCONCLUSIVE naming the
+correlation gap, where before both outcomes rendered as FAIL and disambiguating cost a second run.
+
+## The three ORACLE items closed with the LEARN-002 round
 
 **ORACLE-006 — closed by construction.** The separator set between a closed-set term and its
 rationale was hand-listed (`— – - : ( ,`), so a semicolon or full stop was classified as a
@@ -162,15 +262,21 @@ observed to fail, then restored.
 
 | Gate | Result |
 |---|---|
-| `scripts/run_tests.py` | 917 tests across 33 modules, ok |
+| `scripts/run_tests.py` | 933 tests across 33 modules, ok (917 after the LEARN-002 half) |
 | `scripts/validate_fleet.py` | 11 agents, 20 skills, inventory current |
 | `claude plugin validate . --strict` | passed |
 | `scripts/fleet_doctor.py` | `fail=0` (warnings are pre-existing host drift and CTX-002's listing budget) |
-| Mutation checks | 6/6 guards fail when their protection is removed |
+| Mutation checks | every guard added here fails when its protection is removed |
 
-The `evals/README.md` inventory figures moved with the baselines and were updated; its
-"47 of the 70 cases are no-tool planning-only" line now says that this is enforced rather than
-declared.
+Two guards were weak before they were right, and only mutation showed it — which is the argument
+for the practice rather than a footnote to it. The PROBE-003 test was appended past
+`if __name__ == "__main__":`, so it was never a method of its class and never ran; the ORACLE-010
+oracle had thorough tests of its own that could not show a shipped case declaring `effect_sets`
+actually reaches it. Both passed their first run. Neither was worth anything.
+
+`evals/README.md`'s inventory figures moved twice — with the baselines, and again when ORACLE-010
+restored the 71st case — and its "48 of the 71 cases are no-tool planning-only" line now records
+that this is enforced rather than declared.
 
 ## What a later session should not redo
 
@@ -181,3 +287,7 @@ declared.
 - Do not cite `verifier-envelope-mismatch-fails-closed`'s 3/3 as no-tool evidence, then or now.
 - Do not widen `loop-source-pass-is-not-released-pass`'s recording-mechanism pattern without
   settling the design question above.
+- Do not treat ORACLE-002 as closed at the linter. It is an accepted exposure carried by two
+  cases' negatives; a new case using the gate slots owes its own.
+- Do not buy a second probe run to disambiguate PROBE-002. One is enough now, and the two lines
+  to read are named in its roadmap entry.
