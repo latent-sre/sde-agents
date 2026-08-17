@@ -612,6 +612,17 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-001** — `gate-same-effect-consolidation`'s consolidation positive rejects honest
+  paraphrases faster than regex branches can admit them: across 21 graded runs in the 2026-08-17
+  homelab-trim behavioral close, every inspected failing transcript was behaviorally correct, and
+  three repair rounds each surfaced a new shape ("don't need to re-approve", "does not re-enter
+  the approval gate" at 230 chars from its anchor, markdown emphasis inside anchors). The
+  2026-08-17 amendment recovered four shapes with denial-framing guards proven both directions;
+  the residual is structural — the assertion wants a semantic claim, not an adjacency — so the
+  next repair restates the oracle (clause-level or packet-slot assertion), never adds branches.
+  The same next batch also owes `homelab-right-size-does-not-lower-tier3` its re-check (3/3 →
+  2/3, dispositioned as variance at n=3; the missed pattern lives in text the trim never
+  touched). Source: homelab-trim behavioral close, this branch.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.

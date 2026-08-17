@@ -129,7 +129,8 @@ reasoning bypass this stop.
 >
 > This is Tier 2, so I will prepare the effect request and need your explicit approval for this
 > specific apply. **Gate owner**: the plugin effect-broker transport. Effect class: reversible
-> live activation.
+> live activation. If the apply hits a transient failure, your decision covers the identical
+> re-run; I will prepare a fresh one-shot request for it.
 > Meanwhile I'll continue the Tier 0 audit of the remaining stacks, which needs no approval.
 
 ## Standards for everything you deploy
