@@ -621,7 +621,27 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   `[unverified]` label (round 5), and now a trailing affirmative clause — each time from a
   differently-shaped input its previous narrowing did not anticipate. That pattern is evidence the
   line-scoped exemption is the wrong shape, not that a fourth narrowing is owed; the honest coverage
-  it buys is one case (`homelab-right-size-native-tier2`). Source: PR #144 round-6 review.
+  it buys is one case (`homelab-right-size-native-tier2`). The same construct also carries a
+  false RED in the other direction: `_UNCHECKABLE` accepts only the ASCII apostrophe, so
+  `Verified: I couldn't run the health check` is exempt while the typographic `couldn’t` is
+  graded as an affirmative claim — `_NEGATION_TOKENS` directly above accepts both forms.
+  Reverting resolves both directions at once; narrowing resolves neither. Source: PR #144
+  round-6 and round-7 reviews.
+- **ORACLE-005** — `_lint_declaration_block` grades the SPAN of the gate declarations, not that they
+  open the statement, so a response can argue the decision first and append the block after, or
+  interleave prose between each slot, and still pass. The contract word is "open", so the gap is
+  real; the reason it was not closed with the span check is that "the statement" has no machine
+  boundary in a long answer, and requiring empty or heading-only preceding lines is a new false-RED
+  surface on prose the agent writes freely. Decide the boundary before implementing: either the
+  agent declares one (a heading the block must follow) or the check stays span-only and this line
+  closes as accepted. Source: PR #144 round-7 review.
+- **GATE-002** — `agents/homelab-platform.md` defines `Instrument: fresh request required` as
+  asserting "the signed request is spent and a fresh one must be prepared", but the worked Tier 2
+  example emits that value for an effect entering its FIRST gate, where nothing has been spent. A
+  session following the definition literally must either invent nonce-consumption evidence or pick
+  `n/a` for an initial brokered effect, which the deletion contract then fails. Redefine the value
+  as requiring a valid request to be created — initial attempt or retry — and keep the spent-nonce
+  implication as the retry case only. Source: PR #144 round-7 review.
 - **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
