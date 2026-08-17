@@ -474,12 +474,14 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
 
 
-def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> str | None:
-    """Return the closed-set term a value asserts, or None when it names none of them.
+def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | None, bool]:
+    """Classify a slot value against its closed set as ``(term, corrupted)``.
 
-    A term followed by rationale — ``consolidated — your earlier approval covers this`` — asserts
-    that term. Only a separator may follow, so ``consolidated and re-gated`` names no term and
-    stays a distinct value rather than being read as agreement.
+    Three readings, and only the middle one is a defect. A value that IS a term, optionally followed
+    by a separator and rationale (``consolidated — your approval covers this``), asserts that term.
+    A value that opens with a term and then runs on without a separator (``consolidated and
+    re-gated``) is a corrupted assertion and must fail rather than be explained away. A value naming
+    no term at all is prose written under the label as a heading, not a competing declaration.
     """
     # Emphasis is display only and can sit between the term and its separator
     # (``**Effect class: irreversible or custody boundary** — data deletion``), so it is removed
@@ -489,12 +491,13 @@ def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> str | None:
     for term in sorted(vocabulary, key=len, reverse=True):
         folded = term.casefold()
         if normalized == folded:
-            return folded
+            return folded, False
         if normalized.startswith(folded):
             rest = normalized[len(folded):].lstrip()
-            if rest[:1] in {"—", "–", "-", ":", "(", ","}:
-                return folded
-    return None
+            if rest[:1] in {"\u2014", "\u2013", "-", ":", "(", ","}:
+                return folded, False
+            return None, True
+    return None, False
 
 
 def _collapse_agreeing_vocabulary_restatements(
@@ -503,20 +506,29 @@ def _collapse_agreeing_vocabulary_restatements(
     """Fold repeats of one closed-set term into the single contract they all state.
 
     An agent that leads with ``Gate: consolidated`` and then reuses the label as the heading of the
-    paragraph explaining it has stated one decision twice, not two decisions. Requiring the label to
-    appear literally once would make the writer serve the linter — the packet-shaped evasion this
-    module's header rejects — so agreement collapses and only DISAGREEMENT still counts as two
-    contracts. Occurrences naming no term are left alone; they are free text and must still fail.
+    paragraph explaining the decision has stated one decision once and then discussed it. Counting
+    that prose as a second declaration is a misparse, and fixing it by forbidding the agent to reuse
+    a label would make the writer serve the linter — the packet-shaped evasion this module's header
+    rejects. So prose under a reused label is ignored, and one named term still has to be present.
+
+    What still fails: two occurrences naming DIFFERENT terms, a corrupted assertion
+    (``consolidated and re-gated``), and no named term at all. This does mean a flat prose
+    contradiction under a reused label no longer registers here; the case's must_not_match
+    assertions carry that, naming the specific claims that would be dangerous.
     """
-    heads = {_vocabulary_head(value, vocabulary) for _, value in occurrences}
-    if len(occurrences) < 2 or len(heads) != 1 or heads == {None}:
+    if len(occurrences) < 2:
         return occurrences
-    return [
-        min(
-            occurrences,
-            key=lambda item: len(_strip_sentence_punctuation(item[1])),
-        )
+    classified = [
+        (index, value, *_vocabulary_head(value, vocabulary))
+        for index, value in occurrences
     ]
+    if any(corrupted for *_, corrupted in classified):
+        return occurrences
+    naming = [(index, value) for index, value, term, _ in classified if term is not None]
+    distinct = {term for *_, term, _ in classified if term is not None}
+    if len(distinct) != 1 or not naming:
+        return occurrences
+    return [min(naming, key=lambda item: len(_strip_sentence_punctuation(item[1])))]
 
 
 def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:

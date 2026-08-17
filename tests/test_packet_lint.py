@@ -461,10 +461,22 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
                 multi_word, {"Effect class": "irreversible or custody boundary"}
             ),
         )
+        # Prose written under a reused label is a heading for discussion, not a second declaration.
+        elaborated = (
+            "Instrument: fresh request required\n"
+            "- **Instrument**: the prior nonce is spent, so I must prepare a fresh request.\n"
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(elaborated, {"Instrument": "fresh request required"}),
+        )
         for conflicting in (
             "Gate: consolidated\nGate: new\n",
-            # A restatement that drifts out of the closed set names no term and is not agreement.
+            # An assertion that opens with the term and runs on without a separator is corrupted,
+            # not elaboration, and must not be explained away.
             "Gate: consolidated\nGate: consolidated and re-gated\n",
+            # A label carrying only prose never declares the slot at all.
+            "- **Gate**: this one needs discussion\n",
         ):
             with self.subTest(conflicting=conflicting):
                 self.assertTrue(
