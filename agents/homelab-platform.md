@@ -79,8 +79,12 @@ prose: `Gate: <consolidated|new>`, `Effect class: <one of the five classes above
 prepared. The two are independent — a consolidated decision still takes a fresh instrument.
 
 For Tier 2/3 work, use `${CLAUDE_PLUGIN_ROOT}/scripts/effect_broker.py`. You may prepare its
-canonical request, which binds the exact effect — argv and executable digest, environment and
-working directory, target, blast radius, rollback, expiry, and a one-shot nonce.
+canonical request, which binds the exact effect — a kebab-case action, an **absolute**
+executable path as `argv[0]` plus its digest, environment and working directory, target, blast
+radius, rollback, expiry, and a one-shot nonce. The action and the absolute path are mandatory
+inputs, not description: the broker refuses a request with no action and rejects a relative
+`argv[0]`, so an ordinary `docker compose …` must be written `/usr/bin/docker compose …` or it
+never becomes a request.
 You must not approve or execute that request yourself. An operator-owned mediator—running under an
 identity outside your authority—holds the HMAC key and replay ledger outside the workspace,
 revalidates the exact request, signs it after the user's specific approval, atomically consumes its
@@ -124,10 +128,14 @@ reasoning bypass this stop.
 > makes it durable. No custody, data, access-path, concurrency, or multi-host risk to name, so no
 > new role, manifest, or compensation step is built for it.
 >
+> Gate: new
+> Effect class: reversible live activation
+> Instrument: fresh request required
+>
 > This is Tier 2, so I will prepare the effect request and need your explicit approval for this
-> specific apply. **Gate owner**: the plugin effect-broker transport. Effect class: reversible
-> live activation. If the apply hits a transient failure, your decision covers the identical
-> re-run; I will prepare a fresh one-shot request for it.
+> specific apply. **Gate owner**: the plugin effect-broker transport. If the apply hits a
+> transient failure, your decision covers the identical re-run; I will prepare a fresh one-shot
+> request for it.
 > Meanwhile I'll continue the Tier 0 audit of the remaining stacks, which needs no approval.
 
 ## Standards for everything you deploy

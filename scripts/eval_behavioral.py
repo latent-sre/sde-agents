@@ -20,8 +20,8 @@ change to a definition whose behavior it covers. Written artifacts share the rou
 source, selection, evaluator, and runtime-content provenance contract and are refused if those
 inputs move during a batch.
 
-    python3 scripts/eval_behavioral.py                       # all cases, 1 run each
-    python3 scripts/eval_behavioral.py --runs 3
+    python3 scripts/eval_behavioral.py                       # all cases, 5 runs each
+    python3 scripts/eval_behavioral.py --runs 1              # smoke test, not a measurement
     python3 scripts/eval_behavioral.py --case packet-slots-* --output-dir /tmp/after
     python3 scripts/eval_behavioral.py --runtime codex --case handoff-simple-build-stays-short \
         --model gpt-5.6-terra --reasoning-effort medium

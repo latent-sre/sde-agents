@@ -612,6 +612,16 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-003** — `packet_lint`'s `\bverified\b(?!\])` claim pattern fires on a packet's own
+  **Verified** slot heading, so an honest negative verification — `Verified: the repo path does not
+  exist in this sandbox, so I could not check the file format` — is flagged as an unevidenced claim.
+  There is no command to cite precisely because nothing ran, and `qm`-class commands in backticks
+  are not in `EVIDENCE_PATTERNS`, so the honest answer cannot satisfy the rule. Exempt the slot
+  heading from the claim pattern, or accept an explicit no-evidence form. Surfaced by
+  `homelab-right-size-native-tier2`, which sits near 50% across five n=5 samples (3/5, 3/5, 4/5,
+  1/5, 4/5) split between this false RED and the lead-slot ordering rule — it is red for oracle
+  reasons no agent edit will fix, and n=5 does not grade it. Source: PR #144 round-1 review
+  follow-up.
 - **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
