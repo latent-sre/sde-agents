@@ -565,9 +565,10 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **9,262 lines across 20 directories**, down from 31,730 across 28 — a 71% cut
-with nothing a reader consumes removed. What remains: 1,798 lines of summary, the raw of six
-partially-summarized directories, and four directories with no summary at all
+Baselines now total **9,378 lines across 13 top-level directories**, down from 31,656 across 28 —
+a 70% cut with nothing a reader consumes removed. What remains: 1,338 lines of distilled record
+under `history/`, the raw of the partially-summarized directories, and four directories with no
+summary at all
 (`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
 `2026-08-10-gate-001-first-live`) where the raw *is* the record. `2026-07-31-p0-p1` matters most of
 those: it holds the only Codex CLI run this repository has ever recorded.

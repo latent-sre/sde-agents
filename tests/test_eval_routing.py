@@ -663,6 +663,18 @@ class CaseFileTest(unittest.TestCase):
             (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
         )["cases"]
         no_tool = sum(1 for case in behavioral if case.get("allowed_tools") == [])
+        # The baselines inventory is quoted in the same file and drifted the same way — it was
+        # written once after the retirement commits and not recomputed after the later ones, so it
+        # claimed 9,262 lines across 20 directories against an actual 9,378 across 13. An operator
+        # reads these to judge whether the cleanup did what it says (PR #145 review).
+        baselines = REPO / "evals" / "baselines"
+        baseline_lines = sum(
+            len(path.read_bytes().splitlines()) for path in baselines.rglob("*") if path.is_file()
+        )
+        baseline_dirs = len([path for path in baselines.iterdir() if path.is_dir()])
+        summary_lines = sum(
+            len(path.read_bytes().splitlines()) for path in (baselines / "history").rglob("*.md")
+        )
 
         rows = (
             (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),
@@ -671,6 +683,9 @@ class CaseFileTest(unittest.TestCase):
             (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
             (r"(\d+) of the (\d+) cases are no-tool planning-only", (no_tool, len(behavioral))),
             (r"Behavioral holds (\d+)", (len(behavioral),)),
+            (r"\*\*([\d,]+) lines across (\d+) top-level directories\*\*",
+             (f"{baseline_lines:,}", baseline_dirs)),
+            (r"What remains: ([\d,]+) lines of distilled record", (f"{summary_lines:,}",)),
         )
         for pattern, expected in rows:
             found = re.search(pattern, readme)
