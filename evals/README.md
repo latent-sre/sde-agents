@@ -41,12 +41,24 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 `expect_not_fires` is what a negative is graded against, and it defaults to the whole cluster — so
 an ordinary near-miss passes only when nothing in the cluster fires. A case may **narrow** it to
 name a *disambiguation* boundary instead: the components that must not fire, while a named sibling
-legitimately may. `neg-resolved-not-incident` is the one in the tree — an already-resolved outage
+legitimately may. `neg-resolved-not-incident` is the clearest one — an already-resolved outage
 must not reach the mitigation skills, but `postmortem` (a cluster member) is the correct
 destination, so grading it cluster-wide failed the case for its sibling doing the right thing. Keep
 the narrowing rare and visible: it is a declared exemption, the runner prints the forbidden set it
 actually used, and every name in it must be a cluster member (a typo would forbid nothing and pass
 vacuously).
+
+**Narrowing is no longer rare, and that is a measured coverage cost** (counted 2026-08-17:
+**18** of 66 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
+verdict for one disambiguation and gives up over-trigger detection for every member it stops
+forbidding, so a cluster that narrows most of its negatives stops watching most of its members:
+`continuous-improvement` narrows **6 of 6** negatives to a single forbidden component each,
+leaving five of its six members with no over-trigger coverage in that cluster at all, and
+`agent-systems` narrows 3 of 3, leaving `principal-engineer` uncovered. Read a narrowed
+cluster's clean negative side as "no member named in these exemptions over-fired", never as
+"nothing in this cluster over-fires". Before adding a narrowing, prefer reshaping the prompt —
+that is what the `ladder` cluster's `neg-embedded-decision-not-principal-owned` repair did, and
+its note records why firing-based grading cannot express "may fire, for the right reason".
 
 The runner rejects any polarity other than literal `positive` or `negative`, a positive case with
 no valid `expect_fires` member, an explicitly empty or invalid negative target set, and a threshold
@@ -151,7 +163,31 @@ that survive that noise:
   description edit. That is the eval-first check `prompt-engineer` asks for: run it before and after.
 - **Over-trigger** — a negative that fires *at all*. A near-miss landing on the cluster means the
   description is too broad, and it's a defect regardless of variance (which is why negatives pass
-  only at a 0% fire rate).
+  only at a 0% fire rate). Read that asymmetrically: **one fire is proof of a defect, but zero
+  fires is weak proof of its absence** — "0% fire rate" describes the three runs, not the
+  component. At `--runs 3` a negative whose true over-trigger rate is 10% passes about 73% of the
+  time (20% → about 51%), so a clean negative side bounds over-triggering loosely rather than
+  refuting it.
+
+### What `--runs 3` can and cannot resolve
+
+Three runs express exactly four rates — 0, 1/3, 2/3, 1 — so the default `--threshold 0.5` means
+"at least 2 of 3", and **the pass boundary is a single run**. Consequences to hold on to before
+reading any positive rate as signal:
+
+- At the ~50% fire rate this section describes as normal for a clear match, a correctly described
+  component **coin-flips its verdict** (P(pass) = 0.5). At a true 0.3 it still passes 22% of the
+  time; at 0.7 it fails 22% of the time.
+- A **1/3 ↔ 2/3 movement is not signal.** Between two runs of an unchanged tree at p=0.5, the
+  chance of observing some strict rate increase is about 1 in 3. Treat single-step movement as
+  noise unless a mechanism explains it.
+- A `1/3` positive is a **failing** positive, not a partial success — the roadmap states this for
+  the ladder cluster and it generalizes.
+- Never diff an `n=1` capture against an `n=3` one. Stored rows of that shape exist in
+  `baselines/2026-08-10-learn-002/decisions.md`, and that record retracts two of them itself.
+
+When a paired comparison must actually support a conclusion, raise `--runs` on the specific cases
+in the diff rather than trusting a boundary crossing at three.
 
 Because of that variance, this suite is meant to be run **manually, on demand** — before and after a
 prompt change — not as a hard CI gate that would flake-fail honest PRs. It is intentionally *not*
@@ -396,6 +432,16 @@ not only of the description. Read the clusters accordingly:
 - **Agent positives** (`homelab-platform`, the `ladder` and `craft-vs-fullstack` agent members) are
   a weaker signal one run at a time; trust the **negatives** (over-trigger is a real defect at any
   rate) and **regressions across runs** over an absolute agent-positive rate.
+- **How much of the suite this affects** (counted 2026-08-17): of 76 positives, **26 are
+  agent-only** — only a delegation can score them — 20 are mixed (a skill can rescue the case), and
+  30 are skill-only. Four clusters are majority-agent on their positive side: `agent-systems` 2/2,
+  `investigation` 8/10, `verification-seam` 4/5, `ladder` 6/9. Nothing in the scoring compensates:
+  `--threshold` is one global value applied identically to every positive regardless of component
+  kind. So **any aggregate positive rate over a cluster containing agent-only positives is not a
+  description measurement**, and should not be published as one — including the sort of "positives
+  overall N/M" summary that sums the two kinds together. Cases whose declared target is an agent
+  are best read alongside that agent's pinned behavioral contract, which is the instrument that
+  actually observes it.
 - The native `claude plugin eval` (see below) delegates properly and will tighten the agent signal;
   these case files migrate to it unchanged.
 - **Skill positives are only as visible as the listing the eval model saw.** The skill listing is
