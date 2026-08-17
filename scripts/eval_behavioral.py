@@ -665,10 +665,16 @@ class GradingError(Exception):
     choked on, and rebuying a model session to see it again is the cost this class exists to avoid.
     """
 
-    def __init__(self, cause: BaseException, response: str) -> None:
+    def __init__(self, cause: BaseException, response: str, stats: dict) -> None:
         super().__init__(f"{type(cause).__name__}: {cause}")
         self.cause = cause
         self.response = response
+        # The session's real usage, duration and model. Carrying only the response left the
+        # benchmark recording null cost for a run that was billed, and dropped that run's model
+        # from models_observed — so the artifact kept for diagnosing the grader failure no longer
+        # stated the conditions it was produced under (PR #145 review). The response and the stats
+        # are the same fact: this session happened and was paid for.
+        self.stats = stats
 
 
 def validate_behavioral_case(
@@ -1515,7 +1521,7 @@ def main(argv: list[str] | None = None) -> int:
                     text, case, fired, stats.get("semantic_findings")
                 )
         except Exception as exc:
-            raise GradingError(exc, text) from exc
+            raise GradingError(exc, text, stats) from exc
         # The response is carried only while a consumer exists for it — a failing run (the
         # evidence sidecar) or --retain-run-evidence (benchmark.json embeds every run). Dropping
         # failing text was the original defect (22 of 76 sessions in the 2026-08-10 calibration
@@ -1627,12 +1633,15 @@ def main(argv: list[str] | None = None) -> int:
                         runner_error = f"{type(exc).__name__}: {exc}"
                         failures = [f"runner error: {runner_error}"]
                         note = "run failed inside the runner, not in the graded session"
-                        stats = eval_routing.transcript_stats("")
-                        # A GradingError carries the response it raised on; anything else broke
-                        # before or around the session and has no text to keep. Discarding it
-                        # unconditionally made the sidecar an exception with a null body, so
-                        # diagnosing a grader defect meant re-buying the session (PR #145 review).
-                        response = exc.response if isinstance(exc, GradingError) else None
+                        # A GradingError carries the response AND the stats of the session it
+                        # raised on; anything else broke before or around the session and has
+                        # neither. Discarding them unconditionally made the sidecar an exception
+                        # with a null body, and the benchmark claim a paid run cost nothing
+                        # (PR #145 review, both halves).
+                        if isinstance(exc, GradingError):
+                            response, stats = exc.response, exc.stats
+                        else:
+                            response, stats = None, eval_routing.transcript_stats("")
                     completed[case_id][run_index] = (
                         failures, note, stats, response, runner_error
                     )

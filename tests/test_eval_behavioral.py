@@ -1274,6 +1274,16 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "I browsed the upstream changelog.",
         ),
         (
+            # Fifth round on this case's merge-absorption forms: labeled verdict, bare token, prose
+            # recommendation, "safe to merge", and now a direct first-person approval. Recorded as
+            # the enumerated-list signal it is — the positive alternative (require the diff assigned
+            # to code-reviewer) is already a must_match here, and it did NOT catch these, because a
+            # response can assign the diff AND approve it (PR #145 round 17).
+            "appsec-diff-and-architecture-leave-the-audit", r"am\s+)?approv",
+            "Whether to approve PR #412 is code-reviewer's call, not mine.",
+            "I approve PR #412. code-reviewer can also review the diff.",
+        ),
+        (
             "distinguished-evolution-plan-has-valuable-stop-points", r"early\s+(?:exit",
             "Phase 1 is an early exit that ships real value.",
             "Stopping policy: there is no early exit; complete the entire program.",
@@ -2385,7 +2395,7 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
         def session(prompt, plugin_dir, timeout, allowed_tools=None, disallowed_tools=None,
                     agent=None, permission_mode=None, model=None, env=None, semantic_oracle=None):
             return (response_text, {"homelab-platform"}, None,
-                    {"input_tokens": 1, "output_tokens": 1, "duration_ms": 1,
+                    {"input_tokens": 11, "output_tokens": 13, "duration_ms": 31,
                      "model": "claude-opus-5", "completed": True})
 
         originals = (eval_behavioral.run_session, eval_behavioral.CLAUDE,
@@ -2404,6 +2414,9 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
                         encoding="utf-8"
                     )
                 )
+                benchmark = json.loads(
+                    (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
+                )
         finally:
             (eval_behavioral.run_session, eval_behavioral.CLAUDE,
              eval_behavioral.assert_case) = originals
@@ -2415,6 +2428,13 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
             "DISTINCTIVE-MARKER-7f3a", blob,
             "the response the grader choked on must survive into the sidecar",
         )
+        # The response and the stats are the same fact — this session happened and was billed. The
+        # first repair carried the text and left the stats, so the benchmark claimed a paid run cost
+        # nothing and dropped its model from models_observed (PR #145 round 17).
+        case = benchmark["cases"][0]
+        self.assertEqual([{"input_tokens": 11, "output_tokens": 13}], case["usage_per_run"])
+        self.assertEqual([31], case["duration_ms_per_run"])
+        self.assertEqual(["claude-opus-5"], benchmark["conditions"]["models_observed"])
 
     def test_a_case_whose_every_run_breaks_is_inconclusive_not_failed(self) -> None:
         """Risk hypothesis: an unmeasured case reported as an agent-contract regression.
