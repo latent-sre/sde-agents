@@ -267,7 +267,7 @@ the request to its operator and says so, never reporting the PR as awaiting revi
 
 Wait for both passes **on the current head** — a review-driven edit mints bytes the cleared
 passes never saw, so the last edit owes another wait — and disposition every comment: applied, or
-declined with the reason. At most **two** review-driven edit rounds per PR; a later finding is
+declined with the reason. At most **three** review-driven edit rounds per PR; a later finding is
 dispositioned in the thread without new bytes (declined with the reason, or recorded as owed work
 in `docs/fleet-roadmap.md`) unless an explicit operator ruling buys one further round, the same
 one-round escape as the deep-review bound's round past the cap. The cap bounds edits, never

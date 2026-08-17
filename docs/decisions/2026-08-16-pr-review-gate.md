@@ -3,8 +3,9 @@
 **Status:** Accepted — consolidates rules already operative in `AGENTS.md` ("Opening a pull
 request") together with the incident evidence that minted them; it proposes nothing new. The
 escape semantics were unified to one-further-round-per-ruling across both convergence bounds on
-2026-08-16 (`c2865eb`).
-**Date:** 2026-08-16
+2026-08-16 (`c2865eb`). The PR cap was raised from two rounds to **three** by operator ruling on
+2026-08-17, under this record's own reopen trigger — see "The operator ruling" below.
+**Date:** 2026-08-16 (amended 2026-08-17)
 **Corroborating archive evidence:**
 [`prop-001 outcome`](../archive/2026-08/prop-001-outcome-2026-08-13.md) (records the
 review-latency and operator-step findings contemporaneously with PROP-001).
@@ -15,7 +16,7 @@ The governing text is `AGENTS.md`; this record is its provenance, kept out of th
 context on purpose. The rules, in short: the automated review is request-triggered and requesting
 is an operator step; both passes are waited for on the current head, and a review-driven edit
 owes another wait; every comment is dispositioned as applied or declined with the reason; and at
-most two review-driven edit rounds land per PR, with an explicit operator ruling buying one
+most three review-driven edit rounds land per PR, with an explicit operator ruling buying one
 further round.
 
 ## Evidence
@@ -40,8 +41,19 @@ further round.
    let the gate be satisfied by a review of code a later fix had already replaced.
 7. **PR #136 ran ten review-driven rounds** after the two-round deep-review cap was written,
    because that cap bound the static-review gate and left the disposition loop open. That is the
-   origin of the two-round PR cap, and of stating explicitly that the cap bounds edits, never
+   origin of the PR cap (set at two, raised to three in 2026-08-17's ruling below), and of
+   stating explicitly that the cap bounds edits, never
    waits.
+
+## The operator ruling (2026-08-17)
+
+The cap is **three** review-driven edit rounds per PR, not two. Evidence item 7 minted *a* cap and
+still stands — ten unbounded rounds is the failure mode — but two rounds proved too tight against
+observed review behavior: a first round routinely draws a follow-up finding on the bytes it just
+minted (PR #142's round 2 caught defects in that branch's own round-1 fixes), which consumed the
+budget before any independent third look could land. Three rounds lets that self-correcting
+sequence finish inside the cap instead of spending the operator escape on it. The escape survives
+unchanged on top, so a ruling still buys a fourth round when one is genuinely owed.
 
 ## Rejected alternative
 
