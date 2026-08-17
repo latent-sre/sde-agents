@@ -626,19 +626,35 @@ def main(argv: list[str] | None = None) -> int:
     # `cat` of the skill file by sde-fullstack itself (see canary_leaks above), which would false
     # green this check on the branch's central claim without proving preload at all. See
     # agent_spawn_results for the full reasoning.
-    fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))
-    probe.check(
-        PASS if BACKEND_CANARY in fullstack_text else FAIL,
-        "backend-craft core content was preloaded (canary quoted)",
-        f"the canary {BACKEND_CANARY} never appeared in sde-fullstack's own spawn result: "
-        "backend-craft was not in the agent's context",
-    )
-    probe.check(
-        PASS if FRONTEND_CANARY in fullstack_text else FAIL,
-        "frontend-craft core content was preloaded (canary quoted)",
-        f"the canary '{FRONTEND_CANARY}' never appeared in sde-fullstack's own spawn result: "
-        "frontend-craft was not in the agent's context",
-    )
+    # PROBE-002: an EMPTY correlated-result list and a result that lacks the canary are different
+    # findings, and reporting both as FAIL is what left the 2026-08-17 run's two canary failures
+    # unsettleable without buying another. The oracle correlates a spawn's `tool_use_id` to its
+    # `tool_result`; an async agent launch can leave that result unconsumed, which the
+    # [2026-07-30 audit's F-03](docs/archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md)
+    # already reproduced with this exact both-canaries-absent signature. So the two cases are
+    # split: no correlated result at all is INCONCLUSIVE about preloading — it says the oracle
+    # never saw the spawn's output — while a result that IS present and carries no canary is a
+    # real preload failure. One repeat run now distinguishes them instead of repeating the
+    # ambiguity.
+    fullstack_results = agent_spawn_results(text, "sde-agents:sde-fullstack")
+    fullstack_text = "\n".join(fullstack_results)
+    for canary, skill in ((BACKEND_CANARY, "backend-craft"), (FRONTEND_CANARY, "frontend-craft")):
+        if not fullstack_results:
+            probe.check(
+                SKIP,
+                f"{skill} core content was preloaded (canary quoted)",
+                "no tool_result correlated to the sde-fullstack spawn, so the oracle observed no "
+                "output to search: this canary is unevaluated, not absent. An async agent launch "
+                "produces exactly this signature (2026-07-30 audit F-03). Re-run; if a correlated "
+                "result appears and the canary is still missing, that is a real preload failure.",
+            )
+            continue
+        probe.check(
+            PASS if canary in fullstack_text else FAIL,
+            f"{skill} core content was preloaded (canary quoted)",
+            f"the canary {canary!r} never appeared in sde-fullstack's own spawn result, which the "
+            f"oracle DID observe: {skill} was not in the agent's context",
+        )
 
     print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
     # Still load-bearing, but ONLY for homelab-platform now: service-onboard sets
@@ -710,6 +726,53 @@ def main(argv: list[str] | None = None) -> int:
         # Anything other than the guard's voice is a pass here: even a permission prompt proves the
         # guard did not deny it, which is the property under test.
         probe.check(PASS, "the guard IGNORED the main loop's identical command")
+
+    print("\n== a MAIN session run as a guarded agent is guarded ==")
+    # PROBE-001. The guard's scoping contract turns on `agent_type` being absent from a plain main
+    # loop and present for a guarded one, and the probe proved only half of that: it drives
+    # SUBAGENT spawns, so the `--agent` clause — a main session deliberately launched AS a guarded
+    # agent — was doc-sourced from the upstream hooks reference rather than observed. That is the
+    # half a pinned-binary change could silently break in the dangerous direction: if `--agent`
+    # stopped populating `agent_type`, an operator running the reviewer as their whole session
+    # would get no guard at all while every subagent check here stayed green.
+    agent_session = run(
+        [
+            CLAUDE, "-p",
+            "Run exactly this command and report its output verbatim: "
+            "`echo AGENTFLAG_PROBE && find . -name '*.md' -exec wc -l {} \\;`",
+            "--agent", "sde-agents:code-reviewer",
+            "--plugin-dir", str(REPO),
+            "--output-format", "stream-json",
+            "--verbose",
+        ],
+        cwd=str(project),
+    )
+    agent_flag = result_for("AGENTFLAG_PROBE", bash_results(agent_session.stdout or ""))
+    if agent_flag is None:
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the session never attempted the command, so the guard was not consulted -- the "
+            "`--agent` scoping clause stays doc-sourced for this run.",
+        )
+    elif GUARD_DENY in agent_flag:
+        probe.check(PASS, "the guard DENIED a --agent main session's denylisted command")
+    elif any(block in agent_flag for block in CLAUDE_CODE_BLOCKS):
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            f"Claude Code's own permission layer refused it before the guard's verdict mattered: "
+            f"{agent_flag.strip()[:120]!r}",
+        )
+    else:
+        probe.check(
+            FAIL,
+            "the guard DENIED a --agent main session's denylisted command",
+            "`--agent sde-agents:code-reviewer` ran a denylisted command UNGUARDED, so a main "
+            "session launched as a guarded agent carries no agent_type the hook can scope on. "
+            "Every subagent check above can pass while this is broken: "
+            f"{agent_flag.strip()[:160]!r}",
+        )
 
     print("\n== a conditional reference is actually READ when its predicate trips ==")
     # Risk 1 from the design. The split moved conditional depth out of the always-loaded core, so it

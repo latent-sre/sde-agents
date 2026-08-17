@@ -745,19 +745,18 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
-  upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
-  clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
-  the clause earns the docstring's "probed, not assumed" header. Source: PR #142 Codex round 1.
-- **PROBE-002** — the 2026-08-17 probe run scored 12/19 with the two `skills:` preload canaries
-  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
-  in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
-  undocumented guarantee this fleet depends on, so the failure is either a real regression or
-  canary-quoting variance the oracle cannot separate — settle which with one repeat run before
-  treating either answer as known. A third hypothesis is already reproduced: the
-  [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) documents
-  the same both-canaries-absent signature caused by async agent launches the probe's
-  `tool_use_id` correlation does not consume. Source: PR #143 probe run.
+- **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
+  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared in
+  `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
+  undocumented guarantee this fleet depends on, so the failure is either a real regression or the
+  oracle failing to consume an async agent launch — the
+  [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) reproduced
+  that exact both-canaries-absent signature. **Still open: only a probe run can settle it, and one
+  now will.** As of 2026-08-17 the two outcomes no longer render alike — an uncorrelated spawn
+  reports INCONCLUSIVE naming the correlation gap, while a result the oracle DID observe with no
+  canary in it is a real preload failure. Run `python3 scripts/probe_plugin.py` and read those two
+  lines; do not buy a third run to disambiguate a second ambiguous one. Source: PR #143 probe run.
+
 
 ## Deferred decisions
 

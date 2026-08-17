@@ -63,6 +63,37 @@ class ProbeCanaryTests(unittest.TestCase):
         self.assertEqual([probe_plugin.SKIP], statuses)
         self.assertNotIn(probe_plugin.FAIL, statuses)
 
+    def test_an_uncorrelated_spawn_leaves_the_canaries_unevaluated_not_failed(self) -> None:
+        """PROBE-002: "the canary is absent" and "the oracle saw nothing" are different findings.
+
+        The 2026-08-17 run scored 12/19 with both preload canaries failing, and could not say
+        whether that was a real regression or the oracle failing to consume an async agent
+        launch's result — a signature the 2026-07-30 audit's F-03 had already reproduced. Both
+        rendered as FAIL, so settling it needed another paid run. `agent_spawn_results` returning
+        nothing now means unevaluated; a result the oracle DID observe, with no canary in it, is
+        the real preload failure.
+        """
+        spawn = json.dumps({
+            "type": "assistant",
+            "message": {"content": [{
+                "type": "tool_use", "id": "toolu_async", "name": "Agent",
+                "input": {"subagent_type": "sde-agents:sde-fullstack", "prompt": "build it"},
+            }]},
+        })
+        # The spawn is never correlated to a tool_result, which is the async-launch shape.
+        self.assertEqual([], probe_plugin.agent_spawn_results(spawn, "sde-agents:sde-fullstack"))
+        # A correlated result with no canary stays a real, distinguishable failure.
+        answered = spawn + "\n" + json.dumps({
+            "type": "user",
+            "message": {"content": [{
+                "type": "tool_result", "tool_use_id": "toolu_async",
+                "content": "done, no craft content quoted",
+            }]},
+        })
+        results = probe_plugin.agent_spawn_results(answered, "sde-agents:sde-fullstack")
+        self.assertEqual(1, len(results))
+        self.assertNotIn(probe_plugin.BACKEND_CANARY, results[0])
+
     def test_backend_craft_canary_is_present(self) -> None:
         # Asserted via the probe's own constant, not a copied literal: with a duplicate string
         # here, a probe-side canary change would fail live probes while this tripwire stayed
