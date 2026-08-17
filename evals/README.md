@@ -386,6 +386,46 @@ without measuring what it claimed. Every full case declares exactly one of the f
   positive allowlist. The tier-gate case is the reason: it must never be able to perform the apply
   it exists to prove was refused. An eval that can cause the incident it tests for is not a test.
 
+## Baseline retention: what a stored capture is still for
+
+A capture under `baselines/` has exactly two possible jobs, and they retire on different schedules.
+Keeping this straight is the difference between an archive and a graveyard.
+
+1. **Reuse** — serving as the 'before' side of a paired run, which is what `eval_baseline.py`
+   resolves. This job is **fragile by design** and usually already over: the resolver compares the
+   provenance schema, the selection identity, the evaluator identity, and the plugin hash exactly,
+   so any of a schema bump, a case edit, an evaluator change, or a fleet edit ends it permanently.
+   **As of 2026-08-17 no stored capture holds this job** — all ten clusters resolve `STALE`, and
+   the v3→v4 schema move plus the case retirement made that final rather than incidental. Every
+   paired round from here starts with a fresh capture on both sides.
+2. **Evidence** — being the record of a number some doc, decision, or roadmap item relies on. This
+   job does not expire, but it is served by the *distilled summary*, not the raw capture, once one
+   exists.
+
+**The retention rule.** A capture keeps its raw `benchmark.json` files while it can still be
+reused, or while its numbers exist nowhere else. Once neither holds, the summary stays and the raw
+files retire to Git history. Three consequences worth stating, because each has bitten:
+
+- **Distil before you delete, never after.** 14 of the 28 baseline directories have no summary
+  file, so for those the raw capture is the only record and removing it destroys the measurement
+  rather than compressing it. Writing the summary is authoring work and belongs to whoever
+  understands the round — it is not a cleanup step.
+- **"Nothing cites it" is necessary but not sufficient.** A directory no doc names may still hold
+  the only derivation of a number quoted elsewhere. The quoted claim survives deletion; the ability
+  to check it does not.
+- **A before/after pair retires together or not at all.** Dropping one side while keeping the
+  other's summary leaves a delta nobody can re-derive. `2026-07-29-roles-before` and
+  `-roles-after` are the live example: the 'after' directory's only prose is a note explaining a
+  regrade, not a delta record, so neither side is retirable until the pair's rates are written down.
+
+**Applied so far:** `2026-07-30-deep-review-r1`'s raw captures were retired on 2026-08-17 (2,914
+lines across five run directories) because its `README.md` carries the complete verdict — negatives
+18/18 clean both sides, `pos-incident-after-update` 33%→67%, the two recheck recoveries to 5/5,
+`pos-audit-security` 8/8→4/8, and the ablation's explicit no-causal-claim caveat — and nothing in
+the tree cited the directory. Everything else is still held under the rule above; the largest
+outstanding candidate is `2026-08-01-self-improve` (6,403 lines, seven generations) where only
+`final-live/` is cited and no summary exists, so it owes a distillation pass, not a deletion.
+
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
