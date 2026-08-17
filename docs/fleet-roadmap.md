@@ -663,6 +663,15 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   pre-existing gap. Needs an oracle that groups repeated slot blocks by effect before a combined
   case can be restored — the exactly-once rule and multi-effect grading are incompatible as written.
   Source: PR #144 round-10 review.
+- **GATE-004** — `agents/homelab-platform.md` tells the agent a bare `docker compose …` "must be
+  written `/usr/bin/docker compose …`", prescribing one path where the broker contract requires
+  only an ABSOLUTE one. `effect_broker.py` rejects a non-existent executable before approval
+  (`effect executable is not a regular file`), so on macOS, NixOS, Homebrew or rootless hosts —
+  where Docker is not in `/usr/bin` — a session following this instruction literally builds a
+  request that cannot be signed. Instruct resolving the trusted executable on the execution host
+  and using that absolute result; keep `/usr/bin/docker` only as the worked example's illustration.
+  Introduced by this PR's round-1 fix, which restored the absolute-path requirement by hardcoding
+  one path. Source: PR #144 round-11 review.
 - **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
   (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
   emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
