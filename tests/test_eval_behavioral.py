@@ -521,7 +521,11 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "handoff-builder-applies-work-order",
         }
         hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
-        self.assertEqual(67, len(self.document["cases"]))
+        # A tripwire, not incidental coupling: the count forces anyone adding a case to visit this
+        # tool-boundary rule and decide which category it falls in. 69 since 2026-08-17, when the
+        # researcher and application-security-auditor contracts landed — both plain `allowed_tools:
+        # []` cases, so neither joins the scratch or hash-only sets below.
+        self.assertEqual(69, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:

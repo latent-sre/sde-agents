@@ -81,32 +81,6 @@
       ]
     },
     {
-      "id": "pos-fullstack-crosslayer",
-      "prompt": "Build the admin dashboard end to end \u2014 the React UI and the API behind it \u2014 with tests.",
-      "polarity": "positive",
-      "expect_fires": [
-        "sde-fullstack"
-      ],
-      "expected_output": "Genuinely cross-layer with tests \u2014 the sde-fullstack path (walking skeleton, vertical slices). This is the load-bearing positive for the layer-ownership boundary.",
-      "tags": [
-        "sde-fullstack",
-        "cross-layer"
-      ]
-    },
-    {
-      "id": "pos-fullstack-feature",
-      "prompt": "Implement user-configurable alert thresholds across the UI, the API, and the worker, with tests.",
-      "polarity": "positive",
-      "expect_fires": [
-        "sde-fullstack"
-      ],
-      "expected_output": "A feature spanning three layers end to end \u2014 sde-fullstack.",
-      "tags": [
-        "sde-fullstack",
-        "cross-layer"
-      ]
-    },
-    {
       "id": "neg-review",
       "prompt": "Review this branch for correctness and security bugs before I merge.",
       "polarity": "negative",

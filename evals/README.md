@@ -49,7 +49,7 @@ actually used, and every name in it must be a cluster member (a typo would forbi
 vacuously).
 
 **Narrowing is no longer rare, and that is a measured coverage cost** (counted 2026-08-17:
-**18** of 66 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
+**18** of 65 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
 verdict for one disambiguation and gives up over-trigger detection for every member it stops
 forbidding, so a cluster that narrows most of its negatives stops watching most of its members:
 `continuous-improvement` narrows **6 of 6** negatives to a single forbidden component each,
@@ -414,8 +414,15 @@ simple-stays-simple, and read-only-investigation seams:
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
 there); the capture under `baselines/2026-07-24/` records the later 5-member / 18-case shape. Both
-are *historical* anchors, not like-for-like comparisons with the current 12-member / 37-case
+are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
+
+**Suite size, as of 2026-08-17:** 114 routing cases across the ten clusters (49 positives, 65
+negatives), so a full sweep at the methodology's `--runs 3` is **342 sessions** — down from 426
+before the agent-only positives and three duplicate cases were retired. Behavioral holds 69
+deterministic contracts. Both numbers are worth knowing before starting a paired round: the
+'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
+capture reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 
@@ -432,16 +439,19 @@ not only of the description. Read the clusters accordingly:
 - **Agent positives** (`homelab-platform`, the `ladder` and `craft-vs-fullstack` agent members) are
   a weaker signal one run at a time; trust the **negatives** (over-trigger is a real defect at any
   rate) and **regressions across runs** over an absolute agent-positive rate.
-- **How much of the suite this affects** (counted 2026-08-17): of 76 positives, **26 are
-  agent-only** — only a delegation can score them — 20 are mixed (a skill can rescue the case), and
-  30 are skill-only. Four clusters are majority-agent on their positive side: `agent-systems` 2/2,
-  `investigation` 8/10, `verification-seam` 4/5, `ladder` 6/9. Nothing in the scoring compensates:
-  `--threshold` is one global value applied identically to every positive regardless of component
-  kind. So **any aggregate positive rate over a cluster containing agent-only positives is not a
-  description measurement**, and should not be published as one — including the sort of "positives
-  overall N/M" summary that sums the two kinds together. Cases whose declared target is an agent
-  are best read alongside that agent's pinned behavioral contract, which is the instrument that
-  actually observes it.
+- **This is now the suite's design, not just a caveat.** Routing carries **no agent-only
+  positives** — 26 were retired on 2026-08-17, because a case only a delegation can score measures
+  the harness's reluctance to delegate rather than the description, and nothing in the scoring
+  compensated: `--threshold` is one global value applied identically to every positive regardless
+  of component kind. Of the 49 positives that remain, 31 are skill-only and 18 are mixed (a skill
+  route can score them). **An agent's coverage of record is its pinned behavioral contract**, and
+  its over-trigger coverage stays here — cutting agent positives cost nothing on that axis, because
+  a negative's forbidden set defaults to the whole member list, so every agent in `members` is
+  still guarded against firing on a near-miss.
+- **Adding an agent-only positive is therefore a regression**, not extra coverage: it re-buys three
+  sessions per run to publish a rate that is a property of one-shot headless mode. If an agent's
+  reachability genuinely needs measuring, that is what the native `claude plugin eval` lane below
+  is for.
 - The native `claude plugin eval` (see below) delegates properly and will tighten the agent signal;
   these case files migrate to it unchanged.
 - **Skill positives are only as visible as the listing the eval model saw.** The skill listing is

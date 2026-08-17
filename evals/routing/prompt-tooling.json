@@ -37,14 +37,6 @@
       "tags": ["prompt-craft", "tool-desc"]
     },
     {
-      "id": "pos-eval-iterate-classifier",
-      "prompt": "What's the right way to iteratively evaluate and tune my classifier prompt, with positive and negative cases and a baseline, until precision is reliably above 0.9?",
-      "polarity": "positive",
-      "expect_fires": ["prompt-engineer", "prompt-craft"],
-      "expected_output": "Routes to the eval-driven prompt-engineer path. Phrased to ask HOW rather than commanding a full build, so the run measures routing without spawning a long agentic session.",
-      "tags": ["prompt-engineer", "eval-driven"]
-    },
-    {
       "id": "pos-fires-too-often",
       "prompt": "My agent both fires when it shouldn't and fails to fire when it should. Build a test set of trigger queries, measure precision and recall, and optimize the description.",
       "polarity": "positive",
@@ -59,14 +51,6 @@
       "expect_fires": ["prompt-craft", "prompt-engineer"],
       "expected_output": "Revises the system prompt with clear behavioral boundaries.",
       "tags": ["prompt-craft", "system-prompt"]
-    },
-    {
-      "id": "pos-skill-never-loads",
-      "prompt": "My SKILL.md never gets loaded by Claude even though the task clearly matches. Diagnose why and fix the frontmatter.",
-      "polarity": "positive",
-      "expect_fires": ["prompt-craft", "prompt-engineer"],
-      "expected_output": "Diagnoses a description/frontmatter trigger problem and corrects it.",
-      "tags": ["prompt-craft", "diagnose"]
     },
 
     {

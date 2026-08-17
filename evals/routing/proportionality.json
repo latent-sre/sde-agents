@@ -37,14 +37,6 @@
       "tags": ["simple", "test"]
     },
     {
-      "id": "neg-config-bump",
-      "prompt": "Bump the HTTP timeout in config.yaml from 5 seconds to 10.",
-      "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
-      "expected_output": "A one-line config change. 'Timeout' shares vocabulary with reliability-overhaul triggers but there is no design question here.",
-      "tags": ["simple", "config"]
-    },
-    {
       "id": "neg-quick-script",
       "prompt": "Write me a quick script that dedupes the lines in a text file.",
       "polarity": "negative",

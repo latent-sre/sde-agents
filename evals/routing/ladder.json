@@ -5,60 +5,26 @@
   "notes": "Grader caveat (scripts/eval_routing.py): all four are members, so a positive passes if any expect_fires member fired and cannot cleanly flag a co-firing wrong member. The load-bearing signals are (a) a design task that fires ONLY sde-fullstack — under-escalation — surfacing as a principal positive whose rate collapses, and (b) the near-miss negatives, where a lab/review/prompt/debug near-miss must fire NONE of the ladder. pos-builder-scoped guards the eng-ladder over-trigger the narrowing addressed: it expects sde-fullstack and fails if eng-ladder fires instead. neg-embedded-decision-not-principal-owned is the issue #66 calibration, graded as a disambiguation negative because that is the trustworthy direction here: builder-owned work carrying one embedded builder-recordable decision (reversible, no standing authority) must not draw principal, distinguished, or eng-ladder at all — the prompt satisfies both bypass conditions (obvious owner, stated existing pattern) and answers its own altitude, so a meta-router summon is the scoped-work over-trigger the description narrowing fixed; only sde-fullstack may fire. Its fork is deliberately NOT consult-required: an enacted required consult legitimately summons principal-engineer, and firing-based grading cannot tell that from re-owning — the consult-required half belongs to pos-embedded-principal-fork-consult-required, which grades eng-ladder firing instead.",
   "cases": [
     {
-      "id": "pos-builder-scoped",
-      "prompt": "Add a `max_retries` field to the client config schema and wire it through to the retry loop. There's an existing pattern for config fields.",
-      "polarity": "positive",
-      "expect_fires": ["sde-fullstack"],
-      "expected_output": "A scoped change with an obvious owner and an existing pattern — routes straight to the builder, NOT through eng-ladder. Fails if eng-ladder fires and sde-fullstack does not (the over-trigger the narrowing fixed).",
-      "tags": ["sde-fullstack", "scoped"]
-    },
-    {
-      "id": "pos-builder-bugfix",
-      "prompt": "Fix the off-by-one in the pagination cursor so the last page isn't dropped, and add a test.",
-      "polarity": "positive",
-      "expect_fires": ["sde-fullstack"],
-      "expected_output": "Scoped, local, testable — builder altitude.",
-      "tags": ["sde-fullstack", "scoped"]
-    },
-    {
-      "id": "pos-principal-migration",
-      "prompt": "We need to move order processing from synchronous calls to an event-driven design across the payment and fulfillment services. Design the rollout and the backward-compatibility path.",
-      "polarity": "positive",
-      "expect_fires": ["principal-engineer"],
-      "expected_output": "Cross-service design with a migration and rollout/rollback — principal-engineer. The load-bearing escalation positive.",
-      "tags": ["principal-engineer", "design-migration"]
-    },
-    {
-      "id": "pos-principal-review-design",
-      "prompt": "Review this design doc for blast radius and the failure mode nobody listed, and tell me where to push first.",
-      "polarity": "positive",
-      "expect_fires": ["principal-engineer"],
-      "expected_output": "Reviewing a DESIGN (not a diff) for blast radius — principal-engineer's design-review mode.",
-      "tags": ["principal-engineer", "design-review"]
-    },
-    {
-      "id": "pos-distinguished-buildbuy",
-      "prompt": "Should we build our own feature-flag system or adopt a vendor across all the teams? It's a decision we'll live with for years.",
-      "polarity": "positive",
-      "expect_fires": ["distinguished-architect"],
-      "expected_output": "Build-vs-buy at org scale on a multi-year horizon — distinguished-architect.",
-      "tags": ["distinguished-architect", "build-buy"]
-    },
-    {
-      "id": "pos-distinguished-adr",
-      "prompt": "Write an ADR for standardizing the whole org on one event bus for the next five years, with the trade-offs and what would reopen it.",
-      "polarity": "positive",
-      "expect_fires": ["distinguished-architect"],
-      "expected_output": "An org-wide, multi-year ADR — distinguished-architect (its worked example is exactly an ADR).",
-      "tags": ["distinguished-architect", "adr"]
-    },
-    {
       "id": "pos-engladder-assess",
       "prompt": "Assess this change at the principal level — is it principal-quality work, and what would make it so?",
       "polarity": "positive",
       "expect_fires": ["eng-ladder"],
       "expected_output": "Explicit assessment against a seniority bar — eng-ladder Mode 2. Distinct from code-reviewer, which finds defects rather than scoring altitude.",
       "tags": ["eng-ladder", "assess"]
+    },
+    {
+      "id": "pos-engladder-growth-feedback",
+      "prompt": "Here are the last six months of one engineer's merged pull requests and design notes. What patterns keep showing up, what are they already strong at for their level, and what single behavior should they practice to work at the next level?",
+      "polarity": "positive",
+      "expect_fires": [
+        "eng-ladder"
+      ],
+      "expected_output": "eng-ladder Mode 3 (growth feedback) over a BODY of work rather than one artifact: recurring patterns, current-level strengths, and the single highest-leverage next-level behavior. Seeded because the cluster could not witness Mode 3 at all — its three eng-ladder positives covered Mode 1 altitude, Mode 2 assess, and the embedded-consult fork, so a Mode 3 edit or trim had no case that would detect it landing or regressing (LADDER-002 prerequisite). Deliberately says 'six months of pull requests and design notes' and asks for one behavior: the body-of-work scope and the one-behavior bar are what separate Mode 3 from Mode 2's single-artifact assessment.",
+      "tags": [
+        "eng-ladder",
+        "growth-feedback",
+        "mode-3"
+      ]
     },
     {
       "id": "pos-engladder-altitude",

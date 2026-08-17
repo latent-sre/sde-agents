@@ -46,32 +46,6 @@
       ]
     },
     {
-      "id": "pos-troubleshoot-proxy",
-      "prompt": "My reverse proxy keeps returning 502 for the Grafana route. Figure out why and fix it.",
-      "polarity": "positive",
-      "expect_fires": [
-        "homelab-platform"
-      ],
-      "expected_output": "Troubleshooting live infrastructure \u2014 homelab-platform, under its change tiers (the fix is a Tier 2 apply).",
-      "tags": [
-        "homelab-platform",
-        "troubleshoot"
-      ]
-    },
-    {
-      "id": "pos-pin-and-restart",
-      "prompt": "Pin the Jellyfin image off :latest to a specific version and restart the stack.",
-      "polarity": "positive",
-      "expect_fires": [
-        "homelab-platform"
-      ],
-      "expected_output": "A deliberate versioned change to a running stack \u2014 homelab-platform's worked Tier 2 example is literally this.",
-      "tags": [
-        "homelab-platform",
-        "change"
-      ]
-    },
-    {
       "id": "pos-audit-whats-wrong",
       "prompt": "What's wrong with my home lab? Do a health and hygiene sweep and tell me what needs attention.",
       "polarity": "positive",
@@ -326,19 +300,6 @@
       ]
     },
     {
-      "id": "pos-host-linux",
-      "prompt": "Harden SSH on my lab's Ubuntu box \u2014 key-only logins, no root login, and make sure I can't lock myself out in the process.",
-      "polarity": "positive",
-      "expect_fires": [
-        "homelab-platform"
-      ],
-      "expected_output": "Host-level Linux work on a lab machine \u2014 the Home-Lab SRE's substrate (the users/SSH/access-recovery vocabulary lands in the description with ROLE-001). Seeded before the rebrand: the before-anchor measures the old description, so this case's before/after diff is the direct measure of the Linux-host trigger widening.",
-      "tags": [
-        "homelab-platform",
-        "linux-host"
-      ]
-    },
-    {
       "id": "pos-host-onboard",
       "prompt": "I just set up a new mini PC with a fresh Debian install for the lab. Bring it up to standard as a lab host \u2014 users and SSH, firewall, updates, monitoring, and backups.",
       "polarity": "positive",
@@ -396,19 +357,6 @@
       "tags": [
         "near-miss",
         "security-audit"
-      ]
-    },
-    {
-      "id": "pos-target-specific-lab-glue",
-      "prompt": "Write a tiny host-specific wrapper that runs this lab's existing restic backup command and exposes its exit code to the current monitoring check. No reusable API or domain logic.",
-      "polarity": "positive",
-      "expect_fires": [
-        "homelab-platform"
-      ],
-      "expected_output": "Target-specific orchestration of existing lab commands stays with homelab-platform's small-glue exception and still follows its change tiers.",
-      "tags": [
-        "homelab-platform",
-        "glue-script"
       ]
     },
     {
