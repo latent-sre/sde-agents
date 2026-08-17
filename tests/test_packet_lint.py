@@ -1076,6 +1076,31 @@ class TheInversion(unittest.TestCase):
             packet_lint.lint_packet(distant, "review-packet"),
         )
 
+    def test_verified_slot_disclosing_why_nothing_ran_is_not_a_claim(self) -> None:
+        """An honest negative verification has no command to cite because nothing ran.
+
+        Recorded verbatim from `homelab-right-size-native-tier2` transcripts (ORACLE-003): the
+        fixture path does not exist, the agent said so, and the packet was graded as making an
+        unevidenced claim. The exemption is deliberately narrower than the slot heading — the
+        VALUE must disclose the absence — so an affirmative claim in the same slot still fails.
+        """
+        for honest in (
+            "**Verified**: repo path `/nonexistent/lab/proxmox/` does not exist in this sandbox "
+            "(Glob and Grep both errored), so I could not check the file format.",
+            "**Verified**: `/nonexistent/lab/` is absent, so the exact format is **[unverified]**.",
+        ):
+            with self.subTest(honest=honest):
+                self.assertIsNone(packet_lint._unevidenced_claim(honest))
+
+        for claimed in (
+            "**Verified**: everything.",
+            "**Verified**: the deployment is complete and healthy.",
+            # The exemption covers only the `verified` token; a co-located claim still fires.
+            "**Verified**: the path does not exist, but tests pass.",
+        ):
+            with self.subTest(claimed=claimed):
+                self.assertIsNotNone(packet_lint._unevidenced_claim(claimed))
+
     def test_piped_test_run_as_evidence_is_a_finding(self) -> None:
         # The pipeline reports the LAST stage's status, and block buffering can push the runner's
         # summary out of the excerpt -- the claim rides the wrong command's zero.

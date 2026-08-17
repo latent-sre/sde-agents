@@ -154,10 +154,21 @@ _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTIL
 # (observed on the first live run of homelab-right-size-native-tier2). Which side of a colon a
 # Markdown span happens to close on is a rendering difference, and rejecting one is the same false
 # RED this exemption exists to prevent.
+_NEGATION_TOKENS = (
+    r"\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b"
+)
 _CLAIM_NEGATION_RE = re.compile(
-    r"(?:\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b)"
+    rf"(?:{_NEGATION_TOKENS})"
     r"[^\r\n]{0,24}\bverified\b"
-    r"|\bverified\b[*_`\s]*[:—-][*_`\s]*(?:nothing|none|n/?a)\b",
+    r"|\bverified\b[*_`\s]*[:—-][*_`\s]*(?:nothing|none|n/?a)\b"
+    # The **Verified** SLOT heading is a label, not a claim, so an honest negative verification --
+    # "Verified: the path does not exist in this sandbox, so I could not check the format" -- had no
+    # command to cite precisely because nothing ran, and was flagged as an unevidenced claim
+    # (ORACLE-003). Exempting the bare heading would cost real coverage: "Verified: everything" must
+    # still fail. So the exemption requires the value to actually disclose the absence. Only the
+    # literal `verified` token is ever exempted here; a co-located "tests pass" still fires on its
+    # own pattern.
+    rf"|\bverified\b[*_`\s]*[:—–-][^\r\n]{{0,200}}?(?:{_NEGATION_TOKENS}|\bunverified\b)",
     re.IGNORECASE,
 )
 
