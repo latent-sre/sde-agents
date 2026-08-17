@@ -103,7 +103,7 @@ concurrency, Python runtime, and non-secret authentication/provider mode. Its pr
 hashes the exact eval definitions, selected cases, plugin under test, and executing evaluator and
 grader files. Both runners self-bootstrap from one checked source buffer and compile imported
 graders from likewise registered buffers, so those hashes name what executed rather than a later
-read of the same paths. Provenance schema v3 executes a private copy of the identified plugin bytes,
+read of the same paths. Provenance schema v4 executes a private copy of the identified plugin bytes,
 so an A -> B -> A edit to the source checkout cannot make concurrent sessions load mixed content
 while leaving equal endpoint hashes. Persistent mutation of the private snapshot aborts the artifact. A
 same-user session can transiently mutate and restore that snapshot unless the host sandbox denies

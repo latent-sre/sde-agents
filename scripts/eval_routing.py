@@ -64,7 +64,14 @@ FLEET_SKILLS = frozenset(p.name for p in (REPO / "skills").iterdir() if p.is_dir
 FLEET = FLEET_AGENTS | FLEET_SKILLS
 NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENTS)
 
-PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v3"
+# v4 (2026-08-17): the identity narrowed to what the scorer reads. `selection.definitions` now
+# hashes only the graded case fields (GRADED_CASE_FIELDS) instead of whole case dicts, and
+# `eval_baseline.py` no longer compares `eval_sources`, which hashed each cluster file whole and so
+# invalidated captures on comment-only edits. Both changes remove invalidations that protected
+# nothing. The version moves because a v3 selection hash was computed over different bytes and
+# cannot be compared with a v4 one — reporting that as "selection diverged" would misattribute a
+# schema change to a routing change.
+PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v4"
 
 # `claude --plugin-dir` discovers these authored/runtime surfaces. The allowlist is deliberate:
 # test fixtures, eval outputs, repository docs, generated host adapters, and operator scratch state
@@ -310,6 +317,21 @@ def evaluator_identity(paths: list[Path]) -> dict:
     }
 
 
+GRADED_CASE_FIELDS = ("id", "polarity", "prompt", "expect_fires", "expect_not_fires", "threshold")
+
+
+def _graded_definition(case: dict) -> dict:
+    """The fields of a case the scorer actually reads.
+
+    `expected_output` and `tags` are documentation of intent: `score_case` never reads either, so
+    hashing them made a comment edit invalidate a stored baseline that measured byte-identical
+    routing. Narrowing the identity to the graded fields removes invalidations that protect
+    nothing — it does not weaken the identity, because a field the grader cannot see cannot change
+    a rate. Add a field here in the same change that makes the scorer read it.
+    """
+    return {field: case[field] for field in GRADED_CASE_FIELDS if field in case}
+
+
 def selection_identity(expression: str, cases: list[dict], limit: int | None = None) -> dict:
     """Hash selected definitions and the exact selection operation as canonical JSON."""
     case_ids = [case["id"] for case in cases]
@@ -317,7 +339,7 @@ def selection_identity(expression: str, cases: list[dict], limit: int | None = N
         "expression": expression,
         "limit": limit,
         "case_ids": case_ids,
-        "definitions": cases,
+        "definitions": [_graded_definition(case) for case in cases],
     }
     canonical = json.dumps(
         selected, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False

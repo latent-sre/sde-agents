@@ -52,6 +52,45 @@ class EvalBaselineTests(unittest.TestCase):
         self.assertIn("REUSABLE", out)
         self.assertIn(path.parent.name, out)
 
+    def test_cluster_bytes_the_scorer_cannot_read_stay_reusable(self) -> None:
+        """Risk: a comment-only cluster edit re-buys a capture that measured identical routing.
+
+        `eval_sources` hashes each cluster file whole, so editing `notes`, the top-level
+        `description`, or an unselected case invalidated every stored baseline for it — while
+        `selection` already pinned the graded fields of the exact selected cases. Restore
+        `eval_sources` to the compared set in eval_baseline.provenance_divergences and this fails.
+        """
+        mutated = copy.deepcopy(self.desired)
+        mutated["eval_sources"] = [
+            {"path": "evals/routing/prompt-tooling.json", "sha256": "0" * 64}
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_benchmark(Path(tmp), mutated, dict(CONDITIONS))
+            code, out = self._run(Path(tmp))
+        self.assertEqual(0, code, out)
+        self.assertIn("REUSABLE", out)
+
+    def test_selection_identity_ignores_documentation_only_case_fields(self) -> None:
+        """`expected_output` and `tags` are intent, not inputs: the scorer never reads them."""
+        sys.path.insert(0, str(REPO / "scripts"))
+        import eval_routing  # noqa: PLC0415
+
+        base = {
+            "id": "pos-x", "polarity": "positive", "prompt": "p",
+            "expect_fires": ["prompt-craft"],
+        }
+        documented = dict(base, expected_output="a prose note", tags=["near-miss"])
+        self.assertEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [documented])["sha256"],
+        )
+        # A graded field still moves it.
+        regraded = dict(base, expect_fires=["prompt-engineer"])
+        self.assertNotEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [regraded])["sha256"],
+        )
+
     def test_changed_plugin_bytes_are_stale_and_named(self) -> None:
         mutated = copy.deepcopy(self.desired)
         mutated["plugin"]["sha256"] = "0" * 64

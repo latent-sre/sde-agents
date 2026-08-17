@@ -80,7 +80,13 @@ def provenance_divergences(stored: dict, desired: dict) -> list[str]:
     if stored.get("schema") != desired["schema"]:
         # Older schemas lack identities the policy compares; nothing else is worth naming.
         return [f"schema ({stored.get('schema')!r}, current is {desired['schema']!r})"]
-    diverged = [key for key in ("eval_sources", "selection", "evaluator")
+    # `eval_sources` is deliberately NOT compared: it hashes each cluster file whole, while
+    # `selection` pins the graded fields of the exact selected cases. So eval_sources is strictly
+    # broader and its extra reach is all bytes the scorer cannot read — a cluster `notes` edit, a
+    # top-level description, or an unselected case under `--case` narrowing. Comparing it defeated
+    # the purpose of having a case-exact selection identity. It stays recorded, so a reader can
+    # still see which file bytes produced the capture.
+    diverged = [key for key in ("selection", "evaluator")
                 if stored.get(key) != desired[key]]
     stored_plugin = stored.get("plugin")
     if (
