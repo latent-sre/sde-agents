@@ -89,6 +89,27 @@ class EvalBaselineTests(unittest.TestCase):
             eval_routing.selection_identity("*", [regraded])["sha256"],
         )
 
+    def test_a_case_level_threshold_does_not_stale_a_baseline(self) -> None:
+        """Risk: the narrowing that removed re-buys reintroduced one via an inert field.
+
+        `score_case` takes the threshold as an argument and `main` passes `args.threshold`, so
+        nothing reads `case["threshold"]` — a per-case value grades exactly as its absence does.
+        While it was listed in `GRADED_CASE_FIELDS`, adding one staled every stored baseline for a
+        cluster whose grading had not moved. Put "threshold" back in that tuple and this fails.
+        """
+        base = {"id": "pos-x", "polarity": "positive", "prompt": "p",
+                "expect_fires": ["prompt-craft"]}
+        self.assertEqual(
+            eval_routing.selection_identity("*", [base])["sha256"],
+            eval_routing.selection_identity("*", [dict(base, threshold=0.9)])["sha256"],
+        )
+        # Guard against the fix being wrong in the other direction: if the scorer ever DOES read a
+        # per-case threshold, this test is what says the identity must start hashing it again.
+        self.assertNotIn(
+            "threshold", eval_routing.GRADED_CASE_FIELDS,
+            "if score_case now reads case['threshold'], restore it here and delete this assertion",
+        )
+
     def test_membership_is_part_of_the_selection_identity(self) -> None:
         """Risk: dropping the whole-file `eval_sources` check also dropped membership from identity.
 

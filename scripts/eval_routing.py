@@ -317,7 +317,7 @@ def evaluator_identity(paths: list[Path]) -> dict:
     }
 
 
-GRADED_CASE_FIELDS = ("id", "polarity", "prompt", "expect_fires", "expect_not_fires", "threshold")
+GRADED_CASE_FIELDS = ("id", "polarity", "prompt", "expect_fires", "expect_not_fires")
 
 
 def _graded_definition(case: dict) -> dict:
@@ -328,6 +328,13 @@ def _graded_definition(case: dict) -> dict:
     routing. Narrowing the identity to the graded fields removes invalidations that protect
     nothing — it does not weaken the identity, because a field the grader cannot see cannot change
     a rate. Add a field here in the same change that makes the scorer read it.
+
+    A case-level `threshold` was listed here and is not: `score_case` takes the threshold as an
+    ARGUMENT and `main` passes `args.threshold`, so nothing reads `case["threshold"]` and a
+    per-case value grades identically to its absence. Listing it meant an inert field could stale
+    every stored baseline for a cluster whose grading had not moved — the exact re-buy this
+    narrowing exists to stop, reintroduced by the narrowing itself. If per-case thresholds are ever
+    implemented, this entry returns in that same change (PR #145 review).
     """
     return {field: case[field] for field in GRADED_CASE_FIELDS if field in case}
 
