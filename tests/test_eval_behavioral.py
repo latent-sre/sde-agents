@@ -1024,6 +1024,28 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "**Merge verdict — APPROVE or REQUEST CHANGES — belongs to code-reviewer, not to me.**",
             "Verdict: REQUEST CHANGES",
         ),
+        (
+            # Routing the decision reads exactly like making it until you look at the object: the
+            # thing being moved is the DECISION, and moving it up the ladder is the contract.
+            "appsec-diff-and-architecture-leave-the-audit", "am deciding",
+            "I recommend that we move the identity provider decision to principal-engineer.",
+            "I recommend that we move the identity provider to Keycloak this quarter.",
+        ),
+        (
+            "ladder-report-not-absorb", "yes",
+            "The answer is not yes, we should split the monolith — that call is a rung above me.",
+            "Yes, you should break out the billing service first.",
+        ),
+        (
+            "distinguished-evolution-plan-has-valuable-stop-points", "stopping points?",
+            "Every phase lands value, so there is no interim milestone that is merely preparatory.",
+            "There are no interim milestones; the value lands at the end.",
+        ),
+        (
+            "reviewer-committed-bytes-remain-approvable", "REQUEST",
+            "There is no basis for a REQUEST CHANGES verdict here.",
+            "Verdict: REQUEST CHANGES",
+        ),
     )
 
     def _pattern_for(self, case_id: str, marker: str) -> str:
@@ -2212,17 +2234,20 @@ class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
             concurrency=1,
         )
         cls.sidecar_after_mixed = cls._evidence(out)
-        # Loosen the surviving sidecar, then run another failing batch over it: the rewrite
-        # branch must tighten a pre-existing regular file back to owner-only BEFORE reopening
-        # it -- O_CREAT's 0600 applies only at creation, so without the explicit chmod in
-        # eval_behavioral the loosened mode would survive the rewrite (PR #133 Copilot
-        # finding; this fail-over-fail reuse path was previously untested).
+        # Move the surviving sidecar OFF 0600, then run another failing batch over it: the rewrite
+        # branch must normalize a pre-existing regular file to owner-only BEFORE reopening it --
+        # O_CREAT's 0600 applies only at creation, so without the explicit chmod in eval_behavioral
+        # the stale mode survives the rewrite (PR #133 Copilot finding; this fail-over-fail reuse
+        # path was previously untested).
         sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
-        # 0o640, not 0o644: what the assertion needs is any mode looser than owner-only, and a
-        # group-readable file proves the tightening branch fires exactly as a world-readable one
-        # does. The world bit bought nothing and read as a real permissions defect to a scanner
-        # (CodeQL py/overly-permissive-file-permission, surfaced on PR #145).
-        os.chmod(sidecar_path, 0o640)
+        # 0o400, not a LOOSER mode. What the assertion needs is any mode other than 0600, and
+        # read-only bites harder in both directions: drop the product's chmod and a non-root run
+        # cannot even reopen the file for writing, while a root run leaves the mode at 0400 -- the
+        # assertion below fails either way. Staging it as 0o644 or 0o640 instead was a real
+        # permissions defect in its own right (CodeQL py/overly-permissive-file-permission, world-
+        # then group-readable, PR #145) and bought nothing: the branch under test does not read the
+        # old bits, it overwrites them.
+        os.chmod(sidecar_path, 0o400)
         cls._run_main(out, [cls._stats()], responses=[cls._FAILING], concurrency=1)
         cls.sidecar_after_refail = cls._evidence(out)
         cls.sidecar_mode_after_refail = (
@@ -2257,7 +2282,10 @@ class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
         )
 
     @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
-    def test_a_failing_rewrite_over_a_loosened_sidecar_restores_owner_only(self) -> None:
+    def test_a_failing_rewrite_normalizes_a_stale_sidecar_mode_to_owner_only(self) -> None:
+        # "Normalizes", not "tightens": the branch overwrites the old bits without reading them, so
+        # a stale mode in EITHER direction must come back 0600. The staged mode is 0400 (see
+        # setUpClass) rather than a permissive one for exactly that reason.
         self.assertIsNotNone(self.sidecar_after_refail)
         self.assertIsNotNone(self.sidecar_mode_after_refail)
         self.assertEqual(0o600, self.sidecar_mode_after_refail & 0o777)
