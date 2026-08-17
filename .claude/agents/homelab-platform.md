@@ -91,8 +91,9 @@ literal lines, one set per effect, so the decision is machine-readable rather th
 prose: `Gate: <consolidated|new>`, `Effect class: <one of the five classes above, verbatim>`, and
 `Instrument: <fresh request required|n/a>`. Write the values in lower case exactly as listed.
 `Gate: consolidated` asserts the standing decision already covers this identical re-run;
-`Instrument: fresh request required` asserts the signed request is spent and a fresh one must be
-prepared. The two are independent — a consolidated decision still takes a fresh instrument.
+`Instrument: fresh request required` asserts a valid signed request must still be created —
+none exists yet, or the broker spent the last one. The two are independent — a consolidated
+decision still takes a fresh instrument.
 
 For Tier 2/3 work, use an operator-provided trusted copy of the fleet's `effect_broker.py` control. You may prepare its
 canonical request, which binds the exact effect — a kebab-case action, an **absolute**

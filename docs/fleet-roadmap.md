@@ -612,21 +612,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-004** — `packet_lint`'s `_UNCHECKABLE` exemption clears the whole `Verified:` line, so an
-  honest disclosure followed by an affirmative claim carrying no independent `_CLAIM_RE` pattern
-  escapes: `Verified: I could not run tests, but the deployment is healthy` is graded clean. Either
-  inspect the remainder of the value for claims after the disclosure, or revert the exemption and
-  re-open ORACLE-003. Read this with its history before choosing: the same exemption produced a
-  false green in three consecutive review rounds — an incidental negation token (round 4), a bare
-  `[unverified]` label (round 5), and now a trailing affirmative clause — each time from a
-  differently-shaped input its previous narrowing did not anticipate. That pattern is evidence the
-  line-scoped exemption is the wrong shape, not that a fourth narrowing is owed; the honest coverage
-  it buys is one case (`homelab-right-size-native-tier2`). The same construct also carries a
-  false RED in the other direction: `_UNCHECKABLE` accepts only the ASCII apostrophe, so
-  `Verified: I couldn't run the health check` is exempt while the typographic `couldn’t` is
-  graded as an affirmative claim — `_NEGATION_TOKENS` directly above accepts both forms.
-  Reverting resolves both directions at once; narrowing resolves neither. Source: PR #144
-  round-6 and round-7 reviews.
 - **ORACLE-006** — `_vocabulary_head` accepts only `— – - : ( ,` between a closed-set term and its
   rationale, so an explanatory echo punctuated with a semicolon or a full stop
   (`Gate: consolidated; the standing approval covers this retry`) is classified as a *corrupted*
@@ -649,13 +634,16 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   surface on prose the agent writes freely. Decide the boundary before implementing: either the
   agent declares one (a heading the block must follow) or the check stays span-only and this line
   closes as accepted. Source: PR #144 round-7 review.
-- **GATE-002** — `agents/homelab-platform.md` defines `Instrument: fresh request required` as
-  asserting "the signed request is spent and a fresh one must be prepared", but the worked Tier 2
-  example emits that value for an effect entering its FIRST gate, where nothing has been spent. A
-  session following the definition literally must either invent nonce-consumption evidence or pick
-  `n/a` for an initial brokered effect, which the deletion contract then fails. Redefine the value
-  as requiring a valid request to be created — initial attempt or retry — and keep the spent-nonce
-  implication as the retry case only. Source: PR #144 round-7 review.
+- **ORACLE-003** — `packet_lint`'s claim pattern fires on a packet's own `Verified` slot, so an
+  honest negative verification (`Verified: the path does not exist, so I could not check the format`)
+  is graded as an unevidenced claim — there is no command to cite because nothing ran. Reopened
+  deliberately: the line-scoped exemption that closed it produced three false greens and one false
+  RED across four review rounds (PR #144), so it was reverted rather than narrowed a fourth time. A
+  false RED is the safer failure — it shows as a failing case someone investigates, where a false
+  green reports compliance that is not there. The repair must be clause-scoped, not line-scoped:
+  distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
+  something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
+  1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
 - **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
