@@ -393,10 +393,19 @@ refusal a contract rejected grade as a pass.
 So, in order of preference:
 
 1. **State the contract positively.** If the requirement is "do not present an unestablished claim as
-   fact", require the `[unverified]` label on the claim's own line in `must_match`. There is no
+   fact", require the `[unverified]` label in the claim's own clause in `must_match`. There is no
    negation to invert, so neither direction has anywhere to hide, and a response that settles the
    claim fails a missing requirement rather than slipping past a guard. This is what
    `researcher-unestablished-claim-stays-unverified` does, after four rounds of the alternative.
+
+   **Positive-first is not positive-only.** A positive requirement is satisfied by ONE conforming
+   mention, so it cannot see a second, contradicting assertion: that case passed `The default connect
+   timeout is [unverified]. The default connect timeout is unchanged.` — label present, claim settled
+   anyway. When the contract forbids a contradiction rather than merely requiring a statement, the
+   positive requirement is the primary instrument and a forbidden pattern still guards the
+   contradiction. The same applies to `reviewer-committed-bytes-remain-approvable`: requiring the
+   affirmative "approval remains available" closes the refusal class, and the forbidden forms stay as
+   the backstop for a response that says both.
 2. **Bind the verb to its object.** "We should break up the monolith" is only a decision when the
    monolith is what is being broken up; "move the identity provider" is only absorption when the
    thing moved is the service rather than the decision about it.
