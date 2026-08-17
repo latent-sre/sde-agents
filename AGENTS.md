@@ -65,17 +65,19 @@ if trivial, otherwise record it in `docs/fleet-roadmap.md` and continue.
   sweep, and manual dispatch run the full three-OS matrix, so platform-specific guard and hook
   paths are exercised without billing every PR for them (see the matrix comment in
   `.github/workflows/validate.yml`).
-- **T3 — release or CLI pin bump** (manual, real API): run `scripts/probe_plugin.py` and the
-  eval suites, per the next section. Before a paired routing run, check
+- **T3 — release or CLI pin bump** (manual, real API): run `scripts/probe_plugin.py`, every
+  routing cluster, and the behavioral evals, per the next section — a global trigger owes
+  global coverage, so there is no affected-only subset. Before a paired routing run, check
   `scripts/eval_baseline.py` — a stored benchmark it reports reusable covers the 'before' side;
   the 'after' side is always a fresh run.
 
 Static review has a convergence bound: at most **two** deep-review rounds per prose-behavior
-change (agent or skill text). The divergence signal: a round's criticals land in sentences the
-previous round's fix introduced — each rewrite mints the next round's findings. Close with an
-instrument that measures behavior instead (a behavioral-contract run, or an executed
-verification pass); a third static round happens only on an explicit operator ruling
-(provenance: six rounds and ~1.5M review tokens on one branch).
+change (agent or skill text), **three** for any other fleet prose — docs and this guide
+included. The divergence signal: a round's criticals land in sentences the previous round's
+fix introduced — each rewrite mints the next round's findings. Close with an instrument that
+measures behavior instead (a behavioral-contract run, or an executed verification pass); a
+round past the cap happens only on an explicit operator ruling (provenance: six rounds and
+~1.5M review tokens on one branch).
 
 After **any** canonical agent or skill edit, regenerate the host adapters:
 
@@ -268,7 +270,7 @@ passes never saw, so the last edit owes another wait — and disposition every c
 declined with the reason. At most **two** review-driven edit rounds per PR; a later finding is
 dispositioned in the thread without new bytes (declined with the reason, or recorded as owed work
 in `docs/fleet-roadmap.md`) unless an explicit operator ruling buys one further round, the same
-one-round escape as the deep-review bound's third static round. The cap bounds edits, never
+one-round escape as the deep-review bound's round past the cap. The cap bounds edits, never
 waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 
 ## Hard rules with no playbook exceptions

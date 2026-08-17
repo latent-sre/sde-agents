@@ -603,66 +603,6 @@ consumer waits. (3) Agents writing packets to a well-known scratch file — **re
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
 
-#### GUIDE-001 — finish the AGENTS.md audit remainder
-
-**Status:** `ready` — the 2026-08-16 three-scan audit of the repository guide (design/weight,
-accuracy against sources, consistency) landed its correctness fixes and its largest rewrites on
-`claude/agents-md-review-jp2ly0` (`c2865eb` through the Development-loop and engineering-program
-rewrites, ~7,940 → ~5,726 tokens); outcomes (1) and (2) below are **landed** — this item is the
-unlanded remainder, stated in full below so no external record is needed to scope it.
-
-**Outcome:** (1) **Landed** (`6321635`, `2ba2681`, three-pass verified): the Development-loop
-manual-check bullets shrink to one line each plus pointers
-at `evals/README.md` and the script docstrings, while **keeping** the capability-graph and
-workflow-contract boundary statements ("advisory, never a T0/CI/PR gate"; "design-consistent,
-never runtime-enforced") — their Map copies are already deleted, so these subsections are the
-boundaries' only remaining ambient home. (2) **Landed** (`79faa4c`, `9094e56`): the
-engineering-program section is restructured for
-LLM legibility per operator ruling: the stateless premise leads, one labeled bullet per strand in
-the owner's headline vocabulary, and the reading rule gains the owner's two-question trim
-procedure — a measured net growth (~424 → ~480 after tightening) rather than the originally
-targeted ~250-token cut; clarity was bought instead, at stated cost. (3) **Landed in part**
-(`8d9dccf`): "Validate before you push" is rewritten for the stateless-session reader — each
-tier leads with its command roster, T2 is marked as requiring nothing from the reader, exit-3 is
-a linear read-repair-clear procedure — with its narrations reduced to citations (~818 → ~642
-tokens, file at ~5,563). The Hard-rules half is **landed**: three independent deep reviews
-(home-lab necessity, LLM executability, integrity against sources) drove the rewrite — every
-bullet now leads with a bounded trigger and imperative, the one-writer narration is a verified
-citation (learn-001 outcome; section ~880 → ~710 tokens, file ~5,390), the proportionality maxims are three before-X-do-Y imperatives
-that cannot fire on ordinary work, and two paraphrase-drift claims are corrected toward their
-owning sources ("cannot carry" → never add, since the keys are silently ignored; "does not
-error at load time" → not guaranteed to fail loudly, per the validator's UNDOCUMENTED ruling).
-No rule removed — five bullets are check-backed, three are prose-only and keep their rationale
-because prose is their only enforcement. The preamble
-trim is **landed** on the same branch (~269 → ~206 tokens, two-scan pass: dedup plus LLM-reader
-restructure), closing A3 as a ride-along — the `~/.claude` prohibition now names fleet
-definitions, not sessions. (4) **Landed** (A2, A6; A3 landed with the preamble):
-tripwire-retirement doubt is recorded in the test's docstring beside the risk hypothesis it
-questions, and the Any-edit playbook line runs T0 instead of paraphrasing it. **A4 dropped** (a
-T3 cross-reference to the description-edit eval trigger): the description playbook already binds
-that obligation specifically and imperatively in the same always-in-context file, and a pointer
-restating a nearby fact is the redundancy this campaign removes.
-(5) **Landed**: G3 (a check already red on arrival is fixed if trivial, otherwise recorded in
-the roadmap — never passed silently) opens the Validate section; G4 (a host without the `claude`
-CLI says so and defers the contract check to CI's pinned job) sits beside T1's contract command.
-
-**Source:** the 2026-08-16 audit session; landed halves recorded in the branch commits and
-`docs/decisions/2026-08-16-pr-review-gate.md`.
-
-**Prerequisites:** none for the trims and one-liners. Two operator rulings gate only their own
-edits: **A1** — whether the two-round static deep-review cap widens from "agent or skill text" to
-all fleet prose (the six-round failure mode it was written for is currently uncapped on `docs/`
-and this guide itself); **G5** — whether a release or CLI-pin bump owes every routing cluster or
-only affected ones (`evals/README.md` documents no all-clusters mode, so today "the eval suites"
-has no defined extent).
-
-**Acceptance:** validator and full suite green on each commit; the closing commit shows the two
-boundary statements still present in the Development loop after its trim, and records the file's
-before/after token measure.
-
-**Next action:** put the A1 and G5 rulings to the operator and apply whichever arrive — every
-trim, one-liner, and restructure is landed; the rulings are the item's only remainder.
-
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
