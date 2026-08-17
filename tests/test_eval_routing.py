@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -545,6 +546,94 @@ class CaseFileTest(unittest.TestCase):
                                 f"{sorted(forbidden - members)} — they can never fire, so the case "
                                 f"would pass without measuring anything")
                 self.assertTrue(forbidden, f"{path.name}:{case['id']} forbids nothing")
+
+    # A prompt that points at something must carry it. Every run executes in a fresh empty working
+    # directory, so "here are the findings" with no findings makes the CORRECT behavior — asking for
+    # the missing artifact — score as a routing miss.
+    _DEICTIC = re.compile(
+        r"\b(?:here (?:are|is) (?:the|my|one)|this (?:change|diff|branch|PR|patch)\b"
+        r"|the attached|below\b)",
+        re.IGNORECASE,
+    )
+    # What "carrying the referent" looks like: enough prose to BE the artifact, or a structural
+    # marker that one is inlined.
+    _CARRIES = ("```", "diff --git", "@@", "PR #", "DRAFT", "FINDINGS")
+
+    def test_no_prompt_points_at_an_artifact_it_does_not_carry(self) -> None:
+        """Risk: a case measures the harness's empty cwd instead of the description.
+
+        `evals/README.md` claims this class is empty. It was not, twice: PR #145 retired seven such
+        cases and inlined two, then ADDED `pos-engladder-growth-feedback` saying "here are the last
+        six months of pull requests" with none attached — and the sweep that found it also turned up
+        `pos-iterate-draft`, which predates the branch. A claim of emptiness in prose is worth what
+        the last person's grep was worth; this makes it worth what the tree says.
+        """
+        bare = []
+        for path in sorted((REPO / "evals" / "routing").glob("*.json")):
+            for case in json.loads(path.read_text(encoding="utf-8"))["cases"]:
+                prompt = case["prompt"]
+                match = self._DEICTIC.search(prompt)
+                if match and len(prompt) <= 500 and not any(m in prompt for m in self._CARRIES):
+                    bare.append(f"{path.name}:{case['id']} ({match.group(0)!r})")
+        self.assertEqual(
+            [], bare,
+            "prompt(s) refer to an artifact they do not supply; every run starts in an empty "
+            "directory, so the correct 'send me the artifact' answer scores as a routing miss — "
+            "inline a representative artifact the way pos-engladder-assess does",
+        )
+
+    def test_readme_inventory_figures_match_the_shipped_suites(self) -> None:
+        """Risk: a case lands or leaves and the prose that sizes the suite quietly stops being true.
+
+        These are not decorative numbers — an operator reads them to decide whether a paid sweep is
+        affordable, and a future session reads the narrowing fraction to judge how much over-trigger
+        coverage the suite still has. Both were wrong at once in PR #145: three far-miss retirements
+        left the narrowing denominator at 65 against an actual 62, and a merge took the behavioral
+        count to 70 while the prose still said 69 and "64 of the 69" (wrong on both halves). Two
+        review rounds were spent correcting figures by hand; this is the check that makes the third
+        unnecessary.
+
+        Each row asserts its regex MATCHED as well as what it captured, so rewording the sentence
+        fails loudly instead of silently skipping the assertion.
+        """
+        readme = (REPO / "evals" / "README.md").read_text(encoding="utf-8")
+        clusters = sorted((REPO / "evals" / "routing").glob("*.json"))
+        positives = negatives = narrowed = 0
+        for path in clusters:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+            members = set(spec["members"])
+            for case in spec["cases"]:
+                if case["polarity"] == "positive":
+                    positives += 1
+                    continue
+                negatives += 1
+                if case.get("expect_not_fires") and set(case["expect_not_fires"]) != members:
+                    narrowed += 1
+        behavioral = json.loads(
+            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
+        )["cases"]
+        no_tool = sum(1 for case in behavioral if case.get("allowed_tools") == [])
+
+        rows = (
+            (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),
+            (r"(\d+) routing cases across the ten clusters \((\d+) positives, (\d+)",
+             (positives + negatives, positives, negatives)),
+            (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
+            (r"(\d+) of the (\d+) cases are no-tool planning-only", (no_tool, len(behavioral))),
+            (r"Behavioral holds (\d+)", (len(behavioral),)),
+        )
+        for pattern, expected in rows:
+            found = re.search(pattern, readme)
+            with self.subTest(pattern=pattern):
+                self.assertIsNotNone(
+                    found,
+                    "evals/README.md no longer states this figure in the shape this test reads; "
+                    "reword the test with the prose, do not delete the assertion",
+                )
+                self.assertEqual(
+                    tuple(str(value) for value in expected), found.groups(),
+                    "evals/README.md figure is stale against the shipped suites",
+                )
 
     def test_coverage_table_lists_every_cluster_file(self) -> None:
         readme = (REPO / "evals" / "README.md").read_text(encoding="utf-8")

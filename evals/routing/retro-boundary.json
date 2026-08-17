@@ -26,9 +26,10 @@
     },
     {
       "id": "pos-iterate-draft",
-      "prompt": "Here are the reviewer's findings on my draft doc. Iterate on it against the checklist until it passes.",
+      "prompt": "Here are the reviewer's findings on my draft runbook, and the checklist it has to pass. DRAFT (excerpt): \"Restoring the billing database: 1. Stop the API pods. 2. Restore the latest snapshot with `bao-restore --latest`. 3. Start the pods. 4. Tell the on-call channel.\" FINDINGS: (a) step 2 names no verification that the restore succeeded before traffic returns; (b) no rollback if the snapshot is corrupt; (c) 'latest snapshot' is unqualified \u2014 latest by wall clock or by successful-backup marker?; (d) no owner named for the on-call notification. CHECKLIST: every destructive step has a verification, every step has a rollback or an explicit 'no rollback possible' note, every artifact reference is unambiguous, and every handoff names an owner. Iterate on the draft against the checklist until it passes.",
       "polarity": "positive",
       "expect_fires": ["self-improve-loop"],
+      "expected_output": "self-improve-loop's evaluator-optimizer remit: iterate a draft against a checklist until it passes, rather than writing a retro. The draft, findings, and checklist are EMBEDDED: the first version said \"here are the reviewer's findings\" and supplied none, so a session correctly asking for the missing draft scored as a routing miss. That is the dangling-referent defect this suite swept for \u2014 and this case is the instance the sweep's own author missed while claiming the class was empty (PR #145 review).",
       "tags": ["existing-remit", "evaluator-optimizer"]
     },
     {

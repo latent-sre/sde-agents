@@ -49,7 +49,7 @@ actually used, and every name in it must be a cluster member (a typo would forbi
 vacuously).
 
 **Narrowing is no longer rare, and that is a measured coverage cost** (counted 2026-08-17:
-**18** of 65 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
+**18** of 62 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
 verdict for one disambiguation and gives up over-trigger detection for every member it stops
 forbidding, so a cluster that narrows most of its negatives stops watching most of its members:
 `continuous-improvement` narrows **6 of 6** negatives to a single forbidden component each,
@@ -76,12 +76,20 @@ overlap there is the measurement rather than a defect.
 
 **A prompt with a deictic reference must carry its referent.** Every run executes in a fresh empty
 working directory, so "assess this change" or "review this branch" has nothing to point at, and the
-*correct* behavior — asking for the missing artifact — scores zero. Nine such cases existed as of
-2026-08-17; seven left with the agent-only positives and the remaining two (`pos-engladder-assess`,
-`craft-vs-fullstack`'s `neg-review`) now embed a real diff inline. Supplying the artifact in the
-prompt is the pattern the behavioral suite already uses. On the negative side the defect is quieter
-and worse: a near-miss with no referent has nothing to route to, so its pass was never evidence of a
-correctly narrow description.
+*correct* behavior — asking for the missing artifact — scores zero. Eleven such cases existed as of
+2026-08-17: seven left with the agent-only positives and four now inline their artifact
+(`pos-engladder-assess`, `craft-vs-fullstack`'s `neg-review`, `pos-engladder-growth-feedback` with a
+body of eight PRs and design notes, and `pos-iterate-draft` with its draft, findings, and checklist).
+Supplying the artifact in the prompt is the pattern the behavioral suite already uses. On the
+negative side the defect is quieter and worse: a near-miss with no referent has nothing to route to,
+so its pass was never evidence of a correctly narrow description.
+
+This paragraph used to claim the class was empty at nine cases, and it was wrong twice over — the
+same change that retired seven added `pos-engladder-growth-feedback` with the defect, and the sweep
+that caught it also found `pos-iterate-draft`, which predated the change. So the claim is no longer
+prose: `test_no_prompt_points_at_an_artifact_it_does_not_carry` fails any short prompt that points at
+an artifact it does not supply. Emptiness asserted in a README is worth what the last author's grep
+was worth.
 
 The runner rejects any polarity other than literal `positive` or `negative`, a positive case with
 no valid `expect_fires` member, an explicitly empty or invalid negative target set, and a threshold
