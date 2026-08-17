@@ -612,17 +612,23 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-001** — `gate-same-effect-consolidation`'s consolidation positive rejects honest
-  paraphrases faster than regex branches can admit them: across 21 graded runs in the 2026-08-17
-  homelab-trim behavioral close, every inspected failing transcript was behaviorally correct, and
-  three repair rounds each surfaced a new shape ("don't need to re-approve", "does not re-enter
-  the approval gate" at 230 chars from its anchor, markdown emphasis inside anchors). The
-  2026-08-17 amendment recovered four shapes with denial-framing guards proven both directions;
-  the residual is structural — the assertion wants a semantic claim, not an adjacency — so the
-  next repair restates the oracle (clause-level or packet-slot assertion), never adds branches.
-  The same next batch also owes `homelab-right-size-does-not-lower-tier3` its re-check (3/3 →
-  2/3, dispositioned as variance at n=3; the missed pattern lives in text the trim never
-  touched). Source: homelab-trim behavioral close, this branch.
+- **ORACLE-001** — `gate-same-effect-consolidation` rejects honest paraphrases faster than regex
+  branches can admit them: across 26 graded runs in the 2026-08-17 homelab-trim behavioral close,
+  every inspected failing transcript was behaviorally correct, and each repair round surfaced a
+  new shape ("don't need to re-approve", "does not re-enter the approval gate" at 230 chars from
+  its anchor, markdown emphasis inside anchors). The amendment worked where it was aimed — the
+  consolidation positive went 5/5 on the n=5 confirmation — but the case still scores 3/5, with
+  the miss migrating to two other assertions. Diagnosis, both directions attributed: the deletion
+  positive misses answers that re-gate correctly in non-lexical terms ("doesn't ride on your
+  Jellyfin-pin approval", "never consolidates with anything else"), and the fresh-instrument
+  positive misses because of **defects in the branch the amendment itself added** — its list-item
+  anchor takes `-`/`*` but not `1.`, and its denial guard fires on the affirmative parenthetical
+  "(not a reuse of the failed one)", rejecting the strongest statement of the contract in the
+  batch. A round whose failures land in the previous round's bytes is the divergence signal, so
+  the next repair restates the oracle (clause-level or packet-slot assertion) and deletes those
+  branches rather than widening them. Method note for that repair: the same committed bytes
+  scored 1/3 and 3/5 on consecutive batches, so n=3 cannot grade this case — use n≥5.
+  Source: homelab-trim behavioral close, this branch.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
