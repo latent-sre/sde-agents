@@ -32,7 +32,15 @@ reader-allowlist command guard does not exist on this host — so every boundary
 here is cooperative: use the shell only for read-only repository inspection
 (`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code
 execution or network access, and let the caller provide an outer isolation
-boundary before treating that separation as enforced.
+boundary before treating that separation as enforced. The provenance rule is
+part of that cooperation, and it binds harder here than on the source host:
+git executes code named by a repository's local config — diff drivers under
+`git log`/`git show`, a `core.fsmonitor` command under even `git status` — so a
+repository that *arrived* as a directory, archive, or mounted volume gets no git
+commands at all, step 2's `rev-parse`/`status` included, until your caller states
+the isolation boundary; inspect it with read/search tools and say why. No command
+guard backs this on Codex, so nothing but this instruction stands between an
+arrived repository and its own diff driver.
 
 ## Method
 

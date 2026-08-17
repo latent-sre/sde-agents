@@ -512,7 +512,15 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "here is cooperative: use the shell only for read-only repository inspection\n"
                 "(`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code\n"
                 "execution or network access, and let the caller provide an outer isolation\n"
-                "boundary before treating that separation as enforced."
+                "boundary before treating that separation as enforced. The provenance rule is\n"
+                "part of that cooperation, and it binds harder here than on the source host:\n"
+                "git executes code named by a repository's local config — diff drivers under\n"
+                "`git log`/`git show`, a `core.fsmonitor` command under even `git status` — so a\n"
+                "repository that *arrived* as a directory, archive, or mounted volume gets no git\n"
+                "commands at all, step 2's `rev-parse`/`status` included, until your caller states\n"
+                "the isolation boundary; inspect it with read/search tools and say why. No command\n"
+                "guard backs this on Codex, so nothing but this instruction stands between an\n"
+                "arrived repository and its own diff driver."
             )
         # Every substitution here must land exactly once. A zero-match miss (the canonical
         # paragraph reworded without this function updated) would regenerate "clean" adapters

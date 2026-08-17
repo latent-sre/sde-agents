@@ -454,6 +454,33 @@ class PlatformAdapterTests(unittest.TestCase):
                 )
                 self.assertNotIn("claude", f"{imported['description']}\n{import_body}".lower())
 
+    def test_investigator_provenance_boundary_survives_every_host_rewrite(self) -> None:
+        # The canonical untrusted-provenance paragraph is REPLACED wholesale on both non-Claude
+        # hosts, so a boundary added canonically silently fails to reach them — which is exactly
+        # what happened when the all-git rule landed: the Codex adapter kept step 2's "wait for
+        # the isolation boundary above" pointing at a paragraph that no longer carried one, while
+        # step 4 still instructed `git log`. Each host must state the rule in its own terms, or
+        # (Copilot) hold no shell and instruct no git at all.
+        codex = tomllib.loads(
+            (REPO / ".codex" / "agents" / "repository-investigator.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        codex_body = " ".join(codex["developer_instructions"].split())
+        self.assertIn("arrived", codex_body)
+        self.assertIn("no git commands at all", codex_body)
+        self.assertIn("core.fsmonitor", codex_body)
+
+        copilot_body = " ".join(
+            (REPO / ".github" / "agents" / "repository-investigator.agent.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+        # The no-shell profile closes the same hole by instructing no git at all; a step that
+        # named one would be an instruction this host cannot honor and a boundary it cannot keep.
+        self.assertNotIn("git rev-parse", copilot_body)
+        self.assertNotIn("git log", copilot_body)
+
     def test_codex_adapters_do_not_claim_overridable_defaults_are_controls(self) -> None:
         for path in sorted((REPO / ".codex" / "agents").glob("*.toml")):
             with self.subTest(agent=path.stem):
