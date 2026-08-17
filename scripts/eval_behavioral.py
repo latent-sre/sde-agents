@@ -692,7 +692,7 @@ _BEHAVIORAL_CASE_FIELDS = frozenset({
     "id", "prompt", "expected", "tags", "agent", "permission_mode",
     "allowed_tools", "disallowed_tools", "expect_fires", "expect_all_fires", "packet_shape",
     "packet_learning_mode", "must_match", "must_not_match", "runbook_required_gaps",
-    "exact_fields", "semantic_oracle",
+    "exact_fields", "effect_sets", "semantic_oracle",
 })
 _BEHAVIORAL_RUNTIME_CASE_FIELDS = _BEHAVIORAL_CASE_FIELDS | {"suite"}
 _BEHAVIORAL_REQUIRED_CASE_FIELDS = ("id", "prompt", "expected", "tags")
@@ -983,6 +983,34 @@ def validate_behavioral_case(
                         f"vocabulary: {', '.join(vocabulary)}"
                     )
 
+    effect_sets = case.get("effect_sets")
+    if effect_sets is not None:
+        # Two sets minimum, deliberately: a one-set case is what `exact_fields` already grades,
+        # and declaring this instead would buy the heavier oracle for the shape it was not
+        # written for. The point of the key is the multi-effect statement `exact_fields` cannot
+        # express, because it requires each label exactly once across the whole answer.
+        if not isinstance(effect_sets, list) or len(effect_sets) < 2:
+            findings.append("'effect_sets' must be a list of at least two declaration sets")
+        else:
+            for position, declared in enumerate(effect_sets):
+                if not isinstance(declared, dict) or set(declared) != set(
+                    packet_lint.EFFECT_SET_LABELS
+                ):
+                    findings.append(
+                        f"effect_sets[{position}] must declare exactly "
+                        + ", ".join(packet_lint.EFFECT_SET_LABELS)
+                    )
+                    continue
+                for label, value in declared.items():
+                    vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
+                    if vocabulary is not None and value.casefold() not in {
+                        term.casefold() for term in vocabulary
+                    }:
+                        findings.append(
+                            f"effect_sets[{position}][{label!r}] value {value!r} is outside its "
+                            f"closed vocabulary: {', '.join(vocabulary)}"
+                        )
+
     required_gaps = case.get("runbook_required_gaps")
     if required_gaps is not None:
         if packet_shape != "runbook-proposal":
@@ -1005,6 +1033,7 @@ def validate_behavioral_case(
         or case.get("packet_learning_mode")
         or (isinstance(case.get("must_match"), list) and case["must_match"])
         or (isinstance(case.get("exact_fields"), dict) and case["exact_fields"])
+        or (isinstance(case.get("effect_sets"), list) and case["effect_sets"])
     ):
         findings.append(
             "case requires a semantic output oracle: packet_shape, packet_learning_mode, "
@@ -1324,6 +1353,13 @@ def assert_case(
         failures += [
             f"exact field: {finding}"
             for finding in packet_lint.lint_exact_fields(text, exact_fields)
+        ]
+
+    effect_sets = case.get("effect_sets")
+    if isinstance(effect_sets, list) and effect_sets:
+        failures += [
+            f"effect set: {finding}"
+            for finding in packet_lint.lint_effect_sets(text, effect_sets)
         ]
 
     if case.get("semantic_oracle") == "closed-learning-block":

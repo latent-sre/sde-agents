@@ -403,7 +403,21 @@ def _lint_lead_slot(shape: str, normalized_lines: list[str]) -> list[str]:
 
 
 def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str]]:
-    """Return indexed exact ``Label: value`` lines, tolerating display-only Markdown.
+    """Return indexed exact ``Label: value`` lines, collapsing display-only repeats.
+
+    See ``_raw_field_occurrences`` for the reading, and ``_collapse_display_echoes`` for what
+    counts as a repeat. Callers grading ONE declaration per document want this. A caller grading
+    several — a multi-effect gate statement, where every slot legitimately recurs — wants the raw
+    reader instead, because collapsing is exactly wrong there.
+    """
+    return _collapse_display_echoes(
+        _raw_field_occurrences(label, lines),
+        vocabulary=_ECHO_VOCABULARIES.get(label.casefold()),
+    )
+
+
+def _raw_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str, bool]]:
+    """Return every exact ``Label: value`` line as ``(index, value, decorated)``, uncollapsed.
 
     Prefix matching is intentionally insufficient for Learning: ``Learning curve:`` and
     ``Learning - none`` must not satisfy a machine-readable closeout merely because normalization
@@ -456,9 +470,7 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
             match.group(name) for name in ("outside", "inside", "span")
         )
         occurrences.append((index, value, bool(decorated)))
-    return _collapse_display_echoes(
-        occurrences, vocabulary=_ECHO_VOCABULARIES.get(label.casefold())
-    )
+    return occurrences
 
 
 def _echo_key(value: str, *, normalize: bool) -> str:
@@ -706,6 +718,87 @@ def _collapse_agreeing_vocabulary_restatements(
     if len(distinct) != 1 or not naming:
         return occurrences
     return [min(naming, key=lambda item: len(_strip_sentence_punctuation(item[1])))]
+
+
+EFFECT_SET_LABELS = ("Gate", "Effect class", "Instrument")
+
+
+def _effect_set_blocks(text: str) -> list[dict[str, str]]:
+    """Split a statement into its gate declaration blocks, one per effect.
+
+    A new block starts wherever a slot that is already present recurs, which is what "one set per
+    effect" looks like on the page: the three labels run, then run again for the next effect. This
+    reads RAW occurrences, because every slot legitimately repeats here and two effects sharing a
+    value (`Instrument: fresh request required` twice, which is the common case) must stay two.
+    """
+    seen: list[tuple[int, str, str]] = []
+    for label in EFFECT_SET_LABELS:
+        for index, value, _ in _raw_field_occurrences(label, text.splitlines()):
+            seen.append((index, label, value))
+    blocks: list[dict[str, str]] = []
+    current: dict[str, str] = {}
+    for _, label, value in sorted(seen):
+        if label in current:
+            blocks.append(current)
+            current = {}
+        current[label] = value
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def _effect_set_key(block: dict[str, str]) -> tuple[str, ...]:
+    return tuple(
+        _echo_key(block.get(label, ""), normalize=True) for label in EFFECT_SET_LABELS
+    )
+
+
+def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
+    """Require one complete gate declaration set per declared effect, values paired correctly.
+
+    `agents/homelab-platform.md` contracts "one set per effect" and nothing graded it
+    (ORACLE-010). The clause shipped alongside a change that split the one combined
+    retry-plus-deletion case into two single-effect cases, because `lint_exact_fields` requires
+    each label exactly once GLOBALLY and a two-effect answer has each of them twice. So the suite
+    could not express the very shape the new clause described: an agent could pass both isolated
+    cases while collapsing two simultaneous effects into one block, dropping a block, or attaching
+    the right class to the wrong effect.
+
+    Pairing is what this adds over counting. Comparing the multiset of blocks — rather than each
+    slot's values independently — is what catches the swap: an answer declaring the reversible
+    class with the irreversible effect's gate has every individual value the contract wants, and
+    is wrong in the way that matters. Blocks are matched order-insensitively, since which effect
+    an answer addresses first is presentation.
+    """
+    blocks = _effect_set_blocks(text)
+    findings: list[str] = []
+    incomplete = [
+        block for block in blocks
+        if any(label not in block for label in EFFECT_SET_LABELS)
+    ]
+    for block in incomplete:
+        missing = [label for label in EFFECT_SET_LABELS if label not in block]
+        findings.append(
+            "effect set is incomplete; missing " + ", ".join(missing)
+            + f" (found {', '.join(f'{k}: {v}' for k, v in block.items())})"
+        )
+    if len(blocks) != len(expected):
+        findings.append(
+            f"one set per effect: expected {len(expected)} declaration set(s), found "
+            f"{len(blocks)}"
+        )
+    remaining = [_effect_set_key(block) for block in blocks if block not in incomplete]
+    for wanted in expected:
+        key = _effect_set_key(wanted)
+        if key in remaining:
+            remaining.remove(key)
+            continue
+        findings.append(
+            "no declaration set states "
+            + ", ".join(f"{label}: {wanted[label]}" for label in EFFECT_SET_LABELS)
+            + " together; the values may be present but paired with the wrong effect"
+        )
+    return findings
 
 
 def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:

@@ -745,15 +745,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-010** — `agents/homelab-platform.md` requires "one set per effect", and no case tests it.
-  PR #144 split the combined retry-plus-deletion prompt into two single-effect cases so exact-field
-  grading (each label exactly once, globally) could work, which means the suite cannot express a
-  two-effect answer at all: an agent can pass both isolated cases while collapsing two simultaneous
-  effects into one block, omitting a block, or attaching the wrong class or instrument to the wrong
-  effect. The clause was ADDED by that PR, so this is a contract shipped with no instrument, not a
-  pre-existing gap. Needs an oracle that groups repeated slot blocks by effect before a combined
-  case can be restored — the exactly-once rule and multi-effect grading are incompatible as written.
-  Source: PR #144 round-10 review.
 - **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
@@ -767,11 +758,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) documents
   the same both-canaries-absent signature caused by async agent launches the probe's
   `tool_use_id` correlation does not consume. Source: PR #143 probe run.
-- **PROBE-003** — `probe_plugin.py`'s five workflow assertions cannot run as root: the workflow
-  launch needs `--dangerously-skip-permissions`, which Claude Code refuses under root/sudo, so all
-  five fail as a cascade of one environment condition and read as five fleet defects. Detect the
-  condition and report those assertions `INCONCLUSIVE` (the probe's own documented verdict for
-  "not this guard's doing") instead of FAIL. Source: PR #143 probe run.
 
 ## Deferred decisions
 

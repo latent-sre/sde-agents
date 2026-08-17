@@ -346,6 +346,17 @@ def _remove_workspace(workspace: Path, note: str | None = None) -> None:
         )
 
 
+def _refuses_bypass_permissions() -> bool:
+    """True when this session cannot use the permission mode the workflow probe requires.
+
+    Claude Code refuses `--permission-mode bypassPermissions` for a root or sudo session. Checked
+    by identity rather than by launching and reading the error, because the point is to avoid
+    spending a model session on a launch that cannot succeed. `geteuid` is absent on Windows,
+    where the condition does not arise.
+    """
+    return getattr(os, "geteuid", None) is not None and os.geteuid() == 0
+
+
 def probe_workflow_contract(probe: "Probe") -> None:
     """The workflow platform contract: namespaced resolution, agentType spawns, and PreToolUse
     delivery with plugin-namespaced agent_type inside workflow-spawned agents.
@@ -355,6 +366,22 @@ def probe_workflow_contract(probe: "Probe") -> None:
     line either exists with the right agent_type or the contract is broken.
     """
     print("\n== the workflow platform contract ==")
+    # Every assertion below needs the workflow to actually launch, which needs
+    # `--permission-mode bypassPermissions`, which Claude Code refuses under root or sudo. Running
+    # them anyway turned ONE environment condition into five FAIL lines that read as five fleet
+    # defects — the probe's whole job is telling a broken fleet from a broken environment, so this
+    # is the case its INCONCLUSIVE verdict exists for (PROBE-003). Reported once, not five times:
+    # restating a single cause per assertion is the noise the verdict is meant to remove.
+    if _refuses_bypass_permissions():
+        probe.check(
+            SKIP,
+            "the workflow platform contract (5 assertions)",
+            "this session runs as root, and Claude Code refuses --permission-mode "
+            "bypassPermissions there, so the workflow cannot launch and none of the five "
+            "assertions can be evaluated. Nothing here is evidence about the fleet in either "
+            "direction; re-run as an unprivileged user.",
+        )
+        return
     workspace = REPO / ".probe-tmp"
     plugin_copy = workspace / "plugin"
     # `.claude/worktrees` (the platform's nested-worktree home) is excluded root-anchored, not

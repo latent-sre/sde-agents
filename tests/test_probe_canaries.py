@@ -38,6 +38,31 @@ class ProbeCanaryTests(unittest.TestCase):
         run.assert_not_called()
         remove_workspace.assert_not_called()
 
+    def test_a_root_session_reports_the_workflow_probe_inconclusive_not_failed(self) -> None:
+        """PROBE-003: one environment condition read as five fleet defects.
+
+        The five workflow assertions all need `--permission-mode bypassPermissions`, which Claude
+        Code refuses under root, so the workflow never launches and every assertion fails as a
+        cascade. Telling a broken fleet from a broken environment is the probe's job, and
+        INCONCLUSIVE is its documented verdict for the second — reported once, because restating
+        a single cause five times is the noise that verdict exists to remove.
+        """
+        probe = probe_plugin.Probe()
+        with (
+            mock.patch.object(probe_plugin.os, "geteuid", return_value=0, create=True),
+            mock.patch.object(probe_plugin, "run") as run,
+            mock.patch.object(probe_plugin.shutil, "copytree") as copytree,
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            probe_plugin.probe_workflow_contract(probe)
+
+        run.assert_not_called()
+        copytree.assert_not_called()
+        self.assertIn("INCONCLUSIVE", output.getvalue())
+        statuses = [status for status, *_ in probe.results]
+        self.assertEqual([probe_plugin.SKIP], statuses)
+        self.assertNotIn(probe_plugin.FAIL, statuses)
+
     def test_backend_craft_canary_is_present(self) -> None:
         # Asserted via the probe's own constant, not a copied literal: with a duplicate string
         # here, a probe-side canary change would fail live probes while this tripwire stayed
