@@ -10,7 +10,9 @@ touching or invoking one.
 Where this file paraphrases `README.md` or a script's docstring, the source wins — fix the
 paraphrase here, never the source. The validator pins the checkable facts (the `@AGENTS.md`
 bridge in `CLAUDE.md`, concrete multi-segment repo paths, the model-alias list) and fails them
-on drift.
+on drift. This file is written for the LLM session that loads it on every task: when editing
+it, lead each rule with its trigger and imperative, compress rationale to a clause or a
+citation, and keep incident narration in its archive or decision record — never here.
 
 ## The engineering program
 
