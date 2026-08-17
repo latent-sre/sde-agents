@@ -132,6 +132,72 @@ class RunSessionValidationTest(unittest.TestCase):
         self.assertIn("exited 1", note)
         self.assertTrue(stats["completed"])
 
+    def _run_with_stdout(self, stdout: str, returncode: int = 0):
+        class Proc:
+            stderr = ""
+
+        proc = Proc()
+        proc.returncode = returncode
+        proc.stdout = stdout
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", return_value=proc
+        ):
+            return eval_behavioral.run_session("prompt", REPO, timeout=10)
+
+    def test_malformed_transcript_events_do_not_take_down_the_corpus_reader(self) -> None:
+        """Risk: one uninterpretable line loses a batch of already-paid sessions.
+
+        `event.get("message", {}).get("content", [])` raises AttributeError on a bare `null`,
+        number, or string line, and on an event whose `message` is a plain string. That exact
+        class escaped this reader on 2026-08-10 and took the whole batch down with no benchmark
+        written; the guard reached components_fired and transcript_stats but not the corpus build.
+        Remove the isinstance/`_event_message_field` guards and this test raises instead of failing.
+        """
+        stdout = "\n".join([
+            "null",
+            "123",
+            '"a bare string line"',
+            json.dumps({"type": "assistant", "message": "not a dict"}),
+            json.dumps({"type": "user", "message": "not a dict either"}),
+            json.dumps({"type": "assistant", "message": {"content": "not a list"}}),
+            json.dumps({"type": "result", "is_error": False, "result": "the graded answer"}),
+        ])
+        text, _fired, note, _stats = self._run_with_stdout(stdout)
+        self.assertEqual("the graded answer", text)
+        self.assertIsNone(note)
+
+    def test_timed_out_run_keeps_the_partial_transcript_it_paid_for(self) -> None:
+        """Risk: every timed-out run silently reports no model and no tokens.
+
+        TimeoutExpired.stdout is bytes even when the call passed `encoding=`, so the previous
+        `isinstance(exc.stdout, str)` test always yielded "" — a `conditions` block could then
+        publish `models_observed: []` for a batch whose sessions did run. Revert to the isinstance
+        test and the model/token assertions below fail.
+        """
+        partial = json.dumps({
+            "type": "result", "is_error": False, "result": "cut off",
+            "duration_ms": 9, "model": "claude-sonnet-5",
+            "usage": {"input_tokens": 11, "output_tokens": 3},
+        }).encode("utf-8")
+        timeout_exc = eval_behavioral.subprocess.TimeoutExpired(
+            cmd=["claude"], timeout=10, output=partial
+        )
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", side_effect=timeout_exc
+        ):
+            text, _fired, note, stats = eval_behavioral.run_session("prompt", REPO, timeout=10)
+        self.assertEqual("", text)
+        self.assertIn("timed out", note)
+        self.assertEqual("claude-sonnet-5", stats["model"])
+        self.assertEqual(11, stats["input_tokens"])
+
+    def test_decode_stream_answers_the_bytes_str_asymmetry_in_one_place(self) -> None:
+        self.assertEqual("text", eval_routing.decode_stream("text"))
+        self.assertEqual("bytes", eval_routing.decode_stream(b"bytes"))
+        self.assertEqual("", eval_routing.decode_stream(None))
+        # errors="replace", so undecodable bytes degrade rather than raising mid-batch.
+        self.assertIn("�", eval_routing.decode_stream(b"\xff"))
+
     def test_zero_exit_non_error_result_remains_usable(self) -> None:
         text, _fired, note, stats = self._run_with_event({
             "type": "result", "is_error": False, "result": "usable answer"
@@ -1682,6 +1748,96 @@ class _BatchRunnerMixin:
         holder = tempfile.TemporaryDirectory()
         cls.addClassCleanup(holder.cleanup)
         return Path(holder.name)
+
+
+class SemanticOracleVocabularyTest(unittest.TestCase):
+    """Risk: an oracle passes schema validation and grades nothing, silently.
+
+    Three vocabularies have to agree — the schema's accepted set, the workspace-dispatch set, and
+    `assert_case`'s branch chain. A name added to the schema set alone is accepted on a case,
+    reaches `evaluate_semantic_workspace`, falls through to its `[], None` default, and then in
+    `assert_case` matches neither branch — so the case passes with its declared oracle asserting
+    nothing. That is the same silent-enforcement failure the untested-guard rule exists to catch,
+    and no test referenced either frozenset before this one.
+    """
+
+    def test_every_schema_valid_oracle_sits_on_exactly_one_grading_path(self) -> None:
+        graded_inline = {"closed-learning-block"}
+        self.assertEqual(
+            eval_behavioral._BEHAVIORAL_SEMANTIC_ORACLES,
+            graded_inline | eval_behavioral._WORKSPACE_SEMANTIC_ORACLES,
+            "a schema-valid semantic oracle must be graded either inline by assert_case or "
+            "through the workspace dispatcher; one that is in neither set grades nothing",
+        )
+
+    def test_each_workspace_oracle_is_actually_dispatched(self) -> None:
+        # The dispatcher's fall-through for an unrecognized name is ([], None). A declared
+        # workspace oracle that returned that shape would be indistinguishable from one the
+        # dispatcher never heard of, so every member must produce evidence.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            for oracle in sorted(eval_behavioral._WORKSPACE_SEMANTIC_ORACLES):
+                eval_behavioral.prepare_semantic_workspace(cwd, oracle)
+                _findings, evidence = eval_behavioral.evaluate_semantic_workspace(
+                    cwd, oracle, prompt="", transcript=""
+                )
+                self.assertIsNotNone(
+                    evidence,
+                    f"{oracle} is declared a workspace oracle but the dispatcher returned its "
+                    "unrecognized-name default, so the case would grade nothing",
+                )
+
+
+class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
+    """Risk: one unexpected exception discards every session the batch already paid for.
+
+    `run_session` guards its own subprocess call, but auth classification, transcript_stats,
+    components_fired, and the corpus build ran outside that guard. Anything they raised escaped
+    `future.result()` — which caught only the two availability types — passed the pool shutdown,
+    and left `main()` by traceback with no benchmark written. Delete the generic `except Exception`
+    in the completion loop and this test raises instead of asserting.
+    """
+
+    def test_a_run_raising_inside_the_runner_still_yields_a_graded_batch(self) -> None:
+        calls = {"n": 0}
+
+        def exploding_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                                  disallowed_tools=None, agent=None, permission_mode=None,
+                                  model=None, env=None, semantic_oracle=None):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("transcript reader hit an unexpected event shape")
+            return (
+                "Approval is required before I apply. I will prepare an effect-bound request "
+                "for the operator-owned mediator.",
+                {"homelab-platform"},
+                None,
+                {"input_tokens": 1, "output_tokens": 1, "duration_ms": 1,
+                 "model": "claude-opus-5", "completed": True},
+            )
+
+        original_run, original_claude = eval_behavioral.run_session, eval_behavioral.CLAUDE
+        eval_behavioral.run_session = exploding_run_session
+        eval_behavioral.CLAUDE = "claude"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                code = eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--runs", "3",
+                    "--model", "opus", "--timeout", "77", "--output-dir", tmp,
+                ])
+                self.assertIn(code, (0, 1))
+                benchmark = json.loads(
+                    (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
+                )
+        finally:
+            eval_behavioral.run_session = original_run
+            eval_behavioral.CLAUDE = original_claude
+
+        # The batch survived and the crashed run is attributed rather than silently dropped.
+        self.assertEqual(3, calls["n"])
+        blob = json.dumps(benchmark)
+        self.assertIn("runner error", blob)
+        self.assertIn("RuntimeError", blob)
 
 
 class PassingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):

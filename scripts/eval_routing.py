@@ -628,6 +628,23 @@ def _event_message_field(event: object, field: str):
     return message.get(field) if isinstance(message, dict) else None
 
 
+def decode_stream(value: object) -> str:
+    """Text for a captured stream, whatever the failure path handed us.
+
+    Not a convenience wrapper: `subprocess.TimeoutExpired.stdout` is **bytes even when the call
+    passed `encoding=`**, so an `isinstance(value, str)` test silently yields "" and throws away
+    the partial transcript of a session that was already paid for. Every timed-out run then
+    reports no tokens, no model, and no duration into a `conditions` block whose whole purpose is
+    stating what was measured. Readers of both Claude-side runners route through here so the
+    bytes/str asymmetry is answered in one place.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return ""
+
+
 def components_fired(transcript: str) -> set[str]:
     """The set of fleet components (bare names) invoked anywhere in a run's transcript.
 
@@ -786,12 +803,8 @@ def run_once(prompt: str, plugin_dir: Path, timeout: int = 180, model: str | Non
             if proc.returncode != 0:
                 note = f"exit {proc.returncode}: {stderr[:150]}"
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode("utf-8", "replace")
-        stderr = exc.stderr or ""
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode("utf-8", "replace")
+        stdout = decode_stream(exc.stdout)
+        stderr = decode_stream(exc.stderr)
         returncode = 1
         note = f"timed out after {timeout}s (partial transcript graded)"
     except Exception as exc:  # a broken spawn must not crash the suite

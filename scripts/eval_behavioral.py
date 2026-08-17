@@ -533,7 +533,10 @@ def run_session(
                 transcript=proc.stdout or "",
             )
     except subprocess.TimeoutExpired as exc:
-        partial = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
+        # decode_stream, not an isinstance(str) test: TimeoutExpired.stdout is bytes even under
+        # encoding=, so testing for str discarded every timed-out run's partial transcript and
+        # reported None usage for a session already paid for.
+        partial = eval_routing.decode_stream(exc.stdout)
         return "", set(), f"timed out after {timeout}s before the session concluded", \
             eval_routing.transcript_stats(partial)
     except Exception as exc:
@@ -575,10 +578,18 @@ def run_session(
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        # Both message reads go through _event_message_field, and the event itself is shape-checked:
+        # `event.get("message", {}).get(...)` raises AttributeError on an event whose `message` is a
+        # plain string, and on a bare `null`/number/string line. That is the exact class that took
+        # the whole batch down with no benchmark written on 2026-08-10 (see the helper's docstring);
+        # the fix reached components_fired and transcript_stats but not this reader, which runs on
+        # every line of every session too.
+        if not isinstance(event, dict):
+            continue
         if event.get("type") == "result" and isinstance(event.get("result"), str):
             final = event["result"]
         elif event.get("type") == "assistant":
-            for block in event.get("message", {}).get("content", []):
+            for block in eval_routing._event_message_field(event, "content") or []:
                 if not isinstance(block, dict):
                     continue
                 if block.get("type") == "text":
@@ -586,7 +597,7 @@ def run_session(
                 elif block.get("type") == "tool_use" and block.get("name") in ("Agent", "Task"):
                     agent_calls.add(block.get("id", ""))
         elif event.get("type") == "user":
-            for block in event.get("message", {}).get("content", []):
+            for block in eval_routing._event_message_field(event, "content") or []:
                 if not isinstance(block, dict) or block.get("type") != "tool_result":
                     continue
                 if block.get("tool_use_id") not in agent_calls:
@@ -1550,7 +1561,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 succeeded = 0
                 for future in finished:
-                    futures.pop(future)
+                    job_case, job_run_index = futures.pop(future)
                     try:
                         run_index, case_id, failures, note, stats, response = future.result()
                     except availability_errors as exc:
@@ -1558,6 +1569,21 @@ def main(argv: list[str] | None = None) -> int:
                         for pending in futures:
                             pending.cancel()
                         break
+                    except Exception as exc:
+                        # run_session guards its own subprocess call, but everything after it —
+                        # auth classification, transcript_stats, components_fired, the corpus
+                        # build — ran unprotected, so a single unexpected exception escaped
+                        # future.result(), passed the pool shutdown, and left main() by traceback
+                        # with no benchmark written for a batch already paid for. One bad run is
+                        # recorded as a run-level failure instead; the sessions that did complete
+                        # keep their evidence. Giving this its own measurement-failure state (as
+                        # routing has) would change published verdict semantics and is deliberately
+                        # not done here.
+                        run_index, case_id = job_run_index, job_case["id"]
+                        failures = [f"runner error: {type(exc).__name__}: {exc}"]
+                        note = "run failed inside the runner, not in the graded session"
+                        stats = eval_routing.transcript_stats("")
+                        response = None
                     completed[case_id][run_index] = (failures, note, stats, response)
                     succeeded += 1
                     done += 1
@@ -1782,7 +1808,18 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        args.output_dir.mkdir(parents=True, exist_ok=True)
+        # Inside the same fail-closed discipline as the two writes below: an --output-dir whose
+        # path is an existing regular file raised FileExistsError straight out of main() AFTER the
+        # batch was paid for, so the operator got a traceback where every other artifact failure
+        # returns 2 with a reason.
+        try:
+            args.output_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(
+                f"error: could not create {args.output_dir}: {exc}; no artifacts were written",
+                file=sys.stderr,
+            )
+            return 2
         # Sidecar before benchmark, deliberately: if the evidence file cannot be written (its
         # path is occupied by a directory, the disk is full), the batch aborts BEFORE a
         # benchmark exists whose failing_run_evidence field claims text that was never produced.
@@ -1848,25 +1885,32 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        (args.output_dir / "benchmark.json").write_text(
-            json.dumps({
-                "runs_per_case": args.runs,
-                "conditions": conditions,
-                # An outcome, deliberately OUTSIDE conditions: two paired runs under identical
-                # inputs must not read as condition-divergent merely because one failed and one
-                # passed — that would corrupt the comparability contract exactly when a repair
-                # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
-                # able to tell "nothing failed" from "the text was dropped".
-                "failing_run_evidence": failing_run_evidence,
-                # The digest of the exact sidecar this batch wrote (null when none was written):
-                # provenance and conditions are shared by identical batches, so only this binds a
-                # sidecar to its own benchmark rather than to any same-input run.
-                "failing_run_evidence_sha256": sidecar_sha256,
-                "provenance": provenance,
-                "cases": payload,
-            }, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            (args.output_dir / "benchmark.json").write_text(
+                json.dumps({
+                    "runs_per_case": args.runs,
+                    "conditions": conditions,
+                    # An outcome, deliberately OUTSIDE conditions: two paired runs under identical
+                    # inputs must not read as condition-divergent merely because one failed and one
+                    # passed — that would corrupt the comparability contract exactly when a repair
+                    # succeeds (PR #133 finding). Three states, never a bare bool: a reader must be
+                    # able to tell "nothing failed" from "the text was dropped".
+                    "failing_run_evidence": failing_run_evidence,
+                    # The digest of the exact sidecar this batch wrote (null when none was written):
+                    # provenance and conditions are shared by identical batches, so only this binds a
+                    # sidecar to its own benchmark rather than to any same-input run.
+                    "failing_run_evidence_sha256": sidecar_sha256,
+                    "provenance": provenance,
+                    "cases": payload,
+                }, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            print(
+                f"error: could not write {args.output_dir / 'benchmark.json'}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
         print(f"\nwrote {args.output_dir / 'benchmark.json'}")
         if failing_payload and not args.retain_run_evidence:
             print(
