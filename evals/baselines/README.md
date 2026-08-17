@@ -11,10 +11,17 @@ Three different kinds of thing live here, and they retire on different schedules
 ## `history/` — round records, no captures
 
 Distilled measurement records: what a round measured, under what conditions, and what it concluded.
-Plain Markdown, **invisible to the resolver** (it globs `benchmark.json` and nothing else), and the
-only thing most citations actually consume. These are archive records that happen to sit next to the
-suite they describe; if `docs/archive/` ever becomes their home instead, nothing breaks but the
-paths.
+**Invisible to the resolver** (it globs `benchmark.json` and nothing else), and the only thing most
+citations actually consume. These are archive records that happen to sit next to the suite they
+describe; if `docs/archive/` ever becomes their home instead, nothing breaks but the paths.
+
+Mostly Markdown, with one exception that states the rule for any future one:
+`2026-08-15-learn-002-tool-events.json` is raw `stream-json` retained **because its record's claim is
+not checkable without it** — the `allowed_tools: []` finding turns on `tool_use` blocks correlated
+with their results, and the behavioral runner grades and discards the transcript. Distillation is for
+evidence a summary can carry; a record that says "the raw is why you can believe this" keeps its raw
+beside it, named for the record it belongs to. Retiring this file once (PR #145) broke exactly the
+claim it backed, which is how the exception earned its sentence here.
 
 ## Capture directories with a partial summary
 

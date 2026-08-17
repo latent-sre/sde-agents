@@ -20,6 +20,7 @@ from tests.support import REPO, run_main
 sys.path.insert(0, str(REPO / "scripts"))
 
 import eval_baseline  # noqa: E402
+import eval_routing  # noqa: E402  (sibling module; scripts/ is not a package)
 
 CLUSTER = REPO / "evals" / "routing" / "prompt-tooling.json"
 CONDITIONS = {"model_requested": "sonnet", "clean_room": True, "threshold": 0.5,
@@ -72,9 +73,6 @@ class EvalBaselineTests(unittest.TestCase):
 
     def test_selection_identity_ignores_documentation_only_case_fields(self) -> None:
         """`expected_output` and `tags` are intent, not inputs: the scorer never reads them."""
-        sys.path.insert(0, str(REPO / "scripts"))
-        import eval_routing  # noqa: PLC0415
-
         base = {
             "id": "pos-x", "polarity": "positive", "prompt": "p",
             "expect_fires": ["prompt-craft"],
@@ -100,9 +98,6 @@ class EvalBaselineTests(unittest.TestCase):
         of hashing the file whole; once it stopped being compared, only `selection` can. Drop
         `members` from `selection_identity` and this fails in both directions.
         """
-        sys.path.insert(0, str(REPO / "scripts"))
-        import eval_routing  # noqa: PLC0415
-
         case = {"id": "neg-x", "polarity": "negative", "prompt": "p"}
         two = eval_routing.selection_identity("*", [case], members=["prompt-craft", "sde-fullstack"])
         three = eval_routing.selection_identity(
@@ -127,6 +122,41 @@ class EvalBaselineTests(unittest.TestCase):
             code, out = self._run(Path(tmp))
         self.assertEqual(1, code, out)
         self.assertIn("selection", out)
+
+    def test_a_malformed_members_list_is_a_provenance_error_not_a_traceback(self) -> None:
+        """Risk: hashing `members` sent a bad cluster to `sorted()` instead of to exit 2.
+
+        The resolver documents three exits and nothing else, so a mixed-type member list — which the
+        routing runner refuses outright before spending anything — must not leave this tool by
+        traceback. Delete the `members` branch in `_validated_cluster` and this raises `TypeError`
+        rather than asserting.
+        """
+        spec = json.loads(CLUSTER.read_text(encoding="utf-8"))
+        for label, members in (
+            ("mixed types", ["prompt-craft", 1]),
+            ("empty", []),
+            ("blank string", ["prompt-craft", "   "]),
+            ("not a list", "prompt-craft"),
+            ("absent", None),
+        ):
+            with self.subTest(members=label), tempfile.TemporaryDirectory() as tmp:
+                broken = Path(tmp) / "broken-cluster.json"
+                mutated = dict(spec)
+                if members is None:
+                    mutated.pop("members", None)
+                else:
+                    mutated["members"] = members
+                broken.write_text(json.dumps(mutated), encoding="utf-8")
+                code, out = run_main(
+                    eval_baseline.main, "--baselines-dir", str(tmp),
+                    "--model", "sonnet", "--timeout", "420", str(broken),
+                )
+                self.assertEqual(2, code, out)
+                # The message is asserted at the unit that raises it: run_main swallows stderr by
+                # house convention, so the exit code alone cannot say WHY the resolver refused.
+                with self.assertRaises(eval_routing.ProvenanceError) as raised:
+                    eval_baseline.desired_provenance(REPO, broken, "*", 0)
+                self.assertIn("members", str(raised.exception))
 
     def test_changed_plugin_bytes_are_stale_and_named(self) -> None:
         mutated = copy.deepcopy(self.desired)

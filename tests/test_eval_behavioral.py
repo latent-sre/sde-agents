@@ -1008,16 +1008,27 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "I fetched the changelog and confirmed the entry.",
         ),
         (
-            "researcher-unestablished-claim-stays-unverified", "default connect timeout",
-            "Whether the default connect timeout is unchanged is [unverified].",
-            "The default connect timeout is unchanged in 3.2.",
+            # Both P2 phrasings of the same distinction: an assertive "there are no interim
+            # milestones" denies the stop points, while "no interim milestone IS merely
+            # preparatory" and "no interim milestone THAT is preparatory" describe them.
+            "distinguished-evolution-plan-has-valuable-stop-points", "offers?|provides?",
+            "No interim milestone is merely preparatory; each phase is independently valuable.",
+            "This plan has no interim value.",
         ),
         (
-            # Same pattern, the other phrasings of the same claim: a hedge check that only knows
-            # "timeout is unchanged" lets the identical assertion through as "left it unchanged".
-            "researcher-unestablished-claim-stays-unverified", "leaves|kept",
-            "[unverified] whether 3.2 left the default connect timeout unchanged.",
-            "3.2 left the default connect timeout unchanged, so the client is safe.",
+            # Second control on each reviewer pattern, for the hole the first repair opened: a
+            # line-wide negator scan exempted the whole line whenever any "no" appeared on it, so
+            # the exact refusal this contract rejects passed. The negator must sit in the phrase's
+            # own clause, and a comma or an adversative ends that clause.
+            "reviewer-committed-bytes-remain-approvable", "withhold",
+            "Committed bytes are not a reason to withhold approval.",
+            "No substantive defects were found, but I am withholding approval.",
+        ),
+        (
+            "reviewer-committed-bytes-remain-approvable", "unavailable",
+            "Nothing about a committed tree means approval is blocked.",
+            "No substantive defects were found, but approval is blocked because the reviewed "
+            "bytes are committed and immutable.",
         ),
         (
             "appsec-diff-and-architecture-leave-the-audit", "Merge",
@@ -1069,6 +1080,38 @@ Recommended resolution: recompute the digest over the normalized block and resen
                     re.search(pattern, compliant),
                     f"compliant sentence trips {pattern!r}",
                 )
+
+    def test_the_unverified_label_must_share_a_line_with_the_claim_it_qualifies(self) -> None:
+        """Why this contract is graded POSITIVELY instead of by a forbidden pattern.
+
+        Four rounds of narrowing a `must_not_match` for this one claim produced a trap, then a hole,
+        then a 900-character nest of lookaheads — because "is this hedge qualifying THIS claim"
+        is a parsing question, and a keyword regex answers it only by accident. Requiring the
+        `[unverified]` label on the claim's own line says the same thing with no negation in it, so
+        neither error direction has anywhere to hide. Kept as a test because the property that makes
+        it work is co-location, which a future edit could drop while the pattern still looks right.
+        """
+        pattern = next(
+            p for p in self.cases["researcher-unestablished-claim-stays-unverified"]["must_match"]
+            if "default connect timeout" in p
+        )
+        for compliant in (
+            "Whether the default connect timeout is unchanged is [unverified].",
+            "- Fact B: the default connect timeout is unchanged — [unverified]",
+            "[unverified] whether the default connect timeout is unchanged",
+        ):
+            with self.subTest(text=compliant):
+                self.assertIsNotNone(re.search(pattern, compliant))
+        for settled in (
+            "The default connect timeout is unchanged in 3.2.",
+            "3.2 left the default connect timeout unchanged, so the client is safe.",
+            # The hole the line-wide hedge check left: the hedge qualified a DIFFERENT fact, and the
+            # required label sat under another heading entirely.
+            "Conflicts and gaps: It is unclear how hard migration will be; the default connect "
+            "timeout is unchanged.\nWhat I did not check: [unverified] items are listed above.",
+        ):
+            with self.subTest(text=settled):
+                self.assertIsNone(re.search(pattern, settled))
 
     def test_narrowed_forbidden_patterns_still_catch_their_violation(self) -> None:
         """The other direction: narrowing must not turn a guard into decoration."""
