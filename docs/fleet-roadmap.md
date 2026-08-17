@@ -59,7 +59,7 @@ the closed contracts or the skill text carried the defect. No grader is silently
 `verifier-envelope-mismatch-fails-closed`, `reviewer-formal-approval-emits-envelope`) has a
 three-run clean-room baseline under recorded conditions and either holds its acceptance rate
 or has a grammar/text repair with a recorded rationale — the first-contact single runs in
-`evals/baselines/2026-08-10-learn-002/decisions.md` are diagnostic only and do not close this
+`evals/baselines/history/2026-08-10-learn-002.md` are diagnostic only and do not close this
 half. Closing the original seven without settling these six is not closing LEARN-002.
 
 **Source:** [`LEARN-001 outcome record`](archive/2026-08/learn-001-outcome-2026-08-02.md);
@@ -80,7 +80,7 @@ a hold at the acceptance rate or a grammar/text repair with rationale — first-
 runs and deferred repairs do not satisfy this clause.
 
 **Next action:** The 2026-08-10 calibration round
-(`evals/baselines/2026-08-10-learn-002/`, 76 sessions, decisions.md per case) settled the
+(`evals/baselines/history/2026-08-10-learn-002.md`, 76 sessions, decisions.md per case) settled the
 pattern-setter question for the original seven: **the closed contracts are right and the skill
 text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
 by a Skill-only session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three
@@ -91,7 +91,7 @@ failing run under `--output-dir` now writes its final text to `failing-run-evide
 the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
 artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
 (2) **landed 2026-08-15** — the canonical `self-improve-loop` SKILL.md edits and their paired
-measurement ([`2026-08-15-learn-002`](../evals/baselines/2026-08-15-learn-002/), 114 sessions,
+measurement ([`2026-08-15-learn-002`](../evals/baselines/history/2026-08-15-learn-002.md), 114 sessions,
 `decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
 `Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
 capture template taught `local` as a Provenance value while the canonical block requires the triad
@@ -380,7 +380,7 @@ release stamp is REL-173's evidence, not a gate on this item.
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
 **Current evidence:** The first Terra/medium round remains preserved under
-[`evals/baselines/2026-08-11-handoff-001`](../evals/baselines/2026-08-11-handoff-001/): it proved the
+[`evals/baselines/history/2026-08-11-handoff-001.md`](../evals/baselines/history/2026-08-11-handoff-001.md): it proved the
 producer at 3/3 but left five strict cases unresolved, which triggered this amendment. Those
 artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
 evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
@@ -396,7 +396,7 @@ figure; a restated count here would only mint the next stale one).
 
 The plan's three-session Claude diagnostic **has now run** — operator-approved model
 `claude-sonnet-5`, candidate `7074d8d`, CLI 2.1.233, one run each, artifacts and full reading in
-[`evals/baselines/2026-08-15-handoff-001-sonnet5/`](../evals/baselines/2026-08-15-handoff-001-sonnet5/decisions.md).
+[`evals/baselines/history/2026-08-15-handoff-001-sonnet5.md`](../evals/baselines/history/2026-08-15-handoff-001-sonnet5.md).
 One of the three returned a usable result: the producer passed 1/1. Both builder cases are
 recorded **VOID, not FAIL** — `scripts/eval_behavioral.py:502` grants case tools with `--tools`,
 which bounds the tool *surface* while granting no *permission*, so on CLI 2.1.233 the session's
@@ -773,7 +773,7 @@ and per-run evidence; no known-invalid artifact is called an anchor.
    junction deployment + 9 namespaced via `--plugin-dir`). Under `--clean-room`
    (`scripts/eval_clean_room.py`; namespaced-only fleet, one plugin) the auditor's two agent
    positives still fired **0/6** under otherwise-identical conditions
-   (both captures recorded in `baselines/2026-07-29-verification-round/README.md`: the clean-room
+   (both captures recorded in `baselines/history/2026-07-29-verification-round.md`: the clean-room
    0/6 against the same day's contaminated 0/6). The
    under-fire is a property of headless one-shot mode on this tier, not of the operator's
    configuration. Both runners now record `clean_room` in `conditions`, and artifacts differing on

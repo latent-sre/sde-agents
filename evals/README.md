@@ -207,7 +207,7 @@ reading any positive rate as signal:
 - A `1/3` positive is a **failing** positive, not a partial success — the roadmap states this for
   the ladder cluster and it generalizes.
 - Never diff an `n=1` capture against an `n=3` one. Stored rows of that shape exist in
-  `baselines/2026-08-10-learn-002/decisions.md`, and that record retracts two of them itself.
+  `baselines/history/2026-08-10-learn-002.md`, and that record retracts two of them itself.
 
 When a paired comparison must actually support a conclusion, raise `--runs` on the specific cases
 in the diff rather than trusting a boundary crossing at three.

@@ -40,7 +40,7 @@ Six of ten flipped from "vocabulary" to load-bearing mechanism; three drops stan
   everything unwritten with it — and `postmortem` refuses memory as a source, so an unemitted note
   is unrecoverable evidence), and the Step 4 downgrade is named as the authority edge that ends
   the mitigate-first inversion. `incident-mitigate-first`: 3/3 before == 3/3 after
-  (`evals/baselines/2026-08-13-group1-rescan/`, conditions recorded there).
+  (`evals/baselines/history/2026-08-13-group1-rescan.md`, conditions recorded there).
 - **restore-drill** — zero edits, and that is a verdict, not an omission: step 3 ("a restore
   performed from memory by the person who set it up proves nothing about the 3 a.m. version") is
   the program's clearest exemplar — an *executed* verification that the runbook artifact alone,

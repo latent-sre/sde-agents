@@ -444,4 +444,5 @@ Everything else in this file has landed. What genuinely remains:
   the empty-cwd hypothesis was REFUTED (the repo-presupposing skill positives passed 3/3; the failing
   positives are the agent/layer-expecting cases, all zero-fire), so no prompts were rewritten — then
   anchored before/after under opus/420s: negatives held 0% → 0%, `pos-powershell-pester` 0/3 → 3/3.
-  Artifacts in `evals/baselines/2026-07-27-*/`.
+  Artifacts distilled to `evals/baselines/history/2026-07-27-craft-vs-fullstack.md` (2026-08-17;
+  the three `2026-07-27-*` capture directories retired to Git history, rates preserved there).
