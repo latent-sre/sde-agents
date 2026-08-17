@@ -1128,6 +1128,10 @@ class TheInversion(unittest.TestCase):
             "**Verified**: the deployment is complete and healthy.",
             # The exemption covers only the `verified` token; a co-located claim still fires.
             "**Verified**: the path does not exist, but tests pass.",
+            # An incidental negative must not launder an affirmative claim: keying on any
+            # `no`/`not` token let both of these pass clean (review round 4).
+            "**Verified**: the deployment, not merely the config, is healthy.",
+            "**Verified**: no issues — the cluster is healthy and serving.",
         ):
             with self.subTest(claimed=claimed):
                 self.assertIsNotNone(packet_lint._unevidenced_claim(claimed))

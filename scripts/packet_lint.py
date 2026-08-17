@@ -157,6 +157,22 @@ _EVIDENCE_RE = re.compile("|".join(EVIDENCE_PATTERNS), re.IGNORECASE | re.MULTIL
 _NEGATION_TOKENS = (
     r"\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b"
 )
+# What counts as disclosing that verification could not happen. Deliberately verb-bound: a bare
+# "no"/"not" is ordinary prose and must not launder an affirmative health claim.
+_UNCHECKABLE = (
+    r"(?:could|can|did|do|does|would|will)\s*n[o']?t\b[^\r\n]{0,30}?"
+    r"(?:check|verif|run|confirm|test|inspect|read|reach|execut|observ|validat)"
+    r"|\bcannot\b[^\r\n]{0,30}?"
+    r"(?:check|verif|run|confirm|test|inspect|read|reach|execut|observ|validat)"
+    r"|\bunable to\b"
+    r"|\b(?:does|did|do)\s*n[o']?t exist\b"
+    r"|\bnot found\b|\bis absent\b|\bis missing\b|\bno such (?:file|path|directory)\b"
+    r"|\bnothing (?:ran|executed|was run|to show)\b"
+    r"|\bno (?:commands?|output|evidence)\b"
+    r"|\[unverified\]"
+)
+
+
 _CLAIM_NEGATION_RE = re.compile(
     rf"(?:{_NEGATION_TOKENS})"
     r"[^\r\n]{0,24}\bverified\b"
@@ -164,11 +180,13 @@ _CLAIM_NEGATION_RE = re.compile(
     # The **Verified** SLOT heading is a label, not a claim, so an honest negative verification --
     # "Verified: the path does not exist in this sandbox, so I could not check the format" -- had no
     # command to cite precisely because nothing ran, and was flagged as an unevidenced claim
-    # (ORACLE-003). Exempting the bare heading would cost real coverage: "Verified: everything" must
-    # still fail. So the exemption requires the value to actually disclose the absence. Only the
-    # literal `verified` token is ever exempted here; a co-located "tests pass" still fires on its
-    # own pattern.
-    rf"|\bverified\b[*_`\s]*[:—–-][^\r\n]{{0,200}}?(?:{_NEGATION_TOKENS}|\bunverified\b)",
+    # (ORACLE-003). Two narrowings matter. Exempting the bare heading would cost real coverage, so
+    # the VALUE must disclose the absence. And keying on any negation token laundered affirmative
+    # claims carrying incidental negatives -- "Verified: the deployment, not merely the config, is
+    # healthy" went clean (review round 4) -- so the disclosure must be a clause that actually says
+    # something could not be checked or was not there. Only the literal `verified` token is ever
+    # exempted here; a co-located "tests pass" still fires on its own pattern.
+    rf"|\bverified\b[*_`\s]*[:—–-][^\r\n]{{0,200}}?(?:{_UNCHECKABLE})",
     re.IGNORECASE,
 )
 
