@@ -871,6 +871,18 @@ def validate_behavioral_case(
                     findings.append(
                         f"exact_fields[{label!r}] must be a non-empty exact string value"
                     )
+                    continue
+                # A vocabulary-backed label grades against a finite set the agent file declares.
+                # An undeclared value here would be unreachable by any compliant answer, so the
+                # case would fail every run while reading as a behavioral finding.
+                vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
+                if vocabulary is not None and exact_value.casefold() not in {
+                    value.casefold() for value in vocabulary
+                }:
+                    findings.append(
+                        f"exact_fields[{label!r}] value {exact_value!r} is outside its closed "
+                        f"vocabulary: {', '.join(vocabulary)}"
+                    )
 
     required_gaps = case.get("runbook_required_gaps")
     if required_gaps is not None:

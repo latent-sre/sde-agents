@@ -442,6 +442,31 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         self.assertEqual([(0, "fleet-maintainer and **release** coordinator")], occurrences)
 
+    def test_whole_line_emphasis_does_not_ride_into_a_multi_word_value(self) -> None:
+        """`**Label: a b c d**` closes after the LAST token, so the first-token cleanup misses it
+        and the marker becomes part of the value. Observed on live homelab transcripts, where three
+        of five runs stated the correct effect class and were graded wrong for the rendering."""
+        self.assertEqual(
+            [(0, "irreversible or custody boundary")],
+            packet_lint.literal_field_occurrences(
+                "**Effect class: irreversible or custody boundary**\n", "Effect class"
+            ),
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "**Effect class: irreversible or custody boundary**\n",
+                {"Effect class": "irreversible or custody boundary"},
+            ),
+        )
+        # An unterminated span whose value carries real inline emphasis keeps every marker.
+        self.assertEqual(
+            [(0, "fleet-maintainer and **release** coordinator")],
+            packet_lint.literal_field_occurrences(
+                "**Owner: fleet-maintainer and **release** coordinator\n", "Owner"
+            ),
+        )
+
     def test_display_echoes_collapse_but_conflicts_still_count(self) -> None:
         """A repeated value is display; a different value is a conflict and must still fail."""
         # A bare section header above the block (learning-slot-operational-agent).
@@ -491,6 +516,29 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         self.assertEqual(
             ["Learning: closeout has no disposition value"],
             packet_lint.lint_learning_closeout("Learning:\n", "lifecycle-owner"),
+        )
+
+    def test_gate_slots_grade_case_insensitively_but_free_text_stays_exact(self) -> None:
+        """The gate slots replace prose matching, so case and a trailing stop must not decide a
+        verdict; a free-text label has no closed set and keeps byte-exact comparison."""
+        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        for rendering in (
+            "Gate: consolidated\nInstrument: fresh request required\n",
+            "Gate: Consolidated.\nInstrument: Fresh request required\n",
+            "**Gate**: consolidated\n- Instrument: fresh request required\n",
+        ):
+            with self.subTest(rendering=rendering):
+                self.assertEqual([], packet_lint.lint_exact_fields(rendering, expected))
+
+        # A value outside the set is still a finding -- tolerance is for rendering, not meaning.
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated for now\nInstrument: fresh request required\n", expected
+            )
+        )
+        # Free-text labels are unaffected by the vocabulary path.
+        self.assertTrue(
+            packet_lint.lint_exact_fields("Owner: Fleet-Maintainer\n", {"Owner": "fleet-maintainer"})
         )
 
     def test_closed_vocabulary_fields_tolerate_a_final_full_stop(self) -> None:

@@ -455,7 +455,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "handoff-builder-applies-work-order",
         }
         hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
-        self.assertEqual(67, len(self.document["cases"]))
+        self.assertEqual(68, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
@@ -609,6 +609,30 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 findings = eval_behavioral.validate_behavioral_case({**base, **mutation})
                 self.assertTrue(any(expected in finding for finding in findings), findings)
+
+    def test_vocabulary_backed_exact_field_rejects_undeclared_value(self) -> None:
+        """A value outside the closed set is unreachable, so it would fail as a false behavioral
+        finding on every run rather than as the case defect it is."""
+        base = self._minimal_case()
+        base.pop("must_match")
+        for label, good in (
+            ("Gate", "consolidated"),
+            ("Instrument", "fresh request required"),
+            ("Effect class", "irreversible or custody boundary"),
+        ):
+            with self.subTest(label=label):
+                self.assertEqual(
+                    [],
+                    eval_behavioral.validate_behavioral_case(
+                        {**base, "exact_fields": {label: good}}
+                    ),
+                )
+                findings = eval_behavioral.validate_behavioral_case(
+                    {**base, "exact_fields": {label: "definitely-not-in-the-set"}}
+                )
+                self.assertTrue(
+                    any("outside its closed vocabulary" in f for f in findings), findings
+                )
 
     def test_full_case_requires_explicit_allowed_tools_even_when_empty(self) -> None:
         case = self._minimal_case()

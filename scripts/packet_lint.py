@@ -228,7 +228,32 @@ EXACT_FIELD_LABELS = (
     "Destination",
     "Owner",
     "Runbook disposition",
+    "Gate",
+    "Instrument",
+    "Effect class",
 )
+# Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These three
+# labels exist because the gate decision used to be graded by matching prose paraphrases, and an
+# open-ended pattern set goes stale the way lint_runbook_proposal's docstring describes: every
+# honest rewording needs another branch, and the branch admitting it becomes the next round's false
+# negative. Three repair rounds on `gate-same-effect-consolidation` each moved the miss instead of
+# closing it, with every graded transcript behaviorally correct (ORACLE-001). A closed value set
+# has no paraphrase surface to chase.
+GATE_STATES = ("consolidated", "new")
+INSTRUMENT_STATES = ("fresh request required", "n/a")
+EFFECT_CLASSES = (
+    "artifact preparation",
+    "repository publication",
+    "reversible live activation",
+    "irreversible or custody boundary",
+    "optional hardening",
+)
+# Only labels listed here are graded against a closed set; everything else keeps exact comparison.
+EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
+    "Gate": GATE_STATES,
+    "Instrument": INSTRUMENT_STATES,
+    "Effect class": EFFECT_CLASSES,
+}
 LEARNING_NONE_VALUE = "none — no reusable signal"
 LEARNING_DISPOSITIONS = ("skip", "add", "merge", "supersede", "drop")
 LEARNING_PROVENANCE = ("verified", "sourced", "unverified")
@@ -386,6 +411,13 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
                 first = first[:-len(opener)]
                 value = " ".join((first, split[1])) if len(split) == 2 else first
                 value = value.strip()
+            elif value.endswith(opener) and value.count(opener) == 1:
+                # Whole-line emphasis, ``**Effect class: irreversible or custody boundary**``:
+                # the partner closer sits after the LAST token, not the first, so the branch above
+                # never sees it and the marker rides into the value. Requiring the marker to be
+                # unpaired keeps an unterminated span with genuine inline emphasis
+                # (``**Owner: x and **release** y``) untouched, since there the marker recurs.
+                value = value[: -len(opener)].strip()
         decorated = any(
             match.group(name) for name in ("outside", "inside", "span")
         )
@@ -440,7 +472,14 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 
 
 def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
-    """Require each declared literal field exactly once with its exact declared value."""
+    """Require each declared literal field exactly once with its exact declared value.
+
+    A label carrying a closed vocabulary (``EXACT_FIELD_VOCABULARIES``) compares casefolded and
+    without trailing sentence punctuation, because a finite value set has no ambiguity for case to
+    carry: ``Gate: Consolidated`` at the start of a line states the same contract as ``consolidated``
+    and rejecting it would re-import the paraphrase brittleness these labels exist to remove. Every
+    other label keeps byte-exact comparison, where free-text values make case load-bearing.
+    """
     findings: list[str] = []
     for label, exact_value in expected.items():
         occurrences = literal_field_occurrences(text, label)
@@ -451,7 +490,13 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
             )
             continue
         actual = occurrences[0][1]
-        if actual != exact_value:
+        if label in EXACT_FIELD_VOCABULARIES:
+            matched = (
+                _strip_sentence_punctuation(actual).casefold() == exact_value.casefold()
+            )
+        else:
+            matched = actual == exact_value
+        if not matched:
             findings.append(
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"
             )
