@@ -65,8 +65,11 @@ Two same-family residuals, reviewer-reproduced on the same version. First, `git 
 a `core.fsmonitor` command from that same LOCAL config — which is why the investigator's arrival
 boundary withholds ALL git commands, not merely history commands, until provenance is stated
 (the prose is the fix; this docstring owns the statement of why). Second, in a partial clone an
-allowlisted `git show <old>:<path>` lazily fetches missing promisor objects from the repo's own
-configured remote — an outbound fetch inside the investigator's no-network slice. Hash-verified,
+any allowlisted reader that materializes an absent object — `git show <old>:<path>`, `git log -p`,
+`git blame <rev> -- <file>` — lazily fetches it from the repo's own configured remote (reproduced
+on git 2.43 under `GIT_TRACE_PACKET=1`: `command=fetch` with a `want <blob>` packet). The class,
+not the command list, is the boundary: an outbound fetch inside the investigator's no-network
+slice. Hash-verified,
 so a tampering remote cannot inject content, but a real hole in the literal claim;
 `GIT_NO_LAZY_FETCH=1` would close it if this guard ever gains an env channel, and until then the
 no-network claim is qualified here rather than overstated.

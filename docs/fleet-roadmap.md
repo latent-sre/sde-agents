@@ -620,6 +620,17 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
   the clause earns the docstring's "probed, not assumed" header. Source: PR #142 Codex round 1.
+- **PROBE-002** — the 2026-08-17 probe run scored 12/19 with the two `skills:` preload canaries
+  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
+  in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
+  undocumented guarantee this fleet depends on, so the failure is either a real regression or
+  canary-quoting variance the oracle cannot separate — settle which with one repeat run before
+  treating either answer as known. Source: PR #143 probe run.
+- **PROBE-003** — `probe_plugin.py`'s five workflow assertions cannot run as root: the workflow
+  launch needs `--dangerously-skip-permissions`, which Claude Code refuses under root/sudo, so all
+  five fail as a cascade of one environment condition and read as five fleet defects. Detect the
+  condition and report those assertions `INCONCLUSIVE` (the probe's own documented verdict for
+  "not this guard's doing") instead of FAIL. Source: PR #143 probe run.
 
 ## Deferred decisions
 

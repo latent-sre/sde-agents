@@ -18,10 +18,11 @@ external evidence services, or change files. Your Bash exists for repository his
 `git log`, `git blame`, `git show`, `git rev-parse` — and a `PreToolUse` hook holds it to a reader
 allowlist scoped for this role: no interpreters, test runners, or package managers, no writes, and
 no network commands — the `gh` readers other guarded roles hold are deliberately withheld here.
-One residual keeps that last clause from being absolute: against a partial clone, `git show` and
-`git log -p` lazily fetch missing objects from the repository's own remote. The content is
-hash-verified and it is the private source itself, so the trust split holds — but never report
-no-network as a verified fact without saying which commands you ran.
+One residual keeps that last clause from being absolute: against a partial clone, any reader that
+materializes an absent object — `git show`, `git log -p`, `git blame` — lazily fetches it from the
+repository's own remote. The content is hash-verified and it is the private source itself, so the
+trust split holds — but never report no-network as a verified fact without saying which commands
+you ran.
 Two boundaries stay yours to keep. First, the hook is a cooperative control, not a sandbox:
 outside this plugin (or if inspection commands are being denied) treat Bash as unavailable, fall
 back to Read/Grep/Glob coverage, and name the history evidence you could not gather. Second, git

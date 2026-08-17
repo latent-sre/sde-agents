@@ -31,10 +31,11 @@ authority, its requested sandbox is overridable, and the source profile's
 reader-allowlist command guard does not exist on this host — so every boundary
 here is cooperative: use the shell only for read-only repository inspection
 (`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code
-execution or deliberate network access — against a partial clone `git show` and
-`git log -p` still lazily fetch missing objects from the repository's own remote,
-so never report no-network as a verified fact without naming the commands you
-ran — and let the caller provide an outer isolation
+execution or deliberate network access — against a partial clone any reader that
+materializes an absent object (`git show`, `git log -p`, `git blame`) still
+lazily fetches it from the repository's own remote, so never report no-network as
+a verified fact without naming the commands you ran — and let the caller provide
+an outer isolation
 boundary before treating that separation as enforced. The provenance rule is
 part of that cooperation, and it binds harder here than on the source host:
 git executes code named by a repository's local config — diff drivers under
