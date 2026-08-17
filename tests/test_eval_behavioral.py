@@ -1004,6 +1004,13 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "The default connect timeout is unchanged in 3.2.",
         ),
         (
+            # Same pattern, the other phrasings of the same claim: a hedge check that only knows
+            # "timeout is unchanged" lets the identical assertion through as "left it unchanged".
+            "researcher-unestablished-claim-stays-unverified", "leaves|kept",
+            "[unverified] whether 3.2 left the default connect timeout unchanged.",
+            "3.2 left the default connect timeout unchanged, so the client is safe.",
+        ),
+        (
             "appsec-diff-and-architecture-leave-the-audit", "Merge",
             "**Merge verdict — APPROVE or REQUEST CHANGES — belongs to code-reviewer, not to me.**",
             "Verdict: REQUEST CHANGES",
@@ -2202,7 +2209,11 @@ class OutputDirReuseSequenceTest(_BatchRunnerMixin, unittest.TestCase):
         # eval_behavioral the loosened mode would survive the rewrite (PR #133 Copilot
         # finding; this fail-over-fail reuse path was previously untested).
         sidecar_path = out / eval_behavioral.FAILING_EVIDENCE_FILENAME
-        os.chmod(sidecar_path, 0o644)
+        # 0o640, not 0o644: what the assertion needs is any mode looser than owner-only, and a
+        # group-readable file proves the tightening branch fires exactly as a world-readable one
+        # does. The world bit bought nothing and read as a real permissions defect to a scanner
+        # (CodeQL py/overly-permissive-file-permission, surfaced on PR #145).
+        os.chmod(sidecar_path, 0o640)
         cls._run_main(out, [cls._stats()], responses=[cls._FAILING], concurrency=1)
         cls.sidecar_after_refail = cls._evidence(out)
         cls.sidecar_mode_after_refail = (
