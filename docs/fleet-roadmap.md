@@ -612,38 +612,14 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **DOCTOR-001** — `_skill_listing_budget_check` indexes `manifest["name"]` before checking the
-  decoded JSON root is an object, so `[]`/`null` manifests traceback instead of reporting
-  inconclusive; validate the root (or catch TypeError) with a firing test. Source: PR #141
-  round-3 review, dispositioned past the two-round cap.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
   Reconcile the exit contract with a CLI-level test. Source: PR #141 round-3 review.
-- **DOCTOR-003** — two listing-budget tests assert forward-slash relative paths against
-  `str(Path.relative_to())` output (`tests/test_fleet_doctor.py`), which renders backslashes on
-  Windows, so the T2 windows-latest leg fails after merge while ubuntu-only PR CI stays green;
-  normalize with `as_posix()` or platform-aware assertions. Source: 2026-08-16 multi-lens branch
-  review.
 - **PROBE-001** — the guard's scoping contract documents `--agent` main-session behavior from the
   upstream hooks reference, but `scripts/probe_plugin.py` drives subagent spawns only, so that
   clause is doc-sourced rather than probe-verified; extend the probe with one `--agent` session so
   the clause earns the docstring's "probed, not assumed" header. Source: PR #142 Codex round 1.
-- **DOCTOR-004** — `_skill_listing_budget_check` keys its budget sum by `plugin:name` in one dict
-  shared by skills and workflows, so a workflow meta name colliding with a skill name silently
-  overwrites the skill's entry and undercounts with no inconclusive verdict; key by kind or guard
-  the collision, with a firing test. Latent today — no colliding names exist. Source: 2026-08-16
-  multi-lens branch review.
-- **GUARD-001** — two same-family residuals in the investigator's git slice, both
-  reviewer-reproduced on git 2.43: in a partial clone, allowlisted `git show <old>:path` lazily
-  fetches missing promisor objects (outbound fetch to the repo's own configured remote,
-  hash-verified so not content injection, but a hole in the no-network slice — evaluate
-  `GIT_NO_LAZY_FETCH`); and `git status` executes a crafted `core.fsmonitor` from local
-  `.git/config`, so the agent prose's untrusted-provenance boundary must say **no git commands**
-  on a repo that arrived as a directory/archive — the current "no history commands" leaves step
-  2's `rev-parse`/`status` instructed before provenance is established. Document both residuals
-  in the guard docstring and fix the prose scope in the same pass. Source: PR #141 rounds 3–4
-  review, dispositioned past the two-round cap.
 
 ## Deferred decisions
 

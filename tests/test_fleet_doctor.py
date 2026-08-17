@@ -211,6 +211,32 @@ class SkillListingBudgetCheck(support.TempDirTestCase):
         check = self._check(root)
         self.assertEqual("inconclusive", check.status)
 
+    def test_a_non_object_manifest_root_is_inconclusive_not_a_traceback(self) -> None:
+        # json.loads happily returns a list, and `manifest["name"]` on one raises TypeError —
+        # outside the except clause — so a damaged manifest crashed the doctor instead of
+        # taking the documented inconclusive path (DOCTOR-001).
+        root = self._tree(skills={"one": "short"}, label="list-manifest")
+        (root / ".claude-plugin" / "plugin.json").write_text("[]\n", encoding="utf-8")
+        check = self._check(root)
+        self.assertEqual("inconclusive", check.status)
+
+    def test_a_workflow_name_colliding_with_a_skill_counts_both_entries(self) -> None:
+        # Keyed into one dict by name, the collision silently overwrote the skill's entry — an
+        # undercount toward a false pass with no inconclusive verdict (DOCTOR-004). The model's
+        # listing shows both entries, so the sum must count both.
+        root = self._tree(skills={"twin": "d" * 400}, label="name-collision")
+        (root / "workflows").mkdir()
+        (root / "workflows" / "wf.js").write_text(
+            "export const meta = {\n"
+            "  name: 'twin',\n"
+            f"  description: '{'D' * 400}',\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        check = self._check(root)
+        self.assertEqual(2, check.details["entries"])
+        self.assertGreater(check.details["total_chars"], 800)
+
     def test_an_unparseable_skill_definition_blocks_the_verdict(self) -> None:
         # The unparseable file is omitted from the sum, so a verdict over the remainder would
         # report headroom the model does not have — fictitious-pass, the review finding's exact

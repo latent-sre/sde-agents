@@ -61,6 +61,15 @@ falls back to git's internal diff. It bites when a repo ARRIVES as a directory o
 directory you did not clone" as running its code, and let OS-level least privilege — not this
 guard — be what holds. (`core.pager` is NOT part of this: probed on the same version, git skips
 the pager entirely when stdout is not a TTY, which it never is under a hook.)
+Two same-family residuals, reviewer-reproduced on the same version. First, `git status` executes
+a `core.fsmonitor` command from that same LOCAL config — which is why the investigator's arrival
+boundary withholds ALL git commands, not merely history commands, until provenance is stated
+(the prose is the fix; this docstring owns the statement of why). Second, in a partial clone an
+allowlisted `git show <old>:<path>` lazily fetches missing promisor objects from the repo's own
+configured remote — an outbound fetch inside the investigator's no-network slice. Hash-verified,
+so a tampering remote cannot inject content, but a real hole in the literal claim;
+`GIT_NO_LAZY_FETCH=1` would close it if this guard ever gains an env channel, and until then the
+no-network claim is qualified here rather than overstated.
 
 SCOPING CONTRACT (probed, not assumed): the stdin payload carries `agent_type` — namespaced for a
 plugin agent (`sde-agents:code-reviewer`), bare for a project/user-scope one. A PLAIN main loop

@@ -40,7 +40,8 @@ boundary before treating that separation as enforced.
    or configuration fact to establish. If the request ends in a decision or implementation, stop
    at the evidence the caller needs and route the deliverable to its owner.
 2. **Freeze the target.** Name the repository root and the revision — `git rev-parse HEAD`, with
-   `git status` to detect a dirty tree. If the worktree is mutable and no immutable revision
+   `git status` to detect a dirty tree; on untrusted provenance both wait for the isolation
+   boundary above. If the worktree is mutable and no immutable revision
    identifies it, say so; never imply that citations bind a commit when they bind only current
    bytes.
 3. **Start at the execution surface.** Find entry points, registrations, imports, callers, tests,

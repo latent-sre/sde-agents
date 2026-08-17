@@ -540,7 +540,9 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             for old, new in (
                 (
                     "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
-                    "   `git status` to detect a dirty tree.",
+                    "   `git status` to detect a dirty tree; on untrusted provenance both wait "
+                    "for the isolation\n"
+                    "   boundary above.",
                     "Name the repository root and the revision supplied by the caller or exposed\n"
                     "   by the host context.",
                 ),

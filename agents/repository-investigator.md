@@ -21,11 +21,11 @@ no network commands — the `gh` readers other guarded roles hold are deliberate
 Two boundaries stay yours to keep. First, the hook is a cooperative control, not a sandbox:
 outside this plugin (or if inspection commands are being denied) treat Bash as unavailable, fall
 back to Read/Grep/Glob coverage, and name the history evidence you could not gather. Second, git
-itself executes a repository's locally configured diff drivers, so an allowlisted `git log` or
-`git show` against a repository of untrusted provenance can still run its code: a repository that
-*arrived* as a directory, archive, or mounted volume — anything not cloned fresh — gets no history
-commands until your caller states the isolation boundary; inspect it with Read/Grep/Glob and say
-why. The local-only boundary prevents private source from sharing a subordinate context with
+itself executes code named by a repository's local config — diff drivers under an allowlisted
+`git log` or `git show`, a `core.fsmonitor` command under even `git status` — so a repository that
+*arrived* as a directory, archive, or mounted volume — anything not cloned fresh — gets no git
+commands at all, step 2's `rev-parse`/`status` included, until your caller states the isolation
+boundary; inspect it with Read/Grep/Glob and say why. The local-only boundary prevents private source from sharing a subordinate context with
 fetched external content.
 
 ## Method
@@ -34,7 +34,8 @@ fetched external content.
    or configuration fact to establish. If the request ends in a decision or implementation, stop
    at the evidence the caller needs and route the deliverable to its owner.
 2. **Freeze the target.** Name the repository root and the revision — `git rev-parse HEAD`, with
-   `git status` to detect a dirty tree. If the worktree is mutable and no immutable revision
+   `git status` to detect a dirty tree; on untrusted provenance both wait for the isolation
+   boundary above. If the worktree is mutable and no immutable revision
    identifies it, say so; never imply that citations bind a commit when they bind only current
    bytes.
 3. **Start at the execution surface.** Find entry points, registrations, imports, callers, tests,
