@@ -1265,6 +1265,20 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "The default connect timeout is [unverified]. The default connect timeout is unchanged.",
         ),
         (
+            # Third round on this verb list (fetched/searched → checked/consulted → browsed), which
+            # is the signal an enumerated list is the wrong shape. It stays because the alternative
+            # — requiring an affirmative "I did not retrieve" — demands a sentence the contract does
+            # not ask for. Recorded so a fourth round changes the instrument (PR #145 round 16).
+            "researcher-unestablished-claim-stays-unverified", r"brows",
+            "I did not check the changelog.",
+            "I browsed the upstream changelog.",
+        ),
+        (
+            "distinguished-evolution-plan-has-valuable-stop-points", r"early\s+(?:exit",
+            "Phase 1 is an early exit that ships real value.",
+            "Stopping policy: there is no early exit; complete the entire program.",
+        ),
+        (
             # An auxiliary between subject and verb is the ordinary way to make this claim, and the
             # first widening matched the verbs only immediately after `I` (PR #145 round 11). `did
             # consult` also needs the bare stem, which the inflected-only list missed.

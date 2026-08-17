@@ -668,13 +668,19 @@ class CaseFileTest(unittest.TestCase):
         # claimed 9,262 lines across 20 directories against an actual 9,378 across 13. An operator
         # reads these to judge whether the cleanup did what it says (PR #145 review).
         baselines = REPO / "evals" / "baselines"
-        baseline_lines = sum(
-            len(path.read_bytes().splitlines()) for path in baselines.rglob("*") if path.is_file()
-        )
+        # NEWLINE counts, matching `wc -l`, over every file in the directory. The first version of
+        # this check used `splitlines()`, which adds one for a file with no trailing newline, so it
+        # agreed with itself and disagreed with the tree by 16 lines — a check bound to a
+        # computation no reader would run is not a check (PR #145 round 16). The README states the
+        # exact command beside the figure for the same reason.
+        def newline_count(paths) -> int:
+            return sum(path.read_bytes().count(b"\n") for path in paths if path.is_file())
+
+        baseline_lines = newline_count(baselines.rglob("*"))
         baseline_dirs = len([path for path in baselines.iterdir() if path.is_dir()])
-        summary_lines = sum(
-            len(path.read_bytes().splitlines()) for path in (baselines / "history").rglob("*.md")
-        )
+        # Every file under history/, not just Markdown: the restored tool-event evidence is part of
+        # the distilled record it sits beside.
+        summary_lines = newline_count((baselines / "history").rglob("*"))
 
         rows = (
             (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),

@@ -565,12 +565,20 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **9,378 lines across 13 top-level directories**, down from 31,656 across 28 —
-a 70% cut with nothing a reader consumes removed. What remains: 1,338 lines of distilled record
+Baselines now total **9,362 lines across 13 top-level directories**, down from 31,656 across 28 —
+a 70% cut with nothing a reader consumes removed. What remains: 1,360 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and four directories with no
 summary at all
 (`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
-`2026-08-10-gate-001-first-live`) where the raw *is* the record. `2026-07-31-p0-p1` matters most of
+`2026-08-10-gate-001-first-live`) where the raw *is* the record.
+
+Reproduce both totals with `git ls-files -z evals/baselines | xargs -0 wc -l | tail -1`, and the
+same over `evals/baselines/history` for the distilled figure — newline counts over tracked files,
+which is exactly what `test_readme_inventory_figures_match_the_shipped_suites` recomputes. The
+command is stated because two earlier attempts at this number disagreed with each other and with
+the tree: one counted `splitlines()`, which adds one for a file with no trailing newline, so the
+check agreed with itself while being 16 lines off. A figure bound to a computation no reader would
+run is not bound to anything. `2026-07-31-p0-p1` matters most of
 those: it holds the only Codex CLI run this repository has ever recorded.
 
 ### Why the behavioral suite has no cuts
