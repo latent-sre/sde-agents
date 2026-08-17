@@ -277,6 +277,16 @@ LEARNING_STATE_DISPOSITIONS = {
 }
 LEARNING_POST_TRIAGE_STATES = tuple(LEARNING_STATE_DISPOSITIONS)
 LEARNING_MODES = ("intake", "lifecycle-owner")
+# Which closed set an echo of this label may not silently change. Only these labels can have a
+# continuation checked for a competing term, so only these can collapse an echo that carries one.
+# `EXACT_FIELD_VOCABULARIES` covers the gate slots; the Learning block's two closed slots are
+# named here because their vocabularies are owned elsewhere in this module and are not part of
+# `lint_exact_fields`' gate grading.
+_ECHO_VOCABULARIES: dict[str, tuple[str, ...]] = {
+    **{label.casefold(): terms for label, terms in EXACT_FIELD_VOCABULARIES.items()},
+    "learning disposition": LEARNING_DISPOSITIONS,
+    "promotion state": LEARNING_POST_TRIAGE_STATES + ("quarantined",),
+}
 # A packet shape has one default because eval callers historically supplied only the shape. The
 # builder preloads self-improve-loop and therefore owns lifecycle triage; an explicit mode remains
 # available for testing another role's Learning block or linting a standalone transcript.
@@ -428,12 +438,32 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
         )
         occurrences.append((index, value, bool(decorated)))
     return _collapse_display_echoes(
-        occurrences, normalize=label in EXACT_FIELD_VOCABULARIES
+        occurrences, vocabulary=_ECHO_VOCABULARIES.get(label.casefold())
     )
 
 
+def _echo_key(value: str, *, normalize: bool) -> str:
+    """Normalize a value to what a reader takes it to say, ignoring how it is rendered.
+
+    Decoration is display for every label: ``**Promotion state:** `proposed` `` states the
+    contract ``Promotion state: proposed`` states, and comparing the raw bytes left that pair
+    uncollapsed until the exactly-once rule read one contract as two.
+
+    Case and trailing sentence punctuation are display only where the values are a FINITE set,
+    which is the scope review round 5 established and this keeps: ``Owner: fleet-maintainer``
+    beside ``**Owner: Fleet-Maintainer**`` is a genuinely ambiguous free-text declaration and
+    must stay two.
+    """
+    undecorated = _DECORATION_RE.sub("", value)
+    if not normalize:
+        return undecorated
+    return _strip_sentence_punctuation(undecorated).casefold().strip()
+
+
 def _collapse_display_echoes(
-    occurrences: list[tuple[int, str, bool]], *, normalize: bool = False
+    occurrences: list[tuple[int, str, bool]],
+    *,
+    vocabulary: tuple[str, ...] | None = None,
 ) -> list[tuple[int, str]]:
     """Drop occurrences that carry no value a reader could mistake for a second contract.
 
@@ -449,23 +479,71 @@ def _collapse_display_echoes(
     reading that the same field written twice inside the machine-readable block is malformed: a
     repeat collapses only when its decoration DIFFERS from the line it echoes, which is what makes
     it a rendering of that line rather than a second copy of the field.
+
+    Two further shapes were false REDs in the 2026-08-15 round and are read as display here.
+    An echo can re-render the value as inline code (``**Promotion state:** `proposed` `` beside
+    ``Promotion state: proposed``), which byte-exact keying missed — ``_echo_key`` now removes
+    decoration and case from the comparison, never from the value that is returned. And an echo
+    can restate the value and then continue into rationale
+    (``**Promotion state**: `proposed`. Rollback: none needed``). That collapses only for a label
+    whose values are a closed set, and only when the continuation names no OTHER term from it —
+    so ``proposed`` followed by ``on reflection, rejected`` stays two conflicting declarations.
+    Whichever shapes collapse, the occurrence RETAINED is the undecorated one where there is one:
+    the canonical line is what the rest of this module grades, and keeping the echo instead
+    reported a well-formed block as out of order (``self-improve-canonical-triaged-candidate``).
     """
     valued = [item for item in occurrences if item[1]]
     if not valued:
         return [(index, value) for index, value, _ in occurrences]
-    seen: dict[str, bool] = {}
+    groups: dict[str, list[tuple[int, str, bool]]] = {}
+    for item in valued:
+        key = _echo_key(item[1], normalize=vocabulary is not None)
+        groups.setdefault(_echo_group_key(key, groups, vocabulary), []).append(item)
     collapsed: list[tuple[int, str]] = []
-    for index, value, decorated in valued:
-        # Case and trailing sentence punctuation are display, exactly as the decoration markers
-        # are: ``**Gate: Consolidated**`` echoing ``Gate: consolidated`` is one contract rendered
-        # twice. Comparing them byte-exact left the pair uncollapsed, and a closed-vocabulary slot
-        # then read it as two declarations and failed an otherwise compliant transcript.
-        key = _strip_sentence_punctuation(value).casefold() if normalize else value
-        if key in seen and seen[key] != decorated:
+    for members in groups.values():
+        if len({decorated for *_, decorated in members}) < 2:
+            # Every member is rendered the same way, so none of them is a rendering of another:
+            # `Learning disposition: merge` written twice really is two fields.
+            collapsed.extend((index, value) for index, value, _ in members)
             continue
-        seen.setdefault(key, decorated)
+        undecorated = [item for item in members if not item[2]]
+        index, value, _ = (undecorated or members)[0]
         collapsed.append((index, value))
-    return collapsed
+    return sorted(collapsed)
+
+
+def _echo_group_key(
+    key: str,
+    groups: dict[str, list[tuple[int, str, bool]]],
+    vocabulary: tuple[str, ...] | None,
+) -> str:
+    """Return the group ``key`` belongs to, folding a term-plus-rationale echo into the term.
+
+    Only a closed-set label can fold: the check that the continuation introduces no competing
+    term is what keeps this from becoming a hole, and it is only available where the terms are
+    enumerable. Free-text labels keep exact keying.
+    """
+    if key in groups or not vocabulary:
+        return key
+    terms = {term.casefold() for term in vocabulary}
+    for existing in groups:
+        if existing in terms:
+            term, rationale = existing, _rationale_after(key, existing)
+        elif key in terms:
+            term, rationale = key, _rationale_after(existing, key)
+        else:
+            continue
+        if rationale and not _names_other_term(rationale, terms - {term}):
+            return existing
+    return key
+
+
+def _names_other_term(rationale: str, others: set[str]) -> bool:
+    """True when a continuation names a competing term from the same closed set."""
+    return any(
+        re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", rationale)
+        for term in others
+    )
 
 
 def _literal_field_values(label: str, lines: list[str]) -> list[str]:
@@ -484,6 +562,40 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 
 
 _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
+
+
+def _opens_a_rationale(character: str) -> bool:
+    """True when a character ends a closed-set term and opens the writer's explanation of it.
+
+    Any punctuation does. This was a hand-listed set (``— – - : ( ,``), which made ordinary
+    punctuation decide the verdict on identical meaning: ``consolidated; the standing approval
+    covers this retry`` and ``proposed. Rollback: none needed`` were classified as corrupted
+    assertions while the comma and em-dash renderings of the same sentence passed (ORACLE-006).
+    Enumerating the separators is the shape of that defect rather than one of its instances, so
+    the boundary is stated as what a corrupted assertion actually looks like: a term running on
+    into more words with nothing but whitespace between them (``consolidated and re-gated``).
+    """
+    return bool(character) and not character.isalnum()
+
+
+def _rationale_after(value: str, term: str) -> str | None:
+    """Return the rationale a closed-set value carries after ``term``, or None if it is not one.
+
+    ``""`` means the value is the bare term. Anything else is the term plus a separator and the
+    writer's explanation, which asserts the same term — the reading ``_vocabulary_head`` already
+    applies to the gate slots. A run-on with no separator (``add pending review``) returns None,
+    because a corrupted assertion must fail rather than be explained away.
+    """
+    normalized = _strip_sentence_punctuation(_DECORATION_RE.sub("", value)).casefold().strip()
+    folded = term.casefold()
+    if normalized == folded:
+        return ""
+    if not normalized.startswith(folded):
+        return None
+    rest = normalized[len(folded):].lstrip()
+    if not _opens_a_rationale(rest[:1]):
+        return None
+    return rest
 
 
 def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | None, bool]:
@@ -505,10 +617,9 @@ def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | Non
         if normalized == folded:
             return folded, False
         if normalized.startswith(folded):
-            rest = normalized[len(folded):].lstrip()
-            if rest[:1] in {"\u2014", "\u2013", "-", ":", "(", ","}:
-                return folded, False
-            return None, True
+            if _rationale_after(value, folded) is None:
+                return None, True
+            return folded, False
     return None, False
 
 
@@ -638,6 +749,32 @@ def _has_substantive_token(value: str) -> bool:
     return re.search(r"[A-Za-z0-9]{2,}", value) is not None
 
 
+_INTAKE_DISPOSITION_MARKER = "(proposed recommendation)"
+
+
+def _split_selected_disposition(value: str, learning_mode: str) -> tuple[str, str]:
+    """Split a ``Learning disposition:`` value into its selected term and trailing rationale.
+
+    ``("", "")`` means no accepted value is selected in the shape this mode requires — no named
+    term, a run-on, an intake packet missing the proposed-recommendation marker, or a lifecycle
+    owner wearing the intake-only one.
+    """
+    for term in LEARNING_DISPOSITIONS:
+        rationale = _rationale_after(value, term)
+        if rationale is None:
+            continue
+        if learning_mode == "intake":
+            if not rationale.startswith(_INTAKE_DISPOSITION_MARKER):
+                return "", ""
+            rationale = rationale[len(_INTAKE_DISPOSITION_MARKER):].lstrip()
+            if rationale and not _opens_a_rationale(rationale[:1]):
+                return "", ""
+        elif rationale.startswith(_INTAKE_DISPOSITION_MARKER):
+            return "", ""
+        return term, rationale
+    return "", ""
+
+
 def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
     """Validate Learning:none or the candidate variant authorized for ``learning_mode``."""
     findings: list[str] = []
@@ -757,25 +894,32 @@ def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
     # `Promotion state: quarantined.` and failed the enum fullmatch on the full stop alone
     # (LEARN-002 batch 2, learning-slot-readonly-agent). Only trailing sentence punctuation is
     # removed, so `quarantined and approved` and `not quarantined` still fail.
-    disposition = _strip_sentence_punctuation(field_values.get("learning disposition", ""))
-    disposition_values = "|".join(LEARNING_DISPOSITIONS)
-    if disposition:
-        if learning_mode == "intake" and not re.fullmatch(
-            rf"(?:{disposition_values})\s+\(proposed recommendation\)",
-            disposition,
-            re.IGNORECASE,
-        ):
-            findings.append(
-                "intake Learning disposition: must select one lifecycle value and mark it "
-                "exactly as a (proposed recommendation)"
-            )
-        elif learning_mode == "lifecycle-owner" and not re.fullmatch(
-            rf"(?:{disposition_values})", disposition, re.IGNORECASE
-        ):
-            findings.append(
-                "lifecycle-owner Learning disposition: must be one accepted lifecycle value "
-                "without the intake-only proposed recommendation marker"
-            )
+    # The selected value may carry the writer's reasoning after a separator — the reading the gate
+    # slots already get from `_vocabulary_head`, applied here because the field is the same shape.
+    # Requiring the line to END at the marker failed three of three otherwise-correct intake
+    # packets, all of the form `add (proposed recommendation) — pending the owning writer's
+    # verification` (LEARN-002, learning-slot-readonly-agent). What still fails is what the slot
+    # exists to prevent: no named value, a run-on with no separator, and a rationale that names a
+    # SECOND disposition, which would leave the receiving coordinator two contracts to choose from.
+    disposition, disposition_rationale = _split_selected_disposition(
+        _strip_sentence_punctuation(field_values.get("learning disposition", "")),
+        learning_mode,
+    )
+    if field_values.get("learning disposition") and not disposition:
+        findings.append(
+            "intake Learning disposition: must select one lifecycle value and mark it "
+            "exactly as a (proposed recommendation)"
+            if learning_mode == "intake"
+            else "lifecycle-owner Learning disposition: must be one accepted lifecycle value "
+            "without the intake-only proposed recommendation marker"
+        )
+    elif disposition_rationale and _names_other_term(
+        disposition_rationale, {value for value in LEARNING_DISPOSITIONS if value != disposition}
+    ):
+        findings.append(
+            f"Learning disposition: names a second lifecycle value after {disposition!r}; "
+            "alternatives belong in prose, not in the machine-readable field"
+        )
 
     promotion_state = _strip_sentence_punctuation(field_values.get("promotion state", ""))
     if promotion_state:

@@ -575,8 +575,8 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **9,362 lines across 13 top-level directories**, down from 31,656 across 28 —
-a 70% cut with nothing a reader consumes removed. What remains: 1,360 lines of distilled record
+Baselines now total **9,371 lines across 13 top-level directories**, down from 31,656 across 28 —
+a 70% cut with nothing a reader consumes removed. What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and four directories with no
 summary at all
 (`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
@@ -619,7 +619,7 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 47 of the 70 cases are no-tool planning-only sessions. The expense
+**Where the cost actually is.** 47 of the 70 cases are no-tool planning-only sessions — and since 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and 42 of those 47 had a granted tool still reachable. The expense
 concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
 Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
 per-contract work.

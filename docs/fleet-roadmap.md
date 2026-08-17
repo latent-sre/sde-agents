@@ -38,13 +38,15 @@ single tracker instead of leaking into memory or issue lists.
 
 **Status:** `ready` — the measured residual of the merged LEARN-001 round, plus the six
 LOOP-001/REV-001 contracts this docket now owns. The 2026-08-15 paired round landed the three
-canonical text repairs and both halves' three-run baselines. What remains is the **nine** numbered
-items under **Next action** — grader repairs, two text decisions, an operator ruling, a
-two-consecutive-batch measurement, five unsettled LOOP/REV contracts, a bounded harness
-investigation into `allowed_tools: []`, two shipped-but-unmeasured skill sentences, the
-resultless-session flake, and a reference/skill grammar conflict. Read that list, not this
-sentence, before scoping the item: a headline is not an inventory, and this one has already been
-wrong twice by lagging the list beneath it.
+canonical text repairs and both halves' three-run baselines. The 2026-08-17 offline round then
+worked every sub-item that does not need a paid session: the filed grader defects are repaired
+against the sentences that exposed them, the runner enforces `allowed_tools: []` and stops
+grading a resultless session as a contract failure, and the reference/skill grammar conflict is
+gone. **Nothing in that round is measured.** What remains under **Next action** is the paid half
+— one batch that settles the repairs, the two-consecutive-batch clause, the unmeasured skill
+sentences — plus one operator ruling. Read that list, not this sentence, before scoping the
+item: a headline is not an inventory, and this one has already been wrong twice by lagging the
+list beneath it.
 
 **Outcome:** (1) Each of the seven behavioral contracts failing 0/3 under the final closed
 graders (`self-improve-lifecycle-merge`, `self-improve-promotion-gate`,
@@ -71,15 +73,30 @@ contact and ownership handoff in the
 **Prerequisites:** None — the behavioral harness and pinned conditions are ready. Description
 edits, if any emerge, owe the overlapping routing cluster before/after per standing law.
 
-**Acceptance:** Per-contract paired before/after behavioral runs under identical recorded
-conditions for the original seven; deterministic gates green; the two 2/3-flaky contracts
-re-measured alongside; the watch-metrics (Learning-slot `none`-rate, ledger organic-candidate
-count) reported at close. **And**, for each of the six LOOP-001/REV-001 contracts: a three-run
-clean-room baseline under recorded conditions committed under `evals/baselines/`, plus either
-a hold at the acceptance rate or a grammar/text repair with rationale — first-contact single
-runs and deferred repairs do not satisfy this clause.
+**Acceptance:** Per-contract behavioral runs under identical recorded conditions for the original
+seven; deterministic gates green; the two 2/3-flaky contracts re-measured alongside; the
+watch-metrics (Learning-slot `none`-rate, ledger organic-candidate count) reported at close. The
+paired-run clause is satisfied by a single batch on the current tree for every contract whose
+repair was grader-side: both sides of such a pair would run the same session text through the same
+graders, so a 'before' capture under the repaired graders measures nothing the 'after' does not.
+A contract whose repair is TEXT still owes a genuine pair. **And**, for each of the six
+LOOP-001/REV-001 contracts: a three-run clean-room baseline under recorded conditions committed
+under `evals/baselines/`, plus either a hold at the acceptance rate or a grammar/text repair with
+rationale — first-contact single runs and deferred repairs do not satisfy this clause.
 
-**Next action:** The 2026-08-10 calibration round
+**Next action:** **One paid batch, and one operator ruling.** Every offline repair this docket
+owed is landed and pinned in both directions (see the numbered list below); none of it is
+measured, and the settling runs are T3. The batch to buy: the seven original contracts plus the
+five unsettled LOOP/REV ones, under recorded conditions on the current tree, with
+`learning-runbook-namespaces-compose` re-checked first for its n=3 drop and the decorated-echo
+repair confirmed across **all four** contracts it touches rather than the one it was filed under.
+Two cases have no repair to confirm and are expected to stay red until their owners move —
+`reviewer-formal-approval-emits-envelope` (item 3, operator ruling deferred 2026-08-17) and
+`learning-slot-operational-agent` (item 2, a TEXT repair not yet written). Do not diff the result
+against the 2026-08-15 artifacts: evaluator bytes moved, so that round is history, not the before
+side. The historical account below is retained because it is what the repairs were written from.
+
+The 2026-08-10 calibration round
 (`evals/baselines/history/2026-08-10-learn-002.md`, 76 sessions, decisions.md per case) settled the
 pattern-setter question for the original seven: **the closed contracts are right and the skill
 text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
@@ -102,90 +119,117 @@ of their Acceptance clause. The clause also requires each of the six to hold its
 receive a repair with rationale, and five of the six do neither yet, so the clause as written is
 **not** met.
 
-What this item still owes, all of it now narrow:
+What this item still owes. The 2026-08-17 offline round closed the repair half of items 1, 2, 5,
+6, 8 and 9; each entry below now states what was done and what is still owed, because a repair
+with no measurement behind it is a hypothesis, not a result.
 
-1. **Five filed grader defects**, each already carrying the observed sentence that missed it, in
-   `decisions.md` under "Filed, not amended" — two on `reviewer-approval-does-not-transfer`
-   (a qualifier the precise answer replaces with the commit SHA; an adjacency-bound
-   `fresh review`), and **three** on `self-improve-promotion-gate`: the forbidden promotion pattern
-   firing on the retro's own `Trigger:` restatement, the exactly-once `Promotion state:` rule
-   counting a backticked echo, and — the one that actually governs its after-side rate — the
-   **promotion-refusal positive pattern** missing runs 1 and 3 (`No gate holds, so no promotion…`).
-   The first two are before-side observations; repairing only those leaves this contract at most
-   1/3, which is why the count was wrong and not merely short. Amending any of them needs
-   both-directions proof, per standing law. **The decorated-echo repair's confirmation scope is four
-   contracts, not one** — it is also the sole residual keeping `self-improve-lifecycle-merge` and
-   `self-improve-canonical-triaged-candidate` at 2/3, and the same shape as
-   `learning-slot-operational-agent`'s duplicate `Learning:` field. Validated against only the
-   contract it is filed under, it would read as settled while three others still fail on it.
-2. **The two learning-slot contracts, whose inherited diagnosis was wrong.** The
-   `(proposed recommendation)` abbreviation this item previously carried from 2026-08-10 **does not
-   occur** in any of the six after-side runs, so the prompt-side-emphasis repair it named would have
-   spent a paid batch on a defect that is not there. Recounted causes, with sentences in
-   `decisions.md`: `learning-slot-readonly-agent` (0/3) appends trailing rationale after an
-   exact-value field, and once leaves a plain metavariable in `Provenance:`;
-   `learning-slot-operational-agent` (1/3) emits a second literal `Learning:` field echoing the
-   block, which the passing run omits. Both are unfiled; neither is the abbreviation.
+**What the offline round changed, and what that costs.** Ten graded patterns and four
+`packet_lint` behaviors moved, each pinned in both directions in `tests/test_packet_lint.py`
+(`MeasuredFalseREDsFromTheLearn002Round`) and `tests/test_eval_behavioral.py`
+(`Learn002GraderRepairsTest`) against the sentence recorded in the round's own decisions note, and
+each proven non-vacuous by mutation. Two consequences a later session must not miss. **The
+2026-08-15 rates are no longer the before side for anything here** — evaluator bytes moved, so the
+next batch is a fresh baseline under the repaired graders rather than the 'after' of that round;
+its rates remain the historical record of what the *old* graders measured. And **several cases now
+measure something different**, because item 6 made `allowed_tools: []` actually deny: sessions that
+previously had `Glob`/`Grep`/`Read` available now have nothing, which is what those cases always
+claimed. A rate change there is a true finding about a no-tool session, not a regression.
+
+1. **The five filed grader defects are repaired; the confirmation is owed.** Both patterns on
+   `reviewer-approval-does-not-transfer` are now bound to the subject making the claim (the
+   approval) instead of a trailing `new commit` object the precise answer replaces with the SHA,
+   and `fresh review` tolerates an interposed modifier. On `self-improve-promotion-gate` the loose
+   forbidden alternative — the one that cannot tell an assertion from a report — is split into its
+   own rule and exempted on a `Trigger:` label line, while the three subject-bound alternatives
+   still apply there, so the exemption is not a place to hide a verdict; and the refusal positive
+   now accepts a refusal stated as an outcome (`No gate holds, so no promotion`) and one carried in
+   the disposition's rationale. **The decorated-echo repair's confirmation scope is four contracts,
+   not one** — `self-improve-lifecycle-merge` and `self-improve-canonical-triaged-candidate` were
+   held at 2/3 by it and `learning-slot-operational-agent`'s duplicate `Learning:` field is the
+   same family. Validated against only the contract it was filed under, it would read as settled
+   while three others still fail on it.
+2. **The two learning-slot causes are split: one was a grader defect, one is text.**
+   `learning-slot-readonly-agent` (0/3) appended rationale after an exact-value field, which is the
+   reading the gate slots have always had (`term — rationale` asserts the term) and is now allowed,
+   with a rationale naming a *second* disposition still failing. `learning-slot-operational-agent`
+   (1/3) emits a second literal `Learning:` field pointing back at the block; that is left graded
+   as a violation and is a **TEXT** repair, because a back-reference carries different words from
+   the canonical line and collapsing it would need vocabulary for "this is only a pointer" — the
+   paraphrase surface these labels exist to remove. Run 2's unresolved metavariable in
+   `Provenance:` is likewise a real defect and stays red. The `(proposed recommendation)`
+   abbreviation this item once carried does **not** occur in any of the six after-side runs; do not
+   revive it.
 3. **An operator ruling on `reviewer-formal-approval-emits-envelope`** — whether stipulated
-   evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3.
+   evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3. Put to the
+   operator on 2026-08-17 and **deferred**, so the contract stays red and the ruling stays owed.
+   The choice is three-way: the case is wrong and the refusal is correct conduct (an instrument
+   defect, as LADDER-002's assess 0/3 turned out to be); the agent should approve, which is a
+   shipped-behavior change to `agents/code-reviewer.md`'s bind-to-bytes rule; or it approves with
+   the stipulation labelled, which needs both an agent clause and a case amendment.
 4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
    `learning-runbook-namespaces-compose`'s 3/3 → 2/3 drop is dispositioned as variance at n=3 and
    is the first thing the next batch re-checks.
-5. **Five of the six LOOP-001/REV-001 contracts are baselined but unsettled**, and each still owes
-   a hold or a repair with rationale before its half closes — they are named here because this file
-   is the only live tracker, and a remainder list that omits them lets a later session close
-   LEARN-002 with them red: `loop-capture-is-not-closure` (0/3), `loop-duplicate-merges-provenance`
-   (0/3, GRAMMAR causes quoted in `decisions.md`), `loop-source-pass-is-not-released-pass` (1/3),
-   `reviewer-approval-does-not-transfer` (0/3, item 1 above), and
-   `reviewer-formal-approval-emits-envelope` (0/3, item 3 above). The sixth,
-   `verifier-envelope-mismatch-fails-closed`, holds at 3/3 — with the caveat in item 6.
-6. **`allowed_tools: []` does not deny tools**, discovered in the PR #140 review round and verified
-   by reading `tool_use` blocks from a re-run: the runner turns an empty allowlist into `--tools ""`
-   and actual denial comes from `disallowed_tools`. So `verifier-envelope-mismatch-fails-closed`
-   passed with `Glob`/`Grep` available, and its HOLD must not be cited as no-tool evidence. Wider
-   reach, and the reason this is listed rather than filed away: `AGENTS.md` uses a Claude contract's
-   empty `allowed_tools` as the eligibility test for the Codex behavioral lane, on the reading that
-   it disables tool execution. That rule currently rests on a property the harness does not enforce.
-   Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
-   the runner should reject the combination outright.
-   **Measured 2026-08-17 (PR #145), recounted after main merged.** 47 cases declare `allowed_tools: []`; **42** leave at
-   least
-   one granted tool reachable, and **26** leave `WebFetch`/`WebSearch` reachable — so the gap is
-   the norm rather than an outlier, and no case's 'planning-only' should be read as proof no tool
-   was available. The bounded check now exists as a **floor**, not a gate: `test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable` in
-   `tests/test_eval_behavioral.py` fails when a NEW case joins the class, and fails again if a
-   listed case is fixed without being removed from the list, so the list can only shrink. Two
-   pieces stay owed here. (1) Deciding each of the 25 cases' real denylist changes what that case
-   measures, which is this item's work. (2) The runner cannot express MCP denial at all — `eval_behavioral.RUNTIME_TOOLS` is built-ins only — so `researcher-unestablished-claim-stays-unverified`
-   denies its built-in retrieval surface and states the MCP residue in its own `expected` field
-   rather than shipping a denylist entry whose CLI handling nothing here has probed. Closing that
-   needs either a probed vocabulary extension or a grader assertion on observed tool calls.
-7. **Two SKILL.md sentences ship unmeasured.** Every after-side artifact binds
-   `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it: the no-signal
-   literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the linter rejects)
-   and the `Destination:` clarification. What survives that gap is exact, not a judgement call —
-   the sentences governing both *measured* assertions are byte-identical between `c8312b3` and the
+5. **The five unsettled LOOP-001/REV-001 contracts have their repairs; each still owes a hold.**
+   Named here because this file is the only live tracker and a remainder list that omits them lets
+   a later session close LEARN-002 with them red. `loop-capture-is-not-closure` (0/3) — its four
+   positive patterns missed gaps rendered as numbered bold headings with the negation on the
+   explaining word, and now accept the negation on either side of the gap noun within one line,
+   repaired as one idiom rather than one pattern at a time. `loop-duplicate-merges-provenance`
+   (0/3) — the closed noun set missed "not a new *signal*", and preservation expressed as merging
+   into the existing record now counts. `loop-source-pass-is-not-released-pass` (1/3) — accepts
+   "necessary but not sufficient"; its **second** pattern is deliberately untouched, because
+   whether the ledger's literal `record-retest` may be replaced by a description of the mechanism
+   is a real design question the 2026-08-15 round flagged as undecided, and the literal is what
+   makes the ledger step actionable. `reviewer-approval-does-not-transfer` (0/3, item 1) and
+   `reviewer-formal-approval-emits-envelope` (0/3, item 3, unrepaired pending the ruling). The
+   sixth, `verifier-envelope-mismatch-fails-closed`, held at 3/3 — with the caveat in item 6, which
+   now bites: that pass was measured with `Glob`/`Grep` reachable and the case is now genuinely
+   tool-denied, so its next run measures a different thing and the 3/3 does not carry forward.
+6. **`allowed_tools: []` now denies.** The discovery stands: the runner turned an empty allowlist
+   into `--tools ""`, which bounds nothing, and denial comes only from `disallowed_tools` — proved
+   by `Grep` executing and reporting the session's real cwd in a re-run. Measured 2026-08-17: 47
+   cases declare an empty allowlist, **42** left at least one granted tool reachable and **26** left
+   `WebFetch`/`WebSearch` reachable, so no case's "planning-only" was ever evidence that no tool was
+   available. Repaired at the one place that covers all 47 rather than by 42 hand-edits:
+   `eval_behavioral.session_denylist` synthesizes a denylist over the whole built-in vocabulary
+   whenever the allowlist is empty, and
+   `test_an_empty_allowlist_is_enforced_for_every_planning_only_case` asserts the property against
+   that function for every shipped case — replacing a 25-entry list of known-leaky ids that could
+   only ever be as current as its last edit. The list-based floor is
+   narrowed to the one residue that is still possible. **Still owed here:** the MCP half.
+   `RUNTIME_TOOLS` is built-ins only, so `researcher-unestablished-claim-stays-unverified` keeps its
+   MCP retrieval reachable and states that in its own `expected`; closing it needs a probed
+   `mcp__…` denial vocabulary or a grader assertion on observed tool calls, and shipping an unprobed
+   denylist entry would be a control in name only. `AGENTS.md`'s use of an empty Claude allowlist as
+   the Codex-lane eligibility test now rests on a property the harness enforces.
+7. **Two SKILL.md sentences ship unmeasured, and a third artifact joins them.** Every after-side
+   artifact binds `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it:
+   the no-signal literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the
+   linter rejects) and the `Destination:` clarification. What survives that gap is exact — the
+   sentences governing both *measured* assertions are byte-identical between `c8312b3` and the
    shipped commit, so `0/9 → 9/9` and `1/9 → 9/9` remain evidence for the shipped bytes. The two
-   amendments themselves have **no** behavioral evidence. The no-signal one is the live risk, since
-   it changes what a session emits for every no-signal scan; the next batch measures it, and until
-   then this fleet's own exact-artifact gate is unsatisfied for those two sentences.
-8. **The `Claude exited 1` resultless-session flake has a live owner here, and this is it.** It hit
-   five before-side and four after-side case batches, never at concurrency 1. The runner grades a
-   resultless session as a contract failure, so an operator who does not notice publishes a
-   corrupted rate — it converted three working contracts into apparent 0/3s in this round alone.
-   Interim workaround, used throughout this round: re-run the affected case at `--concurrency 1` and
-   discard the flaked artifact rather than grading it. Owed: a root cause, and a decision on whether
-   `eval_behavioral.py` should classify a resultless session as `INCONCLUSIVE` rather than a
-   failure — the 2026-08-10 round filed that same runner-design question and it is still open.
-9. **`references/retro-protocol.md` teaches a Provenance grammar the linter rejects.** Line 100
-   still renders `Provenance: <verified/sourced/unverified, source, and freshness>` — the comma form
-   — while `packet_lint` requires the triad word followed by an em dash, `->`, or a colon, which is
-   the grammar `SKILL.md` now states. A skill-only session is fixed and a `Read`-capable session
-   that opens the linked template gets the contradiction, so the repair reached the measured path
-   and left the unmeasured one carrying two conflicting contracts. Owed: align the canonical
-   template and regenerate host copies. Deliberately **not** taken in the round that found it —
-   it is a shipped-behavior change, and making it would have added a third skill sentence with no
-   behavioral evidence to item 7's list rather than shrinking it.
+   amendments have **no** behavioral evidence; the no-signal one is the live risk, since it changes
+   what a session emits for every no-signal scan, and the next batch measures it. Item 9's
+   reference repair is the third, and it is unmeasurable by this suite **by construction** now that
+   item 6 lands: these cases run fully tool-denied, so no session can open a `references/` file.
+   Its consumer is a `Read`-capable session in ordinary use, not a contract here — which is a
+   reason to state the limit, not to leave two canonical files contradicting each other.
+8. **The `Claude exited 1` resultless-session flake no longer corrupts a rate.** It hit five
+   before-side and four after-side case batches, never at concurrency 1, and the runner graded the
+   empty response against every `must_match` — which converted three working contracts into
+   apparent 0/3s in that round alone. A session that returned no result is now a **measurement**
+   failure, excluded from the rate exactly as a run that broke inside the runner is, so the case
+   reports INCONCLUSIVE and exit 3 rather than FAIL and exit 1. Deliberately not the
+   systematic-defect path that stops the batch: this failure is per-session and intermittent, so
+   stopping would discard a paid batch over one flaked run. **Still owed:** the root cause. The
+   workaround stands meanwhile — re-run the affected case at `--concurrency 1`.
+9. **`references/retro-protocol.md` no longer teaches a grammar the linter rejects.** Its line 100
+   rendered `Provenance: <verified/sourced/unverified, source, and freshness>` — the comma form —
+   while `packet_lint` requires the triad word followed by an em dash, `->`, or a colon, which is
+   what `SKILL.md` states. The template now carries the triad-first form and the paragraph
+   explaining why `local`/`official`/`upstream` is source detail rather than a Provenance value.
+   Deliberately taken here rather than deferred again: leaving two canonical files contradicting
+   each other to avoid growing item 7's list traded a live defect for a bookkeeping preference.
 
 Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
 repair has **no measured effect** (its target case was already 3/3 before the edit, on model
@@ -698,14 +742,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-006** — `_vocabulary_head` accepts only `— – - : ( ,` between a closed-set term and its
-  rationale, so an explanatory echo punctuated with a semicolon or a full stop
-  (`Gate: consolidated; the standing approval covers this retry`) is classified as a *corrupted*
-  assertion and fails, while the comma and em-dash renderings pass. Ordinary punctuation alone
-  decides the verdict on identical meaning. Widen the set, or better, stop enumerating punctuation:
-  this is the third false RED in this PR traced to a hand-listed character set (typographic
-  apostrophe in `_UNCHECKABLE`, this separator list), which is the shape of the defect rather than
-  its instances. Source: PR #144 round-8 review.
 - **ORACLE-007** — the vocabulary drift test slices the parsed canonical list to `[:5]`, so a class
   APPENDED to `agents/homelab-platform.md` is discarded before comparison and the guard passes while
   `EFFECT_CLASSES` goes stale — the evaluator would then reject compliant output naming the new

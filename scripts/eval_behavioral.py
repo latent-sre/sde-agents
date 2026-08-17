@@ -448,6 +448,28 @@ def behavioral_evaluator_paths(runtime: str = "claude") -> list[Path]:
     raise ValueError(f"unknown behavioral runtime: {runtime}")
 
 
+# Marks an exclusion caused by a session that returned no result, as distinct from one caused by
+# an exception in the runner. Both are measurement failures and both are excluded, but they send
+# an operator to different places — the CLI and the flake, or this file — so the summary names
+# which it saw rather than reporting every exclusion as a runner defect.
+_NO_RESULT = "no result:"
+
+
+def session_denylist(
+    allowed_tools: list[str] | None, disallowed_tools: list[str] | None
+) -> list[str]:
+    """Return the tools a session must be denied, given what its case declares.
+
+    Separate from `run_session` so a test can assert what every shipped case is actually denied
+    without driving a subprocess — the property this enforces holds for 47 cases at once, and a
+    list of known-leaky case ids can only ever be as current as its last edit.
+    """
+    denied = set(disallowed_tools or [])
+    if allowed_tools is not None and not allowed_tools:
+        denied |= RUNTIME_TOOLS
+    return sorted(denied)
+
+
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, allowed_tools: list[str] | None = None,
     disallowed_tools: list[str] | None = None, agent: str | None = None,
@@ -512,12 +534,27 @@ def run_session(
         # `--tools Bash`. That voided both HANDOFF-001 builder cases, whose whole premise is a
         # prescribed `python -I` command, and it is the same failure the permission-mode comment
         # above records for writes — a case measuring the permission prompt instead of its
-        # contract. An empty allowlist grants nothing on purpose and gets no counterpart: `--tools
-        # ""` already disables every tool, so there is nothing left to permit.
+        # contract. An empty allowlist grants nothing on purpose and gets no counterpart: there is
+        # nothing to permit.
         if allowed_tools:
             command += ["--allowedTools", *allowed_tools]
-    if disallowed_tools:
-        command += ["--disallowed-tools", *disallowed_tools]
+    # `--tools ""` was believed to disable every tool. It does not, and the belief is what made an
+    # empty allowlist a statement of intent rather than a control: in a re-run of
+    # `verifier-envelope-mismatch-fails-closed`, `Grep` EXECUTED and reported the session's real
+    # cwd while the case declared `allowed_tools: []` (raw `tool_use` blocks committed at
+    # evals/baselines/history/2026-08-15-learn-002-tool-events.json). Denial comes only from
+    # `--disallowed-tools`, so an empty allowlist now synthesizes one covering the whole built-in
+    # vocabulary and a planning-only case is planning-only in fact. Measured before this change:
+    # 42 of 47 such cases left at least one granted tool reachable and 26 left WebFetch/WebSearch
+    # reachable, so a case's "planning-only" was never evidence that no tool was available
+    # (docs/fleet-roadmap.md LEARN-002 item 6).
+    #
+    # LIMIT, stated because it is load-bearing: `RUNTIME_TOOLS` is the built-in vocabulary only.
+    # An MCP tool cannot be denied here, so a case whose agent grants MCP tools keeps that residue
+    # and must say so in its own `expected` — shipping an unprobed `mcp__…` denylist entry would
+    # be a control nothing here has verified the CLI honors.
+    if denied := session_denylist(allowed_tools, disallowed_tools):
+        command += ["--disallowed-tools", *denied]
     try:
         with scratch_cwd() as cwd:
             prepare_semantic_workspace(cwd, semantic_oracle)
@@ -1483,8 +1520,9 @@ def main(argv: list[str] | None = None) -> int:
 
     def execute(
         job: tuple[dict, int],
-    ) -> tuple[int, str, list[str], str | None, dict, str]:
+    ) -> tuple[int, str, list[str], str | None, dict, str, str | None]:
         case, run_index = job
+        measurement_error: str | None = None
         if args.runtime == "claude":
             text, fired, note, stats = run_session(
                 case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
@@ -1515,6 +1553,17 @@ def main(argv: list[str] | None = None) -> int:
             if case.get("agent"):
                 fired = fired | {case["agent"].split(":")[-1]}
             if note and not text:
+                # A session that returned no result measured NOTHING about the contract, so it is
+                # a measurement failure and is excluded from the rate — the same treatment a run
+                # that broke inside the runner gets, and for the same reason. Grading the empty
+                # string as a contract failure is how the `Claude exited 1` flake converted three
+                # working contracts into apparent 0/3s in one round (LEARN-002 remainder item 8):
+                # every must_match misses, the case reports FAIL, and an operator who does not
+                # notice the note publishes a corrupted rate. It is deliberately NOT the
+                # systematic-defect path that stops the batch: this failure is per-session and
+                # intermittent (it never struck a case running at concurrency 1), so stopping
+                # would discard the batch over a flake in one run.
+                measurement_error = f"{_NO_RESULT} {note}"
                 failures = [f"session produced nothing: {note}"]
             else:
                 failures = assert_case(
@@ -1529,7 +1578,7 @@ def main(argv: list[str] | None = None) -> int:
         # for the whole batch was the over-correction — total-output-sized memory for text
         # nothing writes (PR #133 finding).
         retained = text if (failures or args.retain_run_evidence) else ""
-        return run_index, case["id"], failures, note, stats, retained
+        return run_index, case["id"], failures, note, stats, retained, measurement_error
 
     done = 0
     auth_mode = None
@@ -1619,7 +1668,8 @@ def main(argv: list[str] | None = None) -> int:
                     job_case, job_run_index = futures.pop(future)
                     runner_error = None
                     try:
-                        run_index, case_id, failures, note, stats, response = future.result()
+                        (run_index, case_id, failures, note, stats, response,
+                         runner_error) = future.result()
                     except availability_errors as exc:
                         auth_failure = exc
                         for pending in futures:
@@ -1788,9 +1838,9 @@ def main(argv: list[str] | None = None) -> int:
         if inconclusive:
             inconclusive_cases.append(case["id"])
         first_failure = next((f for failures in graded if failures for f in failures), "")
-        suffix = f" [{excluded} run(s) excluded: runner error]" if excluded else ""
+        suffix = f" [{excluded} run(s) excluded: nothing graded]" if excluded else ""
         if inconclusive:
-            detail = (f"INCONCLUSIVE — every run failed inside the runner "
+            detail = (f"INCONCLUSIVE — no run produced a graded session "
                       f"({len(attempted)} attempted)")
         else:
             detail = ("all assertions held" if ok else first_failure[:60]) + suffix
@@ -1831,13 +1881,18 @@ def main(argv: list[str] | None = None) -> int:
               f"{', '.join(inconclusive_cases)}")
         print("  Re-run those; they are not evidence about the contract in either direction.")
     if excluded_runs_total:
-        never_run = sum(
-            1 for case in cases for error in runner_errors[case["id"]] if error == "not run"
-        )
-        broke = excluded_runs_total - never_run
-        detail = f"{broke} broke inside the runner"
+        errors = [error for case in cases for error in runner_errors[case["id"]] if error]
+        never_run = sum(1 for error in errors if error == "not run")
+        no_result = sum(1 for error in errors if error.startswith(_NO_RESULT))
+        broke = excluded_runs_total - never_run - no_result
+        parts = []
+        if broke:
+            parts.append(f"{broke} broke inside the runner")
+        if no_result:
+            parts.append(f"{no_result} returned no result from the CLI")
         if never_run:
-            detail += f", {never_run} never launched because the batch stopped"
+            parts.append(f"{never_run} never launched because the batch stopped")
+        detail = ", ".join(parts)
         print(f"! {excluded_runs_total} individual run(s) excluded from rates ({detail}).")
 
     failing_payload = [

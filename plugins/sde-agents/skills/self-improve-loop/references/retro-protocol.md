@@ -99,7 +99,7 @@ Candidates: <normalized candidate -> occurrence evidence>
 Learning: candidate — <selected observed -> expected divergence>
 Evidence: <occurrences and exact revision/version/environment>
 Scope: <applicability and exclusions>
-Provenance: <verified/sourced/unverified, source, and freshness>
+Provenance: <verified|sourced|unverified> — <source and freshness detail>
 Learning disposition: <skip/add/merge/supersede/drop>
 Promotion state: <proposed/approved/promoted/rejected/inconclusive/retired>
 Destination: <exact artifact>
@@ -107,6 +107,13 @@ Owner: <authorized owner>
 Promotion evidence: <targeted, regression/adverse, fresh evaluator, exact artifact>
 Residue: <each other candidate -> disposition + promotion state + destination/owner/reason>
 ```
+
+`Provenance:` opens with one bare triad word and nothing before it. The capture template's
+`local` / `official` / `upstream` vocabulary says *where* evidence came from, so it is source
+detail and belongs after the triad word — `Provenance: verified — local, 2026-08-15`, never
+`Provenance: local, verified — 2026-08-15`. This template taught the second form until
+2026-08-17, so a session that opened it read one grammar here and another in SKILL.md, and
+`scripts/packet_lint.py` accepts only the one above.
 
 `quarantined` is not a full-retro outcome: it is the intake state before the retro chooses a
 disposition. No recurring or material signal means `Learning: none — no reusable signal` and the

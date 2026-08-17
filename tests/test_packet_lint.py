@@ -707,6 +707,159 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             )
 
 
+class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
+    """Each case is a sentence a real session emitted that this linter graded as a defect.
+
+    Every one is quoted from `evals/baselines/history/2026-08-15-learn-002.md` ("Filed, not
+    amended"), which is the bar this repository sets for touching a grader: a grader repaired
+    without the sentence it misread is a grader tuned into agreeing with itself. Each repair is
+    pinned in BOTH directions — the compliant rendering must grade clean, and the violation the
+    rule exists to catch must still fail — because narrowing is exactly the edit that silently
+    turns a guard into a hole.
+    """
+
+    def test_an_echo_rendered_as_inline_code_is_one_declaration(self) -> None:
+        """`self-improve-promotion-gate`, before side: `**Promotion state:** `proposed``.
+
+        The 2026-08-10 repair collapsed a decorated echo but compared the value byte-exact, so
+        re-rendering it as inline code produced two Promotion state fields and failed the
+        exactly-once rule on an otherwise compliant block.
+        """
+        self.assertEqual(
+            [],
+            packet_lint.lint_learning_closeout(
+                lifecycle_owner_learning_block("add", "proposed")
+                + "**Promotion state:** `proposed`\n",
+                "lifecycle-owner",
+            ),
+        )
+
+    def test_an_echo_may_restate_the_value_and_continue_into_rationale(self) -> None:
+        """`self-improve-lifecycle-merge` run 3, the residual that held it at 2/3."""
+        self.assertEqual(
+            [],
+            packet_lint.lint_learning_closeout(
+                lifecycle_owner_learning_block("add", "proposed")
+                + "**Promotion state**: `proposed`. Rollback: none needed for a docs-only "
+                "merge.\n",
+                "lifecycle-owner",
+            ),
+        )
+
+    def test_an_echo_naming_a_different_state_is_still_two_declarations(self) -> None:
+        """The other direction: a continuation may explain the value, never replace it.
+
+        Without this the rationale allowance becomes a hole — the reader is handed two states
+        and no way to tell which one the packet contracts to.
+        """
+        for echo in (
+            "**Promotion state**: `rejected` on reflection.\n",
+            "**Promotion state**: `proposed`. On reflection, rejected.\n",
+            "Promotion state: proposed\n",
+        ):
+            with self.subTest(echo=echo):
+                self.assertTrue(
+                    packet_lint.lint_learning_closeout(
+                        lifecycle_owner_learning_block("add", "proposed") + echo,
+                        "lifecycle-owner",
+                    )
+                )
+
+    def test_collapsing_keeps_the_canonical_line_not_the_echo(self) -> None:
+        """`self-improve-canonical-triaged-candidate` run 1: a bolded summary above the block.
+
+        Retaining the FIRST occurrence kept the echo, which sits outside the block, and the
+        contiguity check then reported a well-formed packet as out of order.
+        """
+        self.assertEqual(
+            [],
+            packet_lint.lint_learning_closeout(
+                "**Learning: candidate — untriaged-only linting -> mode-aware lifecycle "
+                "linting**\n"
+                + lifecycle_owner_learning_block("add", "proposed"),
+                "lifecycle-owner",
+            ),
+        )
+
+    def test_a_second_learning_field_pointing_at_the_block_still_fails(self) -> None:
+        """`learning-slot-operational-agent`'s cause is TEXT, and stays graded as one.
+
+        A back-reference is not a rendering of the canonical line: it carries different words,
+        so a reader cannot recover the contract from it. Collapsing it would need vocabulary for
+        "this is only a pointer", which is the paraphrase surface these labels exist to remove.
+        """
+        self.assertTrue(
+            packet_lint.lint_learning_closeout(
+                lifecycle_owner_learning_block("add", "proposed")
+                + "**Learning**: see candidate block above — handed to the runbook owner for "
+                "triage, not self-applied.\n",
+                "lifecycle-owner",
+            )
+        )
+
+    def test_a_disposition_may_carry_its_rationale_after_the_marker(self) -> None:
+        """`learning-slot-readonly-agent` (0/3): all three runs appended their reasoning.
+
+        The field is the same shape as the gate slots, which have always read `term — rationale`
+        as asserting the term. Requiring the line to END at the marker made the writer serve the
+        linter.
+        """
+        self.assertEqual(
+            [],
+            packet_lint.lint_learning_closeout(
+                lifecycle_owner_learning_block(
+                    "add (proposed recommendation) — pending the owning writer's independent "
+                    "verification of the revisions",
+                    "quarantined",
+                ),
+                "intake",
+            ),
+        )
+
+    def test_a_rationale_naming_a_second_disposition_still_fails(self) -> None:
+        """The other direction, and the reason the allowance is safe.
+
+        Also pinned: the marker itself is not optional at intake, and a run-on with no separator
+        remains a corrupted assertion rather than a value with an explanation.
+        """
+        for disposition in (
+            "add (proposed recommendation) — or merge, whichever the owner prefers",
+            "add — pending verification",
+            "add pending verification",
+        ):
+            with self.subTest(disposition=disposition):
+                self.assertTrue(
+                    packet_lint.lint_learning_closeout(
+                        lifecycle_owner_learning_block(disposition, "quarantined"), "intake"
+                    )
+                )
+
+    def test_ordinary_punctuation_does_not_decide_a_closed_set_verdict(self) -> None:
+        """ORACLE-006: the separator set was hand-listed, so a semicolon read as corruption.
+
+        Closed here rather than separately because the full-stop rendering is what held
+        `self-improve-lifecycle-merge`'s echo uncollapsed above — one boundary rule serves both.
+        A run-on with only whitespace between the term and the next word is still corrupt, which
+        is the distinction the enumerated list was standing in for.
+        """
+        for rationale in ("— your approval covers this", "; the standing approval covers this",
+                          ". The standing approval covers this", ", per the standing approval"):
+            with self.subTest(rationale=rationale):
+                self.assertEqual(
+                    [],
+                    packet_lint.lint_exact_fields(
+                        f"Gate: consolidated\n**Gate**: consolidated{rationale}\n",
+                        {"Gate": "consolidated"},
+                    ),
+                )
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated\n**Gate**: consolidated and re-gated\n",
+                {"Gate": "consolidated"},
+            )
+        )
+
+
 class Tier2ApprovalRequestLeadSlot(unittest.TestCase):
     """The one ordered shape. See scripts/packet_lint.py:SHAPE_LEAD_SLOT for why it is ordered.
 
