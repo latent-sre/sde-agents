@@ -201,7 +201,7 @@ no `Read`.
 
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
 
-**Outcome:** The fleet's 30 canonical definitions are audited against the six published shifts for
+**Outcome:** The fleet's 31 canonical definitions are audited against the six published shifts for
 Claude 5-generation models (rules→judgment, examples→interface design, upfront→progressive
 disclosure, repetition→tool definitions, manual memory→auto-memory, simple specs→rich references),
 and any edit is justified by paired before/after routing and behavioral evidence — or the audit
@@ -391,8 +391,8 @@ digest-negative oracle now requires one exact hash command and correlated result
 seeded workspace, closing the prior receipt-only false green. Red-before-green controls, T0, the
 behavioral-evaluator module, the full suite, and `claude plugin validate . --strict` all passed at
 `dc02bed` (107 evaluator tests, 666 across 30 modules **at that commit** — GRAPH-002 and this
-round's additions have since moved the suite to 837 across 33 modules, so re-run rather than
-compare against those figures).
+round's additions have since grown the suite, so re-run T1 rather than compare against that
+figure; a restated count here would only mint the next stale one).
 
 The plan's three-session Claude diagnostic **has now run** — operator-approved model
 `claude-sonnet-5`, candidate `7074d8d`, CLI 2.1.233, one run each, artifacts and full reading in
@@ -412,7 +412,7 @@ evidence", which does not exist.
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
 proven to fail without it by mutation; an empty allowlist deliberately gets no permission flag,
-since `--tools ""` leaves nothing to permit. T0, the module, T1 (836 tests, 33 modules), and
+since `--tools ""` leaves nothing to permit. T0, the module, T1 (full offline suite), and
 `claude plugin validate . --strict` are green. What remains is the paid half: **re-run the two
 void cases** — `handoff-builder-applies-work-order` and `handoff-builder-rejects-digest-mismatch`
 — under recorded conditions, and confirm the mandated `python -I` commands now execute
@@ -429,7 +429,7 @@ capture be proposed. Do not compare Claude results with the archived Terra appro
 
 **Status:** `ready` — spec approved by the operator 2026-08-09, with the design premise
 re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
-suppression both hold). A host-neutral implementation candidate is open as PR #107 — a
+suppression both hold). The host-neutral implementation **landed** in PR #107, merged 2026-08-11 — a
 model-visible `onboarding-map` skill with its cluster cases, README lane section, and decision
 amendment — and its deterministic gates and adapter parity are green. That is packaging evidence,
 not lane evidence: nothing on that branch measures a Codex host, the spec's Phase-0 host evidence
@@ -505,12 +505,15 @@ half (b) validates the *verdict's content* once the component runs — reachabil
 suite's question, so no behavioral result confirms why the routing positive failed. The Group 4
 rescan's upheld Mode 3 finding rides here unchanged.
 
-**Prerequisites:** None on the capture host — `eval_baseline.py evals/routing/ladder.json
---model sonnet --clean-room` resolves `evals/baselines/2026-08-14-ladder/benchmark.json`
-`REUSABLE` there. The reuse is identity-bound, not unconditional: the stored evaluator identity
-pins the runtime (CPython 3.11.15 recorded), so a host on another Python reports
-`STALE: diverged on evaluator` and owes either that runtime or a fresh 'before' capture before
-any paired comparison.
+**Prerequisites:** A fresh 'before' capture is owed — the stored capture no longer resolves.
+`eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` reports
+`STALE: diverged on evaluator, plugin` for `evals/baselines/2026-08-14-ladder/benchmark.json`,
+verified 2026-08-17 on CPython 3.11.15 — the capture's *own* recorded runtime, so the
+runtime is no longer the binding cause. Two identities moved since the capture:
+`scripts/eval_clean_room.py` (a `routing_evaluator_paths()` member, edited by `4bddd9d`/`8253f2c`
+the day after) and the plugin hash. Reuse remains identity-bound in general — the evaluator
+identity does pin the runtime, so another Python would also diverge — but on every host today
+this cluster owes a fresh capture, not a reuse.
 
 **Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
 description **plus** body: remove the growth-feedback clause from the description and the body's
@@ -675,13 +678,14 @@ second workflow conversion is now the only live ignition.
 
 **Source:** Adaptation backlog's parked re-baseline analysis.
 
-**Prerequisites:** ROUND1-001 measurement path is healthy; run small watched foreground batches;
-fix case-design defects before treating numbers as description evidence.
+**Prerequisites:** Run small watched foreground batches; fix case-design defects before treating
+numbers as description evidence. (The measurement path ROUND1-001 established is healthy; that
+item closed 2026-07-29 and is not a gate.)
 
 **Acceptance:** Every artifact records requested/observed model, timeout, CLI version, threshold,
 and per-run evidence; no known-invalid artifact is called an anchor.
 
-**Two facts established 2026-07-29 that shape this item:**
+**Three facts established 2026-07-29 that shape this item:**
 
 1. **The native `claude plugin eval` is still gated** — the subcommand now exists with ablation,
    graders, and JSON output, but invoking it returns "`plugin eval` is currently in early access"
@@ -796,7 +800,7 @@ The initial and deep reviews are consolidated in
 | Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
 | `homelab-platform` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
 | `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
-| Eval coverage stops at one routing cluster with no behavioral checks | Six routing clusters, the behavioral runner, packet linter, and 21 deterministic contracts exist | Machinery landed; additional contract coverage survives below |
+| Eval coverage stops at one routing cluster with no behavioral checks | Ten routing clusters, the behavioral runner, packet linter, and 67 deterministic contracts exist (counts as of 2026-08-17; `evals/` owns the current figures) | Machinery landed; additional contract coverage survives below |
 | Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
 | Body cross-reference namespacing is inconsistent | Descriptions are validator-enforced; body text follows the namespaced-when-invocable convention, with bare names reserved for content already in context | No current broken route found; close |
 | `sre-tool` keeps multi-component detail in its always-loaded core | `skills/sre-tool/references/multi-component.md` now owns that conditional material | Landed; exclude |
@@ -822,7 +826,7 @@ must not seed new work.
 | Historical item | Current evidence | Disposition |
 |---|---|---|
 | `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
-| `restore-drill` and `upgrade-campaign` | Both appear in the generated 19-skill inventory | Landed; exclude despite the backlog's stale “remain open” sentence |
+| `restore-drill` and `upgrade-campaign` | Both appear in the generated skill inventory (20 skills as of 2026-08-17; `README.md` owns the current count) | Landed; exclude despite the backlog's stale “remain open” sentence |
 | `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
 | `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-platform` | Landed; exclude |
 | `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
@@ -831,7 +835,7 @@ must not seed new work.
 | Prompt-craft eval wiring | The retest step now requires the repository harness before/after | Landed; exclude |
 | Runbook worked example | `skills/runbook/references/example.md` exists | Landed; exclude |
 | Root-cause intermittence reference | No file exists, but the proposal was explicitly optional and no repeated failure demonstrates a consumer | Close; reopen after an observed probabilistic-debugging miss |
-| PowerShell craft reference | No file exists; the operator decided it is needed and active Round 1 Items A/B own it | Survives as active Round 1 work |
+| PowerShell craft reference | `skills/code-craft/references/powershell.md` ships it; Round 1 closed 2026-07-29 | Landed; exclude |
 | Full routing re-baseline | No comparable current anchor exists; prior attempts are invalid or incomplete | Survives as deferred measurement work |
 
 ### ECC residue
@@ -851,20 +855,23 @@ The two source reviews are consolidated in
 
 ### Role and governance review
 
-The proposed
+The accepted
 [`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) preserves the
 2026-07-28 review's method, role boundaries, evidence, and reopen triggers. Static inspection and
-direct reproduction left these candidates for the live roadmap:
+direct reproduction raised six candidates for the live roadmap, and **all six have since landed**
+— they are recorded here as the review's outcome, not as work:
 
-- malformed guarded JSON returns the authoritative allow sentinel;
-- one routing positive accepts a component outside its declared cluster;
-- rebrand the visible homelab role and add Linux-host triggers without renaming its key;
-- add the action-shaped `host-onboard` skill;
-- add an application-security auditor with a non-PR remit;
-- design test-execution authority, then add an independent verification engineer.
+- malformed guarded JSON returns the authoritative allow sentinel → GOV-001, PR #40 (the guard now
+  answers `EXIT_INDETERMINATE`);
+- one routing positive accepts a component outside its declared cluster → EVAL-001, PR #40;
+- rebrand the visible homelab role and add Linux-host triggers without renaming its key → ROLE-001;
+- add the action-shaped `host-onboard` skill → `skills/host-onboard/`;
+- add an application-security auditor with a non-PR remit → `agents/application-security-auditor.md`;
+- design test-execution authority, then add an independent verification engineer → ROLE-003/ROLE-004,
+  `agents/verification-engineer.md`, PR #43.
 
-The current-work sections above carry these survivors, the active Round 1 work, the deferred
-routing measurement, ECC behavioral residue, and the trigger-bound compose asset.
+What still survives from this review sits in the current-work sections above: the deferred routing
+measurement, ECC behavioral residue, and the trigger-bound compose asset.
 
 ### Roster-expansion design branch
 
@@ -873,11 +880,11 @@ The detailed source design is preserved at
 
 | Historical proposal | Current disposition |
 |---|---|
-| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; no second testing agent yet |
+| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; shipped as `agents/verification-engineer.md` (PR #43) |
 | Running-lab `security-audit` | Survives as LABSEC-001, distinct from repository application security |
-| Guard-enforced `lab-inspector` | Survives as blocked LABSEC-002 behind GOV-001 and command-level validation |
+| Guard-enforced `lab-inspector` | Survives as LABSEC-002, now `ready` — GOV-001 and DEPLOY-001 landed, so its prerequisites are satisfied |
 | `release` | Survives as trigger-bound RELEASE-001 |
-| `porting-method` | Survives as trigger-bound PORT-001 |
+| `porting-method` | Landed as PORT-001 (PR #45) and left this tracker; the convention is documented in `README.md` |
 | Home-lab SRE description line | Folded into ROLE-001's rebrand without changing the component key |
 | Standalone secrets component | Remains rejected; lab posture belongs inside LABSEC-001 if accepted |
 | Generic Linux references | Superseded by ROLE-001's action-shaped `host-onboard` boundary |
