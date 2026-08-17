@@ -2,8 +2,8 @@
   "applicability": "any always-loaded prose artifact long enough to contain two rules about the same position. The conflict is invisible to static review because both sentences are individually correct; only a behavioral run shows which one the model obeys",
   "candidate_id": "lc_8f572581438d407782e8371d3507d59a",
   "created_at": "2026-08-13T06:08:22.409847Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "agents/prompt-engineer.md Craft knowledge form-to-failure guidance",
+  "disposition": "add",
   "evidence": {
     "environment": "python-3.12/windows",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-12T06:08:22.409847Z"
   },
   "observation": "A prose ordering rule in an agent file was defeated by an earlier directive in the same file. homelab-platform's prime directive 1 said to state the rollback plan 'before touching anything', which reads temporally to a human and positionally to a model: sessions opened their approval request with a Rollback section, one annotating it '(stated before any action, per directive 1)', which pushed the operator-visible effect down the page. The new rule was added lower in the file and lost.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Verified by paired behavioral capture: rewording the incumbent directive moved the ordering contracts from zero of six to five of six across two after-side captures, where no wording of the new rule alone had moved them. The site fix landed in the homelab agent, but the authoring method is unwritten: the form-to-failure tables treat wrong output shape as a recipe problem and never say to find the earlier sentence already claiming that position. Static review cannot see the conflict because both sentences are individually correct. Ships with its residual-rate reporting requirement.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-13T06:08:22.409847Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-13T06:08:22.409847Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:56:39.234751Z",
+      "destination": "agents/prompt-engineer.md Craft knowledge form-to-failure guidance",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Verified by paired behavioral capture: rewording the incumbent directive moved the ordering contracts from zero of six to five of six across two after-side captures, where no wording of the new rule alone had moved them. The site fix landed in the homelab agent, but the authoring method is unwritten: the form-to-failure tables treat wrong output shape as a recipe problem and never say to find the earlier sentence already claiming that position. Static review cannot see the conflict because both sentences are individually correct. Ships with its residual-rate reporting requirement.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-17T11:56:39.234751Z"
 }

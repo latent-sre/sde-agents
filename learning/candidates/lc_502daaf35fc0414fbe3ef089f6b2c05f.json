@@ -2,8 +2,8 @@
   "applicability": "sde-agents rounds closed by any host; a third self-referential ledger candidate is the stop signal to hand this theme to the LOOP-001 spec rather than file more records.",
   "candidate_id": "lc_502daaf35fc0414fbe3ef089f6b2c05f",
   "created_at": "2026-08-09T15:31:34.146953Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "AGENTS.md Change playbooks, Closing a task that surfaced a discovery",
+  "disposition": "merge",
   "evidence": {
     "environment": "sde-agents repository, Claude Code session",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-08T15:31:34.146953Z"
   },
   "observation": "TIER-001 closed with zero learning-ledger candidates filed; the round's durable lesson (profiler fractions do not predict wall-clock attribution; controlled same-machine A/B is the instrument) was written only to one host's project session memory, invisible to other hosts and contributors, and reached the repository only when a later session's closeout noticed and repaired the gap.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "promoted",
+  "reason": "Promoted against landed prose: the change-playbook entry for closing a task that surfaced a discovery requires it to be routed, filed as a gap, or dropped with a stated reason, and states that silence is not a disposition. The closeout gap this record named is therefore closed, and the record now supplies that rule's originating evidence rather than requesting new text. Recurrence confirms the behavior changed: thirty candidates were created in the five days after the rule landed, against the zero-intake window this record reported.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,34 @@
     "last_attested_at": "2026-08-09T15:31:34.146953Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-09T15:31:34.146953Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:57:24.814881Z",
+      "destination": "AGENTS.md Change playbooks, Closing a task that surfaced a discovery",
+      "disposition": "merge",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Triaged out of quarantine against landed prose: the guide now requires every discovery to be routed, filed as a gap, or dropped with a stated reason, and states that silence is not a disposition.",
+      "to": "proposed"
+    },
+    {
+      "at": "2026-08-17T11:57:24.925940Z",
+      "destination": "AGENTS.md Change playbooks, Closing a task that surfaced a discovery",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Approved: the rule this record asked for exists in canonical guide prose, and intake recurrence is independently observable, so promotion rests on landed text rather than on intent.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-17T11:57:25.034398Z",
+      "destination": "AGENTS.md Change playbooks, Closing a task that surfaced a discovery",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Promoted against landed prose: the change-playbook entry for closing a task that surfaced a discovery requires it to be routed, filed as a gap, or dropped with a stated reason, and states that silence is not a disposition. The closeout gap this record named is therefore closed, and the record now supplies that rule's originating evidence rather than requesting new text. Recurrence confirms the behavior changed: thirty candidates were created in the five days after the rule landed, against the zero-intake window this record reported.",
+      "to": "promoted"
+    }
+  ],
+  "updated_at": "2026-08-17T11:57:25.034398Z"
 }

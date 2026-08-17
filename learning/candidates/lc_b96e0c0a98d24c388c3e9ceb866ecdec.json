@@ -2,8 +2,8 @@
   "applicability": "Any host verifying a workflow edit offline; observed on Node 24.",
   "candidate_id": "lc_b96e0c0a98d24c388c3e9ceb866ecdec",
   "created_at": "2026-08-10T06:36:18.330328Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "AGENTS.md Change playbooks, a new Editing a workflow entry",
+  "disposition": "add",
   "evidence": {
     "environment": "Node v24.16.0, Windows 11, Git Bash",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-09T06:36:18.330328Z"
   },
   "observation": "A whole-file node syntax check rejects the workflow at the body top-level return statement, and it does so identically on unmodified committed bytes and on edited bytes, so the obvious offline instrument reports a failure that is not the editor's change and reads as a break in the fleet's only workflow, which already has a history of load failures.",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "proposed",
+  "reason": "Verified: a whole-file parse of the shipped workflow fails identically on committed and edited bytes, because the runtime wraps the body, which is what makes the top-level return still present in that file legal. The validator's meta contract is documented, but no file names the invalid instrument, so the next editor's first offline check reports a false break in the fleet's only workflow, which already has two load-failure incidents. A second record now wants this same missing playbook, which is the named consumer the proportionality gate asks for.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-10T06:36:18.330328Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-10T06:36:18.330328Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:56:39.341077Z",
+      "destination": "AGENTS.md Change playbooks, a new Editing a workflow entry",
+      "disposition": "add",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Verified: a whole-file parse of the shipped workflow fails identically on committed and edited bytes, because the runtime wraps the body, which is what makes the top-level return still present in that file legal. The validator's meta contract is documented, but no file names the invalid instrument, so the next editor's first offline check reports a false break in the fleet's only workflow, which already has two load-failure incidents. A second record now wants this same missing playbook, which is the named consumer the proportionality gate asks for.",
+      "to": "proposed"
+    }
+  ],
+  "updated_at": "2026-08-17T11:56:39.341077Z"
 }

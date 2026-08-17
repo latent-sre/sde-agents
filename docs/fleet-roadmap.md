@@ -467,13 +467,17 @@ amendment, not a roadmap sentence.
 2. The paired `homelab-ops` before/after captures. `eval_baseline.py` returns `STALE` for this
    cluster, so the 'before' side is a fresh capture at merge base `4fef0ce`, not a stored reuse.
 3. The recorded Codex smoke run (spec line 92), which must exercise a **released** artifact. The
-   1.7.3 release records 19 skills (`evals/baselines/2026-08-10-rel-173/conditions.md`) and this
-   map would be the twentieth, so the run waits on a 1.7.4 release tail and is filed through the
-   ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source PASS is never
-   reportable as released-artifact PASS, is exactly this case.
+   last release to record its skill inventory captured 19 skills
+   (`evals/baselines/2026-08-10-rel-173/conditions.md`, taken under the pre-correction `1.7.3`
+   label) and this map would be the twentieth, so the run waits on the **next release tail** and is
+   filed through the ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source
+   PASS is never reportable as released-artifact PASS, is exactly this case. Name the version from
+   the manifests at that time, not from this entry: the fleet corrected its numbering to the
+   `0.7.x` line, so the `1.7.x` labels in older evidence and in the ledger's stored release stamps
+   are historical, not a series that continues.
 
 **Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then captures
-the paired routing run; the smoke run follows the 1.7.4 release.
+the paired routing run; the smoke run follows the next release.
 
 **Rides this item (PROP-002 deferral, 2026-08-13).** `onboarding-map`'s description restates "this
 authorizes nothing" a fourth time; the body's three other copies were reconciled in `eb53758`, but
@@ -605,6 +609,69 @@ no coordinator transcript artifact exists here to consume, and a mechanism witho
 consumer waits. (3) Agents writing packets to a well-known scratch file — **recommended: decline**;
 that is the substitute store `self-improve-loop` forbids for foreign repositories, and it invents a
 write authority read-only roles do not hold.
+
+#### LEDGER-001 — the promoted set has no absorption or drift coverage
+
+**Status:** `ready` — diagnosis complete from a full 53-record audit; each repair below is
+independently landable.
+
+**Outcome:** A lesson recorded as `promoted` is one a reader can trust landed, because something
+other than a manual audit checks that claim. Three specific records are reconciled with the tree,
+and the coverage gap that hid them is either closed or stated where a reader of "promoted" sees it.
+
+**Source:** 2026-08-17 ledger audit (this session), verifying all 28 then-promoted and 4 retired
+records against their destinations. Four findings, each verified at revision `a83b66c`:
+
+1. **`lc_6216159a` — the host-specific half never landed.** Its destination is the researcher's
+   Method 3 and its expected behavior names a concrete redirect fact (one vendor docs host is a
+   redirect shell for another, so callers should target the real host). `agents/researcher.md` has
+   never contained that host name — `git log -S` over that path returns empty — while the
+   *generalized* clause (read the raw artifact when a claim hinges on a literal string) did ship in
+   the same promotion commit. So the promotion was partial. Its retest reference additionally
+   asserts the destination text shipped, which the tree contradicts. Complication to settle first:
+   a later investigation records that same domain as egress-blocked here, which may make the
+   original lesson unactionable as written — resolve which fact is current before writing prose.
+2. **`lc_546acdcc` — the rule is in no live governing artifact.** Its lesson (a change to
+   workflow-shape bytes is exercised by at least one live workflow load before the release
+   containing it closes; validator-green is never reported as loadable) has the strongest field
+   evidence in the store — the same file shipped validator-green and unloadable twice, in opposite
+   directions — and no standing rule behind it. Its declared destination, LOOP-001, closed to an
+   archive record, and `AGENTS.md` has no "Editing a workflow" playbook. `probe_plugin.py` drives a
+   live workflow but writes its own throwaway file, so it cannot catch this class. Note the named
+   consumer: `lc_b96e0c0a` (now `proposed`) wants that same missing playbook for the complementary
+   half — which offline instrument is *invalid* — so one playbook entry closes both.
+3. **`lc_36adb3d0` — promoted, failure class still reachable.** Its lesson is that a red check
+   which can be silently merged over is no gate. `.github/workflows/validate.yml` runs only
+   `ubuntu-latest` on `pull_request` (all three OSes on push and the weekly sweep), so a
+   macOS-only regression merges green, goes red on main's push run, and later PRs merge over it
+   because their own required checks are ubuntu-only. That is the deliberate T2 cost split, not an
+   accident — but it means the record's own first transition ("Gap MOVED rather than closed") was
+   right and it advanced to `promoted` anyway. Not a rejection: the enforcement half genuinely
+   shipped. Owed is a scope narrowing or a `review` renewal so `promoted` does not read as "this
+   class is closed".
+4. **The coverage gap that hid all three.** `scripts/ledger_drift.py` is a required CI check, but
+   it filters to `PENDING_STATES`, so every `promoted` and `retired` record has zero automated
+   destination-drift coverage. This is scoped deliberately (its docstring says "pending"), which is
+   why findings 1–3 needed a manual audit and why `lc_0fe6c3d1`'s line-pin could drift unnoticed.
+
+**Prerequisites:** None. Finding 1 owes the egress-versus-redirect question first; findings 2–4 are
+independent.
+
+**Acceptance:** Findings 1 and 2 land their prose with the reader check the doc-side rule requires,
+or are dropped with a stated reason. Finding 3 records its narrowing. Finding 4 either extends
+drift coverage to terminal states with a firing test, or states the limitation in
+`learning/README.md` where a reader of `promoted` would see it — proportionality decides which, and
+the audit-shaped alternative is a scheduled manual pass, not silence.
+
+**Next action:** Settle finding 1's egress-versus-redirect question, then write the single
+"Editing a workflow" playbook entry that closes finding 2 and `lc_b96e0c0a` together.
+
+**Known un-correctable by CLI:** `lc_0fe6c3d1`'s destination pins
+`agents/homelab-platform.md:27`, where the rule now sits near line 55. The ledger enforces
+`destination` equal to the latest transition's, and `promoted` may only move to `rejected` or
+`retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
+Leave it until that record next transitions legitimately; the correct stable reference is the
+Tier 0 "read-only is not capture-safe" bullet.
 
 ### Small items
 

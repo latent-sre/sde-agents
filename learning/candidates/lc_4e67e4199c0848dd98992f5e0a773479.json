@@ -2,8 +2,8 @@
   "applicability": "Any future session doing structural edits to records or docs",
   "candidate_id": "lc_4e67e4199c0848dd98992f5e0a773479",
   "created_at": "2026-08-13T18:43:50.463874Z",
-  "destination": null,
-  "disposition": null,
+  "destination": "none - declined, reopen as a fresh record on recurrence",
+  "disposition": "drop",
   "evidence": {
     "environment": "Claude Code remote container, fleet source repository",
     "provenance": "verified",
@@ -18,9 +18,9 @@
     "review_at": "2026-09-12T18:43:50.463874Z"
   },
   "observation": "In-place file surgery via ad-hoc string slicing can truncate a document silently and still report success; the Edit tool's exact-match contract refuses precisely this class of error",
-  "owner": null,
-  "promotion_state": "quarantined",
-  "reason": null,
+  "owner": "fleet-maintainer",
+  "promotion_state": "rejected",
+  "reason": "Verified but over-specialized: a single self-caught slice bug that discarded about 130 lines, recovered from git, with no shipped consequence and no fleet artifact that owns how an agent edits a document. The instruments that bounded it already exist, namely git recovery and the post-edit check that caught it. A new prose rule for one scripting slip would add always-loaded text with no named consumer, which the proportionality gate refuses. Dropped rather than skipped: a second independent occurrence justifies a fresh record, which the evidence gate for returning from an adverse state requires anyway.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -47,6 +47,16 @@
     "last_attested_at": "2026-08-13T18:43:50.463874Z",
     "statement": "Operator attested that the candidate contains no raw transcripts, secrets, credentials, or executable instructions."
   },
-  "transition_history": [],
-  "updated_at": "2026-08-13T18:43:50.463874Z"
+  "transition_history": [
+    {
+      "at": "2026-08-17T11:57:04.787039Z",
+      "destination": "none - declined, reopen as a fresh record on recurrence",
+      "disposition": "drop",
+      "from": "quarantined",
+      "owner": "fleet-maintainer",
+      "reason": "Verified but over-specialized: a single self-caught slice bug that discarded about 130 lines, recovered from git, with no shipped consequence and no fleet artifact that owns how an agent edits a document. The instruments that bounded it already exist, namely git recovery and the post-edit check that caught it. A new prose rule for one scripting slip would add always-loaded text with no named consumer, which the proportionality gate refuses. Dropped rather than skipped: a second independent occurrence justifies a fresh record, which the evidence gate for returning from an adverse state requires anyway.",
+      "to": "rejected"
+    }
+  ],
+  "updated_at": "2026-08-17T11:57:04.787039Z"
 }
