@@ -612,6 +612,15 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
+  a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
+  approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
+  term, or no term at all still fails. The trade was deliberate — counting explanatory prose as a
+  second contract false-RED'd behaviorally correct answers — and each case's `must_not_match`
+  assertions carry contradiction detection meanwhile, but they name specific claims rather than the
+  general shape. Either restore conflict detection for contradicting prose under a declared slot,
+  or record the reliance on per-case negatives as the accepted design. Source: ORACLE-001 close,
+  this branch.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
