@@ -500,6 +500,12 @@ def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | Non
     return None, False
 
 
+def _is_bare_declaration(value: str, term: str) -> bool:
+    """True when a value is the closed-set term itself, carrying no rationale."""
+    undecorated = _DECORATION_RE.sub("", value)
+    return _strip_sentence_punctuation(undecorated).casefold().strip() == term
+
+
 def _collapse_agreeing_vocabulary_restatements(
     occurrences: list[tuple[int, str]], vocabulary: tuple[str, ...]
 ) -> list[tuple[int, str]]:
@@ -523,6 +529,18 @@ def _collapse_agreeing_vocabulary_restatements(
         for index, value in occurrences
     ]
     if any(corrupted for *_, corrupted in classified):
+        return occurrences
+    # Two BARE declarations are two declarations, not a statement and its explanation. The rest of
+    # this module already holds that line (`Learning disposition: merge` twice is two fields), and
+    # exempting the gate slots from it would let a duplicated or malformed block pass the
+    # exactly-once contract. Only a rendered or explanatory echo — a term carrying rationale, or
+    # prose under the reused label — is folded.
+    bare = [
+        value
+        for _, value, term, _ in classified
+        if term is not None and _is_bare_declaration(value, term)
+    ]
+    if len(bare) > 1:
         return occurrences
     naming = [(index, value) for index, value, term, _ in classified if term is not None]
     distinct = {term for *_, term, _ in classified if term is not None}

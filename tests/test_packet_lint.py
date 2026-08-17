@@ -472,6 +472,10 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         for conflicting in (
             "Gate: consolidated\nGate: new\n",
+            # Two BARE declarations are two declarations. The rest of this module already holds
+            # that line for `Learning disposition`, and exempting the gate slots would let a
+            # duplicated or malformed block pass the exactly-once contract.
+            "Gate: consolidated\nGate: consolidated\n",
             # An assertion that opens with the term and runs on without a separator is corrupted,
             # not elaboration, and must not be explained away.
             "Gate: consolidated\nGate: consolidated and re-gated\n",
