@@ -71,6 +71,14 @@ NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENT
 # nothing. The version moves because a v3 selection hash was computed over different bytes and
 # cannot be compared with a v4 one — reporting that as "selection diverged" would misattribute a
 # schema change to a routing change.
+#
+# Two later hashing changes in the same PR deliberately did NOT take a v5, and the reason is the
+# rule for the next one: the version exists so a STORED capture computed under older rules is
+# reported as a schema difference rather than a routing one. Every stored capture is v3 (8) or
+# unversioned (17) — no v4 capture has ever been written — and `provenance_divergences` returns on a
+# schema mismatch before it compares `selection`, so those captures can never reach the changed
+# hashing at all. A v5 would therefore rename something no reader can observe. Bump when a capture
+# exists that the change would misreport; not merely because the hash moved.
 PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v4"
 
 # `claude --plugin-dir` discovers these authored/runtime surfaces. The allowlist is deliberate:
@@ -318,6 +326,9 @@ def evaluator_identity(paths: list[Path]) -> dict:
 
 
 GRADED_CASE_FIELDS = ("id", "polarity", "prompt", "expect_fires", "expect_not_fires")
+# Graded as SETS by `_scoring_targets`, so their array order and any duplicate are invisible
+# to every verdict and must be invisible to the identity too.
+_UNORDERED_TARGET_FIELDS = frozenset({"expect_fires", "expect_not_fires"})
 
 
 def _graded_definition(case: dict) -> dict:
@@ -336,7 +347,17 @@ def _graded_definition(case: dict) -> dict:
     narrowing exists to stop, reintroduced by the narrowing itself. If per-case thresholds are ever
     implemented, this entry returns in that same change (PR #145 review).
     """
-    return {field: case[field] for field in GRADED_CASE_FIELDS if field in case}
+    return {
+        # `expect_fires` / `expect_not_fires` are hashed as sorted unique values because
+        # `_scoring_targets` returns `set(raw_targets)` — order and duplicates are both discarded
+        # before anything is graded, so preserving array order here made a pure reorder read as a
+        # routing change and demanded a fresh paid capture. Same reason `members` is sorted above
+        # (PR #145 review). Every other graded field keeps its literal value: `prompt` and `id` are
+        # compared as written, and `polarity` is a scalar.
+        field: sorted(set(case[field])) if field in _UNORDERED_TARGET_FIELDS else case[field]
+        for field in GRADED_CASE_FIELDS
+        if field in case
+    }
 
 
 def selection_identity(

@@ -89,6 +89,47 @@ class EvalBaselineTests(unittest.TestCase):
             eval_routing.selection_identity("*", [regraded])["sha256"],
         )
 
+    def test_reordering_a_target_list_does_not_stale_a_baseline(self) -> None:
+        """Risk: the scorer sets these lists, so array order can't change a verdict — only a hash.
+
+        `_scoring_targets` returns `set(raw_targets)`, so reordering `expect_fires` or dropping a
+        duplicate produces byte-identical grading. While the identity preserved array order, that
+        edit reported STALE and demanded a fresh paid capture for a change no verdict could see —
+        the same class of protects-nothing invalidation this narrowing exists to remove. Remove
+        `expect_fires`/`expect_not_fires` from `_UNORDERED_TARGET_FIELDS` and the first two
+        assertions fail.
+        """
+        base = {"id": "pos-x", "polarity": "positive", "prompt": "p",
+                "expect_fires": ["prompt-craft", "prompt-engineer"]}
+        original = eval_routing.selection_identity("*", [base])["sha256"]
+        for label, targets in (
+            ("reordered", ["prompt-engineer", "prompt-craft"]),
+            ("duplicated", ["prompt-craft", "prompt-engineer", "prompt-craft"]),
+        ):
+            with self.subTest(edit=label):
+                self.assertEqual(
+                    original,
+                    eval_routing.selection_identity(
+                        "*", [dict(base, expect_fires=targets)]
+                    )["sha256"],
+                )
+        # The set's CONTENTS are graded, so changing them must still move the hash.
+        self.assertNotEqual(
+            original,
+            eval_routing.selection_identity(
+                "*", [dict(base, expect_fires=["prompt-craft", "code-reviewer"])]
+            )["sha256"],
+        )
+        # A negative's forbidden set is graded the same way and gets the same treatment.
+        negative = {"id": "neg-x", "polarity": "negative", "prompt": "p",
+                    "expect_not_fires": ["prompt-craft", "prompt-engineer"]}
+        self.assertEqual(
+            eval_routing.selection_identity("*", [negative])["sha256"],
+            eval_routing.selection_identity(
+                "*", [dict(negative, expect_not_fires=["prompt-engineer", "prompt-craft"])]
+            )["sha256"],
+        )
+
     def test_a_case_level_threshold_does_not_stale_a_baseline(self) -> None:
         """Risk: the narrowing that removed re-buys reintroduced one via an inert field.
 
