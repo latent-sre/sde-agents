@@ -644,6 +644,21 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
   something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
   1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
+- **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
+  (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
+  emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
+  `Gate: \`consolidated\`` and `Gate: _consolidated_` are graded as wrong values. Emphasising the
+  value is the more natural rendering of the two, so this is likely to fire rather than latent — it
+  has simply not appeared in a graded run yet. Apply the same normalization in the comparison, with
+  a firing test per rendering. Note when fixing: this is the fourth defect in this construct traced
+  to decoration or punctuation handling, so prefer one normalization applied everywhere over another
+  local strip. Source: PR #144 round-10 review.
+- **GATE-003** — `agents/homelab-platform.md` requires an `Instrument` line on every gate statement
+  and offers `fresh request required|n/a`, but defines only the first. A session facing a gate with
+  no broker instrument — a repository or reviewer gate, or the documented broker-absent continuation
+  this same agent describes — cannot tell whether that is `n/a` or a fresh request that cannot be
+  created, so two sessions can emit contradictory machine-readable decisions for one state. Define
+  `n/a`'s exact conditions beside the fresh-request definition. Source: PR #144 round-10 review.
 - **ORACLE-002** — `lint_exact_fields` now reads prose under a reused slot label as elaboration, so
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
