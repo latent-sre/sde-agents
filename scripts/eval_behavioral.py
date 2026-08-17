@@ -20,8 +20,8 @@ change to a definition whose behavior it covers. Written artifacts share the rou
 source, selection, evaluator, and runtime-content provenance contract and are refused if those
 inputs move during a batch.
 
-    python3 scripts/eval_behavioral.py                       # all cases, 1 run each
-    python3 scripts/eval_behavioral.py --runs 3
+    python3 scripts/eval_behavioral.py                       # all cases, 5 runs each
+    python3 scripts/eval_behavioral.py --runs 1              # smoke test, not a measurement
     python3 scripts/eval_behavioral.py --case packet-slots-* --output-dir /tmp/after
     python3 scripts/eval_behavioral.py --runtime codex --case handoff-simple-build-stays-short \
         --model gpt-5.6-terra --reasoning-effort medium
@@ -882,6 +882,18 @@ def validate_behavioral_case(
                     findings.append(
                         f"exact_fields[{label!r}] must be a non-empty exact string value"
                     )
+                    continue
+                # A vocabulary-backed label grades against a finite set the agent file declares.
+                # An undeclared value here would be unreachable by any compliant answer, so the
+                # case would fail every run while reading as a behavioral finding.
+                vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
+                if vocabulary is not None and exact_value.casefold() not in {
+                    value.casefold() for value in vocabulary
+                }:
+                    findings.append(
+                        f"exact_fields[{label!r}] value {exact_value!r} is outside its closed "
+                        f"vocabulary: {', '.join(vocabulary)}"
+                    )
 
     required_gaps = case.get("runbook_required_gaps")
     if required_gaps is not None:
@@ -1291,7 +1303,10 @@ def main(argv: list[str] | None = None) -> int:
         return load_current_evaluator().main(argv)
 
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--runs", type=int, default=1, help="runs per case (default 1)")
+    # Five is the fleet's grading base, not a nicety. Three cannot separate a real defect from
+    # variance on these cases: identical committed bytes scored 1/3 and 3/5 on consecutive
+    # batches, and a 3/3 hid a duplicate-slot defect that n=5 caught on the next run.
+    parser.add_argument("--runs", type=int, default=5, help="runs per case (default 5)")
     parser.add_argument("--case", default="*", help="glob over case ids (default all)")
     parser.add_argument("--timeout", type=int, default=600, help="per-session timeout in seconds")
     parser.add_argument("--concurrency", type=int, default=3)

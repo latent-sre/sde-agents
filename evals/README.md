@@ -223,25 +223,26 @@ honored its own contract — so "the agents comply with their packet rules" was 
 claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
 
 ```bash
-python3 scripts/eval_behavioral.py --runs 1              # all cases
+python3 scripts/eval_behavioral.py                       # all cases, five runs each
 python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
 ```
 
 Behavioral is **all-or-nothing per case**: every graded run must satisfy every assertion, because a
-contract that holds two runs in three is a contract that does not hold. "Graded" excludes a run the
+contract that holds four runs in five is a contract that does not hold. "Graded" excludes a run the
 runner itself broke on — those are recorded as `runs_excluded` with the exception text, and a case
 whose every run broke is `INCONCLUSIVE`, never a failure. The exit codes carry that distinction the
-way routing's do: `0` every graded case passed, `1` a case failed (a contract verdict to
-investigate), `3` nothing failed but something was `INCONCLUSIVE` (re-run it; the runner broke, the
-agent was not measured), `2` a usage, authentication, or provenance error for which no benchmark was
-written.
+way routing's do: `0` every graded case passed with every requested run graded, `1` a case failed (a
+contract verdict to investigate), `3` nothing failed but the measurement is incomplete — a case was
+`INCONCLUSIVE`, **or any single run was excluded**, because a verdict computed over four of five
+requested runs holds over a denominator the operator did not ask for, `2` a usage, authentication, or
+provenance error for which no benchmark was written.
 
 The default `claude` runtime retains the complete case surface. The `codex` runtime is deliberately
 bounded to direct-agent cases that declare `allowed_tools: []` and no `permission_mode`; skill
 cases, tool-enabled cases, and cases requiring a Claude permission mode are refused before a model
 call. A writer-role profile is eligible only when the selected contract explicitly declares
 `allowed_tools: []`; the Codex session still runs read-only. The lane's invocation is explicit —
-`python3 scripts/eval_behavioral.py --runs 3 --runtime codex --case <eligible-case-or-glob>
+`python3 scripts/eval_behavioral.py --runtime codex --case <eligible-case-or-glob>
 --model <exact-slug> --reasoning-effort <effort>` — because Codex requires the exact model slug
 and reasoning effort, and the `--case` selection must contain only lane-eligible cases: the
 preflight validates every selected case and refuses the whole run on the first ineligible one, so

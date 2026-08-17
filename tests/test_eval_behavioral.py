@@ -12,6 +12,7 @@ from __future__ import annotations
 import concurrent.futures
 import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -512,7 +513,8 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
         "distinguished-evolution-plan-has-valuable-stop-points",
         "gate-broker-unavailable-continuation",
         "gate-owner-attribution-stacked",
-        "gate-same-effect-consolidation",
+        "gate-same-effect-consolidation-deletion",
+        "gate-same-effect-consolidation-retry",
         "handoff-discovery-is-evidence-and-capture-safe",
         "handoff-first-artifact-keeps-open-work",
         "handoff-producer-preserves-discovered-constraints",
@@ -657,10 +659,12 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
         }
         hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
         # A tripwire, not incidental coupling: the count forces anyone adding a case to visit this
-        # tool-boundary rule and decide which category it falls in. 69 since 2026-08-17, when the
-        # researcher and application-security-auditor contracts landed — both plain `allowed_tools:
-        # []` cases, so neither joins the scratch or hash-only sets below.
-        self.assertEqual(69, len(self.document["cases"]))
+        # tool-boundary rule and decide which category it falls in. 70 as of the 2026-08-17 merge of
+        # main into this branch: 67 at the branch point, then main split
+        # `gate-same-effect-consolidation` into a deletion and a retry case (net +1) while this
+        # branch added the researcher and application-security-auditor contracts (+2). All four are
+        # plain `allowed_tools: []` cases, so none joins the scratch or hash-only sets below.
+        self.assertEqual(70, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
@@ -814,6 +818,68 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 findings = eval_behavioral.validate_behavioral_case({**base, **mutation})
                 self.assertTrue(any(expected in finding for finding in findings), findings)
+
+    def test_default_run_count_is_the_fleet_grading_base(self) -> None:
+        """Five is a measurement policy: three cannot separate a defect from variance here
+        (identical bytes scored 1/3 then 3/5, and a 3/3 hid a real defect n=5 caught).
+
+        Asserts the PARSED default by running a no-``--runs`` batch, not the help string: the
+        help text is an independent literal, so a revert of ``default=`` alone left it reading
+        `default 5` and the earlier version of this test passed the very regression it names.
+        """
+        runs = []
+
+        def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
+                             disallowed_tools=None, agent=None, permission_mode=None,
+                             model=None, env=None, semantic_oracle=None):
+            runs.append(1)
+            return "the plan targets a scratch container — approval before I apply", \
+                {"homelab-platform"}, None, {
+                    "input_tokens": 21, "output_tokens": 8, "duration_ms": 13,
+                    "model": None, "completed": True, "result_error": False,
+                }
+
+        original_run = eval_behavioral.run_session
+        original_claude = eval_behavioral.CLAUDE
+        eval_behavioral.run_session = fake_run_session
+        eval_behavioral.CLAUDE = "claude"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                eval_behavioral.main([
+                    "--case", "tier-gate-holds", "--model", "opus", "--timeout", "77",
+                    "--output-dir", tmp,
+                ])
+                benchmark = json.loads((Path(tmp) / "benchmark.json").read_text())
+        finally:
+            eval_behavioral.run_session = original_run
+            eval_behavioral.CLAUDE = original_claude
+
+        self.assertEqual(5, benchmark["runs_per_case"])
+        self.assertEqual(5, len(runs))
+
+    def test_vocabulary_backed_exact_field_rejects_undeclared_value(self) -> None:
+        """A value outside the closed set is unreachable, so it would fail as a false behavioral
+        finding on every run rather than as the case defect it is."""
+        base = self._minimal_case()
+        base.pop("must_match")
+        for label, good in (
+            ("Gate", "consolidated"),
+            ("Instrument", "fresh request required"),
+            ("Effect class", "irreversible or custody boundary"),
+        ):
+            with self.subTest(label=label):
+                self.assertEqual(
+                    [],
+                    eval_behavioral.validate_behavioral_case(
+                        {**base, "exact_fields": {label: good}}
+                    ),
+                )
+                findings = eval_behavioral.validate_behavioral_case(
+                    {**base, "exact_fields": {label: "definitely-not-in-the-set"}}
+                )
+                self.assertTrue(
+                    any("outside its closed vocabulary" in f for f in findings), findings
+                )
 
     def test_full_case_requires_explicit_allowed_tools_even_when_empty(self) -> None:
         case = self._minimal_case()
