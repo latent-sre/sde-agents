@@ -644,6 +644,16 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   distinguish "this slot discloses an absence" from "this slot discloses an absence AND then claims
   something". Cost while open: `homelab-right-size-native-tier2` sits at roughly 50% (3/5, 3/5, 4/5,
   1/5, 4/5 observed) for oracle reasons, not behavior. Source: PR #144 revert decision.
+- **ORACLE-009** — the duplicate-bare-declaration guard added in PR #144 round 2 is
+  ORDER-DEPENDENT, so it is a false green in one arrangement. `_collapse_display_echoes` keys
+  `seen` by value and drops a later occurrence whose decoration differs from the first, so a
+  decorated echo appearing FIRST consumes the key and both following bare declarations are
+  discarded: `**Gate: consolidated**` then `Gate: consolidated` twice yields one occurrence and
+  passes, while the same three lines with a bare declaration first correctly fail. The exactly-once
+  contract therefore holds only when the canonical line precedes its echo. Count duplicate bare
+  declarations independently of echo order, with a firing test per ordering. This is the only known
+  false green on the branch — it fails in the unsafe direction, unlike the other open items.
+  Source: PR #144 round-10 review.
 - **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
   (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
   emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
