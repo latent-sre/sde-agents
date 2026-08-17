@@ -89,6 +89,37 @@ class EvalBaselineTests(unittest.TestCase):
             eval_routing.selection_identity("*", [regraded])["sha256"],
         )
 
+    def test_a_malformed_target_list_is_a_provenance_error_not_a_traceback(self) -> None:
+        """Risk: canonicalizing with `set()` made a bad target list a traceback, not exit 2.
+
+        The sibling of the `members` finding, and it arrived because that repair validated `members`
+        and left the per-case target lists — the same half-fix as sorting one and not the other.
+        `"expect_fires": [{}]` is unhashable, so `set()` raised `TypeError` out of a tool whose
+        docstring documents three exit codes. `_validated_cluster` now reuses the routing runner's
+        `_scoring_targets` rather than restating its rules, so anything the runner refuses before
+        spending is refused here too. Delete that call and this raises instead of asserting.
+        """
+        spec = json.loads(CLUSTER.read_text(encoding="utf-8"))
+        for label, mutation in (
+            ("unhashable target", {"expect_fires": [{}]}),
+            ("non-member target", {"expect_fires": ["not-a-cluster-member"]}),
+            ("empty target list", {"expect_fires": []}),
+            ("target list is not a list", {"expect_fires": "prompt-craft"}),
+            ("unknown polarity", {"polarity": "maybe"}),
+        ):
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as tmp:
+                broken = Path(tmp) / "broken-cluster.json"
+                mutated = json.loads(json.dumps(spec))
+                mutated["cases"][0].update(mutation)
+                broken.write_text(json.dumps(mutated), encoding="utf-8")
+                code, out = run_main(
+                    eval_baseline.main, "--baselines-dir", str(tmp),
+                    "--model", "sonnet", "--timeout", "420", str(broken),
+                )
+                self.assertEqual(2, code, out)
+                with self.assertRaises(eval_routing.ProvenanceError):
+                    eval_baseline.desired_provenance(REPO, broken, "*", 0)
+
     def test_reordering_a_target_list_does_not_stale_a_baseline(self) -> None:
         """Risk: the scorer sets these lists, so array order can't change a verdict — only a hash.
 

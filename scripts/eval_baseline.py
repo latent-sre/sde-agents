@@ -76,6 +76,16 @@ def _validated_cluster(spec: object) -> dict:
             raise eval_routing.ProvenanceError(f"cluster error: case #{index} must have a non-empty 'id'")
         if not isinstance(case.get("prompt"), str) or not case["prompt"].strip():
             raise eval_routing.ProvenanceError(f"cluster error: case {case_id!r} must have a non-empty 'prompt'")
+        # The scoring targets are validated by REUSING the routing runner's own validator rather
+        # than restating its rules here — one parser per fact, and the resolver's whole premise is
+        # that it answers the question the runner would ask. Concretely needed because
+        # `_graded_definition` now canonicalizes those lists with `set()`, so an unhashable target
+        # (`"expect_fires": [{}]`) raised a TypeError where this tool documents exit 2 (PR #145
+        # review). Membership is passed as a set because that is the shape `_scoring_targets` takes.
+        try:
+            eval_routing._scoring_targets(case, set(raw_members))
+        except ValueError as exc:
+            raise eval_routing.ProvenanceError(f"cluster error: {exc}") from exc
     return spec
 
 

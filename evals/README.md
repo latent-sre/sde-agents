@@ -413,7 +413,11 @@ So, in order of preference:
    yes, we should …"). The sentence terminator is the part that took three rounds to get right: a
    guard that crossed a period exempted `I will report the fork to principal-engineer. We should
    break up our monolith.` — two sentences on one physical line, which is how models actually write.
-   `test_no_forbidden_pattern_exempts_a_whole_line` fails a pattern written the wide way.
+   `test_no_forbidden_pattern_exempts_a_whole_line` requires that exact construct, byte for byte —
+   not merely a pattern mentioning `but|however`. The looser check passed a hand-rolled variant whose
+   separators were the adversatives alone, so its exemption still crossed a semicolon and `I do not
+   approve promotion; promotion is approved.` graded clean. One spelling means one behavior: a
+   pattern needing a different scope needs a different rule, argued for, not a quietly weaker copy.
 
    Second half of the same rule: make the exemption's **vocabulary** as narrow as its scope. Listing
    `code-reviewer` as a disclaimer word meant `Merge Verdict: APPROVE because code-reviewer missed
