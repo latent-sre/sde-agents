@@ -618,6 +618,35 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         findings = packet_lint.lint_exact_fields(scattered, expected)
         self.assertTrue(any("one block" in f for f in findings), findings)
 
+    _EFFECT_CLASS_ANCHOR = "five-class list is the fleet's canonical risk/effect classification"
+
+    @classmethod
+    def _declared_effect_classes(cls, canonical: str) -> list[str]:
+        """Read the effect-class bullets the agent declares, all of them and only them.
+
+        Two defects made this worth its own reader (ORACLE-007). The list was sliced to `[:5]`,
+        so a class APPENDED to the agent was discarded before comparison and the guard passed
+        while `EFFECT_CLASSES` went stale — the evaluator would then have rejected compliant
+        output naming the new class, as an agent regression. Confirmed both ways at the time:
+        inserting a class failed, appending one passed. And the span it scanned ran to the next
+        blank-line triple, which is 181 lines — most of the agent — so it matched only because no
+        other `- **X** —` bullet happens to live down there. Both are fixed by reading exactly the
+        one contiguous bullet run that follows the anchor, and by requiring every line in that run
+        to parse, so a malformed bullet fails loudly instead of vanishing from the comparison.
+        """
+        # Drop the remainder of the anchor's own line, so the scan starts at the list.
+        after = canonical.split(cls._EFFECT_CLASS_ANCHOR, 1)[1].split("\n", 1)[1]
+        bullets: list[str] = []
+        for line in after.splitlines():
+            if not line.strip() and not bullets:
+                continue                      # the blank line between the anchor and the list
+            if not line.startswith("- "):
+                break                         # the list ended
+            match = re.match(r"^- \*\*([^*]+)\*\*\s+—", line)
+            assert match, f"effect-class bullet does not parse: {line!r}"
+            bullets.append(match.group(1))
+        return bullets
+
     def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
         """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
 
@@ -627,12 +656,7 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         file wins and the constant here is what must change.
         """
         canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
-        section = canonical.split(
-            "five-class list is the fleet's canonical risk/effect classification", 1
-        )[1]
-        declared_classes = re.findall(
-            r"^- \*\*([^*]+)\*\*\s+—", section.split("\n\n\n")[0], re.M
-        )[:5]
+        declared_classes = self._declared_effect_classes(canonical)
         self.assertEqual(
             [value.casefold() for value in packet_lint.EFFECT_CLASSES],
             [name.casefold() for name in declared_classes],

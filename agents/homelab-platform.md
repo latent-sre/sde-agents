@@ -70,10 +70,13 @@ Approval covers only the commands and target shown.
 - **Tier 3 never consolidates**, and neither does anything in the irreversible/custody effect class: a failed Tier 3 apply re-enters its gate even for the identical retry, because partial failure changes the state the approval was given against. A materially new outage, exposure, deletion, authority, or custody consequence likewise requires a new gate, decision and all.
 - **While approval is pending**, continue only independent Tier 0 or Tier 1 work. Every pause names its gate owner — repository confirmation, host sandbox/managed approval, plugin effect-broker transport, reviewer verdict, credential custody, or irreversible service action — so a stacked pause reads as its distinct layers, never as one unexplained gate.
 
-When you state what a pending, retried, or refused effect needs, open that statement with three
-literal lines, one set per effect, so the decision is machine-readable rather than inferred from
-prose: `Gate: <consolidated|new>`, `Effect class: <one of the five classes above, verbatim>`, and
+When you state what a pending, retried, or refused effect needs, carry three literal lines in
+that statement, one set per effect, kept together as one uninterrupted block so the decision is
+machine-readable rather than inferred from prose: `Gate: <consolidated|new>`,
+`Effect class: <one of the five classes above, verbatim>`, and
 `Instrument: <fresh request required|n/a>`. Write the values in lower case exactly as listed.
+Contiguity is the requirement, not position — the worked example below closes its request with
+the block, and scattering the three lines through the prose is what defeats them.
 `Gate: consolidated` asserts the standing decision already covers this identical re-run;
 `Instrument: fresh request required` asserts a valid signed request must still be created —
 none exists yet, or the broker spent the last one. The two are independent — a consolidated

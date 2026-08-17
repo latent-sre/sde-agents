@@ -123,7 +123,10 @@ What this item still owes. The 2026-08-17 offline round closed the repair half o
 6, 8 and 9; each entry below now states what was done and what is still owed, because a repair
 with no measurement behind it is a hypothesis, not a result.
 
-**What the offline round changed, and what that costs.** Ten graded patterns and four
+**What the offline round changed, and what that costs.** Full record:
+[`learn-002-offline-repairs-2026-08-17`](archive/2026-08/learn-002-offline-repairs-2026-08-17.md),
+which also carries the reasoning for the three ORACLE small items this round closed (005, 006,
+007) — their roadmap lines are deleted, as a closed small item's are. Ten graded patterns and four
 `packet_lint` behaviors moved, each pinned in both directions in `tests/test_packet_lint.py`
 (`MeasuredFalseREDsFromTheLearn002Round`) and `tests/test_eval_behavioral.py`
 (`Learn002GraderRepairsTest`) against the sentence recorded in the round's own decisions note, and
@@ -742,20 +745,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **ORACLE-007** — the vocabulary drift test slices the parsed canonical list to `[:5]`, so a class
-  APPENDED to `agents/homelab-platform.md` is discarded before comparison and the guard passes while
-  `EFFECT_CLASSES` goes stale — the evaluator would then reject compliant output naming the new
-  class. Confirmed both ways: inserting a class fails the test, appending one passes it, so the
-  guard covers renames and removals but not additions. Drop the slice and compare the full list.
-  Source: PR #144 round-8 review.
-- **ORACLE-005** — `_lint_declaration_block` grades the SPAN of the gate declarations, not that they
-  open the statement, so a response can argue the decision first and append the block after, or
-  interleave prose between each slot, and still pass. The contract word is "open", so the gap is
-  real; the reason it was not closed with the span check is that "the statement" has no machine
-  boundary in a long answer, and requiring empty or heading-only preceding lines is a new false-RED
-  surface on prose the agent writes freely. Decide the boundary before implementing: either the
-  agent declares one (a heading the block must follow) or the check stays span-only and this line
-  closes as accepted. Source: PR #144 round-7 review.
 - **ORACLE-003** — `packet_lint`'s claim pattern fires on a packet's own `Verified` slot, so an
   honest negative verification (`Verified: the path does not exist, so I could not check the format`)
   is graded as an unevidenced claim — there is no command to cite because nothing ran. Reopened

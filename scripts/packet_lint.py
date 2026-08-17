@@ -711,11 +711,22 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
     return findings
 
 
-# The gate slots are contracted to OPEN the statement as one block, not to appear somewhere in it
-# (agents/homelab-platform.md). Presence-only grading passed output that explained the decision at
-# length and left the machine-readable lines scattered below, which defeats the point of having
-# them. The window is deliberately loose rather than strict adjacency: a heading or blank line
-# between declarations is rendering, while a block split across paragraphs of prose is not.
+# The gate slots are contracted to sit together as ONE BLOCK, not to appear somewhere in the
+# statement (agents/homelab-platform.md). Presence-only grading passed output that explained the
+# decision at length and left the machine-readable lines scattered below, which defeats the point
+# of having them. The window is deliberately loose rather than strict adjacency: a heading or
+# blank line between declarations is rendering, while a block split across paragraphs of prose is
+# not.
+#
+# CONTIGUITY, NOT POSITION — the decision ORACLE-005 asked for, settled 2026-08-17 and recorded
+# because the alternative is the more obvious reading of the word the agent used. That file said
+# "open that statement with three literal lines" while its own worked example CLOSES a Tier 2
+# request with them, after some twenty lines of prose. A check enforcing the literal wording would
+# therefore have rejected the fleet's own canonical shape, and "the statement" has no machine
+# boundary in a long answer anyway: requiring empty or heading-only preceding lines would be a new
+# false-RED surface on prose the agent writes freely, which is how every earlier ORACLE round
+# went wrong. The wording was corrected to match the example and this check; the span check stands
+# as the whole instrument.
 _DECLARATION_BLOCK_MAX_SPAN = 6
 
 
@@ -730,7 +741,7 @@ def _lint_declaration_block(declared_at: dict[str, int]) -> list[str]:
         label for label, _ in sorted(declared_at.items(), key=lambda item: item[1])
     )
     return [
-        f"declarations must open the statement as one block; {ordered} span {span} lines "
+        f"declarations must sit together as one block; {ordered} span {span} lines "
         f"(limit {_DECLARATION_BLOCK_MAX_SPAN})"
     ]
 
