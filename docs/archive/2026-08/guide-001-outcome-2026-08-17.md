@@ -62,9 +62,10 @@ every remaining outcome:
 
 ## Measures
 
-File: ~7,940 tokens at audit start → ~5,726 at PR #142 merge → **~5,470 at close** (the
-register rule and rulings added back ~80 of wave two's ~380 trim; every figure measured with
-the one instrument, chars/4 on the raw file slice). Every commit validator-green, 858 tests
+File: ~7,940 tokens at audit start → ~5,726 at PR #142 merge → **~5,498 at close** (the
+register rule and rulings added back ~110 of wave two's ~380 trim; every figure measured with
+the one instrument, chars/4 on the raw file slice — this closing figure itself was corrected
+from a pre-measurement draft, the drift lesson below firing one last time). Every commit validator-green, 858 tests
 passing.
 
 ## Lessons paid for
