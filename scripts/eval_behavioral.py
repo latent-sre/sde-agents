@@ -455,6 +455,37 @@ def behavioral_evaluator_paths(runtime: str = "claude") -> list[Path]:
 _NO_RESULT = "no result:"
 
 
+def output_dir_problem(path: Path) -> str | None:
+    """Why `--output-dir` could not receive artifacts, or None if it can. CREATES NOTHING.
+
+    The usability check has to happen before the first session — a mistyped or occupied path
+    otherwise costs a fully paid batch of real model sessions and then refuses to write it
+    (EVAL-004). Moving the `mkdir` itself forward was the obvious repair and the wrong one: a run
+    that aborts for some other reason would leave an empty directory behind as a side effect of
+    having been attempted. So this only INSPECTS — an existing path must be a writable directory,
+    and a path that does not exist yet must have a writable existing ancestor to be created under.
+    The real `mkdir` stays where it always was, after the batch, next to the writes it serves.
+
+    It cannot promise the write will succeed: the disk can fill, and permissions can change while
+    sessions run. Those stay fail-closed at write time. What it removes is the whole class that is
+    knowable up front, which is the class that was costing money.
+    """
+    if path.exists():
+        if not path.is_dir():
+            return f"{path} exists and is not a directory"
+        if not os.access(path, os.W_OK | os.X_OK):
+            return f"{path} is not writable"
+        return None
+    ancestor = path.parent
+    while not ancestor.exists() and ancestor != ancestor.parent:
+        ancestor = ancestor.parent
+    if not ancestor.is_dir():
+        return f"{ancestor} is not a directory, so {path} cannot be created"
+    if not os.access(ancestor, os.W_OK | os.X_OK):
+        return f"{ancestor} is not writable, so {path} cannot be created"
+    return None
+
+
 def session_denylist(
     allowed_tools: list[str] | None, disallowed_tools: list[str] | None
 ) -> list[str]:
@@ -1408,6 +1439,12 @@ def main(argv: list[str] | None = None) -> int:
     # the worst output this tool can produce, so the count is bounded before any work is planned.
     if args.runs < 1:
         print("error: --runs must be at least 1", file=sys.stderr)
+        return 2
+    if args.output_dir and (problem := output_dir_problem(args.output_dir)):
+        print(
+            f"error: --output-dir is unusable: {problem}; no sessions were run",
+            file=sys.stderr,
+        )
         return 2
     if args.retain_run_evidence and args.output_dir is None:
         print(

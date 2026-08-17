@@ -56,7 +56,9 @@ if trivial, otherwise record it in `docs/fleet-roadmap.md` and continue.
   `claude plugin validate . --strict` (platform contract; a host without the `claude` CLI says
   so and defers this check to CI's pinned job), and `python3 scripts/fleet_doctor.py`.
   CI repeats the first two on every PR but can never substitute for fleet_doctor — the drift it
-  finds lives in your host installation, not in the checkout. Exit 3 means warnings: read the
+  finds lives in your host installation, not in the checkout. Exit 1 means a check failed; **2
+  means a check could not be computed**, so a clean-looking report is not evidence of one; 3 means
+  warnings. Read the
   report, repair host drift (the common case) with
   `python3 scripts/install_codex_agents.py --user`, and clear every warning before measuring
   anything — a stale installed profile means you are measuring something other than the fleet

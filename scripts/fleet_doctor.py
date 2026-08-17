@@ -708,9 +708,22 @@ def main(argv: list[str] | None = None) -> int:
     # FAILED, 3 means no check failed but at least one warning needs attention (host drift is the
     # common cause, not the only one — CRLF paths and listing-budget overruns warn too; an absent
     # host CLI is a skip, not a warning), and only 0 means nothing needs attention.
+    # A per-check `inconclusive` reached no exit status at all, so a check the doctor could not
+    # compute exited 0 — the doctor agreeing that everything is fine on the strength of an answer
+    # it never obtained (DOCTOR-002). That is the same defect as the warnings one above, one level
+    # down: the report said so on stdout and nothing a caller can branch on did.
+    #
+    # It maps to 2, which already means "the doctor could not tell you" — the code the whole-report
+    # failure above returns. The ladder is ordered by how definite the answer is: 1 first, because
+    # a check that FAILED is a definite negative and the most actionable thing here; then 2, where
+    # nothing failed but the no-failures claim rests on checks that did not all run; then 3 for
+    # warnings, where everything computed. A skip is not in the ladder — an absent host CLI is a
+    # known, expected non-answer, not an unexpected one.
     summary = report["summary"]  # type: ignore[assignment]
     if summary["fail"]:
         return 1
+    if summary["inconclusive"]:
+        return 2
     return 3 if summary["warn"] else 0
 
 

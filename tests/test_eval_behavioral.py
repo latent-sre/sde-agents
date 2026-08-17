@@ -3259,26 +3259,27 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
             self.assertEqual(mode_before, mode_after)
 
     def test_an_unusable_output_dir_returns_two_before_spending(self) -> None:
-        """Risk: a traceback where every other artifact failure returns 2 with a reason.
+        """Risk: a mistyped `--output-dir` costs a paid batch and then refuses to write it.
 
         `--output-dir` pointing at an existing REGULAR FILE raised FileExistsError straight out of
-        `main()`. The guard for it landed in this PR without a firing test, which is the rule it was
-        written under — a defensive branch and its test are one change (PR #145 review).
+        `main()`; the guard for it returned 2 with a reason, but only AFTER the batch was bought.
+        EVAL-004 moved the question before the first session, so the count below is the assertion
+        that matters — returning 2 was already true when the sessions were paid for.
 
-        The guard runs AFTER the batch, so this test pins that too: the sessions are paid for and
-        then the artifact cannot land. That is the current contract, not an ideal one — validating
-        the path before spending would save the batch, and is filed as EVAL-004 rather than changed
-        here, because moving the check creates a directory as a side effect of runs that may still
-        abort for another reason. If that item lands, this test is where the new ordering is
-        asserted.
+        The check inspects and creates nothing, which is why it could move: eagerly making the
+        directory would leave one behind for every run that aborts elsewhere. The `mkdir` still
+        happens after the batch, beside the writes it serves.
         """
         with tempfile.TemporaryDirectory() as tmp:
             occupied = Path(tmp) / "not-a-directory"
             occupied.write_text("in the way", encoding="utf-8")
 
+            sessions = []
+
             def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
                                  disallowed_tools=None, agent=None, permission_mode=None,
                                  model=None, env=None, semantic_oracle=None):
+                sessions.append(prompt)
                 return self._PASSING, {"homelab-platform"}, None, self._stats()
 
             with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
@@ -3288,8 +3289,31 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
                     "--model", "opus", "--timeout", "77", "--output-dir", str(occupied),
                 ])
             self.assertEqual(2, code)
+            self.assertEqual([], sessions, "the batch must be refused before it is bought")
             self.assertTrue(occupied.is_file(), "the blocking file must be left as it was found")
             self.assertEqual("in the way", occupied.read_text(encoding="utf-8"))
+
+    def test_a_usable_output_dir_is_not_created_by_the_preflight(self) -> None:
+        """The reason the check inspects instead of creating.
+
+        A run that passes the preflight and then aborts for another reason must not leave an empty
+        directory behind as a side effect of having been attempted — which is what moving the
+        `mkdir` forward would have done, and why EVAL-004 was filed rather than fixed in place.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "not-yet" / "artifacts"
+            self.assertIsNone(eval_behavioral.output_dir_problem(missing))
+            self.assertFalse(missing.exists(), "the preflight must create nothing")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            occupied = Path(tmp) / "in-the-way"
+            occupied.write_text("x", encoding="utf-8")
+            self.assertIn("not a directory", eval_behavioral.output_dir_problem(occupied))
+            self.assertIn(
+                "cannot be created",
+                eval_behavioral.output_dir_problem(occupied / "under" / "a" / "file"),
+            )
+            self.assertEqual("x", occupied.read_text(encoding="utf-8"))
 
     def test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed(self) -> None:
         """The other half of same-batch-or-neither, and the other untested guard.
