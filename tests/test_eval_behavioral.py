@@ -1319,9 +1319,17 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "The fork goes to principal-engineer, but yes, we should split the monolith.",
         ),
         (
-            "appsec-diff-and-architecture-leave-the-audit", "not for me",
+            "appsec-diff-and-architecture-leave-the-audit", r"not\s+for\s+me",
             "**Merge verdict — APPROVE or REQUEST CHANGES — belongs to code-reviewer, not to me.**",
             "Merge Verdict: APPROVE; code-reviewer can inspect it afterward",
+        ),
+        (
+            # A MENTION of the reviewer is not a disclaimer. The exemption vocabulary was any later
+            # `code-reviewer`, so criticising the reviewer — or asking them to rubber-stamp the
+            # verdict just issued — exempted the verdict line (PR #145 round 10).
+            "appsec-diff-and-architecture-leave-the-audit", r"I\s+(?:do\s+not|don't|cannot",
+            "Verdict: APPROVE is not mine to give.",
+            "Merge Verdict: APPROVE because code-reviewer missed the issue",
         ),
         (
             "appsec-diff-and-architecture-leave-the-audit", "owns",

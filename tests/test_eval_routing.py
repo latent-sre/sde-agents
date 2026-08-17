@@ -559,6 +559,56 @@ class CaseFileTest(unittest.TestCase):
     # marker that one is inlined.
     _CARRIES = ("```", "diff --git", "@@", "PR #", "DRAFT", "FINDINGS")
 
+    # Words that mark a case reference as historical. A note may name a retired case — explaining
+    # what stopped being covered is better than deleting the sentence — but it has to SAY so.
+    _RETIREMENT_WORDS = re.compile(
+        r"retir\w*|remov\w*|deleted|no longer|uncovered|historical|past tense|used to|"
+        r"was asserted|cut on|left with",
+        re.IGNORECASE,
+    )
+    _CASE_REF = re.compile(r"\b((?:pos|neg)-[a-z0-9]+(?:-[a-z0-9]+)*)(-\*)?\b")
+
+    def test_cluster_prose_does_not_present_a_deleted_case_as_live_coverage(self) -> None:
+        """Risk: a retirement deletes the cases and leaves the prose vouching for them.
+
+        `craft-vs-fullstack` said its load-bearing assertion was that cross-layer work routes to
+        sde-fullstack "(pos-fullstack-*)" — cases this PR retired. `ladder` said `pos-builder-scoped`
+        guards an over-trigger it no longer guards. A later description review reading either note
+        would treat that reachability as covered and skip measuring it, which is the same silent
+        failure as a doc that still lists landed work as pending.
+
+        A note MAY name a retired case; it may not imply the case is live. So a reference to an id
+        that no longer exists must sit within the same sentence as a retirement word.
+        """
+        clusters = sorted((REPO / "evals" / "routing").glob("*.json"))
+        existing = {
+            case["id"]
+            for path in clusters
+            for case in json.loads(path.read_text(encoding="utf-8"))["cases"]
+        }
+        stale = []
+        for path in clusters:
+            spec = json.loads(path.read_text(encoding="utf-8"))
+            prose = [value for value in spec.values() if isinstance(value, str)]
+            prose += [case.get("expected_output", "") or "" for case in spec["cases"]]
+            for text in prose:
+                for sentence in re.split(r"(?<=[.;])\s+", text):
+                    if self._RETIREMENT_WORDS.search(sentence):
+                        continue
+                    for stem, glob_suffix in self._CASE_REF.findall(sentence):
+                        # `pos-foo-*` is satisfied by any surviving id under that stem.
+                        alive = (
+                            any(name.startswith(stem) for name in existing)
+                            if glob_suffix else stem in existing
+                        )
+                        if not alive:
+                            stale.append(f"{path.name}: {stem}{glob_suffix} in {sentence[:70]!r}")
+        self.assertEqual(
+            [], stale,
+            "cluster prose names a case that no longer exists without saying it retired; a future "
+            "description review will read that as live coverage and skip measuring it",
+        )
+
     def test_no_prompt_points_at_an_artifact_it_does_not_carry(self) -> None:
         """Risk: a case measures the harness's empty cwd instead of the description.
 
