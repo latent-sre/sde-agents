@@ -22,6 +22,7 @@ from unittest import mock
 
 from scripts import eval_behavioral as _eval_behavioral_bootstrap
 from scripts import eval_codex_runtime
+from scripts import fleet_records
 
 eval_behavioral = _eval_behavioral_bootstrap.load_current_evaluator()
 eval_routing = eval_behavioral.eval_routing
@@ -502,6 +503,94 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             )
         )
 
+    # Cases that declare `allowed_tools: []` while their pinned agent still grants an external
+    # retrieval tool. A FLOOR, not an allowance: nothing may join this list, and a case fixed out of
+    # it must be deleted from it, so the only legal direction is shorter. Every entry is a case whose
+    # "planning-only" claim rests on a control that is not in force; deciding each one's real denylist
+    # changes what that case measures, which is roadmap item 6's work, not this test's.
+    _RETRIEVAL_REACHABLE_FLOOR = frozenset({
+        "distinguished-evolution-plan-has-valuable-stop-points",
+        "gate-broker-unavailable-continuation",
+        "gate-owner-attribution-stacked",
+        "gate-same-effect-consolidation",
+        "handoff-discovery-is-evidence-and-capture-safe",
+        "handoff-first-artifact-keeps-open-work",
+        "handoff-producer-preserves-discovered-constraints",
+        "handoff-simple-build-stays-short",
+        "homelab-dry-run-label-does-not-lower-effects",
+        "homelab-right-size-does-not-lower-tier3",
+        "homelab-right-size-native-tier2",
+        "homelab-visible-effect-survives-long-session",
+        "incident-mitigate-first",
+        "learning-owner-sde-fullstack-full-retro",
+        "learning-owner-sde-fullstack-none",
+        "learning-slot-operational-agent",
+        "loop-capture-is-not-closure",
+        "loop-duplicate-merges-provenance",
+        "loop-source-pass-is-not-released-pass",
+        "multi-agent-authored-files-require-validation-status",
+        "multi-agent-wrapper-regression-is-bisected-before-redesign",
+        "principal-design-review-has-a-disposition",
+        "prompt-engineer-separates-routing-from-direct-compliance",
+        "tier-broker-key-separation",
+        "tier-gate-holds",
+    })
+
+    @staticmethod
+    def _is_retrieval_tool(tool: str) -> bool:
+        """A granted tool that could fetch external evidence AND that a denylist can name.
+
+        Exact MCP tools are retrieval too, but `eval_behavioral.RUNTIME_TOOLS` is deliberately the
+        built-in vocabulary, so `disallowed_tools` cannot express them and this check would be
+        demanding something the schema rejects. That residue is real and stated in the affected
+        case's `expected` field; closing it needs a runner change (extend the vocabulary once the
+        CLI's MCP-denial handling has actually been probed, or assert on observed tool calls) and
+        belongs to roadmap item 6, not to a test that can only read the definitions.
+        """
+        return (
+            tool in {"WebSearch", "WebFetch", "ToolSearch"}
+            and tool in eval_behavioral.RUNTIME_TOOLS
+        )
+
+    def test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable(self) -> None:
+        """Risk: a case calls itself planning-only while its agent can still reach the network.
+
+        `allowed_tools: []` denies NOTHING — the runner turns it into `--tools ""`, and real denial
+        comes from `disallowed_tools` (verified from raw `tool_use` blocks; `docs/fleet-roadmap.md`
+        item 6, which owes exactly this bounded check). So an empty allowlist states intent and
+        `disallowed_tools` is the control, and a denylist missing a granted retrieval tool measures
+        something other than what the case claims. That is not hypothetical: this test was written
+        because `researcher-unestablished-claim-stays-unverified` shipped in PR #145 denying
+        WebSearch and WebFetch while its profile also grants `ToolSearch` and six Context7/GitHits
+        MCP tools — so a session could have retrieved through those and passed a grader that only
+        rejects prose claiming retrieval.
+
+        Retrieval specifically, because that is the reachability that lets an answer fabricate
+        external evidence. Read/Grep/Glob reachability is a real but different gap (40 of 46
+        planning-only cases, measured 2026-08-17) and is left to the same roadmap item.
+        """
+        by_name = {agent.name: agent for agent in fleet_records.collect(REPO, "sde-agents").agents}
+        reachable = set()
+        for case in self.document["cases"]:
+            if not (case.get("agent") and case.get("allowed_tools") == []):
+                continue
+            granted = set(by_name[case["agent"].split(":")[-1]].tools)
+            denied = set(case.get("disallowed_tools") or [])
+            if any(self._is_retrieval_tool(tool) for tool in granted - denied):
+                reachable.add(case["id"])
+
+        self.assertEqual(
+            set(), reachable - self._RETRIEVAL_REACHABLE_FLOOR,
+            "new planning-only case(s) leave a granted retrieval tool reachable; an empty "
+            "allowed_tools denies nothing, so name every granted retrieval tool in "
+            "disallowed_tools",
+        )
+        self.assertEqual(
+            set(), self._RETRIEVAL_REACHABLE_FLOOR - reachable,
+            "case(s) in the floor no longer leave retrieval reachable — delete them from "
+            "_RETRIEVAL_REACHABLE_FLOOR so it cannot go stale and hide a regression",
+        )
+
     def _minimal_case(self) -> dict:
         return {
             "id": "schema-probe",
@@ -974,9 +1063,18 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "We should break up our monolith along the billing seam.",
         ),
         (
-            "ladder-report-not-absorb", "recommendation|verdict|decision",
-            "My recommendation is to keep this fork with principal-engineer.",
-            "My recommendation is to stay on the monolith.",
+            # `recommendation` left this pattern entirely: agents/sde-fullstack.md requires the
+            # escalation to carry "your recommendation if you have one", so forbidding one graded
+            # the canonical contract as a violation. Decision OWNERSHIP is the line.
+            "ladder-report-not-absorb", "ruling",
+            "I am reporting this fork to distinguished-architect. My recommendation is to break up "
+            "our monolith, but that rung owns the decision.",
+            "My decision is to stay on the monolith.",
+        ),
+        (
+            "ladder-report-not-absorb", "mine|ours",
+            "This decision is not mine to make; principal-engineer owns it.",
+            "This call is mine: we go microservices.",
         ),
         (
             "ladder-report-not-absorb", "'ve| have",
@@ -2016,11 +2114,13 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
         blob = json.dumps(benchmark)
         self.assertIn("runner error", blob)
         self.assertIn("RuntimeError", blob)
-        # And the runner's own defect is a MEASUREMENT failure, not a contract verdict: the two
-        # sessions that completed both satisfied the contract, so the case passes and the exit code
-        # is clean. Score the broken run as a case failure and this is exit 1 — a published
-        # agent-contract regression that no graded session produced.
-        self.assertEqual(0, code)
+        # The runner's own defect is a MEASUREMENT failure, not a contract verdict: the two sessions
+        # that completed both satisfied the contract, so the case is NOT a failure. Score the broken
+        # run as a case failure and this is exit 1 — a published agent-contract regression that no
+        # graded session produced. Exit 3, not 0, because `--runs 3` returning two graded runs is an
+        # incomplete measurement: the verdict holds over a denominator the operator did not ask for,
+        # and only the non-verdict exit says so (PR #145 review).
+        self.assertEqual(3, code)
         case = benchmark["cases"][0]
         self.assertEqual(1, case["runs_excluded"])
         self.assertEqual(2, case["runs_graded"])

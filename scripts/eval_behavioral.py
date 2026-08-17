@@ -1966,9 +1966,15 @@ def main(argv: list[str] | None = None) -> int:
     # Same three-way split as the routing runner, and for the same reason: 1 is a contract verdict
     # to investigate, 3 is a measurement that did not happen and wants a re-run. A real failure
     # outranks an inconclusive because it is the actionable one. (2 stays usage/auth errors.)
+    #
+    # ANY excluded run reaches exit 3, not just a wholly inconclusive case — behavioral is
+    # all-or-nothing per case, so `--runs 3` losing one run leaves a verdict computed over a
+    # denominator the operator never asked for. Reporting that as exit 0 would publish an
+    # incomplete measurement as a clean result, which is the same conflation the exclusion was
+    # added to prevent, one level up (PR #145 review).
     if passed_cases != len(cases) - len(inconclusive_cases):
         return 1
-    return 3 if inconclusive_cases else 0
+    return 3 if (inconclusive_cases or excluded_runs_total) else 0
 
 
 def _main_entry() -> int:

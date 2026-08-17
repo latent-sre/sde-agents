@@ -148,6 +148,17 @@ What this item still owes, all of it now narrow:
    it disables tool execution. That rule currently rests on a property the harness does not enforce.
    Owed: a bounded check across every case declaring an empty allowlist, and a decision on whether
    the runner should reject the combination outright.
+   **Measured 2026-08-17 (PR #145).** 46 cases declare `allowed_tools: []`; **40** leave at least
+   one granted tool reachable, and **25** leave `WebFetch`/`WebSearch` reachable — so the gap is
+   the norm rather than an outlier, and no case's 'planning-only' should be read as proof no tool
+   was available. The bounded check now exists as a **floor**, not a gate: `test_no_new_planning_only_case_leaves_a_retrieval_tool_reachable` in
+   `tests/test_eval_behavioral.py` fails when a NEW case joins the class, and fails again if a
+   listed case is fixed without being removed from the list, so the list can only shrink. Two
+   pieces stay owed here. (1) Deciding each of the 25 cases' real denylist changes what that case
+   measures, which is this item's work. (2) The runner cannot express MCP denial at all — `eval_behavioral.RUNTIME_TOOLS` is built-ins only — so `researcher-unestablished-claim-stays-unverified`
+   denies its built-in retrieval surface and states the MCP residue in its own `expected` field
+   rather than shipping a denylist entry whose CLI handling nothing here has probed. Closing that
+   needs either a probed vocabulary extension or a grader assertion on observed tool calls.
 7. **Two SKILL.md sentences ship unmeasured.** Every after-side artifact binds
    `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it: the no-signal
    literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the linter rejects)
