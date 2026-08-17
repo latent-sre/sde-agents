@@ -646,11 +646,14 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   a flat contradiction there (`Gate: consolidated`, then `**Gate**: on reflection this needs a new
   approval`) no longer counts as a conflicting declaration; only a second *named* term, a corrupted
   term, or no term at all still fails. The trade was deliberate — counting explanatory prose as a
-  second contract false-RED'd behaviorally correct answers — and each case's `must_not_match`
-  assertions carry contradiction detection meanwhile, but they name specific claims rather than the
-  general shape. Either restore conflict detection for contradicting prose under a declared slot,
-  or record the reliance on per-case negatives as the accepted design. Source: ORACLE-001 close,
-  this branch.
+  second contract false-RED'd behaviorally correct answers. The mitigation first recorded here was
+  too strong: the per-case `must_not_match` assertions do NOT cover it — the retry case carries no
+  new-approval negative, and the deletion case's negative does not match `Gate: the prior approval
+  covers the deletion`, so both shapes pass their complete oracle today. Concrete phrasings a repair
+  must fail: `Gate: despite that label, this retry needs a new approval`, and the deletion variant
+  above. Either restore conflict detection for contradicting prose under a declared slot, or accept
+  the exposure explicitly — not by assuming a cover that is not there. Source: ORACLE-001 close,
+  this branch; framing corrected by PR #144 round-7 review.
 - **DOCTOR-002** — per-check `inconclusive` never reaches the doctor's exit code (`main` keys on
   fail/warn only), so an incomplete listing computation exits 0/3 rather than the documented 2;
   pre-existing semantics (`repository.canonical-eol` shares them), widened by the listing check.
