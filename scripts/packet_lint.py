@@ -471,6 +471,54 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
     return _literal_field_occurrences(label, text.splitlines())
 
 
+_DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
+
+
+def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> str | None:
+    """Return the closed-set term a value asserts, or None when it names none of them.
+
+    A term followed by rationale — ``consolidated — your earlier approval covers this`` — asserts
+    that term. Only a separator may follow, so ``consolidated and re-gated`` names no term and
+    stays a distinct value rather than being read as agreement.
+    """
+    # Emphasis is display only and can sit between the term and its separator
+    # (``**Effect class: irreversible or custody boundary** — data deletion``), so it is removed
+    # for term detection. The value itself is compared elsewhere and keeps its own rendering.
+    undecorated = _DECORATION_RE.sub("", value)
+    normalized = _strip_sentence_punctuation(undecorated).casefold().strip()
+    for term in sorted(vocabulary, key=len, reverse=True):
+        folded = term.casefold()
+        if normalized == folded:
+            return folded
+        if normalized.startswith(folded):
+            rest = normalized[len(folded):].lstrip()
+            if rest[:1] in {"—", "–", "-", ":", "(", ","}:
+                return folded
+    return None
+
+
+def _collapse_agreeing_vocabulary_restatements(
+    occurrences: list[tuple[int, str]], vocabulary: tuple[str, ...]
+) -> list[tuple[int, str]]:
+    """Fold repeats of one closed-set term into the single contract they all state.
+
+    An agent that leads with ``Gate: consolidated`` and then reuses the label as the heading of the
+    paragraph explaining it has stated one decision twice, not two decisions. Requiring the label to
+    appear literally once would make the writer serve the linter — the packet-shaped evasion this
+    module's header rejects — so agreement collapses and only DISAGREEMENT still counts as two
+    contracts. Occurrences naming no term are left alone; they are free text and must still fail.
+    """
+    heads = {_vocabulary_head(value, vocabulary) for _, value in occurrences}
+    if len(occurrences) < 2 or len(heads) != 1 or heads == {None}:
+        return occurrences
+    return [
+        min(
+            occurrences,
+            key=lambda item: len(_strip_sentence_punctuation(item[1])),
+        )
+    ]
+
+
 def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
     """Require each declared literal field exactly once with its exact declared value.
 
@@ -483,6 +531,10 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
     findings: list[str] = []
     for label, exact_value in expected.items():
         occurrences = literal_field_occurrences(text, label)
+        if vocabulary := EXACT_FIELD_VOCABULARIES.get(label):
+            occurrences = _collapse_agreeing_vocabulary_restatements(
+                occurrences, vocabulary
+            )
         if len(occurrences) != 1:
             findings.append(
                 f"{label}: must appear exactly once for exact-field grading; "

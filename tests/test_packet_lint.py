@@ -442,6 +442,35 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         self.assertEqual([(0, "fleet-maintainer and **release** coordinator")], occurrences)
 
+    def test_agreeing_gate_restatement_is_one_contract_but_disagreement_is_two(self) -> None:
+        """An agent that leads with the slot line and then reuses the label as the heading of the
+        paragraph explaining it has stated one decision twice. Requiring the label literally once
+        would make the writer serve the linter; only disagreement may fail."""
+        agreeing = (
+            "Gate: consolidated\n"
+            "- **Gate: consolidated** — your earlier approval covers this identical re-run\n"
+        )
+        self.assertEqual([], packet_lint.lint_exact_fields(agreeing, {"Gate": "consolidated"}))
+        multi_word = (
+            "Effect class: irreversible or custody boundary\n"
+            "**Effect class: irreversible or custody boundary** — data deletion\n"
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                multi_word, {"Effect class": "irreversible or custody boundary"}
+            ),
+        )
+        for conflicting in (
+            "Gate: consolidated\nGate: new\n",
+            # A restatement that drifts out of the closed set names no term and is not agreement.
+            "Gate: consolidated\nGate: consolidated and re-gated\n",
+        ):
+            with self.subTest(conflicting=conflicting):
+                self.assertTrue(
+                    packet_lint.lint_exact_fields(conflicting, {"Gate": "consolidated"})
+                )
+
     def test_whole_line_emphasis_does_not_ride_into_a_multi_word_value(self) -> None:
         """`**Label: a b c d**` closes after the LAST token, so the first-token cleanup misses it
         and the marker becomes part of the value. Observed on live homelab transcripts, where three
