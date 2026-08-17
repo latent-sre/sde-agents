@@ -654,6 +654,15 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   declarations independently of echo order, with a firing test per ordering. This is the only known
   false green on the branch — it fails in the unsafe direction, unlike the other open items.
   Source: PR #144 round-10 review.
+- **ORACLE-010** — `agents/homelab-platform.md` requires "one set per effect", and no case tests it.
+  PR #144 split the combined retry-plus-deletion prompt into two single-effect cases so exact-field
+  grading (each label exactly once, globally) could work, which means the suite cannot express a
+  two-effect answer at all: an agent can pass both isolated cases while collapsing two simultaneous
+  effects into one block, omitting a block, or attaching the wrong class or instrument to the wrong
+  effect. The clause was ADDED by that PR, so this is a contract shipped with no instrument, not a
+  pre-existing gap. Needs an oracle that groups repeated slot blocks by effect before a combined
+  case can be restored — the exactly-once rule and multi-effect grading are incompatible as written.
+  Source: PR #144 round-10 review.
 - **ORACLE-008** — `lint_exact_fields` strips markdown decoration when DETECTING a closed-set term
   (`_vocabulary_head`) but not when COMPARING the value, so emphasis around the value fails while
   emphasis around the label passes: `**Gate: consolidated**` is accepted, `Gate: **consolidated**`,
