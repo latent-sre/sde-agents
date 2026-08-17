@@ -564,6 +564,60 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             packet_lint.lint_learning_closeout("Learning:\n", "lifecycle-owner"),
         )
 
+    def test_display_normalization_is_scoped_to_closed_vocabularies(self) -> None:
+        """Case tolerance is display tolerance for a FINITE set; free text keeps byte-exact echoes.
+
+        `lint_exact_fields` grades free-text values literally, so `Owner: fleet-maintainer` beside
+        `**Owner: Fleet-Maintainer**` is a genuinely ambiguous declaration and must not be folded
+        away by the normalization added for the gate slots (review round 5).
+        """
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Owner: fleet-maintainer\n**Owner: Fleet-Maintainer**\n",
+                {"Owner": "fleet-maintainer"},
+            )
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated\n**Gate: Consolidated**\n", {"Gate": "consolidated"}
+            ),
+        )
+
+    def test_gate_declarations_must_sit_together_as_one_block(self) -> None:
+        """The slots are contracted to OPEN the statement, not merely to appear in it.
+
+        Presence-only grading passed output that argued the decision at length and left the
+        machine-readable lines scattered below, which defeats their purpose (review round 5). The
+        window tolerates a heading or blank lines, which are rendering, not placement.
+        """
+        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Gate: consolidated\n"
+                "Effect class: reversible live activation\n"
+                "Instrument: fresh request required\n",
+                expected,
+            ),
+        )
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "## Retry\n\nGate: consolidated\n\n"
+                "Effect class: reversible live activation\n\n"
+                "Instrument: fresh request required\n",
+                expected,
+            ),
+        )
+        scattered = (
+            "Gate: consolidated\n"
+            + "\n".join(f"explanatory prose line {i}" for i in range(12))
+            + "\nInstrument: fresh request required\n"
+        )
+        findings = packet_lint.lint_exact_fields(scattered, expected)
+        self.assertTrue(any("one block" in f for f in findings), findings)
+
     def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
         """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
 
@@ -1132,6 +1186,9 @@ class TheInversion(unittest.TestCase):
             # `no`/`not` token let both of these pass clean (review round 4).
             "**Verified**: the deployment, not merely the config, is healthy.",
             "**Verified**: no issues — the cluster is healthy and serving.",
+            # An [unverified] label can qualify a LATER clause while the slot still claims
+            # something; the label alone must not exempt the claim (review round 5).
+            "**Verified**: the deployment is healthy; rollback behavior is [unverified].",
         ):
             with self.subTest(claimed=claimed):
                 self.assertIsNotNone(packet_lint._unevidenced_claim(claimed))

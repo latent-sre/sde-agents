@@ -158,7 +158,10 @@ _NEGATION_TOKENS = (
     r"\bno\b|\bnot\b|n[’']t\b|\bnothing\b|\bnever\b|\bwithout\b|\bcannot\b|\bunable\b"
 )
 # What counts as disclosing that verification could not happen. Deliberately verb-bound: a bare
-# "no"/"not" is ordinary prose and must not launder an affirmative health claim.
+# "no"/"not" is ordinary prose and must not launder an affirmative health claim. A bare
+# [unverified] label is excluded for the same reason -- it can qualify a LATER clause while the
+# slot still claims something ("the deployment is healthy; rollback behavior is [unverified]"),
+# and every honest shape observed also states the absence in words.
 _UNCHECKABLE = (
     r"(?:could|can|did|do|does|would|will)\s*n[o']?t\b[^\r\n]{0,30}?"
     r"(?:check|verif|run|confirm|test|inspect|read|reach|execut|observ|validat)"
@@ -169,7 +172,6 @@ _UNCHECKABLE = (
     r"|\bnot found\b|\bis absent\b|\bis missing\b|\bno such (?:file|path|directory)\b"
     r"|\bnothing (?:ran|executed|was run|to show)\b"
     r"|\bno (?:commands?|output|evidence)\b"
-    r"|\[unverified\]"
 )
 
 
@@ -456,11 +458,13 @@ def _literal_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, 
             match.group(name) for name in ("outside", "inside", "span")
         )
         occurrences.append((index, value, bool(decorated)))
-    return _collapse_display_echoes(occurrences)
+    return _collapse_display_echoes(
+        occurrences, normalize=label in EXACT_FIELD_VOCABULARIES
+    )
 
 
 def _collapse_display_echoes(
-    occurrences: list[tuple[int, str, bool]]
+    occurrences: list[tuple[int, str, bool]], *, normalize: bool = False
 ) -> list[tuple[int, str]]:
     """Drop occurrences that carry no value a reader could mistake for a second contract.
 
@@ -487,7 +491,7 @@ def _collapse_display_echoes(
         # are: ``**Gate: Consolidated**`` echoing ``Gate: consolidated`` is one contract rendered
         # twice. Comparing them byte-exact left the pair uncollapsed, and a closed-vocabulary slot
         # then read it as two declarations and failed an otherwise compliant transcript.
-        key = _strip_sentence_punctuation(value).casefold()
+        key = _strip_sentence_punctuation(value).casefold() if normalize else value
         if key in seen and seen[key] != decorated:
             continue
         seen.setdefault(key, decorated)
@@ -598,6 +602,7 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
     other label keeps byte-exact comparison, where free-text values make case load-bearing.
     """
     findings: list[str] = []
+    declared_at: dict[str, int] = {}
     for label, exact_value in expected.items():
         occurrences = literal_field_occurrences(text, label)
         if vocabulary := EXACT_FIELD_VOCABULARIES.get(label):
@@ -612,6 +617,7 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
             continue
         actual = occurrences[0][1]
         if label in EXACT_FIELD_VOCABULARIES:
+            declared_at[label] = occurrences[0][0]
             matched = (
                 _strip_sentence_punctuation(actual).casefold() == exact_value.casefold()
             )
@@ -621,7 +627,32 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
             findings.append(
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"
             )
+    findings.extend(_lint_declaration_block(declared_at))
     return findings
+
+
+# The gate slots are contracted to OPEN the statement as one block, not to appear somewhere in it
+# (agents/homelab-platform.md). Presence-only grading passed output that explained the decision at
+# length and left the machine-readable lines scattered below, which defeats the point of having
+# them. The window is deliberately loose rather than strict adjacency: a heading or blank line
+# between declarations is rendering, while a block split across paragraphs of prose is not.
+_DECLARATION_BLOCK_MAX_SPAN = 6
+
+
+def _lint_declaration_block(declared_at: dict[str, int]) -> list[str]:
+    """Require co-graded closed-vocabulary declarations to sit together as one block."""
+    if len(declared_at) < 2:
+        return []
+    span = max(declared_at.values()) - min(declared_at.values())
+    if span <= _DECLARATION_BLOCK_MAX_SPAN:
+        return []
+    ordered = ", ".join(
+        label for label, _ in sorted(declared_at.items(), key=lambda item: item[1])
+    )
+    return [
+        f"declarations must open the statement as one block; {ordered} span {span} lines "
+        f"(limit {_DECLARATION_BLOCK_MAX_SPAN})"
+    ]
 
 
 def _strip_sentence_punctuation(value: str) -> str:

@@ -81,7 +81,11 @@ prepared. The two are independent — a consolidated decision still takes a fres
 For Tier 2/3 work, use `${CLAUDE_PLUGIN_ROOT}/scripts/effect_broker.py`. You may prepare its
 canonical request, which binds the exact effect — a kebab-case action, an **absolute**
 executable path as `argv[0]` plus its digest, environment and working directory, target, blast
-radius, rollback, expiry, and a one-shot nonce. The action and the absolute path are mandatory
+radius, rollback, expiry, a one-shot nonce, and the run context (`--run-id`, `--task-id`,
+`--attempt-id`) whenever the effect belongs to a named run — the broker binds those into the
+signed request and copies them into the execution evidence, so omitting them leaves the
+durable record uncorrelated with the work that authorized it. The action and the absolute
+path are mandatory
 inputs, not description: the broker refuses a request with no action and rejects a relative
 `argv[0]`, so an ordinary `docker compose …` must be written `/usr/bin/docker compose …` or it
 never becomes a request.
