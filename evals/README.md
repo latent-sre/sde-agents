@@ -371,6 +371,36 @@ from `benchmark.json` is what makes that possible — the benchmark cannot be ig
 because it *is* the artifact, which is why `--retain-run-evidence`, whose text lands inside it,
 stays opt-in and requires inspecting the result before you commit or share it.
 
+### Writing a `must_not_match` — prefer a positive requirement
+
+A forbidden pattern reads as "the model must not do X", but a keyword regex cannot tell an assertion
+of X from X named in order to be rejected. Both failure directions are real, and they cost
+differently: a **trap** fails the right answer loudly (a contract regression that never happened, and
+the next session goes off to rewrite an agent that was behaving), while a **hole** passes the wrong
+one silently. PR #145 shipped ten traps in one file, and then, repairing them, two holes — the
+line-wide negator scan that exempted a whole line whenever any "no" appeared on it let the exact
+refusal a contract rejected grade as a pass.
+
+So, in order of preference:
+
+1. **State the contract positively.** If the requirement is "do not present an unestablished claim as
+   fact", require the `[unverified]` label on the claim's own line in `must_match`. There is no
+   negation to invert, so neither direction has anywhere to hide, and a response that settles the
+   claim fails a missing requirement rather than slipping past a guard. This is what
+   `researcher-unestablished-claim-stays-unverified` does, after four rounds of the alternative.
+2. **Bind the verb to its object.** "We should break up the monolith" is only a decision when the
+   monolith is what is being broken up; "move the identity provider" is only absorption when the
+   thing moved is the service rather than the decision about it.
+3. **Anchor structurally** — a verdict line at line start beats the same words in prose.
+4. **Scope a negator check to the claim's own clause**, never the whole line, and remember a comma or
+   an adversative ends that clause. If the guard needs more nesting than that to be right, it is the
+   wrong instrument: go back to 1.
+
+Whatever you land, pin **both** directions in `tests/test_eval_behavioral.py` — the compliant
+sentence must not trip, and the asserted violation must still trip. Narrowing is exactly the edit
+that turns a guard into decoration, and every trap in this file's history was in a sentence a
+competent agent would naturally write.
+
 Behavioral documents are exact schemas, validated both by the runner before any session and by the
 ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
 wrongly typed lists, unknown components or denied-tool names, unqualified agent names, invalid
