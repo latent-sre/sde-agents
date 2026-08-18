@@ -106,13 +106,6 @@ Promotion evidence: <targeted, regression/adverse, fresh evaluator, exact artifa
 Residue: <each other candidate -> disposition + promotion state + destination/owner/reason>
 ```
 
-`Provenance:` opens with one bare triad word and nothing before it. The capture template's
-`local` / `official` / `upstream` vocabulary says *where* evidence came from, so it is source
-detail and belongs after the triad word — `Provenance: verified — local, 2026-08-15`, never
-`Provenance: local, verified — 2026-08-15`. This template taught the second form until
-2026-08-17, so a session that opened it read one grammar here and another in SKILL.md, and
-`scripts/packet_lint.py` accepts only the one above.
-
 `quarantined` is not a full-retro outcome: it is the intake state before the retro chooses a
 disposition. No recurring or material signal means `Learning: none — no reusable signal` and the
 retro ends. That is disciplined subtraction, not a failed retrospective.
