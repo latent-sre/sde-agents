@@ -976,9 +976,9 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         """
         expected = [
             {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Instrument": "fresh request required", "effect": r"retry|re-?run"},
+             "Instrument": "fresh request required", "effect": "retry"},
             {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Instrument": "fresh request required", "effect": r"delet\w+|volume"},
+             "Instrument": "fresh request required", "effect": "deletion"},
         ]
 
         def declaration(gate: str, effect_class: str) -> str:
@@ -988,21 +988,20 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         retry = declaration("consolidated", "reversible live activation")
         deletion = declaration("new", "irreversible or custody boundary")
         self.assertEqual([], packet_lint.lint_effect_sets(
-            f"The identical retry needs:\n{retry}\nThe volume deletion needs:\n{deletion}",
+            f"Effect: retry\n{retry}\nEffect: deletion\n{deletion}",
             expected,
         ))
         # Which effect is addressed first is presentation.
         self.assertEqual([], packet_lint.lint_effect_sets(
-            f"The volume deletion needs:\n{deletion}\nThe retry needs:\n{retry}", expected,
+            f"Effect: deletion\n{deletion}\nEffect: retry\n{retry}", expected,
         ))
-        crossed = (f"The identical retry needs:\n{deletion}\n"
-                   f"The volume deletion needs:\n{retry}")
+        crossed = f"Effect: retry\n{deletion}\nEffect: deletion\n{retry}"
         self.assertTrue(packet_lint.lint_effect_sets(crossed, expected),
                         "each block sits under the wrong effect")
-        scattered = ("The retry:\nGate: consolidated\n" + "prose\n" * 20
+        scattered = ("Effect: retry\nGate: consolidated\n" + "prose\n" * 20
                      + "Effect class: reversible live activation\n" + "prose\n" * 20
                      + "Instrument: fresh request required\n"
-                     f"The volume deletion needs:\n{deletion}")
+                     f"Effect: deletion\n{deletion}")
         self.assertTrue(packet_lint.lint_effect_sets(scattered, expected),
                         "a set scattered through prose is not a block")
 
@@ -1056,44 +1055,47 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Owner: foo_bar\n**Owner: foo_bar**\n", {"Owner": "foo_bar"}
         ))
 
-    def test_a_preamble_naming_both_effects_assigns_the_block_to_the_first(self) -> None:
-        """PR #147 round 2: a comparative heading contains both anchors.
+    def test_a_code_span_preserves_literal_markdown_markers_inside_it(self) -> None:
+        """ORACLE-013: Markdown inside a code span is data, not nested decoration.
 
-        `Deletion, unlike the retry` and `Retry, unlike the volume deletion` each mention both
-        effects, so searching each anchor independently accepted a swapped pair. The effect a
-        block belongs to is the first one its preamble names — the subject leads, the contrast
-        follows.
+        Recursive unwrapping turned `` `__init__` `` into ``init`` and collapsed a conflicting
+        decorated declaration. Removing the code-span wrapper must end decoration processing so
+        dunder identifiers and marker-shaped literals retain their identity.
+        """
+        self.assertTrue(packet_lint.lint_exact_fields(
+            "Owner: `__init__`\n**Owner: init**\n", {"Owner": "__init__"}
+        ))
+        self.assertEqual([], packet_lint.lint_exact_fields(
+            "Owner: `__init__`\n", {"Owner": "__init__"}
+        ))
+        self.assertEqual([], packet_lint.lint_exact_fields(
+            "Owner: `**literal**`\n", {"Owner": "**literal**"}
+        ))
+
+    def test_effect_binding_requires_an_exact_effect_heading(self) -> None:
+        """ORACLE-012/014: effect identity is a boundary, not inferred from prose.
+
+        Comparative grammar and overlapping words defeated three successive anchor heuristics.
+        The only consumer now asks for an exact ``Effect:`` heading immediately before each block;
+        a natural-language heading is therefore not evidence that a set belongs to an effect.
         """
         expected = [
             {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Instrument": "fresh request required", "effect": r"retry|re-?run"},
+             "Instrument": "fresh request required", "effect": "retry"},
             {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Instrument": "fresh request required", "effect": r"delet\w+|volume"},
+             "Instrument": "fresh request required", "effect": "deletion"},
         ]
-
-        def declaration(gate: str, effect_class: str) -> str:
-            return (f"Gate: {gate}\nEffect class: {effect_class}\n"
-                    "Instrument: fresh request required\n")
-
-        retry = declaration("consolidated", "reversible live activation")
-        deletion = declaration("new", "irreversible or custody boundary")
+        retry = self._set("consolidated", "reversible live activation")
+        deletion = self._set("new", "irreversible or custody boundary")
         self.assertEqual([], packet_lint.lint_effect_sets(
-            f"Retry, unlike the volume deletion, needs:\n{retry}\n"
-            f"Deletion, unlike the retry, needs:\n{deletion}", expected,
+            f"Effect: retry\n{retry}\nEffect: deletion\n{deletion}", expected,
         ))
         self.assertTrue(packet_lint.lint_effect_sets(
-            f"Deletion, unlike the retry, needs:\n{retry}\n"
-            f"Retry, unlike the volume deletion, needs:\n{deletion}", expected,
-        ), "both preambles name both effects, so the sets are swapped")
-        # PR #147 round 3, the shape that defeats the opposite rule: an answer that EXPLAINS the
-        # first block before introducing the second puts `retry` ahead of `deletion` in the second
-        # block's preamble. Taking the earliest anchor across the whole preamble rejected this
-        # correct answer, so the scope is the nearest introduction — the last non-empty line.
-        self.assertEqual([], packet_lint.lint_effect_sets(
-            f"The identical retry needs:\n{retry}\n"
-            "This retry uses the standing decision, so no new gate opens.\n\n"
-            f"The volume deletion needs:\n{deletion}", expected,
-        ))
+            f"Effect: deletion\n{retry}\nEffect: retry\n{deletion}", expected,
+        ), "the exact headings bind each declaration block to its effect")
+        self.assertTrue(packet_lint.lint_effect_sets(
+            f"Effect: retry\n{retry}\nJellyfin cache volume deletion:\n{deletion}", expected,
+        ), "shared prose words cannot stand in for the required effect identity")
 
     def test_a_verified_slot_may_disclose_an_absence_without_citing_a_command(self) -> None:
         """ORACLE-003: the honest answer graded worse than a terse one.
