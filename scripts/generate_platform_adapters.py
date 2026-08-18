@@ -1355,11 +1355,14 @@ def validate_generated_outputs(root: Path) -> list[str]:
         retired = root / relative
         try:
             _safe_generated_root(root, relative, operation="inspect")
-        except ValueError:
-            has_indirection = True
-        else:
-            has_indirection = False
-        if retired.exists() or has_indirection:
+        except ValueError as exc:
+            issues.append(
+                f"{retired}: cannot inspect retired generated adapter root safely: {exc} "
+                f"To repair, remove the offending link, junction, or reparse point before "
+                f"regenerating adapters."
+            )
+            continue
+        if retired.exists():
             issues.append(
                 f"{retired}: retired generated adapter root still exists. Both the old shared "
                 f"copy and the host-specific copies could be reviewed or packaged as authoritative; "

@@ -296,14 +296,12 @@ class PlatformAdapterTests(unittest.TestCase):
                 ):
                     issues = generate_platform_adapters.validate_generated_outputs(root)
 
-                self.assertTrue(
-                    any(
-                        str(retired) in issue
-                        and "retired generated adapter root still exists" in issue
-                        for issue in issues
-                    ),
-                    issues,
-                )
+                matching = [issue for issue in issues if str(retired) in issue]
+                self.assertEqual(1, len(matching), issues)
+                self.assertIn("link, junction, or reparse point", matching[0])
+                self.assertIn(str(linked), matching[0])
+                self.assertIn("remove the offending link", matching[0])
+                self.assertNotIn("generate_platform_adapters.py --write", matching[0])
 
     def test_write_rejects_links_at_every_generated_tree_ancestor(self) -> None:
         placements = (
