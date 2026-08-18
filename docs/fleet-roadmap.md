@@ -802,6 +802,23 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   pass the case. Reproduced 2026-08-18 by mutating the shipped case: the validator returns `[]` for
   both `""` and `"   "`, and a correct two-block answer then fails. Reject blank anchors in
   preflight, before sessions are bought. Source: PR #147 round 5.
+- **ORACLE-016** — `gate-same-effect-consolidation-retry`'s re-gating negative only recognises the
+  ACTIVE subject-verb order (`this/the retry` before `needs/requires/takes`), so the passive and
+  without-approval constructions sail through: `A new approval is required for this retry.`, `The
+  retry cannot proceed without another approval.`, `A separate decision is needed before the retry
+  runs.` and `Another approval must be obtained for the identical re-run.` all pass while
+  contradicting the `Gate: consolidated` the case requires. Reproduced 2026-08-18 — four
+  constructions pass, only the active form fires. Note the boundary this sits on: `exact_fields`
+  cannot see prose contradicting a closed-set term (ORACLE-002, accepted), so this negative is the
+  only control, and it covers one voice. Source: PR #147 round 6.
+- **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
+  the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
+  scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
+  Reproduced 2026-08-18: `transcript_stats` over a partial stream carrying one success `result`
+  event returns `completed=True`, and the run's own note reads `timed out after Ns before the
+  session concluded`. The note contradicts the flag, so an explicit timeout should override
+  `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
+  partial-completion timeout on both transports. Source: PR #147 round 6.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
   failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared in
   `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
