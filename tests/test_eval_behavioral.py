@@ -33,6 +33,26 @@ eval_routing = eval_behavioral.eval_routing
 from tests.support import REPO
 
 
+def _symlink_creation_is_permitted() -> bool:
+    """Whether this host lets an unprivileged process create a symlink.
+
+    TEST-006: Windows refuses `os.symlink` with `OSError: [WinError 1314]` unless the session is
+    elevated or Developer Mode is on, so the dangling-symlink guards below ERRORED rather than
+    skipped and `scripts/run_tests.py` exited 1 on every local run. An always-non-zero suite
+    teaches the operator to ignore the exit code, which is the failure the gitignore comment
+    already warns about. CI's Windows runner is elevated, so this skips nothing there.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            os.symlink(Path(tmp) / "target", Path(tmp) / "link")
+        except (OSError, NotImplementedError, AttributeError):
+            return False
+    return True
+
+
+SYMLINKS_AVAILABLE = _symlink_creation_is_permitted()
+
+
 class ExactSourceEntrypointTest(unittest.TestCase):
     def test_standalone_entry_reexecutes_the_captured_runner(self) -> None:
         bound = mock.Mock()
@@ -2628,6 +2648,102 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         ))
         self.assertTrue(eval_behavioral._session_reached_a_result({"completed": True}))
 
+    def _codex_run(self, *, stdout: str, returncode: int = 0, timed_out: bool = False) -> dict:
+        """Drive the Codex transport once and return its stats, however the run ended."""
+        with tempfile.TemporaryDirectory() as tmp:
+            kwargs = dict(
+                agent="sde-agents:homelab-platform",
+                developer_instructions="Exact role instructions.",
+                model="gpt-5.6-terra",
+                reasoning_effort="medium",
+                executable="codex",
+                scratch_root=Path(tmp) / "scratch",
+            )
+            if timed_out:
+                exc = eval_codex_runtime.subprocess.TimeoutExpired(
+                    cmd="codex", timeout=5, output=stdout
+                )
+                patch = mock.patch.object(
+                    eval_codex_runtime.subprocess, "run", side_effect=exc
+                )
+            else:
+                proc = mock.Mock(returncode=returncode, stdout=stdout, stderr="")
+                patch = mock.patch.object(
+                    eval_codex_runtime.subprocess, "run", return_value=proc
+                )
+            with patch:
+                text, _fired, note, stats = eval_codex_runtime.run_session("p", 5, **kwargs)
+        return {"text": text, "note": note, "stats": stats}
+
+    _CODEX_ANSWERED = "\n".join((
+        json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "a"}}),
+        json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}),
+    ))
+
+    def test_a_codex_model_mismatch_run_is_excluded_not_scored(self) -> None:
+        """EVAL-005: a run that observed a model other than the requested pin measured the
+        wrong thing, so it must be excluded — not published in the rate as a contract failure.
+        The branch returns empty text with a note but leaves `completed` intact, so
+        `_session_reached_a_result` calls it gradeable and the empty response scores as FAIL.
+        """
+        run = self._codex_run(
+            stdout=self._CODEX_ANSWERED
+            + "\n"
+            + json.dumps({"type": "turn.completed", "model": "gpt-4o"}),
+        )
+        self.assertEqual("", run["text"])
+        self.assertIn("observed model differs", run["note"])
+        self.assertFalse(
+            eval_behavioral._session_reached_a_result(run["stats"]),
+            "a run that observed the wrong model measured nothing about the contract",
+        )
+
+    def test_a_codex_nonzero_exit_after_a_completion_event_is_excluded(self) -> None:
+        """The unfiled fifth route of the same class, found while repairing EVAL-005.
+
+        `_session_reached_a_result`'s docstring claims both transports clear `completed` on
+        exactly the failures that must be excluded. Codex's `_stats` clears it for failure
+        events and tool attempts only, so a nonzero exit after `turn.completed` arrives at the
+        grader as a contract failure — the `Claude exited 1` flake, recreated for this lane.
+        """
+        run = self._codex_run(stdout=self._CODEX_ANSWERED, returncode=1)
+        self.assertEqual("", run["text"])
+        self.assertIn("exited 1", run["note"])
+        self.assertFalse(
+            eval_behavioral._session_reached_a_result(run["stats"]),
+            "a transport the CLI itself failed cannot be evidence about the contract",
+        )
+
+    def test_a_timeout_after_a_result_event_is_excluded_on_both_transports(self) -> None:
+        """EVAL-008: the partial transcript of a timed-out run can carry a completion event.
+
+        `transcript_stats` over that stream returns `completed=True`, so the empty text scores
+        as a contract failure while the run's own note reads `timed out ... before the session
+        concluded`. The note contradicts the flag; an explicit timeout is authoritative.
+        """
+        partial = json.dumps({"type": "result", "is_error": False, "result": "an answer"})
+        exc = eval_behavioral.subprocess.TimeoutExpired(
+            cmd="claude", timeout=5, output=partial.encode()
+        )
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", side_effect=exc
+        ):
+            text, _fired, note, stats = eval_behavioral.run_session("p", REPO, timeout=5)
+        self.assertEqual("", text)
+        self.assertIn("timed out", note)
+        self.assertFalse(
+            eval_behavioral._session_reached_a_result(stats),
+            "Claude lane: a timed-out run is a measurement failure, not a contract failure",
+        )
+
+        codex = self._codex_run(stdout=self._CODEX_ANSWERED, timed_out=True)
+        self.assertEqual("", codex["text"])
+        self.assertIn("timed out", codex["note"])
+        self.assertFalse(
+            eval_behavioral._session_reached_a_result(codex["stats"]),
+            "Codex lane: same defect, same exclusion",
+        )
+
     def test_a_malformed_effect_set_value_is_a_case_error_not_a_traceback(self) -> None:
         """PR #147 round 2: `"Gate": 1` reached `.casefold()` and left main() by traceback."""
         case = {
@@ -2669,6 +2785,37 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                     findings,
                 )
 
+    def test_a_blocker_at_a_fixed_artifact_path_is_refused_before_any_session(self) -> None:
+        """EVAL-006: the preflight inspected the directory but never what it already holds.
+
+        An existing, writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
+        `failing-run-evidence.json` passed preflight, the batch of real model sessions was
+        bought, and the post-batch write then failed - the exact expensive failure EVAL-004 was
+        added to prevent, reached by another route. The knowable-up-front class is the class
+        that costs money, so both fixed artifact paths are inspected with the directory.
+        """
+        for name in (
+            eval_behavioral.BENCHMARK_FILENAME,
+            eval_behavioral.FAILING_EVIDENCE_FILENAME,
+        ):
+            with self.subTest(artifact=name), tempfile.TemporaryDirectory() as tmp:
+                (Path(tmp) / name).mkdir()
+                problem = eval_behavioral.output_dir_problem(Path(tmp))
+                self.assertIsNotNone(
+                    problem, f"a directory at {name} must be refused before the batch is bought"
+                )
+                self.assertIn(name, problem)
+
+    def test_a_writable_output_dir_holding_ordinary_artifacts_is_still_usable(self) -> None:
+        """The guard must refuse blockers, not re-runs: overwriting last batch's files is normal."""
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / eval_behavioral.BENCHMARK_FILENAME).write_text("{}", encoding="utf-8")
+            (Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME).write_text(
+                "[]", encoding="utf-8"
+            )
+            self.assertIsNone(eval_behavioral.output_dir_problem(Path(tmp)))
+
+    @unittest.skipUnless(SYMLINKS_AVAILABLE, "host forbids unprivileged symlink creation")
     def test_a_dangling_symlink_anywhere_on_the_path_is_refused(self) -> None:
         """PR #147 round 2: `exists()` follows a dangling link at any level of the walk."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -2678,6 +2825,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
             self.assertIsNotNone(problem)
             self.assertIn("symlink", problem)
 
+    @unittest.skipUnless(SYMLINKS_AVAILABLE, "host forbids unprivileged symlink creation")
     def test_a_dangling_symlink_output_dir_is_refused_before_any_session(self) -> None:
         """`Path.exists()` follows the link, so a dangling one read as creatable."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -3677,11 +3825,16 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
         def fake_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
                              disallowed_tools=None, agent=None, permission_mode=None,
                              model=None, env=None, semantic_oracle=None):
+            # Staged DURING the batch, not before it: EVAL-006 taught the preflight to refuse
+            # a directory at a fixed artifact path up front, so staging it first returns 2
+            # from preflight with no session run and no sidecar written - this test would
+            # pass while proving nothing about the guard it names. The write-time guard still
+            # has a live risk to defend, stated in `output_dir_problem`'s own docstring: the
+            # path can stop being writable while the sessions run. That race is staged here.
+            (Path(tmp) / eval_behavioral.BENCHMARK_FILENAME).mkdir(exist_ok=True)
             return self._FAILING, {"homelab-platform"}, None, self._stats()
 
         with tempfile.TemporaryDirectory() as tmp:
-            # A directory at the benchmark path makes write_text raise IsADirectoryError.
-            (Path(tmp) / "benchmark.json").mkdir()
             with mock.patch.object(eval_behavioral, "run_session", fake_run_session), \
                     mock.patch.object(eval_behavioral, "CLAUDE", "claude"):
                 code = eval_behavioral.main([
@@ -3691,6 +3844,10 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
             self.assertEqual(2, code)
             self.assertTrue((Path(tmp) / "benchmark.json").is_dir(),
                             "the blocker stays a directory; nothing overwrote it")
+            self.assertTrue(
+                (Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME).exists(),
+                "the sidecar must have landed first, or this never reached the write guard",
+            )
 
     def test_run_evidence_retention_requires_an_output_directory(self) -> None:
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(

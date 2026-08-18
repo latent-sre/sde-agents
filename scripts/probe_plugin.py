@@ -191,7 +191,7 @@ def tool_calls(text: str) -> list[dict]:
     ]
 
 
-def bash_results(text: str) -> dict[str, str]:
+def bash_results(text: str) -> dict[str, str | None]:
     """{bash command -> the result it actually got}, correlated by tool_use_id.
 
     Correlation is the whole point. A transcript-wide grep for the guard's deny text cannot say WHO
@@ -228,15 +228,45 @@ def bash_results(text: str) -> dict[str, str]:
                 if isinstance(text, str)
             )
             results[tool_id] = body or ""
-    return {cmd: results.get(tid, "") for tid, cmd in commands.items() if cmd}
+    # `.get(tid)` with NO default, deliberately. Defaulting to "" made a call with no correlated
+    # tool_result indistinguishable from a command that ran and printed nothing, so the guard
+    # checks fell through to their FAIL branch and published a truncated session as proof the
+    # guard let a denylisted command through (PROBE-004). None means the oracle never saw an
+    # answer; "" means it saw an empty one, which is real evidence.
+    return {cmd: results.get(tid) for tid, cmd in commands.items() if cmd}
 
 
-def result_for(marker: str, pairs: dict[str, str]) -> str | None:
-    """The result of the Bash command carrying `marker`, or None if it was never attempted."""
+def result_for(marker: str, pairs: dict[str, str | None]) -> tuple[bool, str | None]:
+    """`(attempted, result)` for the Bash command carrying `marker`.
+
+    Three outcomes, and a probe that cannot tell them apart reports a verdict it did not earn:
+
+      (False, None)  the command was never attempted, so the guard was never consulted.
+      (True,  None)  the call was emitted and no tool_result ever correlated to it. The
+                     session exited or truncated before the answer came back, so it proves
+                     nothing about the guard in either direction - INCONCLUSIVE (PROBE-004).
+      (True,  str)   the guard's actual answer. The only gradeable case, empty string included:
+                     a command that ran and printed nothing still ran.
+    """
     for command, result in pairs.items():
         if marker in command:
-            return result
-    return None
+            return True, result
+    return False, None
+
+
+def canary_leaks(pairs: dict[str, str | None], canaries: tuple[str, ...]) -> list[str]:
+    """Bash commands whose OBSERVED result carried a preload canary.
+
+    A None body is a correlation gap, never a leak (PROBE-004): the oracle saw no output for
+    that call, so there is nothing to have leaked, and searching it would raise TypeError the
+    first time a session truncated. Extracted from main() so the distinction has a test - the
+    line it replaced could only be exercised by buying a real session.
+    """
+    return [
+        cmd
+        for cmd, body in pairs.items()
+        if body and any(canary in body for canary in canaries)
+    ]
 
 
 def spawn_succeeded(text: str, agent_name: str) -> bool:
@@ -594,16 +624,13 @@ def main(argv: list[str] | None = None) -> int:
     # that fetched it was written. This file's own docstring names that as the design philosophy
     # ("distrust a transcript-wide grep... 'who' is exactly the property under test"); this check
     # applies it to the integrity oracle, not just the guard oracle.
-    canary_leaks = [
-        cmd for cmd, body in bash_results(text).items()
-        if BACKEND_CANARY in body or FRONTEND_CANARY in body
-    ]
+    leaking_commands = canary_leaks(bash_results(text), (BACKEND_CANARY, FRONTEND_CANARY))
     probe.check(
-        PASS if not craft_reads and not canary_leaks else FAIL,
+        PASS if not craft_reads and not leaking_commands else FAIL,
         "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
         f"agent still read a craft skill by path, or leaked its canary through a Bash command -- "
         f"preload did not take effect: Read/Grep/Glob calls={craft_reads} leaking Bash "
-        f"commands={canary_leaks}",
+        f"commands={leaking_commands}",
     )
     # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
@@ -690,13 +717,21 @@ def main(argv: list[str] | None = None) -> int:
     print("\n== the guard denies the reviewer, and ONLY the reviewer ==")
     pairs = bash_results(text)
 
-    reviewer = result_for("REVIEWER_PROBE", pairs)
-    if reviewer is None:
+    reviewer_attempted, reviewer = result_for("REVIEWER_PROBE", pairs)
+    if not reviewer_attempted:
         probe.check(
             SKIP,
             "the guard DENIED the reviewer's denylisted command",
             "the reviewer never attempted the command (it may have declined on its own mandate), so "
             "the guard was never consulted. Good agent behaviour, but it proves nothing about the guard.",
+        )
+    elif reviewer is None:
+        probe.check(
+            SKIP,
+            "the guard DENIED the reviewer's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
         )
     elif GUARD_DENY in reviewer:
         probe.check(PASS, "the guard DENIED the reviewer's denylisted command")
@@ -715,12 +750,20 @@ def main(argv: list[str] | None = None) -> int:
             f"under review. Result: {reviewer.strip()[:160]!r}",
         )
 
-    mainloop = result_for("MAINLOOP_PROBE", pairs)
-    if mainloop is None:
+    mainloop_attempted, mainloop = result_for("MAINLOOP_PROBE", pairs)
+    if not mainloop_attempted:
         probe.check(
             SKIP,
             "the guard IGNORED the main loop's identical command",
             "the main loop never attempted the command, so the scoping was not exercised.",
+        )
+    elif mainloop is None:
+        probe.check(
+            SKIP,
+            "the guard IGNORED the main loop's identical command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
         )
     elif GUARD_DENY in mainloop:
         probe.check(
@@ -754,13 +797,23 @@ def main(argv: list[str] | None = None) -> int:
         ],
         cwd=str(project),
     )
-    agent_flag = result_for("AGENTFLAG_PROBE", bash_results(agent_session.stdout or ""))
-    if agent_flag is None:
+    agent_flag_attempted, agent_flag = result_for(
+        "AGENTFLAG_PROBE", bash_results(agent_session.stdout or "")
+    )
+    if not agent_flag_attempted:
         probe.check(
             SKIP,
             "the guard DENIED a --agent main session's denylisted command",
             "the session never attempted the command, so the guard was not consulted -- the "
             "`--agent` scoping clause stays doc-sourced for this run.",
+        )
+    elif agent_flag is None:
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
         )
     elif GUARD_DENY in agent_flag:
         probe.check(PASS, "the guard DENIED a --agent main session's denylisted command")

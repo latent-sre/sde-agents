@@ -206,6 +206,69 @@ class ProbeTranscriptParserTests(unittest.TestCase):
 
         self.assertEqual({"echo GOOD": "good result"}, probe_plugin.bash_results(transcript))
 
+    def test_an_uncorrelated_bash_call_is_inconclusive_not_an_unguarded_run(self) -> None:
+        """PROBE-004: a Bash call with no correlated tool_result proves nothing about the guard.
+
+        `bash_results` supplied "" for such a call, so `result_for` returned an empty string
+        rather than signalling the gap; the guard checks then fell through to their FAIL branch
+        and recorded "the command RAN UNGUARDED" with an empty Result. A session that emitted
+        the call and then exited nonzero or truncated is the probe's INCONCLUSIVE case - the
+        same distinction PROBE-002 and PROBE-003 already draw.
+        """
+        transcript = json.dumps({"message": {"content": [{
+            "type": "tool_use", "id": "bash-uncorrelated", "name": "Bash",
+            "input": {"command": "find . -exec AGENTFLAG_PROBE"},
+        }]}})
+
+        pairs = probe_plugin.bash_results(transcript)
+        self.assertEqual({"find . -exec AGENTFLAG_PROBE": None}, pairs)
+
+        attempted, result = probe_plugin.result_for("AGENTFLAG_PROBE", pairs)
+        self.assertTrue(attempted, "the call WAS emitted; the session simply never answered it")
+        self.assertIsNone(result, "no correlated result, so there is nothing to grade")
+
+    def test_a_command_never_attempted_stays_distinct_from_one_never_answered(self) -> None:
+        """The two INCONCLUSIVE causes need different operator actions, so they stay separable."""
+        self.assertEqual((False, None), probe_plugin.result_for("ABSENT_PROBE", {}))
+
+    def test_a_correlated_empty_result_remains_a_real_gradeable_answer(self) -> None:
+        """An empty tool_result is the command running and printing nothing - that IS evidence.
+
+        The repair must not swallow it: only the absence of any correlated result is the gap.
+        """
+        transcript = json.dumps({"message": {"content": [
+            {"type": "tool_use", "id": "bash-empty", "name": "Bash",
+             "input": {"command": "find . -exec MAINLOOP_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "bash-empty", "content": ""},
+        ]}})
+
+        pairs = probe_plugin.bash_results(transcript)
+        self.assertEqual({"find . -exec MAINLOOP_PROBE": ""}, pairs)
+        self.assertEqual((True, ""), probe_plugin.result_for("MAINLOOP_PROBE", pairs))
+
+    def test_a_canary_leak_needs_an_observed_result_not_a_correlation_gap(self) -> None:
+        """PROBE-004 fallout: a None body is a gap, not a leak, and must not be searched.
+
+        Once `bash_results` reports an uncorrelated call as None, every consumer that treats its
+        values as text is a crash waiting for a truncated session - `CANARY in None` raises
+        TypeError. It is also wrong on the merits: the oracle saw no output for that call, so
+        there is nothing to have leaked.
+        """
+        canaries = (probe_plugin.BACKEND_CANARY, probe_plugin.FRONTEND_CANARY)
+
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": None}, canaries))
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": "clean output"}, canaries))
+        self.assertEqual(
+            ["cat backend-craft/SKILL.md"],
+            probe_plugin.canary_leaks(
+                {
+                    "cat backend-craft/SKILL.md": f"...{probe_plugin.BACKEND_CANARY}...",
+                    "echo hi": None,
+                },
+                canaries,
+            ),
+        )
+
     def test_agent_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
             {
