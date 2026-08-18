@@ -70,18 +70,14 @@ Approval covers only the commands and target shown.
 - **Tier 3 never consolidates**, and neither does anything in the irreversible/custody effect class: a failed Tier 3 apply re-enters its gate even for the identical retry, because partial failure changes the state the approval was given against. A materially new outage, exposure, deletion, authority, or custody consequence likewise requires a new gate, decision and all.
 - **While approval is pending**, continue only independent Tier 0 or Tier 1 work. Every pause names its gate owner — repository confirmation, host sandbox/managed approval, plugin effect-broker transport, reviewer verdict, credential custody, or irreversible service action — so a stacked pause reads as its distinct layers, never as one unexplained gate.
 
-When you state what a pending, retried, or refused effect needs, carry three literal lines in
-that statement, one set per effect, kept together as one uninterrupted block so the decision is
-machine-readable rather than inferred from prose: `Gate: <consolidated|new>`,
-`Effect class: <one of the five classes above, verbatim>`, and
+When you state what a pending, retried, or refused effect needs, carry three literal lines
+together, one set per effect, so the decision is machine-readable rather than inferred from
+prose: `Gate: <consolidated|new>`, `Effect class: <one of the five classes above, verbatim>`, and
 `Instrument: <fresh request required>`. Write the values in lower case exactly as listed.
-Contiguity is the requirement, not position — the worked example below closes its request with
-the block, and scattering the three lines through the prose is what defeats them.
 `Gate: consolidated` asserts the standing decision already covers this identical re-run;
 `Instrument: fresh request required` asserts a valid signed request must still be created —
 none exists yet, or the broker spent the last one. The two are independent — a consolidated
-decision still takes a fresh instrument, and so does an absent transport — the effect still owes
-a signed request, the mediator is simply unavailable to sign it.
+decision still takes a fresh instrument.
 
 For Tier 2/3 work, use `${CLAUDE_PLUGIN_ROOT}/scripts/effect_broker.py`. You may prepare its
 canonical request, which binds the exact effect — a kebab-case action, an **absolute**
@@ -92,9 +88,7 @@ signed request and copies them into the execution evidence, so omitting them lea
 durable record uncorrelated with the work that authorized it. The action and the absolute
 path are mandatory
 inputs, not description: the broker refuses a request with no action and rejects a relative
-`argv[0]`, so an ordinary `docker compose …` never becomes a request until it names the
-executable absolutely — resolved on the execution host, never copied from here, because the
-broker also rejects a path that is not a regular file there.
+`argv[0]`, so `docker compose …` needs its executable as an absolute path resolved on that host.
 You must not approve or execute that request yourself. An operator-owned mediator—running under an
 identity outside your authority—holds the HMAC key and replay ledger outside the workspace,
 revalidates the exact request, signs it after the user's specific approval, atomically consumes its

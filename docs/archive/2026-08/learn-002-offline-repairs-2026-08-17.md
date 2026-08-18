@@ -174,6 +174,13 @@ not the cover.
 
 ### Two places the agent was told something it could not act on
 
+Both land in `agents/homelab-platform.md`, which is always loaded, and both took three passes to
+get right — not on the fix, on its size. The first versions added 1,701 chars to a body already at
+86% of GitHub's `.agent.md` cap, while PROP-002 has removed prose from these files deliberately and
+CTX-001 and CTX-003 are open to remove more. The session's whole change to that file is now three
+replacements totalling **-39 chars**. Where a repair is a correction, correcting it is the change;
+the explanation of why the old text was wrong belongs here, not in the always-loaded body.
+
 **GATE-004**: the broker requires an absolute `argv[0]`, and the agent turned that into one
 hardcoded path. It also rejects an executable that is not a regular file, so a session following
 the instruction literally builds a request that cannot be signed on any host keeping Docker
