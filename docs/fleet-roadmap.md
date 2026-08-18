@@ -745,6 +745,43 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **ORACLE-011** — `self-improve-promotion-gate`'s affirmative-promotion negatives recognise
+  approval and a few `proceed`/`promote` forms, so `No promotion now. Promotion is authorized
+  despite the gaps.` earns the refusal positive and trips no negative — the case passes while
+  authorizing the prohibited action. Reproduced 2026-08-18. The third widening of this pattern in
+  one branch, which is the signal: bind the refusal to the answer's FINAL decision rather than
+  accepting a standalone `no promotion` token and chasing each new authorization verb. Source: PR
+  #147 round 4.
+- **ORACLE-012** — `_preamble_assigns` takes the first effect named in a block's nearest
+  introduction, so a PREPOSED comparison puts the object first: `Unlike the deletion, the retry
+  needs:` binds the block to the deletion and a correct answer is reported as a behavioral
+  regression. **A false RED, and the third rule to be defeated by a shape the previous two
+  handled** (last-mention lost to `Deletion, unlike the retry`; earliest-mention lost to trailing
+  commentary). Before tuning it a fourth time, weigh retiring the binding half of `effect_sets`:
+  the mechanism is one round old, its only consumer is a single unmeasured case, and completeness
+  and per-set contiguity are settled without it. Reproduced 2026-08-18. Source: PR #147 round 4.
+- **ORACLE-013** — `_strip_balanced_decoration` unwraps recursively, so decoration INSIDE a code
+  span is read as more decoration: `` Owner: `__init__` `` normalizes to `init` and collapses with
+  a conflicting `**Owner: init**`. Markdown inside backticks is literal, and dunder identifiers are
+  ordinary. Stop unwrapping once a code-span wrapper is removed. Reproduced 2026-08-18. Source: PR
+  #147 round 4.
+- **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
+  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
+  response is scored as a contract failure. A run that observed a model other than the requested pin
+  measured the wrong thing and must be excluded, not published in the rate. Reproduced 2026-08-18;
+  owes a test that exercises the branch. Source: PR #147 round 4.
+- **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
+  inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
+  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write fails
+  — the expensive failure EVAL-004 was added to prevent, by another route.
+  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this blocker.
+  Reproduced 2026-08-18. Source: PR #147 round 4.
+- **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
+  `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
+  returns that empty string rather than `None`, and the branch records FAIL. A session that emitted
+  the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
+  the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
+  Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
   failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared in
   `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
