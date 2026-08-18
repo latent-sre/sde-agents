@@ -191,7 +191,7 @@ _CLAIM_NEGATION_RE = re.compile(
     r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
     r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
     r"\s+(?:to\s+)?(?:be\s+)?"
-    r"(?:run|ran|execute[d]?|verif(?:y|ied)|check(?:ed)?|test(?:ed)?|confirm(?:ed)?"
+    r"(?:(?:re-?)?(?:run|ran)|(?:re-?)?execute[d]?|verif(?:y|ied)|check(?:ed)?|test(?:ed)?|confirm(?:ed)?"
     r"|validate[d]?|reproduce[d]?|access(?:ed)?|reach(?:ed)?|read|inspect(?:ed)?"
     r"|measure[d]?|collect(?:ed)?|obtain(?:ed)?|complete[d]?)\b"
     r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"

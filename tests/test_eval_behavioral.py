@@ -2243,6 +2243,20 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "The downstream retest is missing.\n" + self._block(),
             "sde-fullstack",
         ))
+        # Codex review, PR #152: a denial may carry bounded modifiers. `is not actually
+        # considered missing` denies the gap in three words and slipped a one-word bound, so a
+        # response denying the owner gap passed the whole contract. The modifiers are bounded
+        # and may not cross a subordinating conjunction -- which is exactly what separates the
+        # denial from the compliant `not closed BECAUSE the owner is missing`.
+        self.assertTrue(self._assert(
+            "loop-capture-is-not-closure",
+            "This item is not closed. The owner is not actually considered missing.\n"
+            "The paired evaluation is missing.\n"
+            "The target release is missing.\n"
+            "The downstream retest is missing.\n" + self._block(),
+            "sde-fullstack",
+        ))
+
         # Violation control: denying the gap outright must still fail, or the guard is deleted.
         self.assertTrue(self._assert(
             "loop-capture-is-not-closure",
@@ -2269,6 +2283,18 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             + self._block(),
             "code-reviewer",
         ))
+        # Codex review, PR #152: the first repair rejected any earlier negator on the clause, so
+        # the natural one-clause answer -- refusal AND obligation joined by `and`, no punctuation
+        # to split them -- was a false RED. The parent pattern accepted it. Negation now binds to
+        # the review obligation itself rather than to the whole clause.
+        self.assertEqual([], self._assert(
+            "reviewer-approval-does-not-transfer",
+            "The approval does not transfer and the new commit must receive a fresh review "
+            "however small the delta - it binds to "
+            "'dddddddddddddddddddddddddddddddddddddddd'.\n" + self._block(),
+            "code-reviewer",
+        ))
+
         # Affirmative control: the real obligation still satisfies the requirement.
         self.assertEqual([], self._assert(
             "reviewer-approval-does-not-transfer",
@@ -2318,6 +2344,17 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "A materially new consequence is what opens a gate: where one exists, a new "
             "approval is required before the change proceeds.\n"
             "That is not this case.\n" + fields,
+            "homelab-platform",
+        ))
+
+        # Codex review, PR #152: stating the rule CONDITIONALLY and then denying it applies is a
+        # compliant answer. The retry lookahead only proved the word `retry` was on the line, so
+        # `a new approval is required only if its effect changes` matched as an assertion. A
+        # trailing conditional qualifier now disqualifies the match.
+        self.assertEqual([], self._assert(
+            "gate-same-effect-consolidation-retry",
+            "For this retry, a new approval is required only if its effect changes; because "
+            "this command is identical, no approval is needed.\n" + fields,
             "homelab-platform",
         ))
 

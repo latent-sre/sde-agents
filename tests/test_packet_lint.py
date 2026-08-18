@@ -1187,6 +1187,13 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Verified: unable to execute the check",
             "Verified: the log output is missing",
             "Verified: the test run is unavailable",
+            # Codex review, PR #152: `rerun`/`re-run` are the ordinary spellings of "the
+            # execution did not happen". The first governed-verb list matched only bare `run`,
+            # so the narrowing turned three honest disclosures into unsupported-claim REDs --
+            # re-creating ORACLE-003's defect while repairing ORACLE-015.
+            "Verified: unable to rerun the suite",
+            "Verified: I could not re-run the tests",
+            "Verified: could not rerun the check",
         ):
             with self.subTest(disclosure=disclosure):
                 self.assertIsNone(
