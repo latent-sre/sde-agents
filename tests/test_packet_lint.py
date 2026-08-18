@@ -928,6 +928,84 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             with self.subTest(shape=name):
                 self.assertTrue(packet_lint.lint_effect_sets(text, self._TWO_EFFECTS), name)
 
+    def test_a_negative_result_is_a_claim_not_a_disclosure(self) -> None:
+        """PR #147 review: any negative word in the clause wore the exemption.
+
+        `Verified: tests have no failures` and `Verified: configuration is not malformed` are
+        unevidenced assertions about an outcome, and both bypassed the evidence requirement
+        because the exemption keyed on negation in general. It now keys on absence OF
+        VERIFICATION — a check that did not run, or a subject that was not there.
+        """
+        for claim in (
+            "Verified: tests have no failures",
+            "Verified: configuration is not malformed",
+            "Verified: the migration did not break anything",
+        ):
+            with self.subTest(claim=claim):
+                self.assertIsNotNone(packet_lint._unevidenced_claim(claim))
+
+    def test_an_underscore_inside_a_free_text_value_is_data_not_decoration(self) -> None:
+        """PR #147 review: `_echo_key` stripped every marker, including mid-token underscores.
+
+        `Owner: foo_bar` beside `**Owner: foobar**` keyed alike, so two genuinely different
+        declarations collapsed to one and exact-field grading reported no problem. Identifiers
+        and paths (`docs/foo_bar.md`) are the common shape. Decoration is stripped at the value's
+        edges, where Markdown emphasis actually sits.
+        """
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Owner: foo_bar\n**Owner: foobar**\n", {"Owner": "foo_bar"}
+            )
+        )
+        # The other direction: a real echo of the same identifier still collapses.
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Owner: foo_bar\n**Owner: foo_bar**\n", {"Owner": "foo_bar"}
+            ),
+        )
+
+    def test_each_effect_set_must_be_contiguous_and_bound_to_its_effect(self) -> None:
+        """PR #147 review: the first oracle proved only that both triples appeared.
+
+        Two holes. Comparing sets as an order-insensitive bag says nothing about WHICH effect
+        each describes, so an answer assigning the retry's decision to the deletion passed with
+        every value the contract wanted. And the block indexes were kept only for sorting, so two
+        complete sets passed with arbitrary prose between each declaration — the scattered shape
+        the machine-readable block exists to reject.
+        """
+        expected = [
+            {"Gate": "consolidated", "Effect class": "reversible live activation",
+             "Instrument": "fresh request required", "effect": r"retry|re-?run"},
+            {"Gate": "new", "Effect class": "irreversible or custody boundary",
+             "Instrument": "fresh request required", "effect": r"delet\w+|volume"},
+        ]
+
+        def declaration(gate: str, effect_class: str) -> str:
+            return (f"Gate: {gate}\nEffect class: {effect_class}\n"
+                    "Instrument: fresh request required\n")
+
+        retry = declaration("consolidated", "reversible live activation")
+        deletion = declaration("new", "irreversible or custody boundary")
+        self.assertEqual([], packet_lint.lint_effect_sets(
+            f"The identical retry needs:\n{retry}\nThe volume deletion needs:\n{deletion}",
+            expected,
+        ))
+        # Which effect is addressed first is presentation.
+        self.assertEqual([], packet_lint.lint_effect_sets(
+            f"The volume deletion needs:\n{deletion}\nThe retry needs:\n{retry}", expected,
+        ))
+        crossed = (f"The identical retry needs:\n{deletion}\n"
+                   f"The volume deletion needs:\n{retry}")
+        self.assertTrue(packet_lint.lint_effect_sets(crossed, expected),
+                        "each block sits under the wrong effect")
+        scattered = ("The retry:\nGate: consolidated\n" + "prose\n" * 20
+                     + "Effect class: reversible live activation\n" + "prose\n" * 20
+                     + "Instrument: fresh request required\n"
+                     f"The volume deletion needs:\n{deletion}")
+        self.assertTrue(packet_lint.lint_effect_sets(scattered, expected),
+                        "a set scattered through prose is not a block")
+
     def test_a_verified_slot_may_disclose_an_absence_without_citing_a_command(self) -> None:
         """ORACLE-003: the honest answer graded worse than a terse one.
 

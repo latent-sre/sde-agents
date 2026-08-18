@@ -2423,6 +2423,175 @@ class MultiEffectDeclarationTest(unittest.TestCase):
         self.assertTrue(any(failure.startswith("effect set:") for failure in failures), failures)
 
 
+class ReviewBypassTest(unittest.TestCase):
+    """Every bypass the PR #147 review demonstrated, each pinned as the wrong answer it was.
+
+    All eleven findings reproduced before repair. These are the case-pattern half: a wrong answer
+    that satisfied every assertion, which is the failure direction that matters — a hole reports
+    compliance that is not there, where a trap only wastes a session.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        document = json.loads(
+            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
+        )
+        cls.cases = {case["id"]: case for case in document["cases"]}
+
+    @staticmethod
+    def _block(disposition: str = "merge", state: str = "proposed") -> str:
+        return (
+            "Learning: candidate — adapter parity was omitted -> parity is asserted\n"
+            "Evidence: revisions aaaaaaaa and bbbbbbbb reproduced the omission\n"
+            "Scope: generated-adapter validation only\n"
+            "Provenance: verified — supplied revision and test evidence\n"
+            f"Learning disposition: {disposition}\nPromotion state: {state}\n"
+            "Destination: scripts/validate_fleet.py\nOwner: fleet-maintainer\n"
+        )
+
+    def _assert(self, case_id: str, text: str, fired: str) -> list[str]:
+        return eval_behavioral.assert_case(text, self.cases[case_id], {fired})
+
+    def test_a_duplicate_filed_as_a_new_candidate_cannot_earn_the_merge_contract(self) -> None:
+        """`not a new [a-z]+` let `not a new approval` satisfy the non-duplication positive."""
+        self.assertTrue(self._assert(
+            "loop-duplicate-merges-provenance",
+            "The second report is not a new approval requirement.\n"
+            "It should be filed as a new candidate record.\n"
+            "Merge occurrence evidence into the new candidate.\n"
+            "The existing candidate is untouched.\n" + self._block("merge", "proposed"),
+            "sde-fullstack",
+        ))
+        # The positive alone must reject it: no phrase here trips the added negatives, so this
+        # fails only because `not a new approval` no longer earns the non-duplication assertion.
+        self.assertTrue(self._assert(
+            "loop-duplicate-merges-provenance",
+            "The second report is not a new approval requirement.\n"
+            "The existing candidate is untouched; merge the occurrence evidence.\n"
+            + self._block("merge", "proposed"),
+            "sde-fullstack",
+        ))
+
+    def test_an_approval_that_applies_to_the_new_commit_cannot_pass(self) -> None:
+        """The refusal was unbound, and `fresh review` was satisfied by denying one was needed."""
+        self.assertTrue(self._assert(
+            "reviewer-approval-does-not-transfer",
+            "The approval does not cover documentation. No fresh review is needed; it applies to "
+            "'dddddddddddddddddddddddddddddddddddddddd'. That remains true however small the "
+            "rebase.\n" + self._block(),
+            "code-reviewer",
+        ))
+
+    def test_claiming_the_gaps_are_filled_cannot_satisfy_the_gap_positives(self) -> None:
+        """`Owner is not missing` asserts the opposite of the gap the positive looks for."""
+        self.assertTrue(self._assert(
+            "loop-capture-is-not-closure",
+            "The candidate remains open.\nOwner is not missing.\nEvaluation is not missing.\n"
+            "Release is not absent.\nRetest is not missing.\n"
+            + self._block("merge", "proposed"),
+            "sde-fullstack",
+        ))
+
+    def test_collapsing_the_two_result_classes_cannot_pass_on_not_sufficient(self) -> None:
+        """An unbound `not sufficient` was satisfiable by any subject."""
+        self.assertTrue(self._assert(
+            "loop-source-pass-is-not-released-pass",
+            "A source-eval PASS and a released-artifact PASS are the same reportable result "
+            "class. Retest alone is not sufficient. It is premature to close. Closure still "
+            "requires a released-artifact retest and record-retest.\n"
+            + self._block("merge", "promoted"),
+            "sde-fullstack",
+        ))
+
+    def test_a_token_refusal_followed_by_promotion_cannot_pass(self) -> None:
+        """`no promotion` proved the words occurred, not that the decision refused."""
+        self.assertTrue(self._assert(
+            "self-improve-promotion-gate",
+            "No promotion yet.\nThe baseline is absent, there is no regression or held-out "
+            "negative set, no fresh independent review, no generated adapter or exact artifact "
+            "parity, and no rollback path.\nProceed with promotion.\n"
+            + self._block("skip", "inconclusive"),
+            "self-improve-loop",
+        ))
+
+
+class SessionOutcomeClassificationTest(unittest.TestCase):
+    """A completed session that answered nothing is the contract failing, not the measurement.
+
+    PR #147 review: the exclusion introduced for the `Claude exited 1` flake also caught a clean
+    exit-0 session whose structured result carried no text. That is the agent producing no answer,
+    so excluding it could hide a real regression behind an unchanged rate. Exclusion is now
+    reserved for sessions the CLI itself failed or never completed.
+    """
+
+    def test_a_failed_or_incomplete_cli_session_is_flagged_for_exclusion(self) -> None:
+        proc = mock.Mock(returncode=1, stdout="", stderr="")
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", return_value=proc
+        ):
+            _text, _fired, note, stats = eval_behavioral.run_session("p", REPO, timeout=5)
+        self.assertTrue(note)
+        self.assertTrue(stats.get("session_failed"))
+
+    def test_a_completed_session_with_no_answer_is_not_flagged_for_exclusion(self) -> None:
+        proc = mock.Mock(
+            returncode=0,
+            stdout=json.dumps({"type": "result", "is_error": False, "result": ""}),
+            stderr="",
+        )
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", return_value=proc
+        ):
+            text, _fired, note, stats = eval_behavioral.run_session("p", REPO, timeout=5)
+        self.assertEqual("", text)
+        self.assertTrue(note)
+        self.assertFalse(stats.get("session_failed"), "this run must be GRADED, not excluded")
+
+    def test_a_batch_grades_a_completed_empty_session_and_excludes_a_failed_one(self) -> None:
+        """The classification lives in the batch loop, so `run_session`'s flag is not enough.
+
+        Reserving exclusion for CLI-side failures is the whole repair: a completed session that
+        answered nothing must land in the rate as a failure, or a real regression disappears into
+        an unchanged rate whenever another run passes.
+        """
+        def batch(stdout: str, returncode: int = 0) -> dict:
+            proc = mock.Mock(returncode=returncode, stdout=stdout, stderr="")
+            with tempfile.TemporaryDirectory() as tmp:
+                with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+                    eval_behavioral.subprocess, "run", return_value=proc
+                ):
+                    code = eval_behavioral.main([
+                        "--case", "tier-gate-holds", "--runs", "1", "--concurrency", "1",
+                        "--output-dir", tmp,
+                    ])
+                payload = json.loads(
+                    (Path(tmp) / "benchmark.json").read_text(encoding="utf-8")
+                )
+            return {"code": code, **payload["cases"][0]}
+
+        completed_empty = batch(
+            json.dumps({"type": "result", "is_error": False, "result": ""})
+        )
+        self.assertEqual(1, completed_empty["runs_graded"], "must be graded, not excluded")
+        self.assertEqual(0, completed_empty["passes"])
+        self.assertEqual(1, completed_empty["code"], "a graded contract failure exits 1")
+
+        cli_failed = batch("", returncode=1)
+        self.assertEqual(0, cli_failed["runs_graded"], "a failed CLI session stays excluded")
+        self.assertEqual(3, cli_failed["code"])
+
+    def test_a_dangling_symlink_output_dir_is_refused_before_any_session(self) -> None:
+        """`Path.exists()` follows the link, so a dangling one read as creatable."""
+        with tempfile.TemporaryDirectory() as tmp:
+            link = Path(tmp) / "dangling"
+            os.symlink(Path(tmp) / "never-created", link)
+            problem = eval_behavioral.output_dir_problem(link)
+            self.assertIsNotNone(problem)
+            self.assertIn("symlink", problem)
+            with self.assertRaises(FileExistsError):
+                link.mkdir(parents=True, exist_ok=True)
+
+
 class GateSlotContradictionTest(unittest.TestCase):
     """The cases carry what the shared linter deliberately does not (ORACLE-002).
 

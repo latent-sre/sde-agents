@@ -470,6 +470,12 @@ def output_dir_problem(path: Path) -> str | None:
     sessions run. Those stay fail-closed at write time. What it removes is the whole class that is
     knowable up front, which is the class that was costing money.
     """
+    # `exists()` FOLLOWS the link, so a dangling symlink read as absent, the preflight walked to
+    # its writable parent and returned usable, and the batch was bought before `mkdir` raised
+    # FileExistsError — preserving the exact expensive failure this guard exists to prevent
+    # (PR #147 review). `is_symlink()` is the lexical question.
+    if path.is_symlink() and not path.exists():
+        return f"{path} is a dangling symlink, so it cannot be created or written"
     if path.exists():
         if not path.is_dir():
             return f"{path} exists and is not a directory"
@@ -621,6 +627,7 @@ def run_session(
     # from a session the CLI itself reported as failed. Likewise, an is_error result is outage
     # evidence, never contract output, even when its `result` string happens to match assertions.
     if proc.returncode != 0:
+        stats["session_failed"] = True
         return "", fired, f"Claude exited {proc.returncode} before a successful result", stats
     if not stats["completed"]:
         detail = (
@@ -628,6 +635,7 @@ def run_session(
             if stats["result_error"]
             else "no non-error structured result event was captured"
         )
+        stats["session_failed"] = True
         return "", fired, detail, stats
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
@@ -993,15 +1001,29 @@ def validate_behavioral_case(
             findings.append("'effect_sets' must be a list of at least two declaration sets")
         else:
             for position, declared in enumerate(effect_sets):
-                if not isinstance(declared, dict) or set(declared) != set(
+                # `effect` is the optional anchor that binds this set to the effect the answer's
+                # prose names before it. Without it the sets match as a bag of values, which
+                # proves both triples appear and not which effect each describes.
+                if not isinstance(declared, dict) or set(declared) - {"effect"} != set(
                     packet_lint.EFFECT_SET_LABELS
                 ):
                     findings.append(
                         f"effect_sets[{position}] must declare exactly "
                         + ", ".join(packet_lint.EFFECT_SET_LABELS)
+                        + ", plus an optional 'effect' anchor"
                     )
                     continue
+                anchor = declared.get("effect")
+                if anchor is not None:
+                    try:
+                        re.compile(anchor)
+                    except (re.error, TypeError):
+                        findings.append(
+                            f"effect_sets[{position}]['effect'] must be a valid regex anchor"
+                        )
                 for label, value in declared.items():
+                    if label == "effect":
+                        continue
                     vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
                     if vocabulary is not None and value.casefold() not in {
                         term.casefold() for term in vocabulary
@@ -1625,7 +1647,13 @@ def main(argv: list[str] | None = None) -> int:
             # detect; treat the pin itself as the invocation evidence expect_fires would supply.
             if case.get("agent"):
                 fired = fired | {case["agent"].split(":")[-1]}
-            if note and not text:
+            if note and not text and not stats.get("session_failed"):
+                # The session RAN to a clean structured result and produced no text. That is the
+                # contract failing, not the measurement: every must_match misses because the agent
+                # answered with nothing. Excluding it would let a real regression vanish into an
+                # unchanged rate whenever another run passed (PR #147 review).
+                failures = [f"session produced nothing: {note}"]
+            elif note and not text:
                 # A session that returned no result measured NOTHING about the contract, so it is
                 # a measurement failure and is excluded from the rate — the same treatment a run
                 # that broke inside the runner gets, and for the same reason. Grading the empty
