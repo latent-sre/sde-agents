@@ -2562,9 +2562,16 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         try:
             os.symlink(target, link)
         except OSError as exc:
+            if os.name != "nt" or getattr(exc, "winerror", None) != 1314:
+                raise
             raise unittest.SkipTest(
                 f"this host cannot create the dangling symlink fixture: {exc}"
             ) from exc
+
+    def test_dangling_symlink_fixture_does_not_hide_unexpected_os_errors(self) -> None:
+        with mock.patch.object(os, "symlink", side_effect=OSError("unexpected failure")):
+            with self.assertRaisesRegex(OSError, "unexpected failure"):
+                self._create_dangling_symlink(Path("missing"), Path("link"))
 
     def test_a_failed_or_incomplete_cli_session_is_flagged_for_exclusion(self) -> None:
         proc = mock.Mock(returncode=1, stdout="", stderr="")
