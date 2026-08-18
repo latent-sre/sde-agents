@@ -205,14 +205,11 @@ this repo's own scripts); the hook resolves the guard through `${CLAUDE_PLUGIN_R
 repository under review can never supply it; it fails closed for guarded agents and no-ops for
 everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
-Do not port that hook to Codex, Copilot, or VS Code: their `PreToolUse` payload does not supply the
+Do not port that hook to Codex or VS Code: their `PreToolUse` payload does not supply the
 active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
-What keeps a non-Claude host away from the guard is **structural, never declarative**: its plugin root
-must contain no file at that host's own hook-config path. A manifest field pointing at an empty
-override does not do it — VS Code reads component overrides from the format's own manifest
-(`.claude-plugin/plugin.json`), so a root manifest declaring `hooks` is never consulted and the host
-falls back to `hooks/hooks.json`, the guard itself. This is why `plugins/sde-agents/` has no `hooks/`
-directory, and it is the rule below applied to hooks: authority is the host's own control, never prose.
+Keep a non-Claude host away from the guard **structurally** — no file at that host's own hook-config
+path, which is why `plugins/sde-agents/` has no `hooks/`. A manifest field naming an empty override
+does not do it (`docs/archive/2026-08/vscode-discovery-investigation-2026-08-18.md`).
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -286,14 +283,14 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   install step.
 - **Never hand-edit a generated adapter.** The generated trees are `.github/agents/`,
   `.codex/agents/`, `platforms/copilot/skills/`, and `plugins/sde-agents/skills/`. Edit the
-  canonical file or the generator and regenerate — byte-drift validation proves the result.
-  Two hand-maintained lists encode this set — `GENERATED_ROOTS` in the generator and
-  `GENERATED_ADAPTER_TREES` in the validator — so a tree added or retired is edited in both.
+  canonical file or the generator and regenerate — byte-drift validation proves the result. Adding
+  or retiring a tree edits both lists: `GENERATED_ROOTS` and validate_fleet's
+  `GENERATED_ADAPTER_TREES`.
 - **One parser per fact.** A script that needs frontmatter, `tools:` values, or namespaced
   references builds on the records from `scripts/fleet_records.py`; to read a new fact, extend
   the records. A second parser lets two reports about the same tree disagree with nothing to
   arbitrate them.
-- **Authority is the host's own control, never prose.** Claude's guard, Copilot/VS Code's
+- **Authority is the host's own control, never prose.** Claude's guard, VS Code's
   omission of `execute`, and Codex's `sandbox_mode` are distinct controls — express an agent's
   authority with the target host's control. Never port the Claude hook (its payload cannot be
   scoped elsewhere; see the guard playbook) and never reference `workflows/` from another host

@@ -42,7 +42,9 @@ fixes, lane limits codified, no Codex eval harness.
 2. **Lane documentation** in `README.md`'s Codex section: the invocation contract (`$skill-name`
    for explicit skills; agents reached by explicit request under the v2 spawn schema), the
    two-halves versioning fact (agent TOMLs are unversioned; a plugin version stamps only the
-   skills half), and that `/import` never updates.
+   skills half), and that `scripts/install_codex_agents.py` is the only agent sync path. The
+   `/import` bridge this originally referenced was retired on 2026-08-18; see the packaging
+   decision's amendment.
 3. **Decision-record amendment** to the 2026-07-30 packaging decision: a reopen trigger for
    "a real workload on a generated lane contradicts a consequence of this record", plus a
    consequence line codifying supported-but-limited. Operator approves via PR review.
@@ -127,8 +129,9 @@ Record `codex --version` first, then in a fresh session with the fleet installed
 The skill is purely additive: rollback is deleting `skills/onboarding-map/`, regenerating
 adapters, and reverting the cluster and README edits — one revert commit. The decision amendment
 reverts by PR revert. Upstream findings are from unpinned HEAD; the packaging decision's existing
-freshness trigger (a Codex CLI upgrade re-runs the `/import` live check) also triggers re-reading
-the spawn-schema and skill-visibility behavior this spec relies on.
+freshness trigger (a Codex CLI upgrade re-runs the adoption live check — the `/import` check it
+named was retired on 2026-08-18) also triggers re-reading the spawn-schema and skill-visibility
+behavior this spec relies on.
 
 ## Round exit
 
