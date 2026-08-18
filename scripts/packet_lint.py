@@ -611,7 +611,10 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 
 
 _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
-_EDGE_DECORATION_RE = re.compile(r"^(?:\*\*|__|\*|_|`)+|(?:\*\*|__|\*|_|`)+$")
+# A character class, not an alternation of `**`/`*`: overlapping alternatives under `+` are
+# exponential-backtracking bait on a long run of asterisks, which CodeQL flagged on the
+# first spelling (PR #147). One class matches the same edge runs in linear time.
+_EDGE_DECORATION_RE = re.compile(r"^[*_`]+|[*_`]+$")
 
 
 def _opens_a_rationale(character: str) -> bool:

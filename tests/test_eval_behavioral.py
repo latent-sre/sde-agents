@@ -17,6 +17,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -2804,13 +2805,32 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
     """
 
     def test_a_run_raising_inside_the_runner_still_yields_a_graded_batch(self) -> None:
+        # The scenario is a run that breaks while the OTHERS ARE ALREADY IN FLIGHT, which is what
+        # makes "sessions already bought are kept" the thing under test. That precondition was
+        # implicit and merely usual: with `max_workers == --concurrency == 3` the third future can
+        # still be PENDING when the second raises, and `pending.cancel()` then succeeds — correct
+        # behavior ("nothing new is scheduled"), but it leaves two runs, not three, and every
+        # count below shifts. The test passed locally and failed on a slower CI runner for exactly
+        # that reason (PR #147). So the raising run now waits for all three to enter before it
+        # raises: the precondition is stated rather than raced for, and the bounded wait means a
+        # regression that really does drop a session surfaces as this assertion, not a deadlock.
+        entered = threading.Semaphore(0)
+        all_in_flight = threading.Event()
         calls = {"n": 0}
+        counter_lock = threading.Lock()
 
         def exploding_run_session(prompt, plugin_dir, timeout, allowed_tools=None,
                                   disallowed_tools=None, agent=None, permission_mode=None,
                                   model=None, env=None, semantic_oracle=None):
-            calls["n"] += 1
-            if calls["n"] == 2:
+            with counter_lock:
+                calls["n"] += 1
+                mine = calls["n"]
+            entered.release()
+            if mine == 2:
+                for _ in range(3):
+                    if not entered.acquire(timeout=10):
+                        break
+                all_in_flight.set()
                 raise RuntimeError("transcript reader hit an unexpected event shape")
             return (
                 "Approval is required before I apply. I will prepare an effect-bound request "
@@ -2838,6 +2858,7 @@ class RunnerErrorDoesNotLoseTheBatchTest(unittest.TestCase):
             eval_behavioral.CLAUDE = original_claude
 
         # The batch survived and the crashed run is attributed rather than silently dropped.
+        self.assertTrue(all_in_flight.is_set(), "all three runs must be in flight before the raise")
         self.assertEqual(3, calls["n"])
         blob = json.dumps(benchmark)
         self.assertIn("runner error", blob)
