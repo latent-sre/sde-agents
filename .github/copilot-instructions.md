@@ -1,6 +1,6 @@
 # Reviewing this repository
 
-This repo packages one fleet for Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent Plugins.
+This repo packages one fleet for Claude Code, Codex, and VS Code.
 The files in `agents/` and `skills/` are not documentation *about* a system; they are the only
 authored source, and Claude Code loads them as-is. Other hosts load generated adapters. A wrong
 sentence in a canonical file is a behavior change, while a direct generated-file fix is source
@@ -31,9 +31,10 @@ the highest-value findings in this repo:
 - **The Claude read-only guard is an allowlist, deliberately.** Adding a *reader* is fine; adding
   anything that can execute (an interpreter, a tool with a
   `--pre`/`--pager`/`-exec`-style flag) is not. Flag any allowlist growth that could run a program.
-- **Cross-host controls are not interchangeable.** Copilot/VS Code guarded agents must omit
-  `execute`; Codex read-only agents must use `sandbox_mode = "read-only"`; neither host may load
-  the Claude hook, whose scoping field is absent from their `PreToolUse` payload.
+- **Cross-host controls are not interchangeable.** VS Code guarded agents must omit `execute`;
+  Codex read-only agents must use `sandbox_mode = "read-only"`; neither host may load the Claude
+  hook, whose scoping field is absent from their `PreToolUse` payload — enforced structurally, by
+  keeping that host's own hook-config path empty, never by a manifest field.
 - **Generated output must match the generator byte for byte.** Any edit under `.github/agents/`,
   `.codex/agents/`, `platforms/copilot/skills/`, or `plugins/sde-agents/skills/` must trace to a
   canonical or generator change and a regeneration.

@@ -1,8 +1,8 @@
 # Repository guide for coding agents
 
-This repository packages one fleet for Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent
-Plugins: `agents/` and `skills/` are the only authored source, loaded directly by Claude Code;
-the other hosts load generated adapters. Edit canonical files and regenerate — never a generated
+This repository packages one fleet for Claude Code, Codex, and VS Code: `agents/` and `skills/` are
+the only authored source, loaded directly by Claude Code; the other hosts load generated adapters.
+Edit canonical files and regenerate — never a generated
 copy, never a fleet definition resolved under `~/.claude` (the shipped plugin does not live
 there). Every script under `scripts/` states its contract in its docstring — read it before
 touching or invoking one.
@@ -102,9 +102,9 @@ wrong Claude loop when the plugin is what you are editing:
 claude --plugin-dir .
 ```
 
-The Copilot CLI, VS Code, and Codex local loops are owned by `README.md`'s Install section.
-Standalone Codex agent sync — including `/import`'s one-time-migration limits and the exact-match
-adoption contract — is owned by the `scripts/install_codex_agents.py` docstring.
+The VS Code and Codex local loops are owned by `README.md`'s Install section.
+Standalone Codex agent sync — including the exact-match adoption contract — is owned by the
+`scripts/install_codex_agents.py` docstring.
 
 Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
@@ -205,10 +205,11 @@ this repo's own scripts); the hook resolves the guard through `${CLAUDE_PLUGIN_R
 repository under review can never supply it; it fails closed for guarded agents and no-ops for
 everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
 it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
-Do not port that hook to Codex, Copilot, or VS Code: their `PreToolUse` payload does not supply the
-active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead;
-`hooks/copilot-hooks.json` is the deliberately empty override that keeps Copilot and VS Code from
-loading the Claude guard — leave it empty, it is doing its job.
+Do not port that hook to Codex or VS Code: their `PreToolUse` payload does not supply the
+active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
+Keep a non-Claude host away from the guard **structurally** — no file at that host's own hook-config
+path, which is why `plugins/sde-agents/` has no `hooks/`. A manifest field naming an empty override
+does not do it (`docs/archive/2026-08/vscode-discovery-investigation-2026-08-18.md`).
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -280,15 +281,16 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
 - **Standard library only.** Fleet Python — validators, generators, installers, guard, tests —
   imports only the Python standard library. Never add a dependency, a requirements file, or an
   install step.
-- **Never hand-edit a generated adapter.** The generated trees are `.claude/agents/`,
-  `.github/agents/`, `.codex/agents/`, `platforms/copilot/skills/`, and
-  `plugins/sde-agents/skills/`. Edit the canonical file or the generator and regenerate —
-  byte-drift validation proves the result.
+- **Never hand-edit a generated adapter.** The generated trees are `.github/agents/`,
+  `.codex/agents/`, `platforms/copilot/skills/`, and `plugins/sde-agents/skills/`. Edit the
+  canonical file or the generator and regenerate — byte-drift validation proves the result. Adding
+  or retiring a tree edits both lists: `GENERATED_ROOTS` and validate_fleet's
+  `GENERATED_ADAPTER_TREES`.
 - **One parser per fact.** A script that needs frontmatter, `tools:` values, or namespaced
   references builds on the records from `scripts/fleet_records.py`; to read a new fact, extend
   the records. A second parser lets two reports about the same tree disagree with nothing to
   arbitrate them.
-- **Authority is the host's own control, never prose.** Claude's guard, Copilot/VS Code's
+- **Authority is the host's own control, never prose.** Claude's guard, VS Code's
   omission of `execute`, and Codex's `sandbox_mode` are distinct controls — express an agent's
   authority with the target host's control. Never port the Claude hook (its payload cannot be
   scoped elsewhere; see the guard playbook) and never reference `workflows/` from another host

@@ -39,7 +39,7 @@ class RepoPoolRestoreTests(unittest.TestCase):
     def test_same_size_rewrite_is_restored(self) -> None:
         # The mutation class a (size, mtime) comparison can miss: identical length, written
         # within the filesystem's timestamp granularity. Content hashing must catch it.
-        target = Path("plugin.json")
+        target = Path(".claude-plugin") / "plugin.json"
         with repo_copy() as dst:
             original = (dst / target).read_bytes()
             flipped = bytes(reversed(original))
@@ -64,7 +64,7 @@ class RepoPoolRestoreTests(unittest.TestCase):
         # The shape mutation Codex review caught on #91: a borrower replaces a tracked file
         # with a directory. Restoration must clear the shadowing directory and put the file
         # back — raising IsADirectoryError here would poison the pool for every later test.
-        target = Path("plugin.json")
+        target = Path(".claude-plugin") / "plugin.json"
         with repo_copy() as dst:
             original = (dst / target).read_bytes()
             (dst / target).unlink()
@@ -78,7 +78,7 @@ class RepoPoolRestoreTests(unittest.TestCase):
         # A borrower that replaces a tracked file with a symlink must not make the NEXT restore
         # write pristine content through the link to a target outside the pool (Codex review on
         # #91). The link is residue to remove, and the outside target must stay untouched.
-        target = Path("plugin.json")
+        target = Path(".claude-plugin") / "plugin.json"
         with tempfile.TemporaryDirectory() as outside_dir:
             victim = Path(outside_dir) / "victim.txt"
             victim.write_text("outside content\n", encoding="utf-8")
@@ -123,7 +123,7 @@ class RepoPoolRestoreTests(unittest.TestCase):
         # through the SHARED inode into a file outside the pool, and a link whose content
         # already matches would survive restoration and expose later borrows' writes (Codex
         # review on #91). Both variants: differing content, and matching content.
-        target = Path("plugin.json")
+        target = Path(".claude-plugin") / "plugin.json"
         with tempfile.TemporaryDirectory() as outside_dir:
             differing = Path(outside_dir) / "differing.txt"
             differing.write_text("outside content\n", encoding="utf-8")

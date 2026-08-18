@@ -64,7 +64,10 @@ def _tree(guarded: list[str] | None = None) -> TemporaryDirectory:
         }),
         encoding="utf-8",
     )
-    (root / "plugin.json").write_text(json.dumps({"name": PLUGIN}), encoding="utf-8")
+    (root / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    (root / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps({"name": PLUGIN}), encoding="utf-8"
+    )
     if guarded is not None:
         (root / "scripts").mkdir()
         (root / "scripts" / "readonly-guard.py").write_text(
@@ -354,7 +357,9 @@ class UnreadableDefinitionTests(unittest.TestCase):
 
     def test_a_non_object_manifest_takes_the_refusal_path(self):
         with _tree() as name, TemporaryDirectory() as out:
-            (Path(name) / "plugin.json").write_text("[]", encoding="utf-8")
+            (Path(name) / ".claude-plugin" / "plugin.json").write_text(
+                "[]", encoding="utf-8"
+            )
             self.assertEqual(
                 capability_graph.main(["--root", name, "--emit", str(Path(out) / "g.json")]), 1
             )
@@ -363,7 +368,9 @@ class UnreadableDefinitionTests(unittest.TestCase):
         """A non-string name produced an impossible grammar and exited 0 with every namespaced edge
         missing -- a confident blank topology."""
         with _tree() as name, TemporaryDirectory() as out:
-            (Path(name) / "plugin.json").write_text('{"name": ["x"]}', encoding="utf-8")
+            (Path(name) / ".claude-plugin" / "plugin.json").write_text(
+                '{"name": ["x"]}', encoding="utf-8"
+            )
             self.assertEqual(
                 capability_graph.main(["--root", name, "--emit", str(Path(out) / "g.json")]), 1
             )
@@ -707,7 +714,9 @@ class SafetyTests(unittest.TestCase):
         """Without the namespace there is no reference grammar, so every edge would read as zero --
         a confident empty report about a densely linked tree."""
         with _tree() as name:
-            (Path(name) / "plugin.json").write_text("{not json", encoding="utf-8")
+            (Path(name) / ".claude-plugin" / "plugin.json").write_text(
+                "{not json", encoding="utf-8"
+            )
             self.assertEqual(capability_graph.main(["--root", name]), 1)
 
 
@@ -723,7 +732,9 @@ class RealTreeTests(unittest.TestCase):
     """
 
     def _document(self):
-        plugin = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))["name"]
+        plugin = json.loads(
+            (REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )["name"]
         return fleet_records.collect(REPO, plugin)
 
     def test_the_real_tree_emits_a_well_formed_report(self):

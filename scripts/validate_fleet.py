@@ -2029,7 +2029,6 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
 GENERATED_ADAPTER_TREES = (
     ".github/agents",
     ".codex/agents",
-    ".claude/agents",
     "platforms/copilot/skills",
     "plugins/sde-agents/skills",
 )

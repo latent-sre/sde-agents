@@ -2,7 +2,7 @@
 
 **Status:** Accepted and implemented on 2026-07-30; Codex import bridge amended 2026-08-02;
 generated-lane support level and its field-contradiction reopen trigger amended 2026-08-10
-(LANE-001)
+(LANE-001); Copilot CLI lane and the Codex `/import` bridge retired 2026-08-18
 **Date:** 2026-07-30
 
 ## Context
@@ -137,3 +137,41 @@ uses `$CODEX_HOME/agents` when configured and otherwise defaults to `~/.codex/ag
   behavioral gap rather than merely scoping a gate.
 - A host adds an enforceable skill-level tool deny that can replace a cooperative boundary.
 - A manifest or frontmatter version changes the discovery or invocation contract.
+
+## Amendment, 2026-08-18 — three lanes retired
+
+Reopen trigger hit: *"a manifest or frontmatter version changes the discovery or invocation
+contract."* Reading VS Code 1.133.0's shipped bundles showed this record's host table described a
+discovery contract that does not hold. Evidence:
+`docs/archive/2026-08/vscode-discovery-investigation-2026-08-18.md`.
+
+**Retired:**
+
+- **The Codex `/import` staging lane.** `.claude/agents/` was generated as migration input, but it is
+  also Claude Code's own project-agent path *and* a VS Code agent-discovery path. Both hosts loaded
+  the staging copies as a second fleet — measured at 22 agents for 11 roles. `/import` was never an
+  update mechanism (it skips existing destinations), and `.codex/agents` already satisfies project
+  scope, so the bridge bought nothing that `install_codex_agents.py` does not.
+- **The Copilot CLI lane.** Dropped as a target. The root `plugin.json` it required is rejected by VS
+  Code for lacking a valid `$schema`, so it served no other host.
+- **A stray empty `.codex-plugin/`** at the repository root, which would have made the root a Codex
+  plugin root had a manifest ever landed in it.
+
+**Corrected:** this record and `AGENTS.md` both held that `hooks/copilot-hooks.json`, a deliberately
+empty override, kept Copilot *and VS Code* from loading the Claude guard. It did not. VS Code reads
+component overrides from the format's own manifest — `.claude-plugin/plugin.json` — never from the
+root manifest that referenced the override, so it fell back to format 1's `hookConfigPath`,
+`hooks/hooks.json`: the guard itself. A green test asserted the override's contents and therefore
+proved nothing about the host it was named for. **Keeping a non-Claude host away from the guard is
+structural — no file at that host's own hook-config path — never a declared manifest field.**
+
+**Superseded in the host table:** the Copilot CLI / VS Code row. VS Code is now served by workspace
+discovery of `.github/agents` only. Installing this repository as a VS Code plugin loads the
+canonical Claude fleet and is unsupported; it cannot be prevented from inside the repository,
+because VS Code treats any directory holding `.claude-plugin/plugin.json` as an installable plugin
+and Claude Code requires that file at the root. Skills are not yet on a VS-Code-discovered path.
+
+**Not revisited:** the one-authored-fleet decision, authority translation, host-specific skill
+policy, and the nested Codex plugin root all stand unchanged. The nesting rationale is in fact
+strengthened: the same reasoning that kept Claude's hook out of `plugins/sde-agents/` is what the
+repository root could not offer VS Code.

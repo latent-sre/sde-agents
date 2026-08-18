@@ -1,7 +1,7 @@
 # SDE Agents
 
 A focused fleet of software-engineering and home-lab agents plus reusable skills, packaged for
-Claude Code, Codex, GitHub Copilot CLI, and VS Code Agent Plugins. The definitions in `agents/` and
+Claude Code, Codex, and VS Code. The definitions in `agents/` and
 `skills/` are the only authored source. Claude Code loads them directly; the other hosts load
 generated, host-specific adapters whose byte-for-byte currency is enforced by the validator.
 
@@ -37,32 +37,22 @@ Components are **namespaced** by the plugin, so they are `sde-agents:code-review
 backticked name appears only for content already in context (e.g. a skill the agent preloads via
 `skills:`).
 
-### GitHub Copilot CLI
-
-Install the repository directly:
-
-```bash
-copilot plugin install latent-sre/sde-agents
-```
-
-For a local development checkout, use `copilot plugin install .`. Copilot discovers the root
-`plugin.json`, generated `.github/agents/*.agent.md` profiles, and the Copilot-specific skill copy
-under `platforms/copilot/skills/`.
-
 ### VS Code
 
-Run **Chat: Install Plugin From Source** from the Command Palette and supply this repository's Git
-URL. For a working-tree development loop, register the checkout in `settings.json`:
+**Open the repository as a workspace folder.** VS Code discovers custom agents from `.github/agents`
+with no manifest and no install step, so the generated `.github/agents/*.agent.md` profiles are
+available as soon as the folder is open.
 
-```json
-"chat.pluginLocations": {
-  "/path/to/sde-agents": true
-}
-```
+Do **not** install this repository as a VS Code plugin. VS Code treats any directory containing
+`.claude-plugin/plugin.json` as an installable plugin and classifies it as the Claude format, whose
+default component paths are `agents/`, `skills/` and `hooks/hooks.json` — so installing it loads the
+*canonical Claude fleet* unadapted, including Claude's read-only Bash guard, which cannot scope
+correctly on a host that does not send the active agent on `PreToolUse`. Claude Code requires that
+manifest at the repository root, so this cannot be prevented from inside the repository.
 
-Agent Plugins are a VS Code preview feature and can be disabled by the
-`chat.plugins.enabled` organization setting. VS Code selects the same root Copilot-format
-`plugin.json`.
+Skills are not yet reachable on this lane: VS Code discovers skills from `.agents/skills`,
+`.github/skills` and `.claude/skills`, and the adapted copies currently live under
+`platforms/copilot/skills/`. Tracked in `docs/fleet-roadmap.md`.
 
 ### Codex
 
@@ -74,39 +64,22 @@ codex plugin add sde-agents@latent-sre
 ```
 
 That installs the generated Codex skill bundle. Codex plugins do not currently package custom
-agents, so this repository carries both project-scoped profiles in `.codex/agents/*.toml` and
-Claude-compatible migration sources in `.claude/agents/*.md`.
+agents, so this repository carries project-scoped profiles in `.codex/agents/*.toml` and syncs other
+scopes with the explicit installer below.
 
-For Codex's official one-time migration, start a **local** Codex TUI and enter `/import`. Select
-**Claude Code** and **Subagents**. Codex reads personal agents from `~/.claude/agents/*.md` into
-`~/.codex/agents/*.toml`, or project agents from `<repo>/.claude/agents/*.md` into that project's
-`.codex/agents/*.toml`. The generated Markdown in this checkout is safe staging input for that
-conversion: copy it into an empty or conflict-checked `~/.claude/agents` directory before running
-`/import` when user-wide roles are the goal. This creates personal Claude agents as the migration
-source; remove that staged copy afterward if Claude should continue using only the plugin.
-
-`/import` deliberately skips any same-name Codex TOML rather than overwriting it. In this checkout,
-the tracked `.codex/agents` files already satisfy project scope, so `/import` has nothing to add
-there. For user scope, move conflicting personal Codex TOMLs to a backup before importing. See the
-[official `/import` command](https://learn.chatgpt.com/docs/developer-commands?surface=cli#import-claude-code-configuration-with-import)
-and [agent import behavior](https://learn.chatgpt.com/docs/import).
-
-After a user-scope `/import`, adopt the imported agents into the repository's managed update path:
+Install the agents into user scope with the repository's managed update path:
 
 ```bash
 python3 scripts/install_codex_agents.py --user --check
 python3 scripts/install_codex_agents.py --user
 ```
 
-The first command is expected to exit 1 and report pending updates; the second marks
-contract-identical imported files as managed. The installer compares parsed TOML rather than
+The first command reports pending updates and exits 1 when work is owed; the second writes them. The installer compares parsed TOML rather than
 formatting, refuses any same-name agent with changed or extra authority, and removes only stale
 files it previously marked as managed. `--user` writes to `$CODEX_HOME/agents` when `CODEX_HOME` is
 set and otherwise defaults to `~/.codex/agents`.
 
-If the official migration is not needed, skip the staging and `/import` steps and run the same
-installer directly for the initial user-scope installation. In either case, use the installer for
-future updates; `/import` remains a one-time migration and never overwrites an existing TOML.
+Use the installer for the initial user-scope installation and for every update after it.
 
 #### What this lane surfaces to the model
 
@@ -202,8 +175,8 @@ control, and the hosts do not expose equivalent hook payloads:
 
 | Host | Agents and skills | Read-only posture | Important boundary |
 |---|---|---|---|
-| Claude Code | Canonical `agents/` and `skills/`; generated `.claude/agents/` also serves as Codex import staging | Session hook allowlists Bash for the guarded roles; staging profiles request project-scope permission modes | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are canonical-plugin-only |
-| Copilot CLI / VS Code | Generated `.github/agents/` and `platforms/copilot/skills/` | Guarded roles receive no `execute` tool | Their `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused |
+| Claude Code | Canonical `agents/` and `skills/` | Session hook allowlists Bash for the guarded roles | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are canonical-plugin-only |
+| VS Code | Generated `.github/agents/`, discovered from an open workspace folder | Guarded roles receive no `execute` tool | Its `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused; skills are not yet on a discovered path |
 | Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Roles without canonical write tools request `sandbox_mode = "read-only"` | Parent permissions can override agent sandbox defaults, and custom-agent TOML has no per-agent tool allowlist |
 
 Claude-specific MCP tool identifiers are not promised on other hosts. Generated agents direct the
@@ -382,7 +355,7 @@ free-form body prose remains convention-only. No definition may resolve a fleet 
 `~/.claude`, which does not contain this fleet once it ships as a plugin.
 
 The same validator loads the adapter generator as a library. It rejects missing, extra, or
-byte-drifted generated files, including the official-import Markdown under `.claude/agents`;
+byte-drifted generated files;
 cross-host version or identity drift; the wrong manifest component paths; a Codex marketplace that
 misses the isolated plugin; and any attempt to reuse the Claude guard where the host cannot scope
 it. `scripts/generate_platform_adapters.py --check` exposes that gate directly — which is why it

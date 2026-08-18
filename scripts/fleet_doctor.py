@@ -84,7 +84,7 @@ def _assert_read_only_command(argv: Sequence[str]) -> None:
         and tail[:2] == ("--no-optional-locks", "-C")
         and tuple(tail[3:]) in {("rev-parse", "HEAD"), ("status", "--short")}
     ) or (name in {"claude", "codex"} and tail in {("--version",), ("plugin", "list")})
-    allowed = allowed or (name in {"copilot", "code"} and tail == ("--version",))
+    allowed = allowed or (name == "code" and tail == ("--version",))
     if not allowed:
         raise ValueError(
             "fleet doctor refused a command outside its read-only allowlist: "
@@ -430,7 +430,6 @@ def _cli_checks(which: Which, run: CommandRunner) -> tuple[list[Check], dict[str
     for host, command in (
         ("claude", "claude"),
         ("codex", "codex"),
-        ("copilot", "copilot"),
         ("vscode", "code"),
     ):
         executable = which(command)
