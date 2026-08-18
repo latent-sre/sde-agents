@@ -1040,7 +1040,13 @@ def validate_behavioral_case(
                         f"effect_sets[{position}]['effect'] must be a non-empty exact identity"
                     )
                 else:
-                    effect_identities.append(effect.casefold().strip())
+                    normalized_effect = packet_lint.effect_identity_key(effect)
+                    if not normalized_effect:
+                        findings.append(
+                            f"effect_sets[{position}]['effect'] must be a non-empty exact identity"
+                        )
+                    else:
+                        effect_identities.append(normalized_effect)
                 for label, value in declared.items():
                     if label == "effect":
                         continue

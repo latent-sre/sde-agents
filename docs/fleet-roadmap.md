@@ -761,12 +761,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode the
   same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **TEST-006** — `test_eval_behavioral.SessionOutcomeClassificationTest`'s two dangling-symlink tests
-  call `os.symlink` with no privilege guard, so they **error** rather than skip on a Windows host
-  without Developer Mode or elevation — `OSError: [WinError 1314]`. Pre-existing and environment-only
-  (CI's Windows runner is elevated), but it makes `scripts/run_tests.py` exit 1 locally, which is the
-  "always non-zero teaches the operator to ignore it" failure the gitignore comment already warns
-  about. Add `skipUnless`. Reproduced 2026-08-18.
 - **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
   note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
   response is scored as a contract failure. A run that observed a model other than the requested pin
