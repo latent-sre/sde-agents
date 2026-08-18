@@ -7,6 +7,7 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
+import ast
 import re
 import unittest
 
@@ -1181,6 +1182,11 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Verified: the config cannot be wrong",
             "Verified: the result cannot be incorrect",
             "Verified: the tests cannot pass",
+            # Codex review round 4: an outcome stays an outcome when a QUALIFIER follows it.
+            # Requiring a clause end let a trailing adverbial consume the exemption, so an
+            # unsupported result claim graded clean. A prepositional qualifier is not an object.
+            "Verified: the tests cannot fail under these conditions",
+            "Verified: cannot pass on Windows",
         ):
             with self.subTest(claim=claim):
                 self.assertIsNotNone(
@@ -1939,3 +1945,50 @@ class CanonicalLearningPrompts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShippedScriptInterpreterFloorTests(unittest.TestCase):
+    """Risk: a regex construct newer than the documented floor, invisible to every CI lane.
+
+    `.github/workflows/validate.yml` states the shipped scripts keep a Python 3.10 floor and
+    pins CI to 3.14 as the forward-compatibility lane. Nothing runs the floor. An atomic group
+    (`(?>...)`, Python 3.11+) therefore imported cleanly on the author's interpreter and in CI,
+    and would have raised `re.error: unknown extension ?>` at import time on a supported one --
+    taking `packet_lint` and every behavioral-eval path that imports it down with it (Codex
+    review, PR #152).
+
+    Scoped to string literals via `ast`, not a raw grep, because prose naming the banned
+    construct in a comment is exactly how this rule gets explained.
+    """
+
+    FLOOR_INCOMPATIBLE = {
+        "(?>": "atomic group, Python 3.11+",
+    }
+
+    def test_no_shipped_script_uses_a_regex_construct_newer_than_the_floor(self) -> None:
+        offenders = []
+        for script in sorted((REPO / "scripts").glob("*.py")):
+            tree = ast.parse(script.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+                    continue
+                for construct, why in self.FLOOR_INCOMPATIBLE.items():
+                    if construct in node.value:
+                        offenders.append(f"{script.name}:{node.lineno} uses {construct} ({why})")
+        self.assertEqual(
+            [], offenders,
+            "shipped scripts must import on the documented Python 3.10 floor; CI pins 3.14 "
+            "only, so no lane would catch this",
+        )
+
+    def test_the_tripwire_fires_on_the_construct_it_names(self) -> None:
+        """Non-vacuous by construction: the detector must see the thing it forbids."""
+        tree = ast.parse('BAD = r"a(?>bc)?d"')
+        found = [
+            node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and "(?>" in node.value
+        ]
+        self.assertEqual([r"a(?>bc)?d"], found)

@@ -190,23 +190,27 @@ _CLAIM_NEGATION_RE = re.compile(
     r"\b(?:nothing|none|n/?a|no\s+(?:commands?|output|evidence|checks?|runs?|verification)"
     r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
     r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
-    # The OPTIONALITY is atomic, not just the group. `(?>be\s+)?` still lets the `?` retry
-    # at zero width after the check below fails, so `cannot be wrong` matched `be` as its
-    # verb and earned the exemption anyway. `(?>(?:be\s+)?)` commits to the skip.
-    r"\s+(?>(?:to\s+)?)(?>(?:be\s+)?)"
-    # The disqualifying set, not the qualifying one. `cannot fail` and `cannot be wrong`
-    # assert an outcome; `could not retrieve the CI logs` reports an action that did not
-    # happen. Enumerating the actions is unbounded -- run, rerun, retrieve, open, query,
-    # find -- while the outcomes and properties are a closed set.
-    r"(?!(?:fail(?:s|ed)?|pass(?:es|ed)?|break|broke|succeed(?:s|ed)?|work(?:s|ed)?"
+    # NO ATOMIC GROUPS. `(?>...)` is Python 3.11+, and the shipped scripts keep a 3.10 floor
+    # (.github/workflows/validate.yml) while CI pins 3.14 only -- so the construct imported
+    # fine here and would have raised `re.error: unknown extension ?>` on a supported
+    # interpreter, with no lane to catch it (Codex review, PR #152).
+    #
+    # The disqualifying set is the OUTCOMES, not the actions: enumerating actions is unbounded
+    # (run, rerun, retrieve, open, query, find) while outcomes are closed. Both optional words
+    # sit INSIDE the lookahead as well as after it, so the engine cannot decline to consume
+    # `be`/`to` and then match it as the governed verb -- the escape an atomic group was
+    # papering over.
+    #
+    # An outcome stays an outcome when a QUALIFIER follows it ("cannot fail under these
+    # conditions"); it becomes an action when an OBJECT does ("could not pass authentication").
+    # Prepositional qualifiers are listed; anything else reads as the object of a real verb.
+    r"\s+(?!(?:to\s+)?(?:be\s+)?"
+    r"(?:fail(?:s|ed)?|pass(?:es|ed)?|break|broke|succeed(?:s|ed)?|work(?:s|ed)?"
     r"|exist(?:s|ed)?|differ(?:s|ed)?|happen(?:s|ed)?|occur(?:s|red)?|matter(?:s|ed)?"
-    # A trailing object is what separates an OUTCOME from an ACTION: "the tests cannot
-    # pass" asserts a result, "could not pass authentication" reports an action that did
-    # not happen. Requiring the outcome word at a clause end keeps the honest
-    # authentication/gate disclosures exempt without letting the result claims through.
     r"|wrong|right|correct|incorrect|true|false|valid|invalid|broken|fine|safe)"
-    r"\s*(?:[.,;:!?]|$))"
-    r"\w+\b"
+    r"(?:\s*(?:[.,;:!?]|$)|\s+(?:under|on|in|with|for|after|before|during|when|if|unless"
+    r"|because|since|given|despite|at|by|from|over|within|across|unless)\b))"
+    r"(?:to\s+)?(?:be\s+)?\w+\b"
     r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
     r"|(?:commands?|output|evidence|checks?|runs?|verification|tests?|logs?|transcripts?"
     r"|artifacts?|results?|tools?|fixtures?|paths?|files?|revisions?|suites?)"

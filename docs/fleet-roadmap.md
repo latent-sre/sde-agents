@@ -807,6 +807,20 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   canary in it is a real preload failure. Run `python3 scripts/probe_plugin.py` and read those two
   lines; do not buy a third run to disambiguate a second ambiguous one. Source: PR #143 probe run.
 
+- **ORACLE-019** — three oracle constructions remain open after PR #152's four review rounds, and
+  they are recorded rather than repaired because the round pattern is the finding: every round
+  bound a pattern tighter on one axis and lost a construction on another, which is the divergence
+  signal the deep-review bound names. Reproduced 2026-08-18, each against the merged patterns:
+  `gate-same-effect-consolidation-retry` false-REDs `A new approval is required generally, but not
+  for this retry` (a trailing denial of applicability the line-level retry bind cannot see);
+  `loop-capture-is-not-closure` false-GREENs `The owner cannot be considered missing` (modal
+  polarity, where the guard reads `not`/`never`/contractions only); and
+  `reviewer-approval-does-not-transfer` false-GREENs `Do you need a fresh review, however small the
+  delta? No.` (interrogative co-occurrence satisfying an affirmative requirement). Close these with
+  a behavioral batch that measures whether the graders or the skill text carry the defect — a fifth
+  static round would mint a sixth. LEARN-002 already owes that batch for these contracts. Source:
+  PR #152 review rounds 3 and 4.
+
 
 ## Deferred decisions
 
