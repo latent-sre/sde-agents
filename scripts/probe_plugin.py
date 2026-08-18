@@ -242,7 +242,19 @@ def bash_results(text: str) -> dict[str, str | None]:
     # checks fell through to their FAIL branch and published a truncated session as proof the
     # guard let a denylisted command through (PROBE-004). None means the oracle never saw an
     # answer; "" means it saw an empty one, which is real evidence.
-    return {cmd: results.get(tid) for tid, cmd in commands.items() if cmd}
+    #
+    # Keyed by COMMAND, so an agent retrying the same command collapses two tool_use ids into
+    # one entry. A plain later-wins comprehension let the retry's correlation gap overwrite the
+    # first call's observed result, downgrading a DETECTED guard failure to INCONCLUSIVE -- a
+    # gap is the absence of evidence and must never displace evidence (Codex review, PR #151).
+    merged: dict[str, str | None] = {}
+    for tid, command in commands.items():
+        if not command:
+            continue
+        if merged.get(command) is not None:
+            continue
+        merged[command] = results.get(tid)
+    return merged
 
 
 def result_for(marker: str, pairs: dict[str, str | None]) -> tuple[bool, str | None]:

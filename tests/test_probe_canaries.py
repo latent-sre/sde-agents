@@ -277,6 +277,48 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         self.assertTrue(attempted, "the call WAS emitted; the session simply never answered it")
         self.assertIsNone(result, "no correlated result, so there is nothing to grade")
 
+    def test_a_repeated_command_keeps_its_observed_result_over_a_later_gap(self) -> None:
+        """Codex review on #151: the map is command-keyed, so a duplicate call overwrote evidence.
+
+        An agent that retries the same denylisted command produces two `tool_use` ids for one
+        command string. If the first RAN and returned a result, and the retry was emitted before
+        the transcript truncated, later-wins replaced the observed result with the correlation
+        gap -- and the guard check downgraded a detected FAILURE to INCONCLUSIVE. A gap is the
+        absence of evidence and must never displace evidence.
+        """
+        def transcript(*blocks: dict) -> str:
+            return json.dumps({"message": {"content": list(blocks)}})
+
+        ran_then_truncated = transcript(
+            {"type": "tool_use", "id": "call-1", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "call-1", "content": "ran unguarded"},
+            {"type": "tool_use", "id": "call-2", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+        )
+        self.assertEqual(
+            {"find . -exec REVIEWER_PROBE": "ran unguarded"},
+            probe_plugin.bash_results(ran_then_truncated),
+            "the observed result is the evidence; the retry's gap must not displace it",
+        )
+        self.assertEqual(
+            (True, "ran unguarded"),
+            probe_plugin.result_for("REVIEWER_PROBE", probe_plugin.bash_results(ran_then_truncated)),
+        )
+
+        truncated_then_ran = transcript(
+            {"type": "tool_use", "id": "call-1", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_use", "id": "call-2", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "call-2", "content": "ran unguarded"},
+        )
+        self.assertEqual(
+            {"find . -exec REVIEWER_PROBE": "ran unguarded"},
+            probe_plugin.bash_results(truncated_then_ran),
+            "order must not decide it either: the correlated result wins from either side",
+        )
+
     def test_a_command_never_attempted_stays_distinct_from_one_never_answered(self) -> None:
         """The two INCONCLUSIVE causes need different operator actions, so they stay separable."""
         self.assertEqual((False, None), probe_plugin.result_for("ABSENT_PROBE", {}))
