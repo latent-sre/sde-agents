@@ -27,12 +27,6 @@
       "required": true
     },
     {
-      "id": "copilot-static",
-      "host": "copilot",
-      "kind": "static",
-      "required": true
-    },
-    {
       "id": "vscode-static",
       "host": "vscode",
       "kind": "static",
@@ -52,14 +46,6 @@
       "kind": "discovery",
       "command": "codex",
       "plugin_inventory": true,
-      "required": false
-    },
-    {
-      "id": "copilot-discovery",
-      "host": "copilot",
-      "kind": "discovery",
-      "command": "copilot",
-      "plugin_inventory": false,
       "required": false
     },
     {

@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Mapping
 
 
-HOSTS = {"claude", "codex", "copilot", "vscode"}
+HOSTS = {"claude", "codex", "vscode"}
 KINDS = {"static", "discovery", "behavioral", "model-baseline"}
 REASONING_EFFORTS = {"none", "low", "medium", "high", "xhigh", "max"}
 

@@ -1353,6 +1353,15 @@ def validate_generated_outputs(root: Path) -> list[str]:
         return [f"{root}: cannot inspect generated platform adapters: {exc}"]
     for relative in RETIRED_GENERATED_ROOTS:
         retired = root / relative
+        try:
+            _safe_generated_root(root, relative, operation="inspect")
+        except ValueError as exc:
+            issues.append(
+                f"{retired}: cannot inspect retired generated adapter root safely: {exc} "
+                f"To repair, remove the offending link, junction, or reparse point before "
+                f"regenerating adapters."
+            )
+            continue
         if retired.exists():
             issues.append(
                 f"{retired}: retired generated adapter root still exists. Both the old shared "
