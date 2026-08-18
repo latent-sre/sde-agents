@@ -2820,6 +2820,44 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                 )
                 self.assertIn(name, problem)
 
+    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    def test_a_non_writable_benchmark_is_refused_but_a_read_only_sidecar_is_not(self) -> None:
+        """Codex review round 5 on #151, accepted for one artifact and declined for the other.
+
+        `is_file()` says nothing about writability, and directory write access does not permit
+        truncating a file already inside it -- so a benchmark copied from another run passes
+        preflight and refuses the write after the batch is paid for.
+
+        The sidecar is deliberately exempt. It is not simply rewritten: the runner chmods a
+        pre-existing regular file back to 0600 and reopens it, and OutputDirReuseSequenceTest
+        stages exactly that by setting the file 0400 before a re-run. Refusing it here would
+        break a recovery path the runner is built for -- which is how the first version of this
+        repair was caught.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            benchmark = Path(tmp) / eval_behavioral.BENCHMARK_FILENAME
+            benchmark.write_text("{}", encoding="utf-8")
+            benchmark.chmod(0o444)
+            try:
+                problem = eval_behavioral.output_dir_problem(Path(tmp))
+                self.assertIsNotNone(problem, "a read-only benchmark must be refused up front")
+                self.assertIn(eval_behavioral.BENCHMARK_FILENAME, problem)
+            finally:
+                benchmark.chmod(0o644)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            sidecar = Path(tmp) / eval_behavioral.FAILING_EVIDENCE_FILENAME
+            sidecar.write_text("[]", encoding="utf-8")
+            sidecar.chmod(0o400)
+            try:
+                self.assertIsNone(
+                    eval_behavioral.output_dir_problem(Path(tmp)),
+                    "the runner normalizes this file before rewriting it; refusing it here "
+                    "breaks the reuse recovery OutputDirReuseSequenceTest pins",
+                )
+            finally:
+                sidecar.chmod(0o644)
+
     def test_a_dangling_symlink_at_a_fixed_artifact_path_is_refused(self) -> None:
         """Codex review on #151: the artifact loop lacked the check the directory path has.
 

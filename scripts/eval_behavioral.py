@@ -501,6 +501,20 @@ def output_dir_problem(path: Path) -> str | None:
                 return f"{artifact} is a dangling symlink, so {name} cannot be written"
             if artifact.exists() and not artifact.is_file():
                 return f"{artifact} exists and is not a file, so {name} cannot be written"
+        # Writability is asked of benchmark.json ALONE, deliberately. Directory write access does
+        # not permit truncating a file already inside it, so a benchmark copied from another run
+        # is a regular file that clears every check above and then refuses the write after the
+        # batch is paid for (Codex review round 5). The sidecar is exempt because it is not
+        # simply rewritten: the runner normalizes a pre-existing regular file back to 0600 and
+        # then reopens it, and OutputDirReuseSequenceTest pins that recovery by staging the file
+        # 0400 on purpose. Refusing a read-only sidecar here would break a path the runner is
+        # built to handle. A sidecar owned by ANOTHER user still fails that chmod at write time;
+        # ownership is not knowable from the mode bits, so it stays fail-closed there.
+        benchmark = path / BENCHMARK_FILENAME
+        if benchmark.is_file() and not os.access(benchmark, os.W_OK):
+            return (
+                f"{benchmark} is not writable, so {BENCHMARK_FILENAME} cannot be rewritten"
+            )
         return None
     # Lexical, not `exists()`: a dangling symlink ANYWHERE on the way up is followed by
     # `exists()` and skipped, so `dangling-link/results` walked past it to a writable parent and

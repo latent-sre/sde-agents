@@ -254,7 +254,7 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual({"echo GOOD": "good result"}, probe_plugin.bash_results(transcript))
+        self.assertEqual({"echo GOOD": ["good result"]}, probe_plugin.bash_results(transcript))
 
     def test_an_uncorrelated_bash_call_is_inconclusive_not_an_unguarded_run(self) -> None:
         """PROBE-004: a Bash call with no correlated tool_result proves nothing about the guard.
@@ -271,11 +271,12 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         }]}})
 
         pairs = probe_plugin.bash_results(transcript)
-        self.assertEqual({"find . -exec AGENTFLAG_PROBE": None}, pairs)
+        self.assertEqual({"find . -exec AGENTFLAG_PROBE": [None]}, pairs)
 
         attempted, result = probe_plugin.result_for("AGENTFLAG_PROBE", pairs)
         self.assertTrue(attempted, "the call WAS emitted; the session simply never answered it")
-        self.assertIsNone(result, "no correlated result, so there is nothing to grade")
+        self.assertEqual([], probe_plugin.observed(result),
+                         "no correlated result, so there is nothing to grade")
 
     def test_a_repeated_command_keeps_its_observed_result_over_a_later_gap(self) -> None:
         """Codex review on #151: the map is command-keyed, so a duplicate call overwrote evidence.
@@ -297,13 +298,17 @@ class ProbeTranscriptParserTests(unittest.TestCase):
              "input": {"command": "find . -exec REVIEWER_PROBE"}},
         )
         self.assertEqual(
-            {"find . -exec REVIEWER_PROBE": "ran unguarded"},
+            {"find . -exec REVIEWER_PROBE": ["ran unguarded", None]},
             probe_plugin.bash_results(ran_then_truncated),
             "the observed result is the evidence; the retry's gap must not displace it",
         )
         self.assertEqual(
-            (True, "ran unguarded"),
-            probe_plugin.result_for("REVIEWER_PROBE", probe_plugin.bash_results(ran_then_truncated)),
+            ["ran unguarded"],
+            probe_plugin.observed(
+                probe_plugin.result_for(
+                    "REVIEWER_PROBE", probe_plugin.bash_results(ran_then_truncated)
+                )[1]
+            ),
         )
 
         truncated_then_ran = transcript(
@@ -314,66 +319,70 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             {"type": "tool_result", "tool_use_id": "call-2", "content": "ran unguarded"},
         )
         self.assertEqual(
-            {"find . -exec REVIEWER_PROBE": "ran unguarded"},
+            {"find . -exec REVIEWER_PROBE": [None, "ran unguarded"]},
             probe_plugin.bash_results(truncated_then_ran),
             "order must not decide it either: the correlated result wins from either side",
         )
 
-    def test_an_unguarded_result_beats_a_denial_for_the_same_command(self) -> None:
-        """Codex review round 4 on #151: first-wins hid a guard failure behind a denial.
+    def test_every_correlated_result_is_kept_for_a_repeated_command(self) -> None:
+        """Retires the merge-precedence tests: there is no merge left to get wrong.
 
-        Two correlated results for one command are not a tie to be broken by position. If the
-        agent was denied once and then RAN the command, the guard failed -- and keeping only the
-        denial made the check report PASS, which is a false green on the control this probe
-        exists to test. Evidence that the command executed outranks evidence that it did not,
-        whichever order the transcript happens to carry.
+        Two rounds of review killed two opposite precedences -- first-wins hid a run behind a
+        denial, unguarded-wins hid a denial behind a run -- because the reviewer check and the
+        main-loop check read the SAME evidence with opposite polarity. One value cannot serve
+        both, so the parser now returns all of them and each check decides. The old tests pinned
+        a decision that no longer exists; these pin the evidence and the two verdicts instead.
         """
-        def transcript(*blocks: dict) -> str:
-            return json.dumps({"message": {"content": list(blocks)}})
+        def transcript(*results: str) -> str:
+            blocks = []
+            for index, body in enumerate(results):
+                blocks.append({"type": "tool_use", "id": f"c{index}", "name": "Bash",
+                               "input": {"command": "find . -exec PROBE"}})
+                if body is not None:
+                    blocks.append({"type": "tool_result", "tool_use_id": f"c{index}",
+                                   "content": body})
+            return json.dumps({"message": {"content": blocks}})
 
-        def pair(first: str, second: str) -> tuple[bool, str | None]:
-            text = transcript(
-                {"type": "tool_use", "id": "c1", "name": "Bash",
-                 "input": {"command": "find . -exec REVIEWER_PROBE"}},
-                {"type": "tool_result", "tool_use_id": "c1", "content": first},
-                {"type": "tool_use", "id": "c2", "name": "Bash",
-                 "input": {"command": "find . -exec REVIEWER_PROBE"}},
-                {"type": "tool_result", "tool_use_id": "c2", "content": second},
-            )
-            return probe_plugin.result_for("REVIEWER_PROBE", probe_plugin.bash_results(text))
+        RAN = "total 12 drwxr-xr-x repo"
+        both = probe_plugin.bash_results(transcript(probe_plugin.GUARD_DENY, RAN))
+        self.assertEqual({"find . -exec PROBE": [probe_plugin.GUARD_DENY, RAN]}, both)
+        self.assertEqual(
+            both, probe_plugin.bash_results(transcript(probe_plugin.GUARD_DENY, RAN)),
+            "order is preserved, not resolved",
+        )
 
-        ran = "total 12 drwxr-xr-x repo"
-        for label, first, second in (
-            ("denied then ran", probe_plugin.GUARD_DENY, ran),
-            ("ran then denied", ran, probe_plugin.GUARD_DENY),
+    def test_each_check_reads_the_shared_evidence_with_its_own_polarity(self) -> None:
+        """The reviewer must be denied; the main loop must not. Same input, opposite verdicts."""
+        RAN = "total 12 drwxr-xr-x repo"
+        DENY = probe_plugin.GUARD_DENY
+
+        for label, results in (
+            ("denied then ran", [DENY, RAN]),
+            ("ran then denied", [RAN, DENY]),
         ):
             with self.subTest(order=label):
-                attempted, result = pair(first, second)
-                self.assertTrue(attempted)
-                self.assertNotIn(
-                    probe_plugin.GUARD_DENY, result or "",
-                    "the run that EXECUTED is the guard failure and must survive the merge",
+                seen = probe_plugin.observed(results)
+                # Reviewer polarity: any unguarded run is the failure.
+                self.assertTrue(
+                    probe_plugin.unguarded_runs(seen),
+                    "a guard that allowed one attempt has not held",
                 )
-                self.assertIn("drwxr-xr-x", result or "")
+                # Main-loop polarity: any denial is the failure.
+                self.assertTrue(
+                    [r for r in seen if DENY in r],
+                    "the guard caught the user's own Bash at least once",
+                )
 
-    def test_two_denials_for_one_command_still_read_as_denied(self) -> None:
-        """The merge must not invent a failure either: denied twice is denied."""
-        text = json.dumps({"message": {"content": [
-            {"type": "tool_use", "id": "c1", "name": "Bash",
-             "input": {"command": "find . -exec REVIEWER_PROBE"}},
-            {"type": "tool_result", "tool_use_id": "c1", "content": probe_plugin.GUARD_DENY},
-            {"type": "tool_use", "id": "c2", "name": "Bash",
-             "input": {"command": "find . -exec REVIEWER_PROBE"}},
-            {"type": "tool_result", "tool_use_id": "c2", "content": probe_plugin.GUARD_DENY},
-        ]}})
-        _attempted, result = probe_plugin.result_for(
-            "REVIEWER_PROBE", probe_plugin.bash_results(text)
-        )
-        self.assertIn(probe_plugin.GUARD_DENY, result or "")
+        denied_twice = probe_plugin.observed([DENY, DENY])
+        self.assertEqual([], probe_plugin.unguarded_runs(denied_twice),
+                         "denied twice is denied -- the aggregate must not invent a failure")
+
+        gap_only = probe_plugin.observed([None, None])
+        self.assertEqual([], gap_only, "a correlation gap is never evidence in either direction")
 
     def test_a_command_never_attempted_stays_distinct_from_one_never_answered(self) -> None:
         """The two INCONCLUSIVE causes need different operator actions, so they stay separable."""
-        self.assertEqual((False, None), probe_plugin.result_for("ABSENT_PROBE", {}))
+        self.assertEqual((False, []), probe_plugin.result_for("ABSENT_PROBE", {}))
 
     def test_a_correlated_empty_result_remains_a_real_gradeable_answer(self) -> None:
         """An empty tool_result is the command running and printing nothing - that IS evidence.
@@ -387,8 +396,8 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         ]}})
 
         pairs = probe_plugin.bash_results(transcript)
-        self.assertEqual({"find . -exec MAINLOOP_PROBE": ""}, pairs)
-        self.assertEqual((True, ""), probe_plugin.result_for("MAINLOOP_PROBE", pairs))
+        self.assertEqual({"find . -exec MAINLOOP_PROBE": [""]}, pairs)
+        self.assertEqual((True, [""]), probe_plugin.result_for("MAINLOOP_PROBE", pairs))
 
     def test_a_canary_leak_needs_an_observed_result_not_a_correlation_gap(self) -> None:
         """PROBE-004 fallout: a None body is a gap, not a leak, and must not be searched.
@@ -400,14 +409,14 @@ class ProbeTranscriptParserTests(unittest.TestCase):
         """
         canaries = (probe_plugin.BACKEND_CANARY, probe_plugin.FRONTEND_CANARY)
 
-        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": None}, canaries))
-        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": "clean output"}, canaries))
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": [None]}, canaries))
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": ["clean output"]}, canaries))
         self.assertEqual(
             ["cat backend-craft/SKILL.md"],
             probe_plugin.canary_leaks(
                 {
-                    "cat backend-craft/SKILL.md": f"...{probe_plugin.BACKEND_CANARY}...",
-                    "echo hi": None,
+                    "cat backend-craft/SKILL.md": [f"...{probe_plugin.BACKEND_CANARY}..."],
+                    "echo hi": [None],
                 },
                 canaries,
             ),
@@ -572,7 +581,7 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             ["bash-1", "agent-1"],
             [call["id"] for call in probe_plugin.tool_calls(transcript)],
         )
-        self.assertEqual({"echo PROBE": "bash ok"}, probe_plugin.bash_results(transcript))
+        self.assertEqual({"echo PROBE": ["bash ok"]}, probe_plugin.bash_results(transcript))
         self.assertTrue(probe_plugin.spawn_succeeded(transcript, "sde-agents:sde-fullstack"))
         self.assertEqual(
             ["agent ok"],
