@@ -819,7 +819,25 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   delta? No.` (interrogative co-occurrence satisfying an affirmative requirement). Close these with
   a behavioral batch that measures whether the graders or the skill text carry the defect — a fifth
   static round would mint a sixth. LEARN-002 already owes that batch for these contracts. Source:
-  PR #152 review rounds 3 and 4.
+  Round 5 added three more of the same class, which is confirmation rather than surprise:
+  `reviewer-approval-does-not-transfer` false-REDs the contrastive `you must perform not a
+  cursory check but a fresh review`; `loop-capture-is-not-closure` false-REDs `The owner is not
+  yet assigned to anyone — it is missing`, where a preceding negative FACT explains the gap
+  rather than denying it; and `scripts/packet_lint.py`'s subject allowlist omits the
+  prerequisites verification actually needs, so `Verified: CI is unavailable` and
+  `Verified: credentials are unavailable` false-RED while `the test run is unavailable` passes
+  — an allowlist that cannot be completed, the same shape as the action-verb list that was
+  inverted in round 2. Source:
+  PR #152 review rounds 3, 4 and 5.
+
+- **FLOOR-001** — the documented Python 3.10 floor is already false, independent of any current
+  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and pins
+  CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
+  `scripts/install_codex_agents.py:20` both `import tomllib`, which is 3.11+. Either the floor is
+  wrong and the comment should say 3.11, or the imports are and both need a fallback — the two
+  readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
+  floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
+  floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
 
 
 ## Deferred decisions
