@@ -1072,6 +1072,17 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Owner: `**literal**`\n", {"Owner": "**literal**"}
         ))
 
+    def test_a_multi_backtick_code_span_consumes_its_complete_delimiter(self) -> None:
+        """PR #148: one-backtick stripping left part of a longer delimiter in the value."""
+        for rendering, expected in (
+            ("``__init__``", "__init__"),
+            ("``build`step``", "build`step"),
+        ):
+            with self.subTest(rendering=rendering):
+                self.assertEqual([], packet_lint.lint_exact_fields(
+                    f"Owner: {rendering}\n", {"Owner": expected}
+                ))
+
     def test_effect_binding_requires_an_exact_effect_heading(self) -> None:
         """ORACLE-012/014: effect identity is a boundary, not inferred from prose.
 
@@ -1096,6 +1107,25 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         self.assertTrue(packet_lint.lint_effect_sets(
             f"Effect: retry\n{retry}\nJellyfin cache volume deletion:\n{deletion}", expected,
         ), "shared prose words cannot stand in for the required effect identity")
+
+    def test_effect_binding_rejects_conflicting_headings_in_one_preamble(self) -> None:
+        """PR #148: a matching final heading cannot hide a conflicting structured heading."""
+        expected = [
+            {"Gate": "consolidated", "Effect class": "reversible live activation",
+             "Instrument": "fresh request required", "effect": "retry"},
+            {"Gate": "new", "Effect class": "irreversible or custody boundary",
+             "Instrument": "fresh request required", "effect": "deletion"},
+        ]
+        retry = self._set("consolidated", "reversible live activation")
+        deletion = self._set("new", "irreversible or custody boundary")
+        contradictory = (
+            f"Effect: deletion\nEffect: retry\n{retry}\n"
+            f"Effect: retry\nEffect: deletion\n{deletion}"
+        )
+        self.assertTrue(
+            packet_lint.lint_effect_sets(contradictory, expected),
+            "each preamble must contain exactly one structured effect identity",
+        )
 
     def test_a_verified_slot_may_disclose_an_absence_without_citing_a_command(self) -> None:
         """ORACLE-003: the honest answer graded worse than a terse one.

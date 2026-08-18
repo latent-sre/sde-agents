@@ -1353,7 +1353,7 @@ def validate_generated_outputs(root: Path) -> list[str]:
         return [f"{root}: cannot inspect generated platform adapters: {exc}"]
     for relative in RETIRED_GENERATED_ROOTS:
         retired = root / relative
-        if retired.exists():
+        if retired.exists() or _is_link_or_reparse_point(retired):
             issues.append(
                 f"{retired}: retired generated adapter root still exists. Both the old shared "
                 f"copy and the host-specific copies could be reviewed or packaged as authoritative; "

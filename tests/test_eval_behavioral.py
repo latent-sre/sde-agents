@@ -2557,6 +2557,15 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
     reserved for sessions the CLI itself failed or never completed.
     """
 
+    @staticmethod
+    def _create_dangling_symlink(target: Path, link: Path) -> None:
+        try:
+            os.symlink(target, link)
+        except OSError as exc:
+            raise unittest.SkipTest(
+                f"this host cannot create the dangling symlink fixture: {exc}"
+            ) from exc
+
     def test_a_failed_or_incomplete_cli_session_is_flagged_for_exclusion(self) -> None:
         proc = mock.Mock(returncode=1, stdout="", stderr="")
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
@@ -2657,7 +2666,12 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                  "Instrument": "fresh request required", "effect": "deletion"},
             ],
         }
-        for replacement, expected in (("", "non-empty exact identity"), ("retry", "unique")):
+        for replacement, expected in (
+            ("", "non-empty exact identity"),
+            (".", "non-empty exact identity"),
+            ("retry", "unique"),
+            ("retry.", "unique"),
+        ):
             with self.subTest(replacement=replacement):
                 case = copy.deepcopy(base)
                 case["effect_sets"][1]["effect"] = replacement
@@ -2673,7 +2687,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         """PR #147 round 2: `exists()` follows a dangling link at any level of the walk."""
         with tempfile.TemporaryDirectory() as tmp:
             link = Path(tmp) / "dangling-link"
-            os.symlink(Path(tmp) / "never-created", link)
+            self._create_dangling_symlink(Path(tmp) / "never-created", link)
             problem = eval_behavioral.output_dir_problem(link / "results")
             self.assertIsNotNone(problem)
             self.assertIn("symlink", problem)
@@ -2682,7 +2696,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         """`Path.exists()` follows the link, so a dangling one read as creatable."""
         with tempfile.TemporaryDirectory() as tmp:
             link = Path(tmp) / "dangling"
-            os.symlink(Path(tmp) / "never-created", link)
+            self._create_dangling_symlink(Path(tmp) / "never-created", link)
             problem = eval_behavioral.output_dir_problem(link)
             self.assertIsNotNone(problem)
             self.assertIn("symlink", problem)
