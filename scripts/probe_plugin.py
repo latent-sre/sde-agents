@@ -251,9 +251,20 @@ def bash_results(text: str) -> dict[str, str | None]:
     for tid, command in commands.items():
         if not command:
             continue
-        if merged.get(command) is not None:
+        observed = results.get(tid)
+        if command not in merged:
+            merged[command] = observed
             continue
-        merged[command] = results.get(tid)
+        kept = merged[command]
+        # PRECEDENCE, not position. Two results for one command are not a tie for the
+        # transcript order to break. Evidence outranks a gap; and evidence that the command
+        # RAN outranks evidence that it was denied, because a guard that denied one attempt
+        # and allowed the next has FAILED -- keeping the denial made the check report PASS on
+        # a session that proved the opposite (Codex review round 4, PR #151).
+        if kept is None:
+            merged[command] = observed
+        elif observed is not None and GUARD_DENY in kept and GUARD_DENY not in observed:
+            merged[command] = observed
     return merged
 
 

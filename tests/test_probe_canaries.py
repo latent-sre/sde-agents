@@ -319,6 +319,58 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             "order must not decide it either: the correlated result wins from either side",
         )
 
+    def test_an_unguarded_result_beats_a_denial_for_the_same_command(self) -> None:
+        """Codex review round 4 on #151: first-wins hid a guard failure behind a denial.
+
+        Two correlated results for one command are not a tie to be broken by position. If the
+        agent was denied once and then RAN the command, the guard failed -- and keeping only the
+        denial made the check report PASS, which is a false green on the control this probe
+        exists to test. Evidence that the command executed outranks evidence that it did not,
+        whichever order the transcript happens to carry.
+        """
+        def transcript(*blocks: dict) -> str:
+            return json.dumps({"message": {"content": list(blocks)}})
+
+        def pair(first: str, second: str) -> tuple[bool, str | None]:
+            text = transcript(
+                {"type": "tool_use", "id": "c1", "name": "Bash",
+                 "input": {"command": "find . -exec REVIEWER_PROBE"}},
+                {"type": "tool_result", "tool_use_id": "c1", "content": first},
+                {"type": "tool_use", "id": "c2", "name": "Bash",
+                 "input": {"command": "find . -exec REVIEWER_PROBE"}},
+                {"type": "tool_result", "tool_use_id": "c2", "content": second},
+            )
+            return probe_plugin.result_for("REVIEWER_PROBE", probe_plugin.bash_results(text))
+
+        ran = "total 12 drwxr-xr-x repo"
+        for label, first, second in (
+            ("denied then ran", probe_plugin.GUARD_DENY, ran),
+            ("ran then denied", ran, probe_plugin.GUARD_DENY),
+        ):
+            with self.subTest(order=label):
+                attempted, result = pair(first, second)
+                self.assertTrue(attempted)
+                self.assertNotIn(
+                    probe_plugin.GUARD_DENY, result or "",
+                    "the run that EXECUTED is the guard failure and must survive the merge",
+                )
+                self.assertIn("drwxr-xr-x", result or "")
+
+    def test_two_denials_for_one_command_still_read_as_denied(self) -> None:
+        """The merge must not invent a failure either: denied twice is denied."""
+        text = json.dumps({"message": {"content": [
+            {"type": "tool_use", "id": "c1", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "c1", "content": probe_plugin.GUARD_DENY},
+            {"type": "tool_use", "id": "c2", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "c2", "content": probe_plugin.GUARD_DENY},
+        ]}})
+        _attempted, result = probe_plugin.result_for(
+            "REVIEWER_PROBE", probe_plugin.bash_results(text)
+        )
+        self.assertIn(probe_plugin.GUARD_DENY, result or "")
+
     def test_a_command_never_attempted_stays_distinct_from_one_never_answered(self) -> None:
         """The two INCONCLUSIVE causes need different operator actions, so they stay separable."""
         self.assertEqual((False, None), probe_plugin.result_for("ABSENT_PROBE", {}))
