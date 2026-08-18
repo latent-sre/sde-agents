@@ -2573,6 +2573,18 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "unexpected failure"):
                 self._create_dangling_symlink(Path("missing"), Path("link"))
 
+    def test_dangling_symlink_fixture_skips_windows_privilege_denial(self) -> None:
+        error = OSError("privilege denied")
+        error.winerror = 1314
+        target = Path("missing")
+        link = Path("link")
+        with (
+            mock.patch.object(os, "name", "nt"),
+            mock.patch.object(os, "symlink", side_effect=error),
+            self.assertRaisesRegex(unittest.SkipTest, "cannot create"),
+        ):
+            self._create_dangling_symlink(target, link)
+
     def test_a_failed_or_incomplete_cli_session_is_flagged_for_exclusion(self) -> None:
         proc = mock.Mock(returncode=1, stdout="", stderr="")
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(

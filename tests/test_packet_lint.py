@@ -1077,6 +1077,7 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         for rendering, expected in (
             ("``__init__``", "__init__"),
             ("``build`step``", "build`step"),
+            ("``build```step``", "build```step"),
         ):
             with self.subTest(rendering=rendering):
                 self.assertEqual([], packet_lint.lint_exact_fields(
@@ -1089,6 +1090,12 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         self.assertTrue(
             packet_lint.lint_exact_fields(spaced, {"Owner": "alice"}),
             "Markdown removes one boundary space, not every boundary space",
+        )
+        self.assertTrue(
+            packet_lint.lint_exact_fields(
+                "Owner: ``foo``bar``\n", {"Owner": "foo``bar"}
+            ),
+            "the first equal-length run closes the span before the final run",
         )
 
     def test_effect_binding_requires_an_exact_effect_heading(self) -> None:

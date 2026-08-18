@@ -650,6 +650,19 @@ _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
 _DECORATION_TOKENS = ("**", "__", "*", "_")
 
 
+def _has_backtick_run(value: str, length: int) -> bool:
+    """True when value contains a complete backtick run of exactly the delimiter length."""
+    run = 0
+    for character in value + "\0":
+        if character == "`":
+            run += 1
+            continue
+        if run == length:
+            return True
+        run = 0
+    return False
+
+
 def _strip_balanced_decoration(
     value: str, *, normalize_punctuation: bool = False
 ) -> str:
@@ -681,6 +694,8 @@ def _strip_balanced_decoration(
             closing = len(stripped) - len(stripped.rstrip("`"))
             if opening == closing and len(stripped) > opening + closing:
                 content = stripped[opening:-closing]
+                if _has_backtick_run(content, opening):
+                    return stripped
                 if content.startswith(" ") and content.endswith(" ") and content.strip(" "):
                     content = content[1:-1]
                 return content
