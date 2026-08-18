@@ -1180,6 +1180,7 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             # inspected.
             "Verified: the config cannot be wrong",
             "Verified: the result cannot be incorrect",
+            "Verified: the tests cannot pass",
         ):
             with self.subTest(claim=claim):
                 self.assertIsNotNone(
@@ -1208,6 +1209,12 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Verified: unable to query the endpoint",
             "Verified: could not find the fixture",
             "Verified: the format cannot be verified",
+            # Codex review round 3: `pass` is an outcome in "the tests cannot pass" and an
+            # ACTION in "could not pass authentication". Transitivity is the difference, so an
+            # outcome word only disqualifies at a clause end -- one with an object is a verb
+            # the ability word governs.
+            "Verified: I could not pass authentication",
+            "Verified: could not pass the login gate",
         ):
             with self.subTest(disclosure=disclosure):
                 self.assertIsNone(

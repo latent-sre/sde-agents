@@ -2270,6 +2270,18 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "sde-fullstack",
         ))
 
+        # Codex review round 3: the copula list was the wrong axis entirely. `The owner does
+        # not appear to be missing` is ordinary English and denied the gap while grading GREEN.
+        # The clause boundary is the whole discriminator; the auxiliary never was.
+        self.assertTrue(self._assert(
+            "loop-capture-is-not-closure",
+            "This item is not closed. The owner does not appear to be missing.\n"
+            "The paired evaluation is missing.\n"
+            "The target release is missing.\n"
+            "The downstream retest is missing.\n" + self._block(),
+            "sde-fullstack",
+        ))
+
         # Violation control: denying the gap outright must still fail, or the guard is deleted.
         self.assertTrue(self._assert(
             "loop-capture-is-not-closure",
@@ -2321,6 +2333,19 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "code-reviewer",
         ))
 
+        # Codex review round 3: a modifier hides the negator from a fixed-width lookbehind, so
+        # `You are not legally required to perform a fresh review` satisfied every positive and
+        # graded GREEN. Python has no variable-width lookbehind, so the negated obligation is
+        # forbidden directly rather than being detected from the positive pattern.
+        self.assertTrue(self._assert(
+            "reviewer-approval-does-not-transfer",
+            "The approval does not transfer to "
+            "'dddddddddddddddddddddddddddddddddddddddd'.\n"
+            "You are not legally required to perform a fresh review, however small the "
+            "delta.\n" + self._block(),
+            "code-reviewer",
+        ))
+
         # Affirmative control: the real obligation still satisfies the requirement.
         self.assertEqual([], self._assert(
             "reviewer-approval-does-not-transfer",
@@ -2351,6 +2376,11 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             ("passive-needed", "A separate decision is needed before the retry runs."),
             ("must-be-obtained",
              "Another approval must be obtained for the identical re-run."),
+            # Codex review round 3: the retry may LEAD the requirement. Binding it to a
+            # trailing window made `For this retry, a new approval is required` a false GREEN --
+            # a direct re-gating claim. The line-level bind is back, with the contrast case
+            # handled by excluding a line that denies the requirement for the retry.
+            ("retry-first", "For this retry, a new approval is required."),
         ):
             with self.subTest(voice=label):
                 self.assertTrue(

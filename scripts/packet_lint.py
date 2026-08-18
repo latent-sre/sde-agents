@@ -200,7 +200,12 @@ _CLAIM_NEGATION_RE = re.compile(
     # find -- while the outcomes and properties are a closed set.
     r"(?!(?:fail(?:s|ed)?|pass(?:es|ed)?|break|broke|succeed(?:s|ed)?|work(?:s|ed)?"
     r"|exist(?:s|ed)?|differ(?:s|ed)?|happen(?:s|ed)?|occur(?:s|red)?|matter(?:s|ed)?"
-    r"|wrong|right|correct|incorrect|true|false|valid|invalid|broken|fine|safe)\b)"
+    # A trailing object is what separates an OUTCOME from an ACTION: "the tests cannot
+    # pass" asserts a result, "could not pass authentication" reports an action that did
+    # not happen. Requiring the outcome word at a clause end keeps the honest
+    # authentication/gate disclosures exempt without letting the result claims through.
+    r"|wrong|right|correct|incorrect|true|false|valid|invalid|broken|fine|safe)"
+    r"\s*(?:[.,;:!?]|$))"
     r"\w+\b"
     r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
     r"|(?:commands?|output|evidence|checks?|runs?|verification|tests?|logs?|transcripts?"
