@@ -174,10 +174,19 @@ class Probe:
         if failed:
             return 1
         if skipped:
+            # Deliberately does NOT name a cause. Every INCONCLUSIVE has already printed its
+            # own, and they are not the same failure: a permission refusal before the guard
+            # could rule, a command the agent never attempted, and a call whose result never
+            # came back all land here. Asserting the sandbox for all of them contradicted the
+            # line printed directly above and sent the operator to fix the wrong thing
+            # (Codex review, PR #151).
             print(
-                "\nSome checks could not be run here. Claude Code's own sandbox refused the command\n"
-                "before the guard could rule on it, so the guard is UNPROVEN by this run — not broken,\n"
-                "not proven. Re-run from a plain terminal, outside a Claude Code session."
+                "\nSome checks could not be run here, so the guard is UNPROVEN by this run for those\n"
+                "checks — not broken, not proven. Each INCONCLUSIVE line above carries its OWN cause:\n"
+                "a permission refusal before the guard could rule, a command the agent never\n"
+                "attempted, or a call whose result never came back. Read it there rather than assuming\n"
+                "one cause; where a line names a Claude Code permission refusal, re-run from a\n"
+                "plain terminal outside a Claude Code session."
             )
             return 2
         return 0

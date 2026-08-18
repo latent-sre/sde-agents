@@ -148,6 +148,56 @@ class ProbeCanaryTests(unittest.TestCase):
         )
 
 
+class ProbeInconclusiveReportingTests(unittest.TestCase):
+    """The epilogue must not assert one cause for every inconclusive check.
+
+    Codex review on #151: `report()` attributed every SKIP to Claude Code's sandbox refusing the
+    command and told the operator to re-run outside a Claude Code session. That was already wrong
+    for a command the agent never attempted and for PROBE-002's uncorrelated spawn; the
+    correlation-gap SKIP added in this PR makes it wrong a third way. A probe that prints an
+    accurate per-check cause and then contradicts it in the summary sends the operator to fix
+    the wrong thing.
+    """
+
+    @staticmethod
+    def _report(*results: tuple[str, str, str]) -> tuple[int, str]:
+        probe = probe_plugin.Probe()
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            for status, label, detail in results:
+                probe.check(status, label, detail)
+            code = probe.report()
+        return code, buffer.getvalue()
+
+    def test_the_epilogue_does_not_blame_the_sandbox_for_a_correlation_gap(self) -> None:
+        code, out = self._report((
+            probe_plugin.SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first.",
+        ))
+        self.assertEqual(2, code)
+        self.assertIn("no tool_result ever correlated", out, "the real cause must still print")
+        self.assertNotIn(
+            "Claude Code's own sandbox refused the command",
+            out,
+            "the summary asserted a cause this check did not report",
+        )
+
+    def test_a_sandbox_refusal_still_gets_its_actionable_advice(self) -> None:
+        _code, out = self._report((
+            probe_plugin.SKIP,
+            "the guard DENIED the reviewer's denylisted command",
+            "Claude Code's own permission layer refused it before the guard's verdict mattered.",
+        ))
+        self.assertIn("plain terminal", out)
+
+    def test_a_clean_run_prints_no_inconclusive_epilogue(self) -> None:
+        code, out = self._report((probe_plugin.PASS, "everything held", ""))
+        self.assertEqual(0, code)
+        self.assertNotIn("UNPROVEN", out)
+
+
 class ProbeTranscriptParserTests(unittest.TestCase):
     def test_tool_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
