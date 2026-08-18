@@ -656,7 +656,10 @@ def _strip_balanced_decoration(value: str) -> str:
     collapsed into the other — identifiers and paths legitimately end in an underscore (PR #147
     round 3). A trailing marker with no partner is data. Iterative so `**\u0060x\u0060**` unwraps
     fully, and character-by-character comparison rather than a regex, which is also why the
-    exponential-backtracking spelling this replaced cannot come back.
+    exponential-backtracking spelling this replaced cannot come back. A code-span pair is the
+    stopping boundary: Markdown markers inside backticks are literal data, so recursively
+    interpreting `` `__init__` `` as underscore emphasis would collapse a dunder identifier into
+    ``init`` (ORACLE-013).
     """
     stripped = value.strip()
     changed = True
@@ -669,6 +672,8 @@ def _strip_balanced_decoration(value: str) -> str:
                 and stripped.endswith(token)
             ):
                 stripped = stripped[len(token):-len(token)].strip()
+                if token == "`":
+                    return stripped
                 changed = True
                 break
     return stripped
@@ -842,32 +847,24 @@ def _effect_set_key(block: dict[str, str]) -> tuple[str, ...]:
     )
 
 
-def _preamble_assigns(preamble: str, anchor: str, anchors: list[str]) -> bool:
-    """True when the line introducing this block assigns it to ``anchor``'s effect.
+def _preamble_assigns(preamble: str, effect: str) -> bool:
+    """True when this block immediately follows the exact ``Effect:`` identity it declares.
 
-    Two shapes have to work, and each defeats the obvious rule for the other. A comparative
-    heading names both effects — `Deletion, unlike the retry, needs:` — so taking the LAST mention
-    picks the contrast rather than the subject. And an answer that explains the first block before
-    introducing the second puts `retry` ahead of `deletion` in the second block's preamble, so
-    taking the earliest mention in the whole preamble rejected a natural correct answer (PR #147
-    rounds 2 and 3, one defeating each rule).
-
-    So the search is scoped to the block's nearest introduction — the last non-empty line before
-    it — and the subject is the first effect named THERE. Both shapes then read correctly: the
-    comparative heading is that line, and so is the second effect's heading. Where that line names
-    no effect at all the scope widens to the whole preamble, so an introduction further back is
-    still found rather than failing closed on a compliant answer.
+    Natural-language anchor inference was defeated in both directions across four review rounds:
+    comparative grammar changed which mention was the subject, explanatory prose changed which
+    mention was nearest, and `jellyfin-cache` made the retry and deletion vocabularies overlap.
+    The evaluator is the consumer of this boundary, so its prompt now asks for the exact heading
+    instead of pretending free prose is machine-readable (ORACLE-012/014).
     """
     lines = [line for line in preamble.splitlines() if line.strip()]
-    for scope in ([lines[-1]] if lines else []) + [preamble]:
-        best: tuple[int, str] | None = None
-        for candidate in anchors:
-            found = re.search(candidate, scope, re.IGNORECASE)
-            if found is not None and (best is None or found.start() < best[0]):
-                best = (found.start(), candidate)
-        if best is not None:
-            return best[1] == anchor
-    return False
+    if not lines:
+        return False
+    occurrences = _raw_field_occurrences("Effect", [lines[-1]])
+    return (
+        len(occurrences) == 1
+        and _echo_key(occurrences[0][1], normalize=True)
+        == _echo_key(effect, normalize=True)
+    )
 
 
 def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
@@ -882,13 +879,12 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
     Three things are checked, and the first version of this oracle only did the weakest of them
     (PR #147 review). **Completeness**: every set states all three slots. **Contiguity**: each
     set's own lines sit together, or the machine-readable block is just three sentences scattered
-    through prose. **Binding**: an expected set carrying an `effect` anchor must match the block
-    whose preamble names that effect — comparing the sets as an order-insensitive bag proves both
-    triples appear, not which effect each describes, so an answer that puts the retry's decision
-    under the deletion and vice versa passed with every individual value the contract wanted.
+    through prose. **Binding**: an expected set carrying an `effect` identity must immediately
+    follow the exact ``Effect: <identity>`` heading required by the case prompt. Comparing sets as
+    an order-insensitive bag proves both triples appear, not which effect each describes; inferring
+    that identity from natural prose repeatedly proved non-deterministic (ORACLE-012/014).
     """
     blocks = _effect_set_blocks(text)
-    anchors = [wanted["effect"] for wanted in expected if wanted.get("effect")]
     findings: list[str] = []
     complete: list[tuple[dict[str, str], int, int, str]] = []
     for block, _, span, _preamble in blocks:
@@ -912,14 +908,14 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
         )
     remaining = list(complete)
     for wanted in expected:
-        anchor = wanted.get("effect")
+        effect = wanted.get("effect")
         values = {label: wanted[label] for label in EFFECT_SET_LABELS}
         key = _effect_set_key(values)
         match = next(
             (
                 item for item in remaining
                 if _effect_set_key(item[0]) == key
-                and (anchor is None or _preamble_assigns(item[3], anchor, anchors))
+                and (effect is None or _preamble_assigns(item[3], effect))
             ),
             None,
         )
@@ -929,7 +925,7 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
         stated = ", ".join(f"{label}: {values[label]}" for label in EFFECT_SET_LABELS)
         findings.append(
             f"no declaration set states {stated} together"
-            + (f" under an effect its preamble identifies as {anchor!r}" if anchor else "")
+            + (f" immediately after `Effect: {effect}`" if effect else "")
             + "; the values may be present but paired with the wrong effect"
         )
     return findings
@@ -971,9 +967,14 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
         normalize = label in EXACT_FIELD_VOCABULARIES
         if normalize:
             declared_at[label] = occurrences[0][0]
-        matched = _echo_key(actual, normalize=normalize) == _echo_key(
-            exact_value, normalize=normalize
-        )
+        # The observed value is Markdown and may carry display wrapping; the expected value is
+        # contract data and must stay literal. Applying decoration stripping to both sides turned
+        # an expected dunder identifier (``__init__``) into ``init`` even after the code-span
+        # reader correctly preserved the observed identifier (ORACLE-013).
+        expected_key = exact_value.strip()
+        if normalize:
+            expected_key = _strip_sentence_punctuation(expected_key).casefold().strip()
+        matched = _echo_key(actual, normalize=normalize) == expected_key
         if not matched:
             findings.append(
                 f"{label}: exact value must be {exact_value!r}; found {actual!r}"

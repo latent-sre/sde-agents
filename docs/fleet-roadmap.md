@@ -767,26 +767,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   (CI's Windows runner is elevated), but it makes `scripts/run_tests.py` exit 1 locally, which is the
   "always non-zero teaches the operator to ignore it" failure the gitignore comment already warns
   about. Add `skipUnless`. Reproduced 2026-08-18.
-- **ORACLE-011** — `self-improve-promotion-gate`'s affirmative-promotion negatives recognise
-  approval and a few `proceed`/`promote` forms, so `No promotion now. Promotion is authorized
-  despite the gaps.` earns the refusal positive and trips no negative — the case passes while
-  authorizing the prohibited action. Reproduced 2026-08-18. The third widening of this pattern in
-  one branch, which is the signal: bind the refusal to the answer's FINAL decision rather than
-  accepting a standalone `no promotion` token and chasing each new authorization verb. Source: PR
-  #147 round 4.
-- **ORACLE-012** — `_preamble_assigns` takes the first effect named in a block's nearest
-  introduction, so a PREPOSED comparison puts the object first: `Unlike the deletion, the retry
-  needs:` binds the block to the deletion and a correct answer is reported as a behavioral
-  regression. **A false RED, and the third rule to be defeated by a shape the previous two
-  handled** (last-mention lost to `Deletion, unlike the retry`; earliest-mention lost to trailing
-  commentary). Before tuning it a fourth time, weigh retiring the binding half of `effect_sets`:
-  the mechanism is one round old, its only consumer is a single unmeasured case, and completeness
-  and per-set contiguity are settled without it. Reproduced 2026-08-18. Source: PR #147 round 4.
-- **ORACLE-013** — `_strip_balanced_decoration` unwraps recursively, so decoration INSIDE a code
-  span is read as more decoration: `` Owner: `__init__` `` normalizes to `init` and collapses with
-  a conflicting `**Owner: init**`. Markdown inside backticks is literal, and dunder identifiers are
-  ordinary. Stop unwrapping once a code-span wrapper is removed. Reproduced 2026-08-18. Source: PR
-  #147 round 4.
 - **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
   note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
   response is scored as a contract failure. A run that observed a model other than the requested pin
@@ -804,26 +784,12 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
   the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
   Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
-- **ORACLE-014** — the shipped `effect_sets` anchors on `gate-two-effects-declare-one-set-each`
-  overlap: the retry anchor matches `jellyfin`, and the volume the prompt asks to delete is NAMED
-  `jellyfin-cache`. So `Jellyfin cache volume deletion:` — the heading the prompt's own wording
-  invites — binds the deletion block to the retry and the case reports a false failure. Reproduced
-  2026-08-18: three of five natural deletion headings misbind. This is ORACLE-012's defect reached
-  by a second route (anchor vocabulary rather than sentence shape), which strengthens that item's
-  standing question — weigh retiring the binding half before tuning either. Non-overlapping anchors
-  would close this one alone. Source: PR #147 round 5.
 - **ORACLE-015** — the absence-of-verification vocabulary added for ORACLE-003 admits bare
   `cannot`/`unable`, so `Verified: the test cannot fail` and `Verified: service unavailable` are
   exempted as disclosures although both assert an unsupported RESULT. Reproduced 2026-08-18. Same
   class as the `no`/`not` narrowing already applied this branch and the second widening of this
   vocabulary to be defeated: require the word to govern an execution or check verb rather than
   adding tokens one at a time. Source: PR #147 round 5.
-- **EVAL-007** — `validate_behavioral_case` accepts a blank or whitespace-only `effect` anchor
-  (`re.compile("")` succeeds), but `lint_effect_sets` drops the empty anchor from `anchors` while
-  still requiring that set to bind, so `_preamble_assigns` can never select it and NO response can
-  pass the case. Reproduced 2026-08-18 by mutating the shipped case: the validator returns `[]` for
-  both `""` and `"   "`, and a correct two-block answer then fails. Reject blank anchors in
-  preflight, before sessions are bought. Source: PR #147 round 5.
 - **ORACLE-016** — `gate-same-effect-consolidation-retry`'s re-gating negative only recognises the
   ACTIVE subject-verb order (`this/the retry` before `needs/requires/takes`), so the passive and
   without-approval constructions sail through: `A new approval is required for this retry.`, `The
@@ -841,6 +807,24 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   session concluded`. The note contradicts the flag, so an explicit timeout should override
   `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
   partial-completion timeout on both transports. Source: PR #147 round 6.
+- **ORACLE-017** — `loop-capture-is-not-closure` rejects the compliant sentence `This item is
+  not closed because the owner is missing` because its catch-all negation reaches backward from
+  `missing` into the closure clause. Bind polarity to the missing/absent predicate so closure
+  refusal is not misread as denial of a gap. Reproduced 2026-08-18. Source: PR #147 post-merge
+  review thread.
+- **ORACLE-018** — `reviewer-approval-does-not-transfer` accepts `You do not need to perform a
+  fresh review` as its positive review requirement. Require an affirmative obligation rather than
+  co-occurrence of an action verb and `fresh review`. Reproduced 2026-08-18. Source: PR #147
+  post-merge review thread.
+- **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
+  Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
+  Decide whether the block is broker-only or restore a precisely defined non-broker state. Deferred
+  because the approved follow-up explicitly forbids agent and skill edits. Source: PR #147
+  post-merge review thread.
+- **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
+  run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
+  and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
+  #147 post-merge review thread.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
   failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared in
   `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
