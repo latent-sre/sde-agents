@@ -97,7 +97,7 @@ Candidates: <normalized candidate -> occurrence evidence>
 Learning: candidate — <selected observed -> expected divergence>
 Evidence: <occurrences and exact revision/version/environment>
 Scope: <applicability and exclusions>
-Provenance: <verified/sourced/unverified, source, and freshness>
+Provenance: <verified|sourced|unverified> — <source and freshness detail>
 Learning disposition: <skip/add/merge/supersede/drop>
 Promotion state: <proposed/approved/promoted/rejected/inconclusive/retired>
 Destination: <exact artifact>

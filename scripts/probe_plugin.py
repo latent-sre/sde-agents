@@ -310,6 +310,13 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
             tool_id = block.get("tool_use_id")
             if not isinstance(tool_id, str) or not tool_id:
                 continue
+            if block.get("is_error"):
+                # An errored tool_result is the platform saying the spawn produced no answer — a
+                # timeout, a launch failure. Its error text is not an observation of the agent's
+                # context, and returning it made both preload canaries FAIL, concluding the skills
+                # were absent when nothing had run (PR #147 review). Dropped here so the caller's
+                # empty-result branch reports INCONCLUSIVE, which is what it means.
+                continue
             raw = block.get("content")
             body = raw if isinstance(raw, str) else " ".join(
                 part.get("text", "") for part in (raw or []) if isinstance(part, dict)
@@ -346,6 +353,17 @@ def _remove_workspace(workspace: Path, note: str | None = None) -> None:
         )
 
 
+def _refuses_bypass_permissions() -> bool:
+    """True when this session cannot use the permission mode the workflow probe requires.
+
+    Claude Code refuses `--permission-mode bypassPermissions` for a root or sudo session. Checked
+    by identity rather than by launching and reading the error, because the point is to avoid
+    spending a model session on a launch that cannot succeed. `geteuid` is absent on Windows,
+    where the condition does not arise.
+    """
+    return getattr(os, "geteuid", None) is not None and os.geteuid() == 0
+
+
 def probe_workflow_contract(probe: "Probe") -> None:
     """The workflow platform contract: namespaced resolution, agentType spawns, and PreToolUse
     delivery with plugin-namespaced agent_type inside workflow-spawned agents.
@@ -355,6 +373,22 @@ def probe_workflow_contract(probe: "Probe") -> None:
     line either exists with the right agent_type or the contract is broken.
     """
     print("\n== the workflow platform contract ==")
+    # Every assertion below needs the workflow to actually launch, which needs
+    # `--permission-mode bypassPermissions`, which Claude Code refuses under root or sudo. Running
+    # them anyway turned ONE environment condition into five FAIL lines that read as five fleet
+    # defects — the probe's whole job is telling a broken fleet from a broken environment, so this
+    # is the case its INCONCLUSIVE verdict exists for (PROBE-003). Reported once, not five times:
+    # restating a single cause per assertion is the noise the verdict is meant to remove.
+    if _refuses_bypass_permissions():
+        probe.check(
+            SKIP,
+            "the workflow platform contract (5 assertions)",
+            "this session runs as root, and Claude Code refuses --permission-mode "
+            "bypassPermissions there, so the workflow cannot launch and none of the five "
+            "assertions can be evaluated. Nothing here is evidence about the fleet in either "
+            "direction; re-run as an unprivileged user.",
+        )
+        return
     workspace = REPO / ".probe-tmp"
     plugin_copy = workspace / "plugin"
     # `.claude/worktrees` (the platform's nested-worktree home) is excluded root-anchored, not
@@ -599,19 +633,35 @@ def main(argv: list[str] | None = None) -> int:
     # `cat` of the skill file by sde-fullstack itself (see canary_leaks above), which would false
     # green this check on the branch's central claim without proving preload at all. See
     # agent_spawn_results for the full reasoning.
-    fullstack_text = "\n".join(agent_spawn_results(text, "sde-agents:sde-fullstack"))
-    probe.check(
-        PASS if BACKEND_CANARY in fullstack_text else FAIL,
-        "backend-craft core content was preloaded (canary quoted)",
-        f"the canary {BACKEND_CANARY} never appeared in sde-fullstack's own spawn result: "
-        "backend-craft was not in the agent's context",
-    )
-    probe.check(
-        PASS if FRONTEND_CANARY in fullstack_text else FAIL,
-        "frontend-craft core content was preloaded (canary quoted)",
-        f"the canary '{FRONTEND_CANARY}' never appeared in sde-fullstack's own spawn result: "
-        "frontend-craft was not in the agent's context",
-    )
+    # PROBE-002: an EMPTY correlated-result list and a result that lacks the canary are different
+    # findings, and reporting both as FAIL is what left the 2026-08-17 run's two canary failures
+    # unsettleable without buying another. The oracle correlates a spawn's `tool_use_id` to its
+    # `tool_result`; an async agent launch can leave that result unconsumed, which the
+    # [2026-07-30 audit's F-03](docs/archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md)
+    # already reproduced with this exact both-canaries-absent signature. So the two cases are
+    # split: no correlated result at all is INCONCLUSIVE about preloading — it says the oracle
+    # never saw the spawn's output — while a result that IS present and carries no canary is a
+    # real preload failure. One repeat run now distinguishes them instead of repeating the
+    # ambiguity.
+    fullstack_results = agent_spawn_results(text, "sde-agents:sde-fullstack")
+    fullstack_text = "\n".join(fullstack_results)
+    for canary, skill in ((BACKEND_CANARY, "backend-craft"), (FRONTEND_CANARY, "frontend-craft")):
+        if not fullstack_results:
+            probe.check(
+                SKIP,
+                f"{skill} core content was preloaded (canary quoted)",
+                "no tool_result correlated to the sde-fullstack spawn, so the oracle observed no "
+                "output to search: this canary is unevaluated, not absent. An async agent launch "
+                "produces exactly this signature (2026-07-30 audit F-03). Re-run; if a correlated "
+                "result appears and the canary is still missing, that is a real preload failure.",
+            )
+            continue
+        probe.check(
+            PASS if canary in fullstack_text else FAIL,
+            f"{skill} core content was preloaded (canary quoted)",
+            f"the canary {canary!r} never appeared in sde-fullstack's own spawn result, which the "
+            f"oracle DID observe: {skill} was not in the agent's context",
+        )
 
     print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
     # Still load-bearing, but ONLY for homelab-platform now: service-onboard sets
@@ -683,6 +733,53 @@ def main(argv: list[str] | None = None) -> int:
         # Anything other than the guard's voice is a pass here: even a permission prompt proves the
         # guard did not deny it, which is the property under test.
         probe.check(PASS, "the guard IGNORED the main loop's identical command")
+
+    print("\n== a MAIN session run as a guarded agent is guarded ==")
+    # PROBE-001. The guard's scoping contract turns on `agent_type` being absent from a plain main
+    # loop and present for a guarded one, and the probe proved only half of that: it drives
+    # SUBAGENT spawns, so the `--agent` clause — a main session deliberately launched AS a guarded
+    # agent — was doc-sourced from the upstream hooks reference rather than observed. That is the
+    # half a pinned-binary change could silently break in the dangerous direction: if `--agent`
+    # stopped populating `agent_type`, an operator running the reviewer as their whole session
+    # would get no guard at all while every subagent check here stayed green.
+    agent_session = run(
+        [
+            CLAUDE, "-p",
+            "Run exactly this command and report its output verbatim: "
+            "`echo AGENTFLAG_PROBE && find . -name '*.md' -exec wc -l {} \\;`",
+            "--agent", "sde-agents:code-reviewer",
+            "--plugin-dir", str(REPO),
+            "--output-format", "stream-json",
+            "--verbose",
+        ],
+        cwd=str(project),
+    )
+    agent_flag = result_for("AGENTFLAG_PROBE", bash_results(agent_session.stdout or ""))
+    if agent_flag is None:
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the session never attempted the command, so the guard was not consulted -- the "
+            "`--agent` scoping clause stays doc-sourced for this run.",
+        )
+    elif GUARD_DENY in agent_flag:
+        probe.check(PASS, "the guard DENIED a --agent main session's denylisted command")
+    elif any(block in agent_flag for block in CLAUDE_CODE_BLOCKS):
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            f"Claude Code's own permission layer refused it before the guard's verdict mattered: "
+            f"{agent_flag.strip()[:120]!r}",
+        )
+    else:
+        probe.check(
+            FAIL,
+            "the guard DENIED a --agent main session's denylisted command",
+            "`--agent sde-agents:code-reviewer` ran a denylisted command UNGUARDED, so a main "
+            "session launched as a guarded agent carries no agent_type the hook can scope on. "
+            "Every subagent check above can pass while this is broken: "
+            f"{agent_flag.strip()[:160]!r}",
+        )
 
     print("\n== a conditional reference is actually READ when its predicate trips ==")
     # Risk 1 from the design. The split moved conditional depth out of the always-loaded core, so it

@@ -448,6 +448,84 @@ def behavioral_evaluator_paths(runtime: str = "claude") -> list[Path]:
     raise ValueError(f"unknown behavioral runtime: {runtime}")
 
 
+# Marks an exclusion caused by a session that returned no result, as distinct from one caused by
+# an exception in the runner. Both are measurement failures and both are excluded, but they send
+# an operator to different places — the CLI and the flake, or this file — so the summary names
+# which it saw rather than reporting every exclusion as a runner defect.
+_NO_RESULT = "no result:"
+
+
+def output_dir_problem(path: Path) -> str | None:
+    """Why `--output-dir` could not receive artifacts, or None if it can. CREATES NOTHING.
+
+    The usability check has to happen before the first session — a mistyped or occupied path
+    otherwise costs a fully paid batch of real model sessions and then refuses to write it
+    (EVAL-004). Moving the `mkdir` itself forward was the obvious repair and the wrong one: a run
+    that aborts for some other reason would leave an empty directory behind as a side effect of
+    having been attempted. So this only INSPECTS — an existing path must be a writable directory,
+    and a path that does not exist yet must have a writable existing ancestor to be created under.
+    The real `mkdir` stays where it always was, after the batch, next to the writes it serves.
+
+    It cannot promise the write will succeed: the disk can fill, and permissions can change while
+    sessions run. Those stay fail-closed at write time. What it removes is the whole class that is
+    knowable up front, which is the class that was costing money.
+    """
+    # `exists()` FOLLOWS the link, so a dangling symlink read as absent, the preflight walked to
+    # its writable parent and returned usable, and the batch was bought before `mkdir` raised
+    # FileExistsError — preserving the exact expensive failure this guard exists to prevent
+    # (PR #147 review). `is_symlink()` is the lexical question.
+    if path.is_symlink() and not path.exists():
+        return f"{path} is a dangling symlink, so it cannot be created or written"
+    if path.exists():
+        if not path.is_dir():
+            return f"{path} exists and is not a directory"
+        if not os.access(path, os.W_OK | os.X_OK):
+            return f"{path} is not writable"
+        return None
+    # Lexical, not `exists()`: a dangling symlink ANYWHERE on the way up is followed by
+    # `exists()` and skipped, so `dangling-link/results` walked past it to a writable parent and
+    # reported the path creatable. `mkdir` then still raised, after the batch (PR #147 review).
+    ancestor = path.parent
+    while ancestor != ancestor.parent:
+        if ancestor.is_symlink() and not ancestor.exists():
+            return f"{ancestor} is a dangling symlink, so {path} cannot be created"
+        if ancestor.exists():
+            break
+        ancestor = ancestor.parent
+    if not ancestor.is_dir():
+        return f"{ancestor} is not a directory, so {path} cannot be created"
+    if not os.access(ancestor, os.W_OK | os.X_OK):
+        return f"{ancestor} is not writable, so {path} cannot be created"
+    return None
+
+
+def _session_reached_a_result(stats: dict) -> bool:
+    """True when the transport says the session ran to a completed, valid result.
+
+    Runtime-independent on purpose. The first spelling asked a Claude-only `session_failed` flag,
+    so every Codex timeout, nonzero exit, failure event and missing completion — which set no such
+    flag — read as "completed and answered nothing" and were graded as contract failures,
+    recreating the corrupted-rate defect for that lane (PR #147 review). Both transports already
+    report `completed`, and both clear it on exactly the failures that must be excluded.
+    """
+    return bool(stats.get("completed")) and not stats.get("session_failed")
+
+
+def session_denylist(
+    allowed_tools: list[str] | None, disallowed_tools: list[str] | None
+) -> list[str]:
+    """Return the tools a session must be denied, given what its case declares.
+
+    Separate from `run_session` so a test can assert what every shipped case is actually denied
+    without driving a subprocess — the property this enforces holds for 47 cases at once, and a
+    list of known-leaky case ids can only ever be as current as its last edit.
+    """
+    denied = set(disallowed_tools or [])
+    if allowed_tools is not None and not allowed_tools:
+        denied |= RUNTIME_TOOLS
+    return sorted(denied)
+
+
 def run_session(
     prompt: str, plugin_dir: Path, timeout: int, allowed_tools: list[str] | None = None,
     disallowed_tools: list[str] | None = None, agent: str | None = None,
@@ -512,12 +590,27 @@ def run_session(
         # `--tools Bash`. That voided both HANDOFF-001 builder cases, whose whole premise is a
         # prescribed `python -I` command, and it is the same failure the permission-mode comment
         # above records for writes — a case measuring the permission prompt instead of its
-        # contract. An empty allowlist grants nothing on purpose and gets no counterpart: `--tools
-        # ""` already disables every tool, so there is nothing left to permit.
+        # contract. An empty allowlist grants nothing on purpose and gets no counterpart: there is
+        # nothing to permit.
         if allowed_tools:
             command += ["--allowedTools", *allowed_tools]
-    if disallowed_tools:
-        command += ["--disallowed-tools", *disallowed_tools]
+    # `--tools ""` was believed to disable every tool. It does not, and the belief is what made an
+    # empty allowlist a statement of intent rather than a control: in a re-run of
+    # `verifier-envelope-mismatch-fails-closed`, `Grep` EXECUTED and reported the session's real
+    # cwd while the case declared `allowed_tools: []` (raw `tool_use` blocks committed at
+    # evals/baselines/history/2026-08-15-learn-002-tool-events.json). Denial comes only from
+    # `--disallowed-tools`, so an empty allowlist now synthesizes one covering the whole built-in
+    # vocabulary and a planning-only case is planning-only in fact. Measured before this change:
+    # 42 of 47 such cases left at least one granted tool reachable and 26 left WebFetch/WebSearch
+    # reachable, so a case's "planning-only" was never evidence that no tool was available
+    # (docs/fleet-roadmap.md LEARN-002 item 6).
+    #
+    # LIMIT, stated because it is load-bearing: `RUNTIME_TOOLS` is the built-in vocabulary only.
+    # An MCP tool cannot be denied here, so a case whose agent grants MCP tools keeps that residue
+    # and must say so in its own `expected` — shipping an unprobed `mcp__…` denylist entry would
+    # be a control nothing here has verified the CLI honors.
+    if denied := session_denylist(allowed_tools, disallowed_tools):
+        command += ["--disallowed-tools", *denied]
     try:
         with scratch_cwd() as cwd:
             prepare_semantic_workspace(cwd, semantic_oracle)
@@ -553,6 +646,7 @@ def run_session(
     # from a session the CLI itself reported as failed. Likewise, an is_error result is outage
     # evidence, never contract output, even when its `result` string happens to match assertions.
     if proc.returncode != 0:
+        stats["session_failed"] = True
         return "", fired, f"Claude exited {proc.returncode} before a successful result", stats
     if not stats["completed"]:
         detail = (
@@ -560,6 +654,7 @@ def run_session(
             if stats["result_error"]
             else "no non-error structured result event was captured"
         )
+        stats["session_failed"] = True
         return "", fired, detail, stats
 
     # The `result` event carries the session's final text; fall back to concatenating assistant
@@ -624,7 +719,7 @@ _BEHAVIORAL_CASE_FIELDS = frozenset({
     "id", "prompt", "expected", "tags", "agent", "permission_mode",
     "allowed_tools", "disallowed_tools", "expect_fires", "expect_all_fires", "packet_shape",
     "packet_learning_mode", "must_match", "must_not_match", "runbook_required_gaps",
-    "exact_fields", "semantic_oracle",
+    "exact_fields", "effect_sets", "semantic_oracle",
 })
 _BEHAVIORAL_RUNTIME_CASE_FIELDS = _BEHAVIORAL_CASE_FIELDS | {"suite"}
 _BEHAVIORAL_REQUIRED_CASE_FIELDS = ("id", "prompt", "expected", "tags")
@@ -915,6 +1010,56 @@ def validate_behavioral_case(
                         f"vocabulary: {', '.join(vocabulary)}"
                     )
 
+    effect_sets = case.get("effect_sets")
+    if effect_sets is not None:
+        # Two sets minimum, deliberately: a one-set case is what `exact_fields` already grades,
+        # and declaring this instead would buy the heavier oracle for the shape it was not
+        # written for. The point of the key is the multi-effect statement `exact_fields` cannot
+        # express, because it requires each label exactly once across the whole answer.
+        if not isinstance(effect_sets, list) or len(effect_sets) < 2:
+            findings.append("'effect_sets' must be a list of at least two declaration sets")
+        else:
+            for position, declared in enumerate(effect_sets):
+                # `effect` is the optional anchor that binds this set to the effect the answer's
+                # prose names before it. Without it the sets match as a bag of values, which
+                # proves both triples appear and not which effect each describes.
+                if not isinstance(declared, dict) or set(declared) - {"effect"} != set(
+                    packet_lint.EFFECT_SET_LABELS
+                ):
+                    findings.append(
+                        f"effect_sets[{position}] must declare exactly "
+                        + ", ".join(packet_lint.EFFECT_SET_LABELS)
+                        + ", plus an optional 'effect' anchor"
+                    )
+                    continue
+                anchor = declared.get("effect")
+                if anchor is not None:
+                    try:
+                        re.compile(anchor)
+                    except (re.error, TypeError):
+                        findings.append(
+                            f"effect_sets[{position}]['effect'] must be a valid regex anchor"
+                        )
+                for label, value in declared.items():
+                    if label == "effect":
+                        continue
+                    # Checked before comparison: `"Gate": 1` reached `.casefold()` and left main()
+                    # by traceback, bypassing the BehavioralCaseError handling that reports every
+                    # other malformed case cleanly (PR #147 review).
+                    if not isinstance(value, str) or not value.strip():
+                        findings.append(
+                            f"effect_sets[{position}][{label!r}] must be a non-empty string"
+                        )
+                        continue
+                    vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
+                    if vocabulary is not None and value.casefold() not in {
+                        term.casefold() for term in vocabulary
+                    }:
+                        findings.append(
+                            f"effect_sets[{position}][{label!r}] value {value!r} is outside its "
+                            f"closed vocabulary: {', '.join(vocabulary)}"
+                        )
+
     required_gaps = case.get("runbook_required_gaps")
     if required_gaps is not None:
         if packet_shape != "runbook-proposal":
@@ -937,6 +1082,7 @@ def validate_behavioral_case(
         or case.get("packet_learning_mode")
         or (isinstance(case.get("must_match"), list) and case["must_match"])
         or (isinstance(case.get("exact_fields"), dict) and case["exact_fields"])
+        or (isinstance(case.get("effect_sets"), list) and case["effect_sets"])
     ):
         findings.append(
             "case requires a semantic output oracle: packet_shape, packet_learning_mode, "
@@ -1258,6 +1404,13 @@ def assert_case(
             for finding in packet_lint.lint_exact_fields(text, exact_fields)
         ]
 
+    effect_sets = case.get("effect_sets")
+    if isinstance(effect_sets, list) and effect_sets:
+        failures += [
+            f"effect set: {finding}"
+            for finding in packet_lint.lint_effect_sets(text, effect_sets)
+        ]
+
     if case.get("semantic_oracle") == "closed-learning-block":
         failures += lint_closed_learning_block(text)
     elif case.get("semantic_oracle") in _WORKSPACE_SEMANTIC_ORACLES:
@@ -1372,6 +1525,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.runs < 1:
         print("error: --runs must be at least 1", file=sys.stderr)
         return 2
+    if args.output_dir and (problem := output_dir_problem(args.output_dir)):
+        print(
+            f"error: --output-dir is unusable: {problem}; no sessions were run",
+            file=sys.stderr,
+        )
+        return 2
     if args.retain_run_evidence and args.output_dir is None:
         print(
             "error: --retain-run-evidence requires --output-dir because its only output is "
@@ -1483,8 +1642,9 @@ def main(argv: list[str] | None = None) -> int:
 
     def execute(
         job: tuple[dict, int],
-    ) -> tuple[int, str, list[str], str | None, dict, str]:
+    ) -> tuple[int, str, list[str], str | None, dict, str, str | None]:
         case, run_index = job
+        measurement_error: str | None = None
         if args.runtime == "claude":
             text, fired, note, stats = run_session(
                 case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
@@ -1514,7 +1674,24 @@ def main(argv: list[str] | None = None) -> int:
             # detect; treat the pin itself as the invocation evidence expect_fires would supply.
             if case.get("agent"):
                 fired = fired | {case["agent"].split(":")[-1]}
-            if note and not text:
+            if note and not text and _session_reached_a_result(stats):
+                # The session RAN to a clean structured result and produced no text. That is the
+                # contract failing, not the measurement: every must_match misses because the agent
+                # answered with nothing. Excluding it would let a real regression vanish into an
+                # unchanged rate whenever another run passed (PR #147 review).
+                failures = [f"session produced nothing: {note}"]
+            elif note and not text:
+                # A session that returned no result measured NOTHING about the contract, so it is
+                # a measurement failure and is excluded from the rate — the same treatment a run
+                # that broke inside the runner gets, and for the same reason. Grading the empty
+                # string as a contract failure is how the `Claude exited 1` flake converted three
+                # working contracts into apparent 0/3s in one round (LEARN-002 remainder item 8):
+                # every must_match misses, the case reports FAIL, and an operator who does not
+                # notice the note publishes a corrupted rate. It is deliberately NOT the
+                # systematic-defect path that stops the batch: this failure is per-session and
+                # intermittent (it never struck a case running at concurrency 1), so stopping
+                # would discard the batch over a flake in one run.
+                measurement_error = f"{_NO_RESULT} {note}"
                 failures = [f"session produced nothing: {note}"]
             else:
                 failures = assert_case(
@@ -1529,7 +1706,7 @@ def main(argv: list[str] | None = None) -> int:
         # for the whole batch was the over-correction — total-output-sized memory for text
         # nothing writes (PR #133 finding).
         retained = text if (failures or args.retain_run_evidence) else ""
-        return run_index, case["id"], failures, note, stats, retained
+        return run_index, case["id"], failures, note, stats, retained, measurement_error
 
     done = 0
     auth_mode = None
@@ -1619,7 +1796,8 @@ def main(argv: list[str] | None = None) -> int:
                     job_case, job_run_index = futures.pop(future)
                     runner_error = None
                     try:
-                        run_index, case_id, failures, note, stats, response = future.result()
+                        (run_index, case_id, failures, note, stats, response,
+                         runner_error) = future.result()
                     except availability_errors as exc:
                         auth_failure = exc
                         for pending in futures:
@@ -1788,9 +1966,9 @@ def main(argv: list[str] | None = None) -> int:
         if inconclusive:
             inconclusive_cases.append(case["id"])
         first_failure = next((f for failures in graded if failures for f in failures), "")
-        suffix = f" [{excluded} run(s) excluded: runner error]" if excluded else ""
+        suffix = f" [{excluded} run(s) excluded: nothing graded]" if excluded else ""
         if inconclusive:
-            detail = (f"INCONCLUSIVE — every run failed inside the runner "
+            detail = (f"INCONCLUSIVE — no run produced a graded session "
                       f"({len(attempted)} attempted)")
         else:
             detail = ("all assertions held" if ok else first_failure[:60]) + suffix
@@ -1831,13 +2009,18 @@ def main(argv: list[str] | None = None) -> int:
               f"{', '.join(inconclusive_cases)}")
         print("  Re-run those; they are not evidence about the contract in either direction.")
     if excluded_runs_total:
-        never_run = sum(
-            1 for case in cases for error in runner_errors[case["id"]] if error == "not run"
-        )
-        broke = excluded_runs_total - never_run
-        detail = f"{broke} broke inside the runner"
+        errors = [error for case in cases for error in runner_errors[case["id"]] if error]
+        never_run = sum(1 for error in errors if error == "not run")
+        no_result = sum(1 for error in errors if error.startswith(_NO_RESULT))
+        broke = excluded_runs_total - never_run - no_result
+        parts = []
+        if broke:
+            parts.append(f"{broke} broke inside the runner")
+        if no_result:
+            parts.append(f"{no_result} returned no result from the CLI")
         if never_run:
-            detail += f", {never_run} never launched because the batch stopped"
+            parts.append(f"{never_run} never launched because the batch stopped")
+        detail = ", ".join(parts)
         print(f"! {excluded_runs_total} individual run(s) excluded from rates ({detail}).")
 
     failing_payload = [

@@ -38,6 +38,94 @@ class ProbeCanaryTests(unittest.TestCase):
         run.assert_not_called()
         remove_workspace.assert_not_called()
 
+    def test_a_root_session_reports_the_workflow_probe_inconclusive_not_failed(self) -> None:
+        """PROBE-003: one environment condition read as five fleet defects.
+
+        The five workflow assertions all need `--permission-mode bypassPermissions`, which Claude
+        Code refuses under root, so the workflow never launches and every assertion fails as a
+        cascade. Telling a broken fleet from a broken environment is the probe's job, and
+        INCONCLUSIVE is its documented verdict for the second — reported once, because restating
+        a single cause five times is the noise that verdict exists to remove.
+        """
+        probe = probe_plugin.Probe()
+        with (
+            mock.patch.object(probe_plugin.os, "geteuid", return_value=0, create=True),
+            mock.patch.object(probe_plugin, "run") as run,
+            mock.patch.object(probe_plugin.shutil, "copytree") as copytree,
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            probe_plugin.probe_workflow_contract(probe)
+
+        run.assert_not_called()
+        copytree.assert_not_called()
+        self.assertIn("INCONCLUSIVE", output.getvalue())
+        statuses = [status for status, *_ in probe.results]
+        self.assertEqual([probe_plugin.SKIP], statuses)
+        self.assertNotIn(probe_plugin.FAIL, statuses)
+
+    def test_an_uncorrelated_spawn_leaves_the_canaries_unevaluated_not_failed(self) -> None:
+        """PROBE-002: "the canary is absent" and "the oracle saw nothing" are different findings.
+
+        The 2026-08-17 run scored 12/19 with both preload canaries failing, and could not say
+        whether that was a real regression or the oracle failing to consume an async agent
+        launch's result — a signature the 2026-07-30 audit's F-03 had already reproduced. Both
+        rendered as FAIL, so settling it needed another paid run. `agent_spawn_results` returning
+        nothing now means unevaluated; a result the oracle DID observe, with no canary in it, is
+        the real preload failure.
+        """
+        spawn = json.dumps({
+            "type": "assistant",
+            "message": {"content": [{
+                "type": "tool_use", "id": "toolu_async", "name": "Agent",
+                "input": {"subagent_type": "sde-agents:sde-fullstack", "prompt": "build it"},
+            }]},
+        })
+        # The spawn is never correlated to a tool_result, which is the async-launch shape.
+        self.assertEqual([], probe_plugin.agent_spawn_results(spawn, "sde-agents:sde-fullstack"))
+        # A correlated result with no canary stays a real, distinguishable failure.
+        answered = spawn + "\n" + json.dumps({
+            "type": "user",
+            "message": {"content": [{
+                "type": "tool_result", "tool_use_id": "toolu_async",
+                "content": "done, no craft content quoted",
+            }]},
+        })
+        results = probe_plugin.agent_spawn_results(answered, "sde-agents:sde-fullstack")
+        self.assertEqual(1, len(results))
+        self.assertNotIn(probe_plugin.BACKEND_CANARY, results[0])
+
+    def test_an_errored_agent_result_is_not_an_observation(self) -> None:
+        """PR #147 round 2: an errored tool_result was read as the agent's answer.
+
+        A timeout or launch failure returns `is_error: true` with error text. Returning that text
+        made both preload canaries FAIL — concluding the skills were absent from the agent's
+        context when nothing had run. It now reaches the caller's empty-result branch, which
+        reports INCONCLUSIVE.
+        """
+        spawn = json.dumps({
+            "type": "assistant",
+            "message": {"content": [{
+                "type": "tool_use", "id": "toolu_err", "name": "Agent",
+                "input": {"subagent_type": "sde-agents:sde-fullstack", "prompt": "build"},
+            }]},
+        })
+
+        def result(payload: dict) -> list[str]:
+            return probe_plugin.agent_spawn_results(
+                spawn + "\n" + json.dumps({"type": "user", "message": {"content": [payload]}}),
+                "sde-agents:sde-fullstack",
+            )
+
+        self.assertEqual([], result({
+            "type": "tool_result", "tool_use_id": "toolu_err", "is_error": True,
+            "content": "Error: agent timed out",
+        }))
+        observed = result({
+            "type": "tool_result", "tool_use_id": "toolu_err",
+            "content": f"{probe_plugin.BACKEND_CANARY} and more",
+        })
+        self.assertEqual(1, len(observed))
+
     def test_backend_craft_canary_is_present(self) -> None:
         # Asserted via the probe's own constant, not a copied literal: with a duplicate string
         # here, a probe-side canary change would fail live probes while this tripwire stayed

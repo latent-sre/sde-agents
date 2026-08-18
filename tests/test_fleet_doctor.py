@@ -464,8 +464,25 @@ class FleetDoctorTests(unittest.TestCase):
         self.assertEqual(1, self._exit_code_for(fail=1, warn=2))
 
     def test_only_a_clean_report_exits_zero(self) -> None:
-        # skip and inconclusive are not attention states: an absent host cannot be drift.
-        self.assertEqual(0, self._exit_code_for(**{"pass": 9, "skip": 2, "inconclusive": 1}))
+        # A skip is a known non-answer, not an attention state: an absent host cannot be drift.
+        self.assertEqual(0, self._exit_code_for(**{"pass": 9, "skip": 2}))
+
+    def test_a_check_that_could_not_be_computed_is_not_a_clean_exit(self) -> None:
+        """DOCTOR-002: `inconclusive` reached no exit status, so it exited 0.
+
+        This test previously asserted that, on the reading that skip and inconclusive are both
+        non-attention states. They are not the same thing. A skip is a known, expected non-answer
+        — the host CLI is not installed. An inconclusive check is one the doctor tried to compute
+        and could not, so exiting 0 means agreeing the fleet is healthy on the strength of an
+        answer it never obtained. That is the same defect the warnings exit fixed, one level down.
+        """
+        self.assertEqual(2, self._exit_code_for(**{"pass": 9, "skip": 2, "inconclusive": 1}))
+
+    def test_the_exit_ladder_is_ordered_by_how_definite_the_answer_is(self) -> None:
+        """A definite negative outranks an unobtained answer, which outranks a computed warning."""
+        self.assertEqual(1, self._exit_code_for(fail=1, inconclusive=1, warn=1))
+        self.assertEqual(2, self._exit_code_for(inconclusive=1, warn=1))
+        self.assertEqual(3, self._exit_code_for(warn=1))
 
 
 if __name__ == "__main__":
