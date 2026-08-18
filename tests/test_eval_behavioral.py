@@ -2820,7 +2820,16 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                 )
                 self.assertIn(name, problem)
 
-    @unittest.skipUnless(os.name == "posix", "permission bits are POSIX semantics")
+    # Root is the extra clause, and it is not shared with the other POSIX-guarded tests here:
+    # those assert MODE BITS, which chmod sets identically for any user. This one asserts a
+    # consequence of access being DENIED, and root bypasses the bits entirely -- so as root the
+    # file stays writable, the preflight correctly returns None, and the assertion inverts.
+    # Containerised runs are commonly root; GitHub's hosted runners are not, which is why CI
+    # was green while the module was not portable (Codex review, PR #151).
+    @unittest.skipUnless(
+        os.name == "posix" and os.geteuid() != 0,
+        "permission bits are POSIX semantics, and root bypasses them",
+    )
     def test_a_non_writable_benchmark_is_refused_but_a_read_only_sidecar_is_not(self) -> None:
         """Codex review round 5 on #151, accepted for one artifact and declined for the other.
 
