@@ -1033,6 +1033,29 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
                     packet_lint.lint_learning_closeout(block(offered), "lifecycle-owner")
                 )
 
+    def test_an_unmatched_edge_marker_is_data_not_decoration(self) -> None:
+        """PR #147 round 3: the edge-run repair still ate a lone trailing marker.
+
+        `Owner: foo_` and `**Owner: foo**` both keyed as `foo`, so one conflicting declaration
+        collapsed into the other. Identifiers and paths legitimately end in an underscore, so only
+        a balanced pair is wrapping.
+        """
+        for value, decorated in (("foo_", "**Owner: foo**"), ("foo_bar", "**Owner: foobar**")):
+            with self.subTest(value=value):
+                self.assertTrue(packet_lint.lint_exact_fields(
+                    f"Owner: {value}\n{decorated}\n", {"Owner": value}
+                ))
+        # Balanced wrapping is still display, in every marker the packets use.
+        for rendering in ("**consolidated**", "`consolidated`", "_consolidated_",
+                          "__consolidated__", "*consolidated*"):
+            with self.subTest(rendering=rendering):
+                self.assertEqual([], packet_lint.lint_exact_fields(
+                    f"Gate: {rendering}\n", {"Gate": "consolidated"}
+                ))
+        self.assertEqual([], packet_lint.lint_exact_fields(
+            "Owner: foo_bar\n**Owner: foo_bar**\n", {"Owner": "foo_bar"}
+        ))
+
     def test_a_preamble_naming_both_effects_assigns_the_block_to_the_first(self) -> None:
         """PR #147 round 2: a comparative heading contains both anchors.
 
@@ -1062,6 +1085,15 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             f"Deletion, unlike the retry, needs:\n{retry}\n"
             f"Retry, unlike the volume deletion, needs:\n{deletion}", expected,
         ), "both preambles name both effects, so the sets are swapped")
+        # PR #147 round 3, the shape that defeats the opposite rule: an answer that EXPLAINS the
+        # first block before introducing the second puts `retry` ahead of `deletion` in the second
+        # block's preamble. Taking the earliest anchor across the whole preamble rejected this
+        # correct answer, so the scope is the nearest introduction — the last non-empty line.
+        self.assertEqual([], packet_lint.lint_effect_sets(
+            f"The identical retry needs:\n{retry}\n"
+            "This retry uses the standing decision, so no new gate opens.\n\n"
+            f"The volume deletion needs:\n{deletion}", expected,
+        ))
 
     def test_a_verified_slot_may_disclose_an_absence_without_citing_a_command(self) -> None:
         """ORACLE-003: the honest answer graded worse than a terse one.

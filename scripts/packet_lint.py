@@ -496,7 +496,7 @@ def _echo_key(value: str, *, normalize: bool) -> str:
     # free-text pair `Owner: foo_bar` / `**Owner: foobar**` keyed alike and one genuinely
     # conflicting declaration collapsed into the other. Paths (`docs/foo_bar.md`) and identifiers
     # are the common shape. Markdown emphasis wraps a value; it does not appear mid-token here.
-    undecorated = _EDGE_DECORATION_RE.sub("", value)
+    undecorated = _strip_balanced_decoration(value)
     if not normalize:
         return undecorated
     return _strip_sentence_punctuation(undecorated).casefold().strip()
@@ -645,10 +645,33 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 
 
 _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
-# A character class, not an alternation of `**`/`*`: overlapping alternatives under `+` are
-# exponential-backtracking bait on a long run of asterisks, which CodeQL flagged on the
-# first spelling (PR #147). One class matches the same edge runs in linear time.
-_EDGE_DECORATION_RE = re.compile(r"^[*_`]+|[*_`]+$")
+_DECORATION_TOKENS = ("**", "__", "*", "_", "`")
+
+
+def _strip_balanced_decoration(value: str) -> str:
+    """Remove Markdown wrapping from a value, and only wrapping.
+
+    Balanced pairs only. Stripping every edge RUN treated an unmatched marker as decoration, so
+    the free-text `Owner: foo_` keyed the same as `**Owner: foo**` and one conflicting declaration
+    collapsed into the other — identifiers and paths legitimately end in an underscore (PR #147
+    round 3). A trailing marker with no partner is data. Iterative so `**\u0060x\u0060**` unwraps
+    fully, and character-by-character comparison rather than a regex, which is also why the
+    exponential-backtracking spelling this replaced cannot come back.
+    """
+    stripped = value.strip()
+    changed = True
+    while changed:
+        changed = False
+        for token in _DECORATION_TOKENS:
+            if (
+                len(stripped) > 2 * len(token)
+                and stripped.startswith(token)
+                and stripped.endswith(token)
+            ):
+                stripped = stripped[len(token):-len(token)].strip()
+                changed = True
+                break
+    return stripped
 
 
 def _opens_a_rationale(character: str) -> bool:
@@ -820,20 +843,31 @@ def _effect_set_key(block: dict[str, str]) -> tuple[str, ...]:
 
 
 def _preamble_assigns(preamble: str, anchor: str, anchors: list[str]) -> bool:
-    """True when this block's preamble assigns it to ``anchor``'s effect, not merely mentions it.
+    """True when the line introducing this block assigns it to ``anchor``'s effect.
 
-    Searching each anchor independently accepted a comparative heading that names both effects:
-    `Deletion, unlike the retry` and `Retry, unlike the volume deletion` each contain both, so a
-    swapped pair passed (PR #147 review). The effect a block belongs to is the FIRST one its
-    preamble names — the subject leads, and the contrast follows it — so the winning anchor is the
-    earliest match and it has to be this set's.
+    Two shapes have to work, and each defeats the obvious rule for the other. A comparative
+    heading names both effects — `Deletion, unlike the retry, needs:` — so taking the LAST mention
+    picks the contrast rather than the subject. And an answer that explains the first block before
+    introducing the second puts `retry` ahead of `deletion` in the second block's preamble, so
+    taking the earliest mention in the whole preamble rejected a natural correct answer (PR #147
+    rounds 2 and 3, one defeating each rule).
+
+    So the search is scoped to the block's nearest introduction — the last non-empty line before
+    it — and the subject is the first effect named THERE. Both shapes then read correctly: the
+    comparative heading is that line, and so is the second effect's heading. Where that line names
+    no effect at all the scope widens to the whole preamble, so an introduction further back is
+    still found rather than failing closed on a compliant answer.
     """
-    best: tuple[int, str] | None = None
-    for candidate in anchors:
-        found = re.search(candidate, preamble, re.IGNORECASE)
-        if found is not None and (best is None or found.start() < best[0]):
-            best = (found.start(), candidate)
-    return best is not None and best[1] == anchor
+    lines = [line for line in preamble.splitlines() if line.strip()]
+    for scope in ([lines[-1]] if lines else []) + [preamble]:
+        best: tuple[int, str] | None = None
+        for candidate in anchors:
+            found = re.search(candidate, scope, re.IGNORECASE)
+            if found is not None and (best is None or found.start() < best[0]):
+                best = (found.start(), candidate)
+        if best is not None:
+            return best[1] == anchor
+    return False
 
 
 def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
