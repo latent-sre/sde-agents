@@ -568,7 +568,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
-    manifest = root / "plugin.json"
+    manifest = root / ".claude-plugin" / "plugin.json"
     plugin_name = ""
     if manifest.is_file():
         try:

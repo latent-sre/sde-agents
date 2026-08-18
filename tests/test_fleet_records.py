@@ -16,7 +16,9 @@ from scripts import fleet_records
 from tests.support import REPO
 
 
-PLUGIN = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))["name"]
+PLUGIN = json.loads(
+    (REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+)["name"]
 
 
 def _tree(guard_source: str | None) -> TemporaryDirectory:

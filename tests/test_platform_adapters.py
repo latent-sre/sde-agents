@@ -289,30 +289,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 finally:
                     _remove_directory_link(link)
 
-    def test_write_replaces_claude_import_agents_without_touching_claude_siblings(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "repo"
-            sibling = root / ".claude" / "worktrees" / "sentinel.txt"
-            stale = root / generate_platform_adapters.CLAUDE_IMPORT_AGENTS / "stale.md"
-            sibling.parent.mkdir(parents=True)
-            sibling.write_text("preserve me\n", encoding="utf-8")
-            stale.parent.mkdir(parents=True)
-            stale.write_text("stale\n", encoding="utf-8")
-            expected_path = (
-                generate_platform_adapters.CLAUDE_IMPORT_AGENTS / "reviewer.md"
-            )
-
-            with mock.patch.object(
-                generate_platform_adapters,
-                "expected_outputs",
-                return_value={expected_path: b"generated\n"},
-            ):
-                generate_platform_adapters.write_generated_outputs(root)
-
-            self.assertEqual("preserve me\n", sibling.read_text(encoding="utf-8"))
-            self.assertFalse(stale.exists())
-            self.assertEqual(b"generated\n", (root / expected_path).read_bytes())
-
     def test_canonical_source_links_are_rejected_before_resource_copy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -389,7 +365,6 @@ class PlatformAdapterTests(unittest.TestCase):
         paths = (
             REPO / ".github" / "agents" / "sde-fullstack.agent.md",
             REPO / ".codex" / "agents" / "sde-fullstack.toml",
-            REPO / ".claude" / "agents" / "sde-fullstack.md",
         )
         for path in paths:
             with self.subTest(path=path.relative_to(REPO)):
@@ -416,43 +391,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 )
                 self.assertEqual(source.stem, generated["name"])
                 self.assertEqual(expected, generated["sandbox_mode"])
-                import_fields = validate_fleet.parse_frontmatter(
-                    REPO / ".claude" / "agents" / f"{source.stem}.md"
-                )
-                self.assertIsNotNone(import_fields)
-                self.assertEqual(
-                    "acceptEdits" if expected == "workspace-write" else "readOnly",
-                    import_fields["permissionMode"],
-                )
-
-    def test_codex_import_adapters_preserve_source_authority_and_toml_contract(self) -> None:
-        for source in sorted((REPO / "agents").glob("*.md")):
-            with self.subTest(agent=source.stem):
-                canonical = validate_fleet.parse_frontmatter(source)
-                import_path = REPO / ".claude" / "agents" / f"{source.stem}.md"
-                imported = validate_fleet.parse_frontmatter(import_path)
-                _, import_body, _ = generate_platform_adapters._definition_parts(import_path)
-                codex = tomllib.loads(
-                    (REPO / ".codex" / "agents" / f"{source.stem}.toml").read_text(
-                        encoding="utf-8"
-                    )
-                )
-
-                self.assertEqual(canonical["tools"], imported["tools"])
-                self.assertEqual(codex["name"], imported["name"])
-                self.assertEqual(codex["description"], imported["description"])
-                self.assertEqual(
-                    codex["sandbox_mode"],
-                    {
-                        "readOnly": "read-only",
-                        "acceptEdits": "workspace-write",
-                    }[imported["permissionMode"]],
-                )
-                self.assertEqual(
-                    codex["developer_instructions"].strip(),
-                    import_body.strip(),
-                )
-                self.assertNotIn("claude", f"{imported['description']}\n{import_body}".lower())
 
     def test_investigator_provenance_boundary_survives_every_host_rewrite(self) -> None:
         # The canonical untrusted-provenance paragraph is REPLACED wholesale on both non-Claude
@@ -513,7 +451,6 @@ class PlatformAdapterTests(unittest.TestCase):
         paths = (
             REPO / ".github" / "agents" / "sde-fullstack.agent.md",
             REPO / ".codex" / "agents" / "sde-fullstack.toml",
-            REPO / ".claude" / "agents" / "sde-fullstack.md",
         )
         for path in paths:
             with self.subTest(path=path.relative_to(REPO)):
@@ -525,7 +462,6 @@ class PlatformAdapterTests(unittest.TestCase):
         paths = [
             *(REPO / ".github" / "agents").glob("*.agent.md"),
             *(REPO / ".codex" / "agents").glob("*.toml"),
-            *(REPO / ".claude" / "agents").glob("*.md"),
         ]
         for path in sorted(paths):
             with self.subTest(path=path.relative_to(REPO)):
@@ -676,8 +612,13 @@ class PlatformAdapterTests(unittest.TestCase):
                 for workflow in ("service-onboard", "host-onboard"):
                     self.assertIn(f"`{invocation}{workflow}`", text)
 
-    def test_non_claude_plugins_do_not_load_the_claude_guard(self) -> None:
-        copilot = json.loads((REPO / "plugin.json").read_text(encoding="utf-8"))
+    def test_the_codex_plugin_root_cannot_reach_the_claude_guard(self) -> None:
+        # Structural, not declarative. The previous version of this test also asserted that the
+        # root Copilot manifest pointed `hooks` at an empty override file -- an assertion that
+        # passed while proving nothing, because VS Code reads component overrides from the
+        # format's own manifest (`.claude-plugin/plugin.json`) and never from that root file, so
+        # it fell back to `hooks/hooks.json` -- the guard itself. Only the absence of a hook file
+        # at the host's own hookConfigPath actually keeps a non-Claude host away from the guard.
         codex = json.loads(
             (
                 REPO
@@ -687,11 +628,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 / "plugin.json"
             ).read_text(encoding="utf-8")
         )
-        self.assertEqual("./hooks/copilot-hooks.json", copilot["hooks"])
-        hook_config = json.loads(
-            (REPO / copilot["hooks"].removeprefix("./")).read_text(encoding="utf-8")
-        )
-        self.assertEqual({}, hook_config["hooks"])
         self.assertNotIn("hooks", codex)
         self.assertFalse(
             (REPO / "plugins" / "sde-agents" / "hooks" / "hooks.json").exists()
@@ -702,7 +638,6 @@ class PlatformAdapterTests(unittest.TestCase):
             json.loads(
                 (REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
             ),
-            json.loads((REPO / "plugin.json").read_text(encoding="utf-8")),
             json.loads(
                 (
                     REPO
@@ -724,12 +659,16 @@ class PlatformAdapterTests(unittest.TestCase):
             "keywords",
         ):
             with self.subTest(field=field):
-                self.assertEqual([manifests[0][field]] * 3, [m[field] for m in manifests])
+                self.assertEqual(
+                    [manifests[0][field]] * len(manifests),
+                    [m[field] for m in manifests],
+                )
 
-        self.assertEqual("./.github/agents/", manifests[1]["agents"])
-        self.assertEqual("./platforms/copilot/skills/", manifests[1]["skills"])
-        self.assertNotIn("agents", manifests[2])
-        self.assertEqual("./skills/", manifests[2]["skills"])
+        # Codex is the only remaining non-Claude manifest. It packages skills from its own nested
+        # plugin root and must not claim to package agents -- Codex plugins do not load custom-agent
+        # TOML, so an `agents` field would read as distribution while loading nothing.
+        self.assertNotIn("agents", manifests[1])
+        self.assertEqual("./skills/", manifests[1]["skills"])
 
     def test_codex_marketplace_points_to_the_isolated_plugin_root(self) -> None:
         marketplace = json.loads(

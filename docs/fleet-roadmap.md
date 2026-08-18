@@ -745,6 +745,28 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
+- **HOST-010** — VS Code discovers zero fleet skills. Its skill-discovery paths are
+  `.agents/skills`, `.github/skills` and `.claude/skills`; the 20 adapted copies sit in
+  `platforms/copilot/skills/`, which no host reads. Moving them to `.github/skills/` was scoped out
+  of the 2026-08-18 lane retirement. Source: `docs/decisions/2026-07-30-multi-platform-packaging.md`
+  amendment 2026-08-18.
+- **HOST-011** — `platforms/copilot/skills/` is generated output with no consumer since the Copilot
+  CLI lane was retired: no manifest references it and no host discovers it. Retire it, or relocate it
+  as HOST-010's fix. Source: same amendment.
+- **HOST-012** — Installing this repository as a VS Code plugin loads the canonical Claude fleet,
+  including `hooks/hooks.json`, because VS Code treats any directory holding
+  `.claude-plugin/plugin.json` as an installable plugin and Claude Code requires that file at the
+  root. Documented as unsupported in `README.md`; reopen only if a nested Agent Plugins 1.0 root is
+  wanted, which format 3 cannot share with `.github/agents`. Source: same amendment.
+- **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode the
+  same fact by hand in two files. A drift test now pins them together
+  (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
+- **TEST-006** — `test_eval_behavioral.SessionOutcomeClassificationTest`'s two dangling-symlink tests
+  call `os.symlink` with no privilege guard, so they **error** rather than skip on a Windows host
+  without Developer Mode or elevation — `OSError: [WinError 1314]`. Pre-existing and environment-only
+  (CI's Windows runner is elevated), but it makes `scripts/run_tests.py` exit 1 locally, which is the
+  "always non-zero teaches the operator to ignore it" failure the gitignore comment already warns
+  about. Add `skipUnless`. Reproduced 2026-08-18.
 - **ORACLE-011** — `self-improve-promotion-gate`'s affirmative-promotion negatives recognise
   approval and a few `proceed`/`promote` forms, so `No promotion now. Promotion is authorized
   despite the gaps.` earns the refusal positive and trips no negative — the case passes while

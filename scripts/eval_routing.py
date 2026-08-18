@@ -88,7 +88,7 @@ PROVENANCE_SCHEMA = "sde-agents/eval-provenance/v4"
 # ${CLAUDE_PLUGIN_ROOT} or a safe backticked repository-relative path; those exact references are
 # discovered and included below (the fleet's read-only guard and learning ledger are examples).
 PLUGIN_RUNTIME_DIRS = (".claude-plugin", "agents", "commands", "hooks", "skills", "workflows")
-PLUGIN_RUNTIME_FILES = ("plugin.json", ".mcp.json")
+PLUGIN_RUNTIME_FILES = (".mcp.json",)
 PLUGIN_HASH_EXCLUSIONS = (
     ".git/**",
     "evals/**",

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Safely synchronize the generated Codex custom agents into another scope.
 
-Codex plugins currently load skills, hooks, and MCP servers, but not custom-agent TOML. Codex's
-official ``/import`` command can perform an initial migration from ``.claude/agents`` but skips
-existing destinations, so it is not an update mechanism. The repository therefore keeps
-project-scoped agents under ``.codex/agents`` and provides this explicit synchronizer for a user or
-alternate project scope.
+Codex plugins currently load skills, hooks, and MCP servers, but not custom-agent TOML. The
+repository therefore keeps project-scoped agents under ``.codex/agents`` and provides this explicit
+synchronizer for a user or alternate project scope.
 
 The installer owns only files carrying ``INSTALL_MARKER``. It adopts an unmarked copy only when its
 parsed contract matches the current generated source, refuses every behaviorally different name
