@@ -1019,27 +1019,28 @@ def validate_behavioral_case(
         if not isinstance(effect_sets, list) or len(effect_sets) < 2:
             findings.append("'effect_sets' must be a list of at least two declaration sets")
         else:
+            effect_identities: list[str] = []
             for position, declared in enumerate(effect_sets):
-                # `effect` is the optional anchor that binds this set to the effect the answer's
-                # prose names before it. Without it the sets match as a bag of values, which
-                # proves both triples appear and not which effect each describes.
-                if not isinstance(declared, dict) or set(declared) - {"effect"} != set(
-                    packet_lint.EFFECT_SET_LABELS
-                ):
+                # `effect` is the exact identity the response must state immediately before this
+                # declaration block. Earlier regex anchors tried to infer that identity from prose;
+                # comparison grammar and overlapping words defeated every ordering heuristic
+                # (ORACLE-012/014). The explicit boundary also makes blank or duplicate identities
+                # configuration errors rather than cases no possible response can satisfy.
+                required_keys = set(packet_lint.EFFECT_SET_LABELS) | {"effect"}
+                if not isinstance(declared, dict) or set(declared) != required_keys:
                     findings.append(
                         f"effect_sets[{position}] must declare exactly "
                         + ", ".join(packet_lint.EFFECT_SET_LABELS)
-                        + ", plus an optional 'effect' anchor"
+                        + ", plus a required 'effect' identity"
                     )
                     continue
-                anchor = declared.get("effect")
-                if anchor is not None:
-                    try:
-                        re.compile(anchor)
-                    except (re.error, TypeError):
-                        findings.append(
-                            f"effect_sets[{position}]['effect'] must be a valid regex anchor"
-                        )
+                effect = declared["effect"]
+                if not isinstance(effect, str) or not effect.strip():
+                    findings.append(
+                        f"effect_sets[{position}]['effect'] must be a non-empty exact identity"
+                    )
+                else:
+                    effect_identities.append(effect.casefold().strip())
                 for label, value in declared.items():
                     if label == "effect":
                         continue
@@ -1059,6 +1060,10 @@ def validate_behavioral_case(
                             f"effect_sets[{position}][{label!r}] value {value!r} is outside its "
                             f"closed vocabulary: {', '.join(vocabulary)}"
                         )
+            if len(effect_identities) != len(set(effect_identities)):
+                findings.append(
+                    "'effect_sets' effect identities must be unique so each block names one effect"
+                )
 
     required_gaps = case.get("runbook_required_gaps")
     if required_gaps is not None:
