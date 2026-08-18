@@ -33,26 +33,6 @@ eval_routing = eval_behavioral.eval_routing
 from tests.support import REPO
 
 
-def _symlink_creation_is_permitted() -> bool:
-    """Whether this host lets an unprivileged process create a symlink.
-
-    TEST-006: Windows refuses `os.symlink` with `OSError: [WinError 1314]` unless the session is
-    elevated or Developer Mode is on, so the dangling-symlink guards below ERRORED rather than
-    skipped and `scripts/run_tests.py` exited 1 on every local run. An always-non-zero suite
-    teaches the operator to ignore the exit code, which is the failure the gitignore comment
-    already warns about. CI's Windows runner is elevated, so this skips nothing there.
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        try:
-            os.symlink(Path(tmp) / "target", Path(tmp) / "link")
-        except (OSError, NotImplementedError, AttributeError):
-            return False
-    return True
-
-
-SYMLINKS_AVAILABLE = _symlink_creation_is_permitted()
-
-
 class ExactSourceEntrypointTest(unittest.TestCase):
     def test_standalone_entry_reexecutes_the_captured_runner(self) -> None:
         bound = mock.Mock()
@@ -2577,6 +2557,34 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
     reserved for sessions the CLI itself failed or never completed.
     """
 
+    @staticmethod
+    def _create_dangling_symlink(target: Path, link: Path) -> None:
+        try:
+            os.symlink(target, link)
+        except OSError as exc:
+            if os.name != "nt" or getattr(exc, "winerror", None) != 1314:
+                raise
+            raise unittest.SkipTest(
+                f"this host cannot create the dangling symlink fixture: {exc}"
+            ) from exc
+
+    def test_dangling_symlink_fixture_does_not_hide_unexpected_os_errors(self) -> None:
+        with mock.patch.object(os, "symlink", side_effect=OSError("unexpected failure")):
+            with self.assertRaisesRegex(OSError, "unexpected failure"):
+                self._create_dangling_symlink(Path("missing"), Path("link"))
+
+    def test_dangling_symlink_fixture_skips_windows_privilege_denial(self) -> None:
+        error = OSError("privilege denied")
+        error.winerror = 1314
+        target = Path("missing")
+        link = Path("link")
+        with (
+            mock.patch.object(os, "name", "nt"),
+            mock.patch.object(os, "symlink", side_effect=error),
+            self.assertRaisesRegex(unittest.SkipTest, "cannot create"),
+        ):
+            self._create_dangling_symlink(target, link)
+
     def test_a_failed_or_incomplete_cli_session_is_flagged_for_exclusion(self) -> None:
         proc = mock.Mock(returncode=1, stdout="", stderr="")
         with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
@@ -2773,7 +2781,13 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                  "Instrument": "fresh request required", "effect": "deletion"},
             ],
         }
-        for replacement, expected in (("", "non-empty exact identity"), ("retry", "unique")):
+        for replacement, expected in (
+            ("", "non-empty exact identity"),
+            (".", "non-empty exact identity"),
+            ("retry", "unique"),
+            ("retry.", "unique"),
+            ("`retry`.", "unique"),
+        ):
             with self.subTest(replacement=replacement):
                 case = copy.deepcopy(base)
                 case["effect_sets"][1]["effect"] = replacement
@@ -2815,22 +2829,20 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
             )
             self.assertIsNone(eval_behavioral.output_dir_problem(Path(tmp)))
 
-    @unittest.skipUnless(SYMLINKS_AVAILABLE, "host forbids unprivileged symlink creation")
     def test_a_dangling_symlink_anywhere_on_the_path_is_refused(self) -> None:
         """PR #147 round 2: `exists()` follows a dangling link at any level of the walk."""
         with tempfile.TemporaryDirectory() as tmp:
             link = Path(tmp) / "dangling-link"
-            os.symlink(Path(tmp) / "never-created", link)
+            self._create_dangling_symlink(Path(tmp) / "never-created", link)
             problem = eval_behavioral.output_dir_problem(link / "results")
             self.assertIsNotNone(problem)
             self.assertIn("symlink", problem)
 
-    @unittest.skipUnless(SYMLINKS_AVAILABLE, "host forbids unprivileged symlink creation")
     def test_a_dangling_symlink_output_dir_is_refused_before_any_session(self) -> None:
         """`Path.exists()` follows the link, so a dangling one read as creatable."""
         with tempfile.TemporaryDirectory() as tmp:
             link = Path(tmp) / "dangling"
-            os.symlink(Path(tmp) / "never-created", link)
+            self._create_dangling_symlink(Path(tmp) / "never-created", link)
             problem = eval_behavioral.output_dir_problem(link)
             self.assertIsNotNone(problem)
             self.assertIn("symlink", problem)

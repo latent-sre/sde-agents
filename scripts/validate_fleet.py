@@ -1620,7 +1620,7 @@ def validate_host_conformance_manifest(root: Path) -> list[str]:
         for lane in lanes
         if isinstance(lane, dict) and lane.get("kind") == "static"
     }
-    missing_hosts = sorted({"claude", "codex", "copilot", "vscode"} - static_hosts)
+    missing_hosts = sorted({"claude", "codex", "vscode"} - static_hosts)
     if missing_hosts:
         issues.append(
             f"{path}: static conformance lanes are missing hosts {missing_hosts}. A generated host "

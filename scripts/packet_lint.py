@@ -496,7 +496,9 @@ def _echo_key(value: str, *, normalize: bool) -> str:
     # free-text pair `Owner: foo_bar` / `**Owner: foobar**` keyed alike and one genuinely
     # conflicting declaration collapsed into the other. Paths (`docs/foo_bar.md`) and identifiers
     # are the common shape. Markdown emphasis wraps a value; it does not appear mid-token here.
-    undecorated = _strip_balanced_decoration(value)
+    undecorated = _strip_balanced_decoration(
+        value, normalize_punctuation=normalize
+    )
     if not normalize:
         return undecorated
     return _strip_sentence_punctuation(undecorated).casefold().strip()
@@ -645,10 +647,25 @@ def literal_field_occurrences(text: str, label: str) -> list[tuple[int, str]]:
 
 
 _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
-_DECORATION_TOKENS = ("**", "__", "*", "_", "`")
+_DECORATION_TOKENS = ("**", "__", "*", "_")
 
 
-def _strip_balanced_decoration(value: str) -> str:
+def _has_backtick_run(value: str, length: int) -> bool:
+    """True when value contains a complete backtick run of exactly the delimiter length."""
+    run = 0
+    for character in value + "\0":
+        if character == "`":
+            run += 1
+            continue
+        if run == length:
+            return True
+        run = 0
+    return False
+
+
+def _strip_balanced_decoration(
+    value: str, *, normalize_punctuation: bool = False
+) -> str:
     """Remove Markdown wrapping from a value, and only wrapping.
 
     Balanced pairs only. Stripping every edge RUN treated an unmatched marker as decoration, so
@@ -659,12 +676,29 @@ def _strip_balanced_decoration(value: str) -> str:
     exponential-backtracking spelling this replaced cannot come back. A code-span pair is the
     stopping boundary: Markdown markers inside backticks are literal data, so recursively
     interpreting `` `__init__` `` as underscore emphasis would collapse a dunder identifier into
-    ``init`` (ORACLE-013).
+    ``init`` (ORACLE-013). A code-span delimiter is its complete backtick run, so a longer run may
+    contain a literal backtick without leaving part of the wrapper in the value (PR #148). Closed
+    vocabularies may also remove sentence punctuation between decoration layers; that reaches a
+    stable display key without reinterpreting marker-shaped data after a code span is opened.
     """
     stripped = value.strip()
     changed = True
     while changed:
         changed = False
+        if normalize_punctuation:
+            normalized = _strip_sentence_punctuation(stripped).strip()
+            changed = normalized != stripped
+            stripped = normalized
+        if stripped.startswith("`"):
+            opening = len(stripped) - len(stripped.lstrip("`"))
+            closing = len(stripped) - len(stripped.rstrip("`"))
+            if opening == closing and len(stripped) > opening + closing:
+                content = stripped[opening:-closing]
+                if _has_backtick_run(content, opening):
+                    return stripped
+                if content.startswith(" ") and content.endswith(" ") and content.strip(" "):
+                    content = content[1:-1]
+                return content
         for token in _DECORATION_TOKENS:
             if (
                 len(stripped) > 2 * len(token)
@@ -672,8 +706,6 @@ def _strip_balanced_decoration(value: str) -> str:
                 and stripped.endswith(token)
             ):
                 stripped = stripped[len(token):-len(token)].strip()
-                if token == "`":
-                    return stripped
                 changed = True
                 break
     return stripped
@@ -800,6 +832,11 @@ def _collapse_agreeing_vocabulary_restatements(
 EFFECT_SET_LABELS = ("Gate", "Effect class", "Instrument")
 
 
+def effect_identity_key(value: str) -> str:
+    """Return the one normalized identity used by case validation and block binding."""
+    return _echo_key(value, normalize=True)
+
+
 def _effect_set_blocks(text: str) -> list[tuple[dict[str, str], int, int, str]]:
     """Split a statement into its gate declaration blocks: (values, first line, span, preamble).
 
@@ -854,16 +891,17 @@ def _preamble_assigns(preamble: str, effect: str) -> bool:
     comparative grammar changed which mention was the subject, explanatory prose changed which
     mention was nearest, and `jellyfin-cache` made the retry and deletion vocabularies overlap.
     The evaluator is the consumer of this boundary, so its prompt now asks for the exact heading
-    instead of pretending free prose is machine-readable (ORACLE-012/014).
+    instead of pretending free prose is machine-readable (ORACLE-012/014). Every structured
+    heading in the preamble is counted so a final matching heading cannot hide a conflict.
     """
     lines = [line for line in preamble.splitlines() if line.strip()]
     if not lines:
         return False
-    occurrences = _raw_field_occurrences("Effect", [lines[-1]])
+    occurrences = _raw_field_occurrences("Effect", lines)
     return (
         len(occurrences) == 1
-        and _echo_key(occurrences[0][1], normalize=True)
-        == _echo_key(effect, normalize=True)
+        and occurrences[0][0] == len(lines) - 1
+        and effect_identity_key(occurrences[0][1]) == effect_identity_key(effect)
     )
 
 

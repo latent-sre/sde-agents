@@ -36,6 +36,28 @@ class ProbeHostsTests(unittest.TestCase):
         with self.assertRaisesRegex(probe_hosts.ConformanceError, "explicit high"):
             probe_hosts.validate_manifest(wrong_effort)
 
+    def test_manifest_contains_only_current_fleet_hosts(self) -> None:
+        self.assertEqual(
+            {"claude", "codex", "vscode"},
+            {lane["host"] for lane in self.manifest["lanes"]},
+        )
+
+    def test_schema_rejects_the_retired_copilot_host(self) -> None:
+        manifest = copy.deepcopy(self.manifest)
+        manifest["lanes"] = [
+            lane for lane in manifest["lanes"] if lane["host"] != "copilot"
+        ]
+        manifest["lanes"].append(
+            {
+                "id": "retired-copilot-static",
+                "host": "copilot",
+                "kind": "static",
+                "required": False,
+            }
+        )
+        with self.assertRaisesRegex(probe_hosts.ConformanceError, "invalid host"):
+            probe_hosts.validate_manifest(manifest)
+
     def test_codex_command_pins_model_effort_sandbox_and_clean_conditions(self) -> None:
         lane = self._sol_lane()
         command = probe_hosts.build_codex_command(
@@ -146,9 +168,9 @@ class ProbeHostsTests(unittest.TestCase):
             lane_pattern="*-static",
             which=lambda command: None,
         )
-        self.assertEqual(4, len(report["results"]))
+        self.assertEqual(3, len(report["results"]))
         self.assertEqual(
-            {"claude", "codex", "copilot", "vscode"},
+            {"claude", "codex", "vscode"},
             {result["host"] for result in report["results"]},
         )
         self.assertTrue(all(result["verdict"] == "pass" for result in report["results"]))
@@ -156,7 +178,7 @@ class ProbeHostsTests(unittest.TestCase):
         discovery = probe_hosts.run_manifest(
             REPO,
             self.manifest,
-            lane_pattern="copilot-discovery",
+            lane_pattern="vscode-discovery",
             which=lambda command: None,
         )
         self.assertEqual("skip", discovery["results"][0]["verdict"])
@@ -182,7 +204,7 @@ class ProbeHostsTests(unittest.TestCase):
 
         self.assertEqual(1, contracts.call_count)
         self.assertEqual(1, outputs.call_count)
-        self.assertEqual(4, len(report["results"]))
+        self.assertEqual(3, len(report["results"]))
         self.assertTrue(all(result["verdict"] == "fail" for result in report["results"]))
         self.assertTrue(
             all(
