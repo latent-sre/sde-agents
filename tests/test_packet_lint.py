@@ -1116,6 +1116,39 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             with self.subTest(disclosure=disclosure):
                 self.assertIsNone(packet_lint._unevidenced_claim(disclosure))
 
+    def test_an_absence_word_must_govern_a_check_to_earn_the_exemption(self) -> None:
+        """ORACLE-015: bare `cannot`/`unable`/`unavailable` let a RESULT claim wear the exemption.
+
+        `Verified: the test cannot fail` and `Verified: service unavailable` assert unsupported
+        results, yet each carried a vocabulary token and was exempted as a disclosure. This is
+        the SECOND widening of this vocabulary to be defeated, so the repair is the mechanism
+        rather than another token struck off one at a time: an ability word must govern an
+        execution or check verb, and a state word must name the verification's own subject.
+        """
+        for claim in (
+            "Verified: the test cannot fail",
+            "Verified: service unavailable",
+            "Verified: the config cannot be wrong",
+            "Verified: the database is unavailable and consistent",
+        ):
+            with self.subTest(claim=claim):
+                self.assertIsNotNone(
+                    packet_lint._unevidenced_claim(claim),
+                    "asserts a result no evidence supports",
+                )
+
+        for disclosure in (
+            "Verified: I could not run the suite",
+            "Verified: unable to execute the check",
+            "Verified: the log output is missing",
+            "Verified: the test run is unavailable",
+        ):
+            with self.subTest(disclosure=disclosure):
+                self.assertIsNone(
+                    packet_lint._unevidenced_claim(disclosure),
+                    "discloses that the verification itself did not happen",
+                )
+
     def test_a_verified_slot_that_also_claims_something_still_fails(self) -> None:
         """The direction the line-scoped attempt lost, four review rounds running.
 

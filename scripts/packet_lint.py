@@ -180,10 +180,26 @@ _CLAIM_NEGATION_RE = re.compile(
     # `Verified: configuration is not malformed` are unevidenced assertions, and both bypassed
     # the evidence requirement (PR #147 review). Each token below says a check did not run or
     # its subject was not there.
+    # ORACLE-015: the vocabulary must describe the VERIFICATION failing, not the subject's
+    # state. Bare `cannot`/`unable`/`unavailable` let a result claim wear the exemption --
+    # `Verified: the test cannot fail` and `Verified: service unavailable` both assert an
+    # unsupported RESULT. That was the second widening of this list to be defeated, so the
+    # bound is structural rather than another token struck off one at a time: an ability word
+    # must GOVERN an execution or check verb, and a state word must name the verification's
+    # own subject. A word that governs neither is describing the world, not a missing check.
     r"\b(?:nothing|none|n/?a|no\s+(?:commands?|output|evidence|checks?|runs?|verification)"
-    r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run|could\s?n[o\u2019']?t|could\s+not"
-    r"|cannot|can[\u2019']t|unable|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
-    r"|not\s+present|not\s+available|unavailable|absent|missing|no\s+access|inaccessible)\b",
+    r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
+    r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
+    r"\s+(?:to\s+)?(?:be\s+)?"
+    r"(?:run|ran|execute[d]?|verif(?:y|ied)|check(?:ed)?|test(?:ed)?|confirm(?:ed)?"
+    r"|validate[d]?|reproduce[d]?|access(?:ed)?|reach(?:ed)?|read|inspect(?:ed)?"
+    r"|measure[d]?|collect(?:ed)?|obtain(?:ed)?|complete[d]?)\b"
+    r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
+    r"|(?:commands?|output|evidence|checks?|runs?|verification|tests?|logs?|transcripts?"
+    r"|artifacts?|results?|tools?|fixtures?|paths?|files?|revisions?|suites?)"
+    r"\s+(?:\w+\s+){0,2}?(?:is\s+|are\s+|was\s+|were\s+)?"
+    r"(?:not\s+present|not\s+available|unavailable|absent|missing|inaccessible)"
+    r"|no\s+access)\b",
     re.IGNORECASE,
 )
 

@@ -784,21 +784,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
   the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
   Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
-- **ORACLE-015** — the absence-of-verification vocabulary added for ORACLE-003 admits bare
-  `cannot`/`unable`, so `Verified: the test cannot fail` and `Verified: service unavailable` are
-  exempted as disclosures although both assert an unsupported RESULT. Reproduced 2026-08-18. Same
-  class as the `no`/`not` narrowing already applied this branch and the second widening of this
-  vocabulary to be defeated: require the word to govern an execution or check verb rather than
-  adding tokens one at a time. Source: PR #147 round 5.
-- **ORACLE-016** — `gate-same-effect-consolidation-retry`'s re-gating negative only recognises the
-  ACTIVE subject-verb order (`this/the retry` before `needs/requires/takes`), so the passive and
-  without-approval constructions sail through: `A new approval is required for this retry.`, `The
-  retry cannot proceed without another approval.`, `A separate decision is needed before the retry
-  runs.` and `Another approval must be obtained for the identical re-run.` all pass while
-  contradicting the `Gate: consolidated` the case requires. Reproduced 2026-08-18 — four
-  constructions pass, only the active form fires. Note the boundary this sits on: `exact_fields`
-  cannot see prose contradicting a closed-set term (ORACLE-002, accepted), so this negative is the
-  only control, and it covers one voice. Source: PR #147 round 6.
 - **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
   the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
   scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
@@ -807,15 +792,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   session concluded`. The note contradicts the flag, so an explicit timeout should override
   `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
   partial-completion timeout on both transports. Source: PR #147 round 6.
-- **ORACLE-017** — `loop-capture-is-not-closure` rejects the compliant sentence `This item is
-  not closed because the owner is missing` because its catch-all negation reaches backward from
-  `missing` into the closure clause. Bind polarity to the missing/absent predicate so closure
-  refusal is not misread as denial of a gap. Reproduced 2026-08-18. Source: PR #147 post-merge
-  review thread.
-- **ORACLE-018** — `reviewer-approval-does-not-transfer` accepts `You do not need to perform a
-  fresh review` as its positive review requirement. Require an affirmative obligation rather than
-  co-occurrence of an action verb and `fresh review`. Reproduced 2026-08-18. Source: PR #147
-  post-merge review thread.
 - **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
   Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
   Decide whether the block is broker-only or restore a precisely defined non-broker state. Deferred
