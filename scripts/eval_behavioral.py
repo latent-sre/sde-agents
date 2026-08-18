@@ -482,14 +482,33 @@ def output_dir_problem(path: Path) -> str | None:
         if not os.access(path, os.W_OK | os.X_OK):
             return f"{path} is not writable"
         return None
+    # Lexical, not `exists()`: a dangling symlink ANYWHERE on the way up is followed by
+    # `exists()` and skipped, so `dangling-link/results` walked past it to a writable parent and
+    # reported the path creatable. `mkdir` then still raised, after the batch (PR #147 review).
     ancestor = path.parent
-    while not ancestor.exists() and ancestor != ancestor.parent:
+    while ancestor != ancestor.parent:
+        if ancestor.is_symlink() and not ancestor.exists():
+            return f"{ancestor} is a dangling symlink, so {path} cannot be created"
+        if ancestor.exists():
+            break
         ancestor = ancestor.parent
     if not ancestor.is_dir():
         return f"{ancestor} is not a directory, so {path} cannot be created"
     if not os.access(ancestor, os.W_OK | os.X_OK):
         return f"{ancestor} is not writable, so {path} cannot be created"
     return None
+
+
+def _session_reached_a_result(stats: dict) -> bool:
+    """True when the transport says the session ran to a completed, valid result.
+
+    Runtime-independent on purpose. The first spelling asked a Claude-only `session_failed` flag,
+    so every Codex timeout, nonzero exit, failure event and missing completion — which set no such
+    flag — read as "completed and answered nothing" and were graded as contract failures,
+    recreating the corrupted-rate defect for that lane (PR #147 review). Both transports already
+    report `completed`, and both clear it on exactly the failures that must be excluded.
+    """
+    return bool(stats.get("completed")) and not stats.get("session_failed")
 
 
 def session_denylist(
@@ -1023,6 +1042,14 @@ def validate_behavioral_case(
                         )
                 for label, value in declared.items():
                     if label == "effect":
+                        continue
+                    # Checked before comparison: `"Gate": 1` reached `.casefold()` and left main()
+                    # by traceback, bypassing the BehavioralCaseError handling that reports every
+                    # other malformed case cleanly (PR #147 review).
+                    if not isinstance(value, str) or not value.strip():
+                        findings.append(
+                            f"effect_sets[{position}][{label!r}] must be a non-empty string"
+                        )
                         continue
                     vocabulary = packet_lint.EXACT_FIELD_VOCABULARIES.get(label)
                     if vocabulary is not None and value.casefold() not in {
@@ -1647,7 +1674,7 @@ def main(argv: list[str] | None = None) -> int:
             # detect; treat the pin itself as the invocation evidence expect_fires would supply.
             if case.get("agent"):
                 fired = fired | {case["agent"].split(":")[-1]}
-            if note and not text and not stats.get("session_failed"):
+            if note and not text and _session_reached_a_result(stats):
                 # The session RAN to a clean structured result and produced no text. That is the
                 # contract failing, not the measurement: every must_match misses because the agent
                 # answered with nothing. Excluding it would let a real regression vanish into an

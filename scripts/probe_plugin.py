@@ -310,6 +310,13 @@ def agent_spawn_results(text: str, agent_name: str) -> list[str]:
             tool_id = block.get("tool_use_id")
             if not isinstance(tool_id, str) or not tool_id:
                 continue
+            if block.get("is_error"):
+                # An errored tool_result is the platform saying the spawn produced no answer — a
+                # timeout, a launch failure. Its error text is not an observation of the agent's
+                # context, and returning it made both preload canaries FAIL, concluding the skills
+                # were absent when nothing had run (PR #147 review). Dropped here so the caller's
+                # empty-result branch reports INCONCLUSIVE, which is what it means.
+                continue
             raw = block.get("content")
             body = raw if isinstance(raw, str) else " ".join(
                 part.get("text", "") for part in (raw or []) if isinstance(part, dict)

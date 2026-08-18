@@ -94,6 +94,38 @@ class ProbeCanaryTests(unittest.TestCase):
         self.assertEqual(1, len(results))
         self.assertNotIn(probe_plugin.BACKEND_CANARY, results[0])
 
+    def test_an_errored_agent_result_is_not_an_observation(self) -> None:
+        """PR #147 round 2: an errored tool_result was read as the agent's answer.
+
+        A timeout or launch failure returns `is_error: true` with error text. Returning that text
+        made both preload canaries FAIL — concluding the skills were absent from the agent's
+        context when nothing had run. It now reaches the caller's empty-result branch, which
+        reports INCONCLUSIVE.
+        """
+        spawn = json.dumps({
+            "type": "assistant",
+            "message": {"content": [{
+                "type": "tool_use", "id": "toolu_err", "name": "Agent",
+                "input": {"subagent_type": "sde-agents:sde-fullstack", "prompt": "build"},
+            }]},
+        })
+
+        def result(payload: dict) -> list[str]:
+            return probe_plugin.agent_spawn_results(
+                spawn + "\n" + json.dumps({"type": "user", "message": {"content": [payload]}}),
+                "sde-agents:sde-fullstack",
+            )
+
+        self.assertEqual([], result({
+            "type": "tool_result", "tool_use_id": "toolu_err", "is_error": True,
+            "content": "Error: agent timed out",
+        }))
+        observed = result({
+            "type": "tool_result", "tool_use_id": "toolu_err",
+            "content": f"{probe_plugin.BACKEND_CANARY} and more",
+        })
+        self.assertEqual(1, len(observed))
+
     def test_backend_craft_canary_is_present(self) -> None:
         # Asserted via the probe's own constant, not a copied literal: with a duplicate string
         # here, a probe-side canary change would fail live probes while this tripwire stayed

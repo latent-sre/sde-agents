@@ -1006,6 +1006,63 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         self.assertTrue(packet_lint.lint_effect_sets(scattered, expected),
                         "a set scattered through prose is not a block")
 
+    def test_a_rationale_may_use_a_vocabulary_word_as_an_ordinary_verb(self) -> None:
+        """PR #147 round 2: banning every occurrence false-RED'd the compliant answer.
+
+        `Learning disposition: merge — add occurrence evidence to the existing candidate` states
+        the duplicate-feedback contract's required behavior exactly: merging IS adding an
+        occurrence. Only an OFFERED alternative competes with a selection already made.
+        """
+        def block(disposition: str) -> str:
+            return (
+                "Learning: candidate — adapter parity was omitted -> parity is asserted\n"
+                "Evidence: revisions aaaaaaaa and bbbbbbbb reproduced the omission\n"
+                "Scope: generated-adapter validation only\n"
+                "Provenance: verified — supplied revision and test evidence\n"
+                f"Learning disposition: {disposition}\nPromotion state: proposed\n"
+                "Destination: scripts/validate_fleet.py\nOwner: fleet-maintainer\n"
+            )
+        for compliant in ("merge", "merge — add occurrence evidence to the existing candidate"):
+            with self.subTest(disposition=compliant):
+                self.assertEqual(
+                    [], packet_lint.lint_learning_closeout(block(compliant), "lifecycle-owner")
+                )
+        for offered in ("merge — or add, the owner decides", "merge — supersede instead"):
+            with self.subTest(disposition=offered):
+                self.assertTrue(
+                    packet_lint.lint_learning_closeout(block(offered), "lifecycle-owner")
+                )
+
+    def test_a_preamble_naming_both_effects_assigns_the_block_to_the_first(self) -> None:
+        """PR #147 round 2: a comparative heading contains both anchors.
+
+        `Deletion, unlike the retry` and `Retry, unlike the volume deletion` each mention both
+        effects, so searching each anchor independently accepted a swapped pair. The effect a
+        block belongs to is the first one its preamble names — the subject leads, the contrast
+        follows.
+        """
+        expected = [
+            {"Gate": "consolidated", "Effect class": "reversible live activation",
+             "Instrument": "fresh request required", "effect": r"retry|re-?run"},
+            {"Gate": "new", "Effect class": "irreversible or custody boundary",
+             "Instrument": "fresh request required", "effect": r"delet\w+|volume"},
+        ]
+
+        def declaration(gate: str, effect_class: str) -> str:
+            return (f"Gate: {gate}\nEffect class: {effect_class}\n"
+                    "Instrument: fresh request required\n")
+
+        retry = declaration("consolidated", "reversible live activation")
+        deletion = declaration("new", "irreversible or custody boundary")
+        self.assertEqual([], packet_lint.lint_effect_sets(
+            f"Retry, unlike the volume deletion, needs:\n{retry}\n"
+            f"Deletion, unlike the retry, needs:\n{deletion}", expected,
+        ))
+        self.assertTrue(packet_lint.lint_effect_sets(
+            f"Deletion, unlike the retry, needs:\n{retry}\n"
+            f"Retry, unlike the volume deletion, needs:\n{deletion}", expected,
+        ), "both preambles name both effects, so the sets are swapped")
+
     def test_a_verified_slot_may_disclose_an_absence_without_citing_a_command(self) -> None:
         """ORACLE-003: the honest answer graded worse than a terse one.
 

@@ -582,15 +582,49 @@ def _echo_group_key(
             term, rationale = key, _rationale_after(existing, key)
         else:
             continue
-        if rationale and not _names_other_term(rationale, terms - {term}):
+        if rationale and not _mentions_other_term(rationale, terms - {term}):
             return existing
     return key
 
 
-def _names_other_term(rationale: str, others: set[str]) -> bool:
-    """True when a continuation names a competing term from the same closed set."""
+# What a competing SELECTION looks like, as opposed to a vocabulary word used as an ordinary verb.
+# Banning every occurrence false-RED'd the compliant `Learning disposition: merge — add occurrence
+# evidence to the existing candidate`, which is precisely the duplicate-feedback case's required
+# behavior: merging IS adding an occurrence (PR #147 review). Only an offered alternative counts.
+_ALTERNATIVE_SELECTION = (
+    r"(?:\bor\b|\bversus\b|\bvs\.?\b|\brather than\b|\binstead of\b|\beither\b|"
+    r"\bcould also be\b|\bmight be\b)"
+)
+
+
+def _mentions_other_term(continuation: str, others: set[str]) -> bool:
+    """True when an ECHO's continuation names any competing term from the closed set.
+
+    Broad on purpose, and deliberately not the same question as `_offers_other_term`. An echo
+    earns collapse by being a RENDERING of the canonical line; a continuation that names another
+    term is not one, whatever grammar introduces it, and treating `proposed. On reflection,
+    rejected.` as a restatement loses the conflict the exactly-once rule exists to catch.
+    """
     return any(
-        re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", rationale)
+        re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", continuation)
+        for term in others
+    )
+
+
+def _offers_other_term(rationale: str, others: set[str]) -> bool:
+    """True when a SELECTED value's rationale offers a competing term as an alternative.
+
+    Narrow on purpose: here the writer has already chosen, and the rationale is prose explaining
+    the choice. Banning every occurrence false-RED'd `merge — add occurrence evidence to the
+    existing candidate`, which is the duplicate-feedback contract's required behavior stated
+    exactly (PR #147 review). Only an offered alternative competes with the selection.
+    """
+    return any(
+        re.search(
+            rf"{_ALTERNATIVE_SELECTION}\s+(?:a\s+|to\s+)?{re.escape(term)}(?![a-z0-9])"
+            rf"|(?<![a-z0-9]){re.escape(term)}\s+instead\b",
+            rationale,
+        )
         for term in others
     )
 
@@ -785,6 +819,23 @@ def _effect_set_key(block: dict[str, str]) -> tuple[str, ...]:
     )
 
 
+def _preamble_assigns(preamble: str, anchor: str, anchors: list[str]) -> bool:
+    """True when this block's preamble assigns it to ``anchor``'s effect, not merely mentions it.
+
+    Searching each anchor independently accepted a comparative heading that names both effects:
+    `Deletion, unlike the retry` and `Retry, unlike the volume deletion` each contain both, so a
+    swapped pair passed (PR #147 review). The effect a block belongs to is the FIRST one its
+    preamble names — the subject leads, and the contrast follows it — so the winning anchor is the
+    earliest match and it has to be this set's.
+    """
+    best: tuple[int, str] | None = None
+    for candidate in anchors:
+        found = re.search(candidate, preamble, re.IGNORECASE)
+        if found is not None and (best is None or found.start() < best[0]):
+            best = (found.start(), candidate)
+    return best is not None and best[1] == anchor
+
+
 def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
     """Require one complete, contiguous declaration set per declared effect, bound to that effect.
 
@@ -803,6 +854,7 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
     under the deletion and vice versa passed with every individual value the contract wanted.
     """
     blocks = _effect_set_blocks(text)
+    anchors = [wanted["effect"] for wanted in expected if wanted.get("effect")]
     findings: list[str] = []
     complete: list[tuple[dict[str, str], int, int, str]] = []
     for block, _, span, _preamble in blocks:
@@ -833,7 +885,7 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
             (
                 item for item in remaining
                 if _effect_set_key(item[0]) == key
-                and (anchor is None or re.search(anchor, item[3], re.IGNORECASE))
+                and (anchor is None or _preamble_assigns(item[3], anchor, anchors))
             ),
             None,
         )
@@ -1109,7 +1161,7 @@ def _lint_learning_closeout(lines: list[str], learning_mode: str) -> list[str]:
             else "lifecycle-owner Learning disposition: must be one accepted lifecycle value "
             "without the intake-only proposed recommendation marker"
         )
-    elif disposition_rationale and _names_other_term(
+    elif disposition_rationale and _offers_other_term(
         disposition_rationale, {value for value in LEARNING_DISPOSITIONS if value != disposition}
     ):
         findings.append(

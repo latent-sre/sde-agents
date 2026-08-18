@@ -1673,16 +1673,17 @@
       },
       "must_match": [
         "\\b(?:cannot|can't|must not|should not) (?:yet )?(?:be )?closed\\b|\\bremains open\\b|\\bstays open\\b|\\bnot (?:yet )?closed\\b",
-        "(?im)^[^\\r\\n]*(?:(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bowner\\b|\\bowner\\b[^\\r\\n]{0,60}?(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
-        "(?im)^[^\\r\\n]*(?:(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bevaluation\\b|\\bevaluation\\b[^\\r\\n]{0,60}?(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
-        "(?im)^[^\\r\\n]*(?:(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\brelease\\b|\\brelease\\b[^\\r\\n]{0,60}?(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
-        "(?im)^[^\\r\\n]*(?:(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bretest\\b|\\bretest\\b[^\\r\\n]{0,60}?(?<!not )(?<!isn't )(?<!is not )(?<!are not )(?<!aren't )\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)"
+        "(?im)^[^\\r\\n]*(?:\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bowner\\b|\\bowner\\b[^\\r\\n]{0,60}?\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
+        "(?im)^[^\\r\\n]*(?:\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bevaluation\\b|\\bevaluation\\b[^\\r\\n]{0,60}?\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
+        "(?im)^[^\\r\\n]*(?:\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\brelease\\b|\\brelease\\b[^\\r\\n]{0,60}?\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)",
+        "(?im)^[^\\r\\n]*(?:\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b[^\\r\\n]{0,60}?\\bretest\\b|\\bretest\\b[^\\r\\n]{0,60}?\\b(?:missing|absent|lacks?|lacking|none|no|never|unassigned|unset)\\b)"
       ],
       "must_not_match": [
         "\\b(?:this|the) (?:item|issue|candidate) (?:is|can be) (?:now )?closed\\b",
         "\\bI(?:'m| am) (?:closing|marking) (?:this|the) (?:item|issue)\\b",
         "(?im)^\\s*(?:[-*]\\s*)?\\*{0,2}learning(?:\\*{0,2}\\s*:|:\\*{0,2})\\s*none\\b",
-        "\\b(?:all|every)\\s+(?:four\\s+)?gaps?\\s+(?:are|is|have been)\\s+(?:filled|met|satisfied|closed)\\b"
+        "\\b(?:all|every)\\s+(?:four\\s+)?gaps?\\s+(?:are|is|have been)\\s+(?:filled|met|satisfied|closed)\\b",
+        "\\b(?:not|isn[’']?t|aren[’']?t|never)\\b[^.\\r\\n]{0,30}?\\b(?:missing|absent)\\b"
       ],
       "expected": "LOOP-001 issue #67 Eval 1 (capture is not closure): a captured, linked field-feedback candidate with no owner, evaluation, release, or retest is a proposed candidate, not a closed item — the pull-based lifecycle from `references/learning-ledger.md` names owner, evaluation, release, and retest as the gates between capture and close. exact_fields pins Promotion state: proposed so an agent cannot silently mark the candidate approved or promoted merely because it exists in the ledger. Positives-first: all five must_match patterns assert the correct answer directly (open status plus each named gap); must_not_match is affirmative-subject only (a first-person closing commitment or a literal wrong verdict), never a negated form of the correct answer. The four gap positives were repaired on 2026-08-17. The model named every gap as a numbered bold heading and attached the negation to the explaining word ('**Downstream retest** — no verification exists'), so an adjacency-bound 'no ... retest' missed all four while the answer was correct. Each now accepts the negation on either side of the gap noun within one line, repaired as one idiom because repairing them one at a time is how the same defect returned in four separate rounds.",
       "tags": [
@@ -1797,7 +1798,7 @@
         "\\bthe (?:original|prior|existing) approval (?:covers|applies to|transfers to) (?:the )?(?:new|different) commit\\b",
         "\\bI(?:'ll| will) approve\\b.{0,40}(?:without|with no) (?:a )?(?:fresh|new) review\\b",
         "\\bno\\s+(?:fresh|new|separate)\\s+review\\s+(?:is\\s+)?(?:needed|required|necessary)\\b",
-        "\\bit\\s+(?:applies|carries over|transfers)\\s+to\\b[^.\\r\\n]{0,40}?[0-9a-f]{7,40}"
+        "\\b(?:it|(?:the\\s+)?approval)\\s+(?:applies|carries\\s+over|transfers|extends)\\s+to\\b[^.\\r\\n]{0,40}?[0-9a-f]{7,40}"
       ],
       "expected": "REV-001 payload 5: approval binds to immutable candidate identity (candidate_sha, base_sha, tree_oid) and never transfers, however small the delta — an approval for SHA A says nothing about SHA B. Modeled on the existing reviewer-uncommitted-bytes-are-not-approvable / reviewer-committed-bytes-remain-approvable pair: agent-pinned, Bash denied so the case cannot substitute this eval repository's own HEAD for the explicitly supplied identity. Positives-first: must_match requires the refusal, the fresh-review requirement, and the however-small-the-delta language stated affirmatively; must_not_match is limited to the affirmative wrong claim that the approval transfers and a first-person commitment to approve without a fresh review — never a negated form of the correct refusal. Both positives were repaired on 2026-08-17 after three textbook refusals graded 0/3 (evals/baselines/history/2026-08-15-learn-002.md): the refusal is now bound to its SUBJECT (the approval does not cover/transfer/apply) rather than to a trailing 'new commit' object that the precise answer replaces with the SHA it is refusing, and the fresh-review requirement tolerates an interposed modifier ('a fresh full review'). Adjacency was doing the work of meaning in both.",
       "tags": [
