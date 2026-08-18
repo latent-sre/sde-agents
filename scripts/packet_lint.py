@@ -190,10 +190,18 @@ _CLAIM_NEGATION_RE = re.compile(
     r"\b(?:nothing|none|n/?a|no\s+(?:commands?|output|evidence|checks?|runs?|verification)"
     r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
     r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
-    r"\s+(?:to\s+)?(?:be\s+)?"
-    r"(?:(?:re-?)?(?:run|ran)|(?:re-?)?execute[d]?|verif(?:y|ied)|check(?:ed)?|test(?:ed)?|confirm(?:ed)?"
-    r"|validate[d]?|reproduce[d]?|access(?:ed)?|reach(?:ed)?|read|inspect(?:ed)?"
-    r"|measure[d]?|collect(?:ed)?|obtain(?:ed)?|complete[d]?)\b"
+    # The OPTIONALITY is atomic, not just the group. `(?>be\s+)?` still lets the `?` retry
+    # at zero width after the check below fails, so `cannot be wrong` matched `be` as its
+    # verb and earned the exemption anyway. `(?>(?:be\s+)?)` commits to the skip.
+    r"\s+(?>(?:to\s+)?)(?>(?:be\s+)?)"
+    # The disqualifying set, not the qualifying one. `cannot fail` and `cannot be wrong`
+    # assert an outcome; `could not retrieve the CI logs` reports an action that did not
+    # happen. Enumerating the actions is unbounded -- run, rerun, retrieve, open, query,
+    # find -- while the outcomes and properties are a closed set.
+    r"(?!(?:fail(?:s|ed)?|pass(?:es|ed)?|break|broke|succeed(?:s|ed)?|work(?:s|ed)?"
+    r"|exist(?:s|ed)?|differ(?:s|ed)?|happen(?:s|ed)?|occur(?:s|red)?|matter(?:s|ed)?"
+    r"|wrong|right|correct|incorrect|true|false|valid|invalid|broken|fine|safe)\b)"
+    r"\w+\b"
     r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
     r"|(?:commands?|output|evidence|checks?|runs?|verification|tests?|logs?|transcripts?"
     r"|artifacts?|results?|tools?|fixtures?|paths?|files?|revisions?|suites?)"

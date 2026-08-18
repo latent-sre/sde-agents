@@ -2257,6 +2257,19 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "sde-fullstack",
         ))
 
+        # Codex review round 2, PR #152: the three-token cap was arbitrary and lost a wording
+        # the original 30-character guard caught. `is not among the gaps considered missing`
+        # spans four. The bound is now characters plus the clause boundary -- the subordinating
+        # conjunction was always the real discriminator, the token count never was.
+        self.assertTrue(self._assert(
+            "loop-capture-is-not-closure",
+            "This item is not closed. The owner is not among the gaps considered missing.\n"
+            "The paired evaluation is missing.\n"
+            "The target release is missing.\n"
+            "The downstream retest is missing.\n" + self._block(),
+            "sde-fullstack",
+        ))
+
         # Violation control: denying the gap outright must still fail, or the guard is deleted.
         self.assertTrue(self._assert(
             "loop-capture-is-not-closure",
@@ -2292,6 +2305,19 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "The approval does not transfer and the new commit must receive a fresh review "
             "however small the delta - it binds to "
             "'dddddddddddddddddddddddddddddddddddddddd'.\n" + self._block(),
+            "code-reviewer",
+        ))
+
+        # Codex review round 2, PR #152: a PASSIVE obligation is still an obligation. `you are
+        # required to perform a fresh review` was rejected only because `required` was absent
+        # from the modal list, so the `to` exclusion -- which exists to stop `to perform` after
+        # a negated modal -- caught an affirmative governor instead.
+        self.assertEqual([], self._assert(
+            "reviewer-approval-does-not-transfer",
+            "The approval does not cover "
+            "'dddddddddddddddddddddddddddddddddddddddd'.\n"
+            "However small the delta, you are required to perform a fresh review.\n"
+            + self._block(),
             "code-reviewer",
         ))
 
@@ -2355,6 +2381,17 @@ class Learn002GraderRepairsTest(unittest.TestCase):
             "gate-same-effect-consolidation-retry",
             "For this retry, a new approval is required only if its effect changes; because "
             "this command is identical, no approval is needed.\n" + fields,
+            "homelab-platform",
+        ))
+
+        # Codex review round 2, PR #152: contrasting the two effects on one line is compliant.
+        # `a new approval is required for deletion, but not for this retry` was a false RED
+        # because the retry lookahead only proved the word appeared somewhere on the line. Each
+        # voice now binds to the retry CLAUSE through a window that cannot cross a comma.
+        self.assertEqual([], self._assert(
+            "gate-same-effect-consolidation-retry",
+            "The retry differs from deletion: a new approval is required for deletion, but "
+            "not for this retry.\n" + fields,
             "homelab-platform",
         ))
 

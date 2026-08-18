@@ -1175,6 +1175,11 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Verified: service unavailable",
             "Verified: the config cannot be wrong",
             "Verified: the database is unavailable and consistent",
+            # The `be` sidestep: with a non-atomic optional, the engine declined to consume
+            # `be`, matched it as the governed verb, and the outcome word behind it was never
+            # inspected.
+            "Verified: the config cannot be wrong",
+            "Verified: the result cannot be incorrect",
         ):
             with self.subTest(claim=claim):
                 self.assertIsNotNone(
@@ -1194,6 +1199,15 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             "Verified: unable to rerun the suite",
             "Verified: I could not re-run the tests",
             "Verified: could not rerun the check",
+            # Codex review round 2, PR #152: an allowlist of action verbs cannot be completed --
+            # retrieve, open, query and find were all missing, and the next reviewer would find
+            # four more. The rule is inverted: an ability word may govern any ACTION, and only
+            # an outcome or property disqualifies the exemption.
+            "Verified: I could not retrieve the CI logs",
+            "Verified: could not open the log file",
+            "Verified: unable to query the endpoint",
+            "Verified: could not find the fixture",
+            "Verified: the format cannot be verified",
         ):
             with self.subTest(disclosure=disclosure):
                 self.assertIsNone(
