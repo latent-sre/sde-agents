@@ -2820,6 +2820,29 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
                 )
                 self.assertIn(name, problem)
 
+    def test_a_dangling_symlink_at_a_fixed_artifact_path_is_refused(self) -> None:
+        """Codex review on #151: the artifact loop lacked the check the directory path has.
+
+        `Path.exists()` FOLLOWS the link, so a dangling symlink at a fixed artifact name read as
+        absent, the loop skipped it, preflight passed, and the batch of real sessions was bought
+        -- then the write followed that link and raised because its target could not be created.
+        The function already answers this lexically for the output directory itself; the two
+        fixed paths inside it now get the same answer, for the same reason.
+        """
+        for name in (
+            eval_behavioral.BENCHMARK_FILENAME,
+            eval_behavioral.FAILING_EVIDENCE_FILENAME,
+        ):
+            with self.subTest(artifact=name), tempfile.TemporaryDirectory() as tmp:
+                self._create_dangling_symlink(
+                    Path(tmp) / "never-created", Path(tmp) / name
+                )
+                problem = eval_behavioral.output_dir_problem(Path(tmp))
+                self.assertIsNotNone(
+                    problem, f"a dangling symlink at {name} must be refused up front"
+                )
+                self.assertIn("symlink", problem)
+
     def test_a_writable_output_dir_holding_ordinary_artifacts_is_still_usable(self) -> None:
         """The guard must refuse blockers, not re-runs: overwriting last batch's files is normal."""
         with tempfile.TemporaryDirectory() as tmp:

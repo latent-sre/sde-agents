@@ -493,6 +493,12 @@ def output_dir_problem(path: Path) -> str | None:
         # is a normal re-run and stays allowed; only a blocker that is not a file is refused.
         for name in (BENCHMARK_FILENAME, FAILING_EVIDENCE_FILENAME):
             artifact = path / name
+            # Lexical, mirroring the output-directory check above and for the identical
+            # reason: `exists()` follows the link, so a dangling symlink at a fixed
+            # artifact name read as absent, the batch was bought, and the write then
+            # followed the link and raised (Codex review, PR #151).
+            if artifact.is_symlink() and not artifact.exists():
+                return f"{artifact} is a dangling symlink, so {name} cannot be written"
             if artifact.exists() and not artifact.is_file():
                 return f"{artifact} exists and is not a file, so {name} cannot be written"
         return None
