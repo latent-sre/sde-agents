@@ -2678,6 +2678,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
             (".", "non-empty exact identity"),
             ("retry", "unique"),
             ("retry.", "unique"),
+            ("`retry`.", "unique"),
         ):
             with self.subTest(replacement=replacement):
                 case = copy.deepcopy(base)

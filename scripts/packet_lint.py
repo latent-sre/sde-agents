@@ -496,7 +496,9 @@ def _echo_key(value: str, *, normalize: bool) -> str:
     # free-text pair `Owner: foo_bar` / `**Owner: foobar**` keyed alike and one genuinely
     # conflicting declaration collapsed into the other. Paths (`docs/foo_bar.md`) and identifiers
     # are the common shape. Markdown emphasis wraps a value; it does not appear mid-token here.
-    undecorated = _strip_balanced_decoration(value)
+    undecorated = _strip_balanced_decoration(
+        value, normalize_punctuation=normalize
+    )
     if not normalize:
         return undecorated
     return _strip_sentence_punctuation(undecorated).casefold().strip()
@@ -648,7 +650,9 @@ _DECORATION_RE = re.compile(r"\*\*|__|\*|_|`")
 _DECORATION_TOKENS = ("**", "__", "*", "_")
 
 
-def _strip_balanced_decoration(value: str) -> str:
+def _strip_balanced_decoration(
+    value: str, *, normalize_punctuation: bool = False
+) -> str:
     """Remove Markdown wrapping from a value, and only wrapping.
 
     Balanced pairs only. Stripping every edge RUN treated an unmatched marker as decoration, so
@@ -660,17 +664,26 @@ def _strip_balanced_decoration(value: str) -> str:
     stopping boundary: Markdown markers inside backticks are literal data, so recursively
     interpreting `` `__init__` `` as underscore emphasis would collapse a dunder identifier into
     ``init`` (ORACLE-013). A code-span delimiter is its complete backtick run, so a longer run may
-    contain a literal backtick without leaving part of the wrapper in the value (PR #148).
+    contain a literal backtick without leaving part of the wrapper in the value (PR #148). Closed
+    vocabularies may also remove sentence punctuation between decoration layers; that reaches a
+    stable display key without reinterpreting marker-shaped data after a code span is opened.
     """
     stripped = value.strip()
     changed = True
     while changed:
         changed = False
+        if normalize_punctuation:
+            normalized = _strip_sentence_punctuation(stripped).strip()
+            changed = normalized != stripped
+            stripped = normalized
         if stripped.startswith("`"):
             opening = len(stripped) - len(stripped.lstrip("`"))
             closing = len(stripped) - len(stripped.rstrip("`"))
             if opening == closing and len(stripped) > opening + closing:
-                return stripped[opening:-closing].strip()
+                content = stripped[opening:-closing]
+                if content.startswith(" ") and content.endswith(" ") and content.strip(" "):
+                    content = content[1:-1]
+                return content
         for token in _DECORATION_TOKENS:
             if (
                 len(stripped) > 2 * len(token)

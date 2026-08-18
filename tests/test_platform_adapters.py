@@ -261,44 +261,49 @@ class PlatformAdapterTests(unittest.TestCase):
                 finally:
                     _remove_directory_link(link)
 
-    def test_validation_rejects_a_dangling_link_at_a_retired_root(self) -> None:
+    def test_validation_rejects_dangling_links_at_every_retired_root_depth(self) -> None:
         """PR #149: target existence cannot stand in for lexical link existence."""
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary) / "repo"
-            (root / ".claude-plugin").mkdir(parents=True)
-            (root / ".claude-plugin" / "plugin.json").write_text(
-                "{}\n", encoding="utf-8"
-            )
-            retired = root / ".claude" / "agents"
+        for name, link_relative in (
+            ("leaf", Path(".claude") / "agents"),
+            ("parent", Path(".claude")),
+        ):
+            with self.subTest(placement=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "repo"
+                (root / ".claude-plugin").mkdir(parents=True)
+                (root / ".claude-plugin" / "plugin.json").write_text(
+                    "{}\n", encoding="utf-8"
+                )
+                retired = root / ".claude" / "agents"
+                linked = root / link_relative
 
-            def is_link(path: Path) -> bool:
-                return path == retired
+                def is_link(path: Path) -> bool:
+                    return path == linked
 
-            with (
-                mock.patch.object(
-                    generate_platform_adapters, "expected_outputs", return_value={}
-                ),
-                mock.patch.object(
-                    generate_platform_adapters,
-                    "_repository_tracked_files",
-                    return_value=set(),
-                ),
-                mock.patch.object(
-                    generate_platform_adapters,
-                    "_is_link_or_reparse_point",
-                    side_effect=is_link,
-                ),
-            ):
-                issues = generate_platform_adapters.validate_generated_outputs(root)
+                with (
+                    mock.patch.object(
+                        generate_platform_adapters, "expected_outputs", return_value={}
+                    ),
+                    mock.patch.object(
+                        generate_platform_adapters,
+                        "_repository_tracked_files",
+                        return_value=set(),
+                    ),
+                    mock.patch.object(
+                        generate_platform_adapters,
+                        "_is_link_or_reparse_point",
+                        side_effect=is_link,
+                    ),
+                ):
+                    issues = generate_platform_adapters.validate_generated_outputs(root)
 
-            self.assertTrue(
-                any(
-                    str(retired) in issue
-                    and "retired generated adapter root still exists" in issue
-                    for issue in issues
-                ),
-                issues,
-            )
+                self.assertTrue(
+                    any(
+                        str(retired) in issue
+                        and "retired generated adapter root still exists" in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
 
     def test_write_rejects_links_at_every_generated_tree_ancestor(self) -> None:
         placements = (

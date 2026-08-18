@@ -1082,6 +1082,14 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
                 self.assertEqual([], packet_lint.lint_exact_fields(
                     f"Owner: {rendering}\n", {"Owner": expected}
                 ))
+        spaced = "Owner: ``  alice  ``\n"
+        self.assertEqual(
+            [], packet_lint.lint_exact_fields("Owner: `` alice ``\n", {"Owner": "alice"})
+        )
+        self.assertTrue(
+            packet_lint.lint_exact_fields(spaced, {"Owner": "alice"}),
+            "Markdown removes one boundary space, not every boundary space",
+        )
 
     def test_effect_binding_requires_an_exact_effect_heading(self) -> None:
         """ORACLE-012/014: effect identity is a boundary, not inferred from prose.
