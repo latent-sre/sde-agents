@@ -174,10 +174,19 @@ class Probe:
         if failed:
             return 1
         if skipped:
+            # Deliberately does NOT name a cause. Every INCONCLUSIVE has already printed its
+            # own, and they are not the same failure: a permission refusal before the guard
+            # could rule, a command the agent never attempted, and a call whose result never
+            # came back all land here. Asserting the sandbox for all of them contradicted the
+            # line printed directly above and sent the operator to fix the wrong thing
+            # (Codex review, PR #151).
             print(
-                "\nSome checks could not be run here. Claude Code's own sandbox refused the command\n"
-                "before the guard could rule on it, so the guard is UNPROVEN by this run — not broken,\n"
-                "not proven. Re-run from a plain terminal, outside a Claude Code session."
+                "\nSome checks could not be run here, so the guard is UNPROVEN by this run for those\n"
+                "checks — not broken, not proven. Each INCONCLUSIVE line above carries its OWN cause:\n"
+                "a permission refusal before the guard could rule, a command the agent never\n"
+                "attempted, or a call whose result never came back. Read it there rather than assuming\n"
+                "one cause; where a line names a Claude Code permission refusal, re-run from a\n"
+                "plain terminal outside a Claude Code session."
             )
             return 2
         return 0
@@ -191,12 +200,21 @@ def tool_calls(text: str) -> list[dict]:
     ]
 
 
-def bash_results(text: str) -> dict[str, str]:
-    """{bash command -> the result it actually got}, correlated by tool_use_id.
+def bash_results(text: str) -> dict[str, list[str | None]]:
+    """{bash command -> EVERY result correlated to it, in transcript order}.
 
     Correlation is the whole point. A transcript-wide grep for the guard's deny text cannot say WHO
     was denied, and "who" is exactly the property under test: the reviewer must be denied and the
     main loop must not.
+
+    Every result is kept, and no precedence is applied here. Merging a retry's two results into one
+    was tried twice and failed twice in opposite directions -- first-wins hid a run behind a denial,
+    then unguarded-wins hid a denial behind a run -- because the two oracles have OPPOSITE polarity
+    and one merged value cannot serve both. A denial is the failure for the main-loop check and the
+    pass for the reviewer check. So the decision belongs to each check, which knows its own
+    direction, and this returns the evidence rather than a verdict (Codex review round 5, PR #151).
+
+    A `None` entry is a call whose result never came back: the absence of evidence, never evidence.
     """
     commands: dict[str, str] = {}
     results: dict[str, str] = {}
@@ -228,15 +246,59 @@ def bash_results(text: str) -> dict[str, str]:
                 if isinstance(text, str)
             )
             results[tool_id] = body or ""
-    return {cmd: results.get(tid, "") for tid, cmd in commands.items() if cmd}
+    merged: dict[str, list[str | None]] = {}
+    for tid, command in commands.items():
+        if not command:
+            continue
+        merged.setdefault(command, []).append(results.get(tid))
+    return merged
 
 
-def result_for(marker: str, pairs: dict[str, str]) -> str | None:
-    """The result of the Bash command carrying `marker`, or None if it was never attempted."""
-    for command, result in pairs.items():
+def result_for(marker: str, pairs: dict[str, list[str | None]]) -> tuple[bool, list[str | None]]:
+    """`(attempted, every result)` for the Bash command carrying `marker`.
+
+    `attempted` False means the command was never emitted, so the guard was never consulted.
+    An empty observed list (every entry None) means the calls were emitted and no result ever came
+    back -- INCONCLUSIVE, never evidence the command ran (PROBE-004). An observed `""` is a real
+    answer: a command that ran and printed nothing still ran.
+    """
+    for command, results in pairs.items():
         if marker in command:
-            return result
-    return None
+            return True, results
+    return False, []
+
+
+def observed(results: list[str | None]) -> list[str]:
+    """Only what the oracle actually saw. A `None` is a correlation gap, not an answer."""
+    return [result for result in results if result is not None]
+
+
+def unguarded_runs(results: list[str]) -> list[str]:
+    """Observed results that are neither the guard's denial nor Claude Code's own refusal.
+
+    For a check whose contract is "this agent MUST be denied", each of these is a failure, and one
+    is enough: a guard that denied the first attempt and allowed a retry has not held.
+    """
+    return [
+        result
+        for result in results
+        if GUARD_DENY not in result
+        and not any(block in result for block in CLAUDE_CODE_BLOCKS)
+    ]
+
+
+def canary_leaks(pairs: dict[str, list[str | None]], canaries: tuple[str, ...]) -> list[str]:
+    """Bash commands whose OBSERVED result carried a preload canary.
+
+    A None entry is a correlation gap, never a leak (PROBE-004): the oracle saw no output for that
+    call, so there is nothing to have leaked. Extracted from main() so the distinction has a test --
+    the line it replaced could only be exercised by buying a real session.
+    """
+    return [
+        cmd
+        for cmd, results in pairs.items()
+        if any(body and any(canary in body for canary in canaries) for body in results)
+    ]
 
 
 def spawn_succeeded(text: str, agent_name: str) -> bool:
@@ -594,16 +656,13 @@ def main(argv: list[str] | None = None) -> int:
     # that fetched it was written. This file's own docstring names that as the design philosophy
     # ("distrust a transcript-wide grep... 'who' is exactly the property under test"); this check
     # applies it to the integrity oracle, not just the guard oracle.
-    canary_leaks = [
-        cmd for cmd, body in bash_results(text).items()
-        if BACKEND_CANARY in body or FRONTEND_CANARY in body
-    ]
+    leaking_commands = canary_leaks(bash_results(text), (BACKEND_CANARY, FRONTEND_CANARY))
     probe.check(
-        PASS if not craft_reads and not canary_leaks else FAIL,
+        PASS if not craft_reads and not leaking_commands else FAIL,
         "sde-fullstack did NOT read a craft SKILL.md (it was preloaded)",
         f"agent still read a craft skill by path, or leaked its canary through a Bash command -- "
         f"preload did not take effect: Read/Grep/Glob calls={craft_reads} leaking Bash "
-        f"commands={canary_leaks}",
+        f"commands={leaking_commands}",
     )
     # A Skill tool call carries no file_path, so it is invisible to craft_reads above -- an agent that
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
@@ -690,48 +749,75 @@ def main(argv: list[str] | None = None) -> int:
     print("\n== the guard denies the reviewer, and ONLY the reviewer ==")
     pairs = bash_results(text)
 
-    reviewer = result_for("REVIEWER_PROBE", pairs)
-    if reviewer is None:
+    reviewer_attempted, reviewer = result_for("REVIEWER_PROBE", pairs)
+    reviewer_seen = observed(reviewer)
+    reviewer_ran = unguarded_runs(reviewer_seen)
+    if not reviewer_attempted:
         probe.check(
             SKIP,
             "the guard DENIED the reviewer's denylisted command",
             "the reviewer never attempted the command (it may have declined on its own mandate), so "
             "the guard was never consulted. Good agent behaviour, but it proves nothing about the guard.",
         )
-    elif GUARD_DENY in reviewer:
+    elif not reviewer_seen:
+        probe.check(
+            SKIP,
+            "the guard DENIED the reviewer's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
+        )
+    elif reviewer_ran:
+        # ANY unguarded run fails this check, whatever else the session also produced: a guard
+        # that denied one attempt and allowed a retry has not held, and the denial must not mask
+        # it. The main-loop check below reads the SAME evidence with the opposite polarity.
+        probe.check(
+            FAIL,
+            "the guard DENIED the reviewer's denylisted command",
+            f"the command RAN UNGUARDED in {len(reviewer_ran)} of {len(reviewer_seen)} correlated "
+            f"result(s). code-reviewer executed `find -exec` against the repository under review. "
+            f"Result: {reviewer_ran[0].strip()[:160]!r}",
+        )
+    elif any(GUARD_DENY in result for result in reviewer_seen):
         probe.check(PASS, "the guard DENIED the reviewer's denylisted command")
-    elif any(block in reviewer for block in CLAUDE_CODE_BLOCKS):
+    else:
         probe.check(
             SKIP,
             "the guard DENIED the reviewer's denylisted command",
             f"Claude Code's own permission layer refused it before the guard's verdict mattered: "
-            f"{reviewer.strip()[:120]!r}",
-        )
-    else:
-        probe.check(
-            FAIL,
-            "the guard DENIED the reviewer's denylisted command",
-            f"the command RAN UNGUARDED. code-reviewer executed `find -exec` against the repository "
-            f"under review. Result: {reviewer.strip()[:160]!r}",
+            f"{reviewer_seen[0].strip()[:120]!r}",
         )
 
-    mainloop = result_for("MAINLOOP_PROBE", pairs)
-    if mainloop is None:
+    mainloop_attempted, mainloop = result_for("MAINLOOP_PROBE", pairs)
+    mainloop_seen = observed(mainloop)
+    mainloop_denied = [result for result in mainloop_seen if GUARD_DENY in result]
+    if not mainloop_attempted:
         probe.check(
             SKIP,
             "the guard IGNORED the main loop's identical command",
             "the main loop never attempted the command, so the scoping was not exercised.",
         )
-    elif GUARD_DENY in mainloop:
+    elif not mainloop_seen:
+        probe.check(
+            SKIP,
+            "the guard IGNORED the main loop's identical command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
+        )
+    elif mainloop_denied:
+        # OPPOSITE polarity to the reviewer check above: here a denial IS the failure, and one is
+        # enough. This is exactly why no single merged value could serve both checks.
         probe.check(
             FAIL,
             "the guard IGNORED the main loop's identical command",
-            "the session-wide guard caught the USER'S OWN Bash. This would make the plugin unusable: "
+            f"the session-wide guard caught the USER'S OWN Bash in {len(mainloop_denied)} of "
+            f"{len(mainloop_seen)} correlated result(s). This would make the plugin unusable: "
             "you could not run an ordinary command in your own session.",
         )
     else:
-        # Anything other than the guard's voice is a pass here: even a permission prompt proves the
-        # guard did not deny it, which is the property under test.
+        # Anything other than the guard's voice is a pass here: even a permission prompt proves
+        # the guard did not deny it, which is the property under test.
         probe.check(PASS, "the guard IGNORED the main loop's identical command")
 
     print("\n== a MAIN session run as a guarded agent is guarded ==")
@@ -754,31 +840,46 @@ def main(argv: list[str] | None = None) -> int:
         ],
         cwd=str(project),
     )
-    agent_flag = result_for("AGENTFLAG_PROBE", bash_results(agent_session.stdout or ""))
-    if agent_flag is None:
+    agent_flag_attempted, agent_flag = result_for(
+        "AGENTFLAG_PROBE", bash_results(agent_session.stdout or "")
+    )
+    agent_flag_seen = observed(agent_flag)
+    agent_flag_ran = unguarded_runs(agent_flag_seen)
+    if not agent_flag_attempted:
         probe.check(
             SKIP,
             "the guard DENIED a --agent main session's denylisted command",
             "the session never attempted the command, so the guard was not consulted -- the "
             "`--agent` scoping clause stays doc-sourced for this run.",
         )
-    elif GUARD_DENY in agent_flag:
+    elif not agent_flag_seen:
+        probe.check(
+            SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first. This is unevaluated, not "
+            "evidence the command ran unguarded. Re-run.",
+        )
+    elif agent_flag_ran:
+        # Same polarity as the reviewer check: this session IS a guarded agent, so any unguarded
+        # run is the failure, and a denial elsewhere in the session cannot excuse it.
+        probe.check(
+            FAIL,
+            "the guard DENIED a --agent main session's denylisted command",
+            f"`--agent sde-agents:code-reviewer` ran a denylisted command UNGUARDED in "
+            f"{len(agent_flag_ran)} of {len(agent_flag_seen)} correlated result(s), so a main "
+            "session launched as a guarded agent carries no agent_type the hook can scope on. "
+            "Every subagent check above can pass while this is broken: "
+            f"{agent_flag_ran[0].strip()[:160]!r}",
+        )
+    elif any(GUARD_DENY in result for result in agent_flag_seen):
         probe.check(PASS, "the guard DENIED a --agent main session's denylisted command")
-    elif any(block in agent_flag for block in CLAUDE_CODE_BLOCKS):
+    else:
         probe.check(
             SKIP,
             "the guard DENIED a --agent main session's denylisted command",
             f"Claude Code's own permission layer refused it before the guard's verdict mattered: "
-            f"{agent_flag.strip()[:120]!r}",
-        )
-    else:
-        probe.check(
-            FAIL,
-            "the guard DENIED a --agent main session's denylisted command",
-            "`--agent sde-agents:code-reviewer` ran a denylisted command UNGUARDED, so a main "
-            "session launched as a guarded agent carries no agent_type the hook can scope on. "
-            "Every subagent check above can pass while this is broken: "
-            f"{agent_flag.strip()[:160]!r}",
+            f"{agent_flag_seen[0].strip()[:120]!r}",
         )
 
     print("\n== a conditional reference is actually READ when its predicate trips ==")

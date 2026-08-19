@@ -148,6 +148,56 @@ class ProbeCanaryTests(unittest.TestCase):
         )
 
 
+class ProbeInconclusiveReportingTests(unittest.TestCase):
+    """The epilogue must not assert one cause for every inconclusive check.
+
+    Codex review on #151: `report()` attributed every SKIP to Claude Code's sandbox refusing the
+    command and told the operator to re-run outside a Claude Code session. That was already wrong
+    for a command the agent never attempted and for PROBE-002's uncorrelated spawn; the
+    correlation-gap SKIP added in this PR makes it wrong a third way. A probe that prints an
+    accurate per-check cause and then contradicts it in the summary sends the operator to fix
+    the wrong thing.
+    """
+
+    @staticmethod
+    def _report(*results: tuple[str, str, str]) -> tuple[int, str]:
+        probe = probe_plugin.Probe()
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            for status, label, detail in results:
+                probe.check(status, label, detail)
+            code = probe.report()
+        return code, buffer.getvalue()
+
+    def test_the_epilogue_does_not_blame_the_sandbox_for_a_correlation_gap(self) -> None:
+        code, out = self._report((
+            probe_plugin.SKIP,
+            "the guard DENIED a --agent main session's denylisted command",
+            "the call was emitted but no tool_result ever correlated to it, so the oracle saw "
+            "no verdict: the session exited or truncated first.",
+        ))
+        self.assertEqual(2, code)
+        self.assertIn("no tool_result ever correlated", out, "the real cause must still print")
+        self.assertNotIn(
+            "Claude Code's own sandbox refused the command",
+            out,
+            "the summary asserted a cause this check did not report",
+        )
+
+    def test_a_sandbox_refusal_still_gets_its_actionable_advice(self) -> None:
+        _code, out = self._report((
+            probe_plugin.SKIP,
+            "the guard DENIED the reviewer's denylisted command",
+            "Claude Code's own permission layer refused it before the guard's verdict mattered.",
+        ))
+        self.assertIn("plain terminal", out)
+
+    def test_a_clean_run_prints_no_inconclusive_epilogue(self) -> None:
+        code, out = self._report((probe_plugin.PASS, "everything held", ""))
+        self.assertEqual(0, code)
+        self.assertNotIn("UNPROVEN", out)
+
+
 class ProbeTranscriptParserTests(unittest.TestCase):
     def test_tool_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
@@ -204,7 +254,173 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual({"echo GOOD": "good result"}, probe_plugin.bash_results(transcript))
+        self.assertEqual({"echo GOOD": ["good result"]}, probe_plugin.bash_results(transcript))
+
+    def test_an_uncorrelated_bash_call_is_inconclusive_not_an_unguarded_run(self) -> None:
+        """PROBE-004: a Bash call with no correlated tool_result proves nothing about the guard.
+
+        `bash_results` supplied "" for such a call, so `result_for` returned an empty string
+        rather than signalling the gap; the guard checks then fell through to their FAIL branch
+        and recorded "the command RAN UNGUARDED" with an empty Result. A session that emitted
+        the call and then exited nonzero or truncated is the probe's INCONCLUSIVE case - the
+        same distinction PROBE-002 and PROBE-003 already draw.
+        """
+        transcript = json.dumps({"message": {"content": [{
+            "type": "tool_use", "id": "bash-uncorrelated", "name": "Bash",
+            "input": {"command": "find . -exec AGENTFLAG_PROBE"},
+        }]}})
+
+        pairs = probe_plugin.bash_results(transcript)
+        self.assertEqual({"find . -exec AGENTFLAG_PROBE": [None]}, pairs)
+
+        attempted, result = probe_plugin.result_for("AGENTFLAG_PROBE", pairs)
+        self.assertTrue(attempted, "the call WAS emitted; the session simply never answered it")
+        self.assertEqual([], probe_plugin.observed(result),
+                         "no correlated result, so there is nothing to grade")
+
+    def test_a_repeated_command_keeps_its_observed_result_over_a_later_gap(self) -> None:
+        """Codex review on #151: the map is command-keyed, so a duplicate call overwrote evidence.
+
+        An agent that retries the same denylisted command produces two `tool_use` ids for one
+        command string. If the first RAN and returned a result, and the retry was emitted before
+        the transcript truncated, later-wins replaced the observed result with the correlation
+        gap -- and the guard check downgraded a detected FAILURE to INCONCLUSIVE. A gap is the
+        absence of evidence and must never displace evidence.
+        """
+        def transcript(*blocks: dict) -> str:
+            return json.dumps({"message": {"content": list(blocks)}})
+
+        ran_then_truncated = transcript(
+            {"type": "tool_use", "id": "call-1", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "call-1", "content": "ran unguarded"},
+            {"type": "tool_use", "id": "call-2", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+        )
+        self.assertEqual(
+            {"find . -exec REVIEWER_PROBE": ["ran unguarded", None]},
+            probe_plugin.bash_results(ran_then_truncated),
+            "the observed result is the evidence; the retry's gap must not displace it",
+        )
+        self.assertEqual(
+            ["ran unguarded"],
+            probe_plugin.observed(
+                probe_plugin.result_for(
+                    "REVIEWER_PROBE", probe_plugin.bash_results(ran_then_truncated)
+                )[1]
+            ),
+        )
+
+        truncated_then_ran = transcript(
+            {"type": "tool_use", "id": "call-1", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_use", "id": "call-2", "name": "Bash",
+             "input": {"command": "find . -exec REVIEWER_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "call-2", "content": "ran unguarded"},
+        )
+        self.assertEqual(
+            {"find . -exec REVIEWER_PROBE": [None, "ran unguarded"]},
+            probe_plugin.bash_results(truncated_then_ran),
+            "order must not decide it either: the correlated result wins from either side",
+        )
+
+    def test_every_correlated_result_is_kept_for_a_repeated_command(self) -> None:
+        """Retires the merge-precedence tests: there is no merge left to get wrong.
+
+        Two rounds of review killed two opposite precedences -- first-wins hid a run behind a
+        denial, unguarded-wins hid a denial behind a run -- because the reviewer check and the
+        main-loop check read the SAME evidence with opposite polarity. One value cannot serve
+        both, so the parser now returns all of them and each check decides. The old tests pinned
+        a decision that no longer exists; these pin the evidence and the two verdicts instead.
+        """
+        def transcript(*results: str) -> str:
+            blocks = []
+            for index, body in enumerate(results):
+                blocks.append({"type": "tool_use", "id": f"c{index}", "name": "Bash",
+                               "input": {"command": "find . -exec PROBE"}})
+                if body is not None:
+                    blocks.append({"type": "tool_result", "tool_use_id": f"c{index}",
+                                   "content": body})
+            return json.dumps({"message": {"content": blocks}})
+
+        RAN = "total 12 drwxr-xr-x repo"
+        both = probe_plugin.bash_results(transcript(probe_plugin.GUARD_DENY, RAN))
+        self.assertEqual({"find . -exec PROBE": [probe_plugin.GUARD_DENY, RAN]}, both)
+        self.assertEqual(
+            both, probe_plugin.bash_results(transcript(probe_plugin.GUARD_DENY, RAN)),
+            "order is preserved, not resolved",
+        )
+
+    def test_each_check_reads_the_shared_evidence_with_its_own_polarity(self) -> None:
+        """The reviewer must be denied; the main loop must not. Same input, opposite verdicts."""
+        RAN = "total 12 drwxr-xr-x repo"
+        DENY = probe_plugin.GUARD_DENY
+
+        for label, results in (
+            ("denied then ran", [DENY, RAN]),
+            ("ran then denied", [RAN, DENY]),
+        ):
+            with self.subTest(order=label):
+                seen = probe_plugin.observed(results)
+                # Reviewer polarity: any unguarded run is the failure.
+                self.assertTrue(
+                    probe_plugin.unguarded_runs(seen),
+                    "a guard that allowed one attempt has not held",
+                )
+                # Main-loop polarity: any denial is the failure.
+                self.assertTrue(
+                    [r for r in seen if DENY in r],
+                    "the guard caught the user's own Bash at least once",
+                )
+
+        denied_twice = probe_plugin.observed([DENY, DENY])
+        self.assertEqual([], probe_plugin.unguarded_runs(denied_twice),
+                         "denied twice is denied -- the aggregate must not invent a failure")
+
+        gap_only = probe_plugin.observed([None, None])
+        self.assertEqual([], gap_only, "a correlation gap is never evidence in either direction")
+
+    def test_a_command_never_attempted_stays_distinct_from_one_never_answered(self) -> None:
+        """The two INCONCLUSIVE causes need different operator actions, so they stay separable."""
+        self.assertEqual((False, []), probe_plugin.result_for("ABSENT_PROBE", {}))
+
+    def test_a_correlated_empty_result_remains_a_real_gradeable_answer(self) -> None:
+        """An empty tool_result is the command running and printing nothing - that IS evidence.
+
+        The repair must not swallow it: only the absence of any correlated result is the gap.
+        """
+        transcript = json.dumps({"message": {"content": [
+            {"type": "tool_use", "id": "bash-empty", "name": "Bash",
+             "input": {"command": "find . -exec MAINLOOP_PROBE"}},
+            {"type": "tool_result", "tool_use_id": "bash-empty", "content": ""},
+        ]}})
+
+        pairs = probe_plugin.bash_results(transcript)
+        self.assertEqual({"find . -exec MAINLOOP_PROBE": [""]}, pairs)
+        self.assertEqual((True, [""]), probe_plugin.result_for("MAINLOOP_PROBE", pairs))
+
+    def test_a_canary_leak_needs_an_observed_result_not_a_correlation_gap(self) -> None:
+        """PROBE-004 fallout: a None body is a gap, not a leak, and must not be searched.
+
+        Once `bash_results` reports an uncorrelated call as None, every consumer that treats its
+        values as text is a crash waiting for a truncated session - `CANARY in None` raises
+        TypeError. It is also wrong on the merits: the oracle saw no output for that call, so
+        there is nothing to have leaked.
+        """
+        canaries = (probe_plugin.BACKEND_CANARY, probe_plugin.FRONTEND_CANARY)
+
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": [None]}, canaries))
+        self.assertEqual([], probe_plugin.canary_leaks({"echo hi": ["clean output"]}, canaries))
+        self.assertEqual(
+            ["cat backend-craft/SKILL.md"],
+            probe_plugin.canary_leaks(
+                {
+                    "cat backend-craft/SKILL.md": [f"...{probe_plugin.BACKEND_CANARY}..."],
+                    "echo hi": [None],
+                },
+                canaries,
+            ),
+        )
 
     def test_agent_consumers_ignore_non_object_tool_input(self) -> None:
         transcript = json.dumps(
@@ -365,7 +581,7 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             ["bash-1", "agent-1"],
             [call["id"] for call in probe_plugin.tool_calls(transcript)],
         )
-        self.assertEqual({"echo PROBE": "bash ok"}, probe_plugin.bash_results(transcript))
+        self.assertEqual({"echo PROBE": ["bash ok"]}, probe_plugin.bash_results(transcript))
         self.assertTrue(probe_plugin.spawn_succeeded(transcript, "sde-agents:sde-fullstack"))
         self.assertEqual(
             ["agent ok"],

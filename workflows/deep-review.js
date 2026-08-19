@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-review',
-  description: 'Two parallel code-reviewer lanes — correctness + security threat model — over the working-tree diff; the final static gate for a multi-commit branch. args (optional): a single git ref = the diff base via merge-base (default: main); never a range, a checkout target, or prose. To review a branch, check it out first. Read the returned verdict, gated on P0/P1 confirmed_criticals — never findings-list emptiness; P2/P3 do not block. Static-only: stacks on tests and acceptance verification, never replaces them.',
+  description: 'Two parallel code-reviewer lanes — correctness + security threat model — over the working-tree diff; the final static gate for a multi-commit branch. args (optional): a single git ref = the diff base via merge-base (default: main); never a range, a checkout target, or prose. To review a branch, check it out first. Read the returned verdict, gated first by P0/P1 confirmed_criticals and lane verdicts (any request-changes = do-not-merge), plus not_checked for coverage gaps — never findings-list emptiness; P2/P3 do not block by themselves. Static-only: stacks on tests and acceptance verification, never replaces them.',
   phases: [
     { title: 'Scope', detail: 'guarded reviewer enumerates the diff', model: 'sonnet' },
     { title: 'Review', detail: 'correctness and security lanes in parallel', model: 'opus' },

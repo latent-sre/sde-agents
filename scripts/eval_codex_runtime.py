@@ -323,6 +323,31 @@ def _stats(parsed: Mapping[str, object], duration_ms: int) -> dict[str, object]:
     }
 
 
+def _measurement_failed(stats: dict[str, object]) -> dict[str, object]:
+    """Mark `stats` as a run that measured NOTHING about the contract, and return it.
+
+    Every early return in `run_session` that yields empty text does so for one of two reasons,
+    and they must not be confused:
+
+      * The MEASUREMENT failed - nonzero exit, a failure event, observable tool activity, a
+        timeout, or a model other than the requested pin. The run is not evidence about the
+        contract in either direction and must be excluded from the rate.
+      * The CONTRACT failed - the session completed cleanly and answered with empty text. That
+        is a real 0, and excluding it would let a regression vanish into an unchanged rate
+        (PR #147 review). It does NOT come through this helper.
+
+    Gradeability is decided by `eval_behavioral._session_reached_a_result`, which reads
+    `completed` and `session_failed`. `completed` stays a LITERAL reading of the transcript -
+    a run can emit a completion event and still be worthless as measurement, and the exit-1
+    branch is pinned on that reading - so `session_failed` carries the verdict. This helper
+    exists so a new invalidating branch is marked by writing the local idiom rather than by
+    remembering a flag: that omission is what put EVAL-005, EVAL-008 and the nonzero-exit route
+    into the published rate as contract failures.
+    """
+    stats["session_failed"] = True
+    return stats
+
+
 def _partial_text(value: object) -> str:
     if isinstance(value, str):
         return value
@@ -392,7 +417,7 @@ def run_session(
         "result_error": False,
     }
     if binary is None:
-        return "", set(), "the `codex` CLI is not on PATH", empty
+        return "", set(), "the `codex` CLI is not on PATH", _measurement_failed(dict(empty))
     bare = _bare_agent(agent)
     root = scratch_root or (Path.home() / ".sde-agents" / "eval-scratch-codex")
     started = time.monotonic()
@@ -423,10 +448,20 @@ def run_session(
         parsed = parse_jsonl(stdout)
         _raise_if_unavailable(parsed, _diagnostic_lines(stdout), stderr)
         stats = _stats(parsed, duration)
-        return "", {bare}, f"timed out after {timeout}s before the session concluded", stats
+        return (
+            "",
+            {bare},
+            f"timed out after {timeout}s before the session concluded",
+            _measurement_failed(stats),
+        )
     except (OSError, subprocess.SubprocessError) as exc:
         duration = round((time.monotonic() - started) * 1000)
-        return "", {bare}, f"run failed: {exc}", {**empty, "duration_ms": duration}
+        return (
+            "",
+            {bare},
+            f"run failed: {exc}",
+            _measurement_failed({**empty, "duration_ms": duration}),
+        )
 
     duration = round((time.monotonic() - started) * 1000)
     stdout, stderr = proc.stdout or "", proc.stderr or ""
@@ -438,9 +473,19 @@ def run_session(
     stats = _stats(parsed, duration)
     observed = parsed["observed_models"]
     if proc.returncode != 0:
-        return "", {bare}, f"Codex exited {proc.returncode} before terminal success", stats
+        return (
+            "",
+            {bare},
+            f"Codex exited {proc.returncode} before terminal success",
+            _measurement_failed(stats),
+        )
     if parsed["failed"]:
-        return "", {bare}, "Codex emitted a failure event; error text was not graded", stats
+        return (
+            "",
+            {bare},
+            "Codex emitted a failure event; error text was not graded",
+            _measurement_failed(stats),
+        )
     tool_attempts = parsed["tool_attempts"]
     if tool_attempts:
         return (
@@ -448,14 +493,27 @@ def run_session(
             {bare},
             "observable Codex tool activity invalidated the run: "
             + ", ".join(str(item) for item in tool_attempts),
-            stats,
+            _measurement_failed(stats),
         )
     if not parsed["completed"]:
-        return "", {bare}, "no turn.completed event was captured", stats
+        return (
+            "",
+            {bare},
+            "no turn.completed event was captured",
+            _measurement_failed(stats),
+        )
     if observed and (len(observed) != 1 or observed[0] != model):
-        return "", {bare}, "observed model differs from the requested Codex model", stats
+        return (
+            "",
+            {bare},
+            "observed model differs from the requested Codex model",
+            _measurement_failed(stats),
+        )
     final = parsed["last_message"]
     if not isinstance(final, str) or not final:
+        # NOT _measurement_failed, deliberately: the session ran to a clean turn.completed
+        # and answered with nothing. That is the CONTRACT failing and must be graded as a
+        # real 0 - the Codex twin of the completed-but-empty Claude session PR #147 fixed.
         return "", {bare}, "no completed agent_message was captured", stats
     return final, {bare}, None, stats
 
