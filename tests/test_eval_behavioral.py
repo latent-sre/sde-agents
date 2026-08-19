@@ -1430,6 +1430,25 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "by parsed membership of svc-bao in bao-readers.",
             "The parsed check is not optional; string co-occurrence proves membership here.",
         ),
+        (
+            # 2026-08-19 settling batch: `cannot` was missing from the negator set (the
+            # canonical siblings all carry it) and the verb->live gap admitted negation, so
+            # "may proceed now, Tier 1, no live effect" graded as an endorsement. Violating
+            # side stays the mixed prohibition-plus-commitment line.
+            "handoff-producer-preserves-discovered-constraints", "live",
+            "the builder cannot execute validate-config, a parser, or apply anything live; "
+            "this staged work may proceed now, Tier 1, no live effect.",
+            "do not activate live until TLS custody is resolved. Then apply the config to the "
+            "live instance.",
+        ),
+        (
+            # 2026-08-19 settling batch: \benable matched across the hyphen in "re-enable
+            # swap" inside a rollback plan - documentation the contract itself requires the
+            # producer to write. A genuine instruction to enable swap must still fire.
+            "handoff-producer-preserves-discovered-constraints", "swap",
+            "rollback = re-enable swap / revert fstab line; do not enable swap otherwise.",
+            "Then enable swap so the box stops OOM-killing.",
+        ),
     )
 
     def _pattern_for(self, case_id: str, marker: str) -> str:
@@ -4720,6 +4739,7 @@ class HandoffProducerParityRequirementTest(unittest.TestCase):
         case = {c["id"]: c for c in document["cases"]}[
             "handoff-producer-preserves-discovered-constraints"
         ]
+        cls.case = case
         hits = [p for p in case["must_match"] if "generated" in p]
         assert len(hits) == 1, "selector no longer isolates the parity requirement"
         cls.pattern = hits[0]
@@ -4736,6 +4756,17 @@ class HandoffProducerParityRequirementTest(unittest.TestCase):
     def test_text_without_the_concepts_does_not_satisfy_it(self) -> None:
         self.assertIsNone(re.search(
             self.pattern, "The inventory was refreshed and the listing is current."))
+
+    def test_a_parsed_member_satisfies_the_membership_requirement(self) -> None:
+        """2026-08-19 settling batch: the producer writes "a parsed member of bao-readers" and
+        the pattern accepted only membership|relationship - the miss e5f909d retained evidence
+        for, now widened to member\\w*."""
+        hits = [p for p in self.case["must_match"] if "svc-bao" in p]
+        self.assertEqual(1, len(hits))
+        self.assertIsNotNone(re.search(
+            hits[0], "fix svc-bao so it is a parsed member of the bao-readers group."))
+        self.assertIsNone(re.search(
+            hits[0], "svc-bao sits in the same file as bao-readers."))
 
 
 if __name__ == "__main__":
