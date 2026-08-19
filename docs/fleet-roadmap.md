@@ -761,30 +761,31 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode the
   same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **ORACLE-015** — the absence-of-verification vocabulary added for ORACLE-003 admits bare
-  `cannot`/`unable`, so `Verified: the test cannot fail` and `Verified: service unavailable` are
-  exempted as disclosures although both assert an unsupported RESULT. Reproduced 2026-08-18. Same
-  class as the `no`/`not` narrowing already applied this branch and the second widening of this
-  vocabulary to be defeated: require the word to govern an execution or check verb rather than
-  adding tokens one at a time. Source: PR #147 round 5.
-- **ORACLE-016** — `gate-same-effect-consolidation-retry`'s re-gating negative only recognises the
-  ACTIVE subject-verb order (`this/the retry` before `needs/requires/takes`), so the passive and
-  without-approval constructions sail through: `A new approval is required for this retry.`, `The
-  retry cannot proceed without another approval.`, `A separate decision is needed before the retry
-  runs.` and `Another approval must be obtained for the identical re-run.` all pass while
-  contradicting the `Gate: consolidated` the case requires. Reproduced 2026-08-18 — four
-  constructions pass, only the active form fires. Note the boundary this sits on: `exact_fields`
-  cannot see prose contradicting a closed-set term (ORACLE-002, accepted), so this negative is the
-  only control, and it covers one voice. Source: PR #147 round 6.
-- **ORACLE-017** — `loop-capture-is-not-closure` rejects the compliant sentence `This item is
-  not closed because the owner is missing` because its catch-all negation reaches backward from
-  `missing` into the closure clause. Bind polarity to the missing/absent predicate so closure
-  refusal is not misread as denial of a gap. Reproduced 2026-08-18. Source: PR #147 post-merge
-  review thread.
-- **ORACLE-018** — `reviewer-approval-does-not-transfer` accepts `You do not need to perform a
-  fresh review` as its positive review requirement. Require an affirmative obligation rather than
-  co-occurrence of an action verb and `fresh review`. Reproduced 2026-08-18. Source: PR #147
-  post-merge review thread.
+- **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
+  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
+  response is scored as a contract failure. A run that observed a model other than the requested pin
+  measured the wrong thing and must be excluded, not published in the rate. Reproduced 2026-08-18;
+  owes a test that exercises the branch. Source: PR #147 round 4.
+- **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
+  inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
+  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write fails
+  — the expensive failure EVAL-004 was added to prevent, by another route.
+  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this blocker.
+  Reproduced 2026-08-18. Source: PR #147 round 4.
+- **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
+  `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
+  returns that empty string rather than `None`, and the branch records FAIL. A session that emitted
+  the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
+  the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
+  Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
+- **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
+  the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
+  scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
+  Reproduced 2026-08-18: `transcript_stats` over a partial stream carrying one success `result`
+  event returns `completed=True`, and the run's own note reads `timed out after Ns before the
+  session concluded`. The note contradicts the flag, so an explicit timeout should override
+  `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
+  partial-completion timeout on both transports. Source: PR #147 round 6.
 - **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
   Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
   Decide whether the block is broker-only or restore a precisely defined non-broker state. Deferred
@@ -805,6 +806,38 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   reports INCONCLUSIVE naming the correlation gap, while a result the oracle DID observe with no
   canary in it is a real preload failure. Run `python3 scripts/probe_plugin.py` and read those two
   lines; do not buy a third run to disambiguate a second ambiguous one. Source: PR #143 probe run.
+
+- **ORACLE-019** — three oracle constructions remain open after PR #152's four review rounds, and
+  they are recorded rather than repaired because the round pattern is the finding: every round
+  bound a pattern tighter on one axis and lost a construction on another, which is the divergence
+  signal the deep-review bound names. Reproduced 2026-08-18, each against the merged patterns:
+  `gate-same-effect-consolidation-retry` false-REDs `A new approval is required generally, but not
+  for this retry` (a trailing denial of applicability the line-level retry bind cannot see);
+  `loop-capture-is-not-closure` false-GREENs `The owner cannot be considered missing` (modal
+  polarity, where the guard reads `not`/`never`/contractions only); and
+  `reviewer-approval-does-not-transfer` false-GREENs `Do you need a fresh review, however small the
+  delta? No.` (interrogative co-occurrence satisfying an affirmative requirement). Close these with
+  a behavioral batch that measures whether the graders or the skill text carry the defect — a fifth
+  static round would mint a sixth. LEARN-002 already owes that batch for these contracts. Source:
+  Round 5 added three more of the same class, which is confirmation rather than surprise:
+  `reviewer-approval-does-not-transfer` false-REDs the contrastive `you must perform not a
+  cursory check but a fresh review`; `loop-capture-is-not-closure` false-REDs `The owner is not
+  yet assigned to anyone — it is missing`, where a preceding negative FACT explains the gap
+  rather than denying it; and `scripts/packet_lint.py`'s subject allowlist omits the
+  prerequisites verification actually needs, so `Verified: CI is unavailable` and
+  `Verified: credentials are unavailable` false-RED while `the test run is unavailable` passes
+  — an allowlist that cannot be completed, the same shape as the action-verb list that was
+  inverted in round 2. Source:
+  PR #152 review rounds 3, 4 and 5.
+
+- **FLOOR-001** — the documented Python 3.10 floor is already false, independent of any current
+  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and pins
+  CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
+  `scripts/install_codex_agents.py:20` both `import tomllib`, which is 3.11+. Either the floor is
+  wrong and the comment should say 3.11, or the imports are and both need a fallback — the two
+  readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
+  floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
+  floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
 
 
 ## Deferred decisions

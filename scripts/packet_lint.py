@@ -180,10 +180,43 @@ _CLAIM_NEGATION_RE = re.compile(
     # `Verified: configuration is not malformed` are unevidenced assertions, and both bypassed
     # the evidence requirement (PR #147 review). Each token below says a check did not run or
     # its subject was not there.
+    # ORACLE-015: the vocabulary must describe the VERIFICATION failing, not the subject's
+    # state. Bare `cannot`/`unable`/`unavailable` let a result claim wear the exemption --
+    # `Verified: the test cannot fail` and `Verified: service unavailable` both assert an
+    # unsupported RESULT. That was the second widening of this list to be defeated, so the
+    # bound is structural rather than another token struck off one at a time: an ability word
+    # must GOVERN an execution or check verb, and a state word must name the verification's
+    # own subject. A word that governs neither is describing the world, not a missing check.
     r"\b(?:nothing|none|n/?a|no\s+(?:commands?|output|evidence|checks?|runs?|verification)"
-    r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run|could\s?n[o\u2019']?t|could\s+not"
-    r"|cannot|can[\u2019']t|unable|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
-    r"|not\s+present|not\s+available|unavailable|absent|missing|no\s+access|inaccessible)\b",
+    r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
+    r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
+    # NO ATOMIC GROUPS. `(?>...)` is Python 3.11+, and the shipped scripts keep a 3.10 floor
+    # (.github/workflows/validate.yml) while CI pins 3.14 only -- so the construct imported
+    # fine here and would have raised `re.error: unknown extension ?>` on a supported
+    # interpreter, with no lane to catch it (Codex review, PR #152).
+    #
+    # The disqualifying set is the OUTCOMES, not the actions: enumerating actions is unbounded
+    # (run, rerun, retrieve, open, query, find) while outcomes are closed. Both optional words
+    # sit INSIDE the lookahead as well as after it, so the engine cannot decline to consume
+    # `be`/`to` and then match it as the governed verb -- the escape an atomic group was
+    # papering over.
+    #
+    # An outcome stays an outcome when a QUALIFIER follows it ("cannot fail under these
+    # conditions"); it becomes an action when an OBJECT does ("could not pass authentication").
+    # Prepositional qualifiers are listed; anything else reads as the object of a real verb.
+    r"\s+(?!(?:to\s+)?(?:be\s+)?"
+    r"(?:fail(?:s|ed)?|pass(?:es|ed)?|break|broke|succeed(?:s|ed)?|work(?:s|ed)?"
+    r"|exist(?:s|ed)?|differ(?:s|ed)?|happen(?:s|ed)?|occur(?:s|red)?|matter(?:s|ed)?"
+    r"|wrong|right|correct|incorrect|true|false|valid|invalid|broken|fine|safe)"
+    r"(?:\s*(?:[.,;:!?]|$)|\s+(?:under|on|in|with|for|after|before|during|when|if|unless"
+    r"|because|since|given|despite|at|by|from|over|within|across|unless)\b))"
+    r"(?:to\s+)?(?:be\s+)?\w+\b"
+    r"|does\s?n[o\u2019']?t\s+exist|does\s+not\s+exist"
+    r"|(?:commands?|output|evidence|checks?|runs?|verification|tests?|logs?|transcripts?"
+    r"|artifacts?|results?|tools?|fixtures?|paths?|files?|revisions?|suites?)"
+    r"\s+(?:\w+\s+){0,2}?(?:is\s+|are\s+|was\s+|were\s+)?"
+    r"(?:not\s+present|not\s+available|unavailable|absent|missing|inaccessible)"
+    r"|no\s+access)\b",
     re.IGNORECASE,
 )
 

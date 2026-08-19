@@ -7,6 +7,7 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
+import ast
 import re
 import unittest
 
@@ -1161,6 +1162,72 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
             with self.subTest(disclosure=disclosure):
                 self.assertIsNone(packet_lint._unevidenced_claim(disclosure))
 
+    def test_an_absence_word_must_govern_a_check_to_earn_the_exemption(self) -> None:
+        """ORACLE-015: bare `cannot`/`unable`/`unavailable` let a RESULT claim wear the exemption.
+
+        `Verified: the test cannot fail` and `Verified: service unavailable` assert unsupported
+        results, yet each carried a vocabulary token and was exempted as a disclosure. This is
+        the SECOND widening of this vocabulary to be defeated, so the repair is the mechanism
+        rather than another token struck off one at a time: an ability word must govern an
+        execution or check verb, and a state word must name the verification's own subject.
+        """
+        for claim in (
+            "Verified: the test cannot fail",
+            "Verified: service unavailable",
+            "Verified: the config cannot be wrong",
+            "Verified: the database is unavailable and consistent",
+            # The `be` sidestep: with a non-atomic optional, the engine declined to consume
+            # `be`, matched it as the governed verb, and the outcome word behind it was never
+            # inspected.
+            "Verified: the config cannot be wrong",
+            "Verified: the result cannot be incorrect",
+            "Verified: the tests cannot pass",
+            # Codex review round 4: an outcome stays an outcome when a QUALIFIER follows it.
+            # Requiring a clause end let a trailing adverbial consume the exemption, so an
+            # unsupported result claim graded clean. A prepositional qualifier is not an object.
+            "Verified: the tests cannot fail under these conditions",
+            "Verified: cannot pass on Windows",
+        ):
+            with self.subTest(claim=claim):
+                self.assertIsNotNone(
+                    packet_lint._unevidenced_claim(claim),
+                    "asserts a result no evidence supports",
+                )
+
+        for disclosure in (
+            "Verified: I could not run the suite",
+            "Verified: unable to execute the check",
+            "Verified: the log output is missing",
+            "Verified: the test run is unavailable",
+            # Codex review, PR #152: `rerun`/`re-run` are the ordinary spellings of "the
+            # execution did not happen". The first governed-verb list matched only bare `run`,
+            # so the narrowing turned three honest disclosures into unsupported-claim REDs --
+            # re-creating ORACLE-003's defect while repairing ORACLE-015.
+            "Verified: unable to rerun the suite",
+            "Verified: I could not re-run the tests",
+            "Verified: could not rerun the check",
+            # Codex review round 2, PR #152: an allowlist of action verbs cannot be completed --
+            # retrieve, open, query and find were all missing, and the next reviewer would find
+            # four more. The rule is inverted: an ability word may govern any ACTION, and only
+            # an outcome or property disqualifies the exemption.
+            "Verified: I could not retrieve the CI logs",
+            "Verified: could not open the log file",
+            "Verified: unable to query the endpoint",
+            "Verified: could not find the fixture",
+            "Verified: the format cannot be verified",
+            # Codex review round 3: `pass` is an outcome in "the tests cannot pass" and an
+            # ACTION in "could not pass authentication". Transitivity is the difference, so an
+            # outcome word only disqualifies at a clause end -- one with an object is a verb
+            # the ability word governs.
+            "Verified: I could not pass authentication",
+            "Verified: could not pass the login gate",
+        ):
+            with self.subTest(disclosure=disclosure):
+                self.assertIsNone(
+                    packet_lint._unevidenced_claim(disclosure),
+                    "discloses that the verification itself did not happen",
+                )
+
     def test_a_verified_slot_that_also_claims_something_still_fails(self) -> None:
         """The direction the line-scoped attempt lost, four review rounds running.
 
@@ -1878,3 +1945,57 @@ class CanonicalLearningPrompts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShippedScriptRegexConstructTests(unittest.TestCase):
+    """Risk: a REGEX construct newer than the documented floor, invisible to every CI lane.
+
+    Scope, stated because the first version of this class over-claimed it: this checks regex
+    constructs in string literals and nothing else. It is NOT evidence that the shipped scripts
+    import on Python 3.10. They do not -- `scripts/eval_codex_runtime.py` and
+    `scripts/install_codex_agents.py` import `tomllib`, which is 3.11+, so the floor
+    `.github/workflows/validate.yml` documents is already contradicted by the tree (recorded as
+    FLOOR-001). A test whose name promised floor-wide coverage while scanning one token would be
+    the "reads as enforcement while enforcing nothing" failure the repository bans, so the promise
+    is narrowed to the fact (Codex review round 5, PR #152).
+
+    Within that scope it is worth keeping: CI pins 3.14 only, an atomic group (`(?>...)`, 3.11+)
+    imported cleanly here and in CI, and it would have raised `re.error: unknown extension ?>` at
+    import time on any older interpreter.
+
+    Scoped to string literals via `ast`, not a raw grep, because prose naming the banned construct
+    in a comment is exactly how this rule gets explained.
+    """
+
+    VERSIONED_REGEX_CONSTRUCTS = {
+        "(?>": "atomic group, Python 3.11+",
+    }
+
+    def test_no_shipped_script_uses_a_regex_construct_newer_than_the_floor(self) -> None:
+        offenders = []
+        for script in sorted((REPO / "scripts").glob("*.py")):
+            tree = ast.parse(script.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+                    continue
+                for construct, why in self.VERSIONED_REGEX_CONSTRUCTS.items():
+                    if construct in node.value:
+                        offenders.append(f"{script.name}:{node.lineno} uses {construct} ({why})")
+        self.assertEqual(
+            [], offenders,
+            "a regex construct newer than the documented floor compiles at import time, and CI "
+            "pins 3.14 only, so no lane would catch it. This assertion covers regex constructs "
+            "ONLY -- see FLOOR-001 for the tomllib imports that break the floor outright",
+        )
+
+    def test_the_tripwire_fires_on_the_construct_it_names(self) -> None:
+        """Non-vacuous by construction: the detector must see the thing it forbids."""
+        tree = ast.parse('BAD = r"a(?>bc)?d"')
+        found = [
+            node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and "(?>" in node.value
+        ]
+        self.assertEqual([r"a(?>bc)?d"], found)
