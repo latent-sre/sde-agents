@@ -454,7 +454,7 @@ fixture is graded from resulting state rather than a second prose copy.
 its [paired lean plan](superpowers/plans/handoff-001-plan.md);
 issue #60 with three-occurrence recurrence evidence and its field-derived section list.
 
-**Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 1.7.3
+**Prerequisites:** None — REV-001's idiom is settled in source (merged in PR #109). The 0.7.3
 release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
@@ -583,7 +583,7 @@ amendment, not a roadmap sentence.
    cluster, so the 'before' side is a fresh capture at merge base `4fef0ce`, not a stored reuse.
 3. The recorded Codex smoke run (spec line 92), which must exercise a **released** artifact. The
    last release to record its skill inventory captured 19 skills
-   (`evals/baselines/2026-08-10-rel-173/conditions.md`, taken under the pre-correction `1.7.3`
+   (`evals/baselines/2026-08-10-rel-173/conditions.md`, taken under the pre-correction `0.7.3`
    label) and this map would be the twentieth, so the run waits on the **next release tail** and is
    filed through the ledger's `record-release`/`record-retest` — LOOP-001's rule below, that source
    PASS is never reportable as released-artifact PASS, is exactly this case. Name the version from
@@ -716,7 +716,7 @@ import.
 **Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10
 ([outcome record](archive/2026-08/loop-001-outcome-2026-08-10.md)); this item sits upstream of
 that lifecycle's first state and can now be designed without a concurrent edit to the same
-skill text. The 1.7.3 release-tail evidence now lives in that archived closeout, not in this
+skill text. The 0.7.3 release-tail evidence now lives in that archived closeout, not in this
 live tracker.
 
 **Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the emitting

@@ -36,15 +36,15 @@
   },
   "release": {
     "recorded_at": "2026-08-10T21:54:23.739886Z",
-    "reference": "sde-agents--v1.7.3",
-    "version": "1.7.3"
+    "reference": "sde-agents--v0.7.3",
+    "version": "0.7.3"
   },
   "retention": {
     "expires_at": "2027-08-02T02:31:25.468652Z",
     "policy": "review-or-expire"
   },
   "retest": {
-    "environment": "tagged tree sde-agents--v1.7.3 (f6cfdb3), Windows 11 checkout, Python 3.12",
+    "environment": "tagged tree sde-agents--v0.7.3 (f6cfdb3), Windows 11 checkout, Python 3.12",
     "recorded_at": "2026-08-10T21:54:23.903191Z",
     "reference": "deterministic gates at the tag: 612/612 suite + validator clean; evals/baselines/2026-08-10-rel-173/conditions.md",
     "result": "pass"

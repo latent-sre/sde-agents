@@ -44,17 +44,17 @@
   },
   "release": {
     "recorded_at": "2026-08-10T21:54:25.223442Z",
-    "reference": "sde-agents--v1.7.3",
-    "version": "1.7.3"
+    "reference": "sde-agents--v0.7.3",
+    "version": "0.7.3"
   },
   "retention": {
     "expires_at": "2027-08-02T08:13:49.312574Z",
     "policy": "review-or-expire"
   },
   "retest": {
-    "environment": "released 1.7.3 artifact",
+    "environment": "released 0.7.3 artifact",
     "recorded_at": "2026-08-10T21:54:25.373309Z",
-    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "reference": "destination text ships in 0.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
     "result": "inconclusive"
   },
   "review_history": [],

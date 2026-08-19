@@ -36,17 +36,17 @@
   },
   "release": {
     "recorded_at": "2026-08-10T21:54:19.393513Z",
-    "reference": "sde-agents--v1.7.3",
-    "version": "1.7.3"
+    "reference": "sde-agents--v0.7.3",
+    "version": "0.7.3"
   },
   "retention": {
     "expires_at": "2027-08-03T05:00:41.651369Z",
     "policy": "review-or-expire"
   },
   "retest": {
-    "environment": "released 1.7.3 artifact",
+    "environment": "released 0.7.3 artifact",
     "recorded_at": "2026-08-10T21:54:19.540737Z",
-    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "reference": "destination text ships in 0.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
     "result": "inconclusive"
   },
   "review_history": [],

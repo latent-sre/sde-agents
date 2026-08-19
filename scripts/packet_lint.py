@@ -373,7 +373,7 @@ _LEARNING_CANDIDATE_RE = re.compile(
 
 
 # An ordered-list marker is display, not packet data. Strip only a leading marker followed by
-# whitespace so ordinary values such as version 1.7.3 remain untouched.
+# whitespace so ordinary values such as version 0.7.3 remain untouched.
 _ORDERED_MARKER_RE = re.compile(r"^(\s*(?:>\s*)*)\d+[.)]\s+")
 
 

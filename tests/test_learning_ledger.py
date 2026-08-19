@@ -679,25 +679,25 @@ class LearningLedgerTests(TempDirTestCase):
 
         # 2. Release only.
         release_only = seed("release_only")
-        self.ledger.record_release(release_only, version="1.7.3", reference="PR 401")
+        self.ledger.record_release(release_only, version="0.7.3", reference="PR 401")
 
         # 3. Release plus a settled retest.
         release_retest = seed("release_retest")
-        self.ledger.record_release(release_retest, version="1.7.3", reference="PR 402")
+        self.ledger.record_release(release_retest, version="0.7.3", reference="PR 402")
         self.ledger.record_retest(
             release_retest,
             result="pass",
-            environment="released plugin 1.7.3",
+            environment="released plugin 0.7.3",
             reference="retest 402",
         )
 
         # 4. A second promotion cycle, so the record also carries `release_history`.
         with_history = seed("with_history")
-        self.ledger.record_release(with_history, version="1.7.3", reference="PR 403")
+        self.ledger.record_release(with_history, version="0.7.3", reference="PR 403")
         self.ledger.record_retest(
             with_history,
             result="fail",
-            environment="released plugin 1.7.3",
+            environment="released plugin 0.7.3",
             reference="retest 403",
         )
         self.ledger.transition(
@@ -820,12 +820,12 @@ class LearningLedgerTests(TempDirTestCase):
         with self.assertRaisesRegex(
             learning_ledger.LedgerError, "not 'promoted'.*no released bytes"
         ):
-            self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+            self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#123")
         self.assertEqual(before, path.read_bytes())
 
         self._promote(candidate_id)
-        released = self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
-        self.assertEqual("1.7.3", released["release"]["version"])
+        released = self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#123")
+        self.assertEqual("0.7.3", released["release"]["version"])
         self.assertEqual("PR#123", released["release"]["reference"])
         self.assertEqual(1, len(self.ledger.check()))
 
@@ -864,7 +864,7 @@ class LearningLedgerTests(TempDirTestCase):
             )
 
         self._promote(candidate_id)
-        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#123")
         retested = self.ledger.record_retest(
             candidate_id, result="fail", environment="prod", reference="run#1"
         )
@@ -885,7 +885,7 @@ class LearningLedgerTests(TempDirTestCase):
         record = self._add()
         candidate_id = record["candidate_id"]
         self._promote(candidate_id)
-        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#123")
 
         passed = self.ledger.record_retest(
             candidate_id, result="pass", environment="prod", reference="run#0"
@@ -900,7 +900,7 @@ class LearningLedgerTests(TempDirTestCase):
         )
         second_id = second["candidate_id"]
         self._promote(second_id)
-        self.ledger.record_release(second_id, version="1.7.3", reference="PR#456")
+        self.ledger.record_release(second_id, version="0.7.3", reference="PR#456")
         failed = self.ledger.record_retest(
             second_id, result="fail", environment="prod", reference="run#1"
         )
@@ -927,7 +927,7 @@ class LearningLedgerTests(TempDirTestCase):
         )
         candidate_id = record["candidate_id"]
         self._promote(candidate_id)
-        self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
+        self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#1")
         first_cycle = self.ledger.record_retest(
             candidate_id, result="fail", environment="prod", reference="run#1"
         )
@@ -945,7 +945,7 @@ class LearningLedgerTests(TempDirTestCase):
         self.ledger.transition(
             candidate_id, promotion_state="rejected", disposition="drop",
             destination="proposal:none", owner="fleet-maintainer",
-            reason="1.7.3 regressed the rollback-command invariant in the field.",
+            reason="0.7.3 regressed the rollback-command invariant in the field.",
         )
         self._advance(seconds=1)
         self.ledger.observe(
@@ -999,7 +999,7 @@ class LearningLedgerTests(TempDirTestCase):
                 )
                 candidate_id = record["candidate_id"]
                 self._promote(candidate_id)
-                self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#1")
+                self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#1")
 
                 inconclusive = self.ledger.record_retest(
                     candidate_id, result="inconclusive", environment="prod",
@@ -1042,7 +1042,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_worker.py::test_awaiting",
         )
         self._promote(awaiting["candidate_id"])
-        self.ledger.record_release(awaiting["candidate_id"], version="1.7.3", reference="PR#1")
+        self.ledger.record_release(awaiting["candidate_id"], version="0.7.3", reference="PR#1")
 
         retested = self._add(
             observation="A verifier packet omitted the exact target revision.",
@@ -1051,7 +1051,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_verifier.py::test_retested",
         )
         self._promote(retested["candidate_id"])
-        self.ledger.record_release(retested["candidate_id"], version="1.7.3", reference="PR#2")
+        self.ledger.record_release(retested["candidate_id"], version="0.7.3", reference="PR#2")
         self.ledger.record_retest(
             retested["candidate_id"], result="pass", environment="prod", reference="run#1"
         )
@@ -1078,7 +1078,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_restore.py::test_inconclusive",
         )
         self._promote(inconclusive["candidate_id"])
-        self.ledger.record_release(inconclusive["candidate_id"], version="1.7.3", reference="PR#3")
+        self.ledger.record_release(inconclusive["candidate_id"], version="0.7.3", reference="PR#3")
         self.ledger.record_retest(
             inconclusive["candidate_id"], result="inconclusive", environment="prod",
             reference="run#1: drill window unavailable",
@@ -1089,7 +1089,7 @@ class LearningLedgerTests(TempDirTestCase):
         summaries = {
             item["candidate_id"]: item for item in self.ledger.list_records("awaiting-retest")
         }
-        self.assertEqual("1.7.3", summaries[awaiting["candidate_id"]]["release"]["version"])
+        self.assertEqual("0.7.3", summaries[awaiting["candidate_id"]]["release"]["version"])
         self.assertIsNone(summaries[awaiting["candidate_id"]]["retest"])
         self.assertEqual(
             "inconclusive", summaries[inconclusive["candidate_id"]]["retest"]["result"]
@@ -1103,7 +1103,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_worker.py::test_regressed",
         )
         self._promote(regressed["candidate_id"])
-        self.ledger.record_release(regressed["candidate_id"], version="1.7.3", reference="PR#1")
+        self.ledger.record_release(regressed["candidate_id"], version="0.7.3", reference="PR#1")
         self.ledger.record_retest(
             regressed["candidate_id"], result="fail", environment="prod", reference="run#1"
         )
@@ -1115,7 +1115,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_verifier.py::test_passed",
         )
         self._promote(passed["candidate_id"])
-        self.ledger.record_release(passed["candidate_id"], version="1.7.3", reference="PR#2")
+        self.ledger.record_release(passed["candidate_id"], version="0.7.3", reference="PR#2")
         self.ledger.record_retest(
             passed["candidate_id"], result="pass", environment="prod", reference="run#1"
         )
@@ -1153,7 +1153,7 @@ class LearningLedgerTests(TempDirTestCase):
             source_reference="tests/test_worker.py::test_released",
         )
         self._promote(released["candidate_id"])
-        self.ledger.record_release(released["candidate_id"], version="1.7.3", reference="PR#1")
+        self.ledger.record_release(released["candidate_id"], version="0.7.3", reference="PR#1")
 
         self._add(
             observation="A packet omitted the request id on retry exhaustion.",
@@ -1178,7 +1178,7 @@ class LearningLedgerTests(TempDirTestCase):
         self._promote(candidate_id)
         self._advance(seconds=2)
         released = self.ledger.record_release(
-            candidate_id, version="1.7.3", reference="PR#123"
+            candidate_id, version="0.7.3", reference="PR#123"
         )
         mutated = json.loads(json.dumps(released))
         release_block = mutated.pop("release")
@@ -1200,7 +1200,7 @@ class LearningLedgerTests(TempDirTestCase):
         self._advance(seconds=2)
         self._promote(candidate_id)
         self._advance(seconds=2)
-        released = self.ledger.record_release(candidate_id, version="1.7.3", reference="PR#123")
+        released = self.ledger.record_release(candidate_id, version="0.7.3", reference="PR#123")
         release_baseline = json.loads(json.dumps(released))
 
         def write(payload: dict) -> None:
@@ -1332,10 +1332,10 @@ class LearningLedgerTests(TempDirTestCase):
             self.assertEqual(0, transitioned.returncode, transitioned.stderr)
 
         released = self._cli(
-            "record-release", candidate_id, "--version", "1.7.3", "--reference", "PR#123"
+            "record-release", candidate_id, "--version", "0.7.3", "--reference", "PR#123"
         )
         self.assertEqual(0, released.returncode, released.stderr)
-        self.assertEqual("1.7.3", json.loads(released.stdout)["release"]["version"])
+        self.assertEqual("0.7.3", json.loads(released.stdout)["release"]["version"])
 
         awaiting = self._cli("list", "--view", "awaiting-retest")
         self.assertEqual(0, awaiting.returncode, awaiting.stderr)

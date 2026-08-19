@@ -125,7 +125,7 @@ Record the plugin version a promoted candidate shipped in:
 python scripts/learning_ledger.py `
   --root C:\path\to\repo `
   record-release lc_00000000000000000000000000000000 `
-  --version 1.7.3 `
+  --version 0.7.3 `
   --reference "PR #123"
 ```
 

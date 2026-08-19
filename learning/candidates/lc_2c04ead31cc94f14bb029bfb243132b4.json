@@ -20,7 +20,7 @@
   "observation": "A reviewer-supplied failure repro was accepted as the stated cause in 3 of 5 findings from one deep-review round, but running each repro showed the stated trigger did not reproduce while a narrower one did. The underlying defects were real in all three cases, so the findings were useful; the supplied rationale was not. Examples: a claim that a censored assert means fail_msg never reaches the operator (it does, via the error banner); a claim of two ConfigParser triggers where neither fires (interpolation is lazy per-key, and CPython auto-enables UTF-8 mode under LC_ALL=C); a claim that a document undercounted at two where the derived count was five across four roles.",
   "owner": "fleet-maintainer",
   "promotion_state": "promoted",
-  "reason": "Promoted on the 1.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 1.7.3 waits on the tag.",
+  "reason": "Promoted on the 0.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 0.7.3 waits on the tag.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -36,17 +36,17 @@
   },
   "release": {
     "recorded_at": "2026-08-10T21:54:20.814997Z",
-    "reference": "sde-agents--v1.7.3",
-    "version": "1.7.3"
+    "reference": "sde-agents--v0.7.3",
+    "version": "0.7.3"
   },
   "retention": {
     "expires_at": "2027-08-04T00:32:31.740445Z",
     "policy": "review-or-expire"
   },
   "retest": {
-    "environment": "released 1.7.3 artifact",
+    "environment": "released 0.7.3 artifact",
     "recorded_at": "2026-08-10T21:54:20.961864Z",
-    "reference": "destination text ships in 1.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
+    "reference": "destination text ships in 0.7.3; behavioral/recurrence instrument pending (LEARN-002 docket or watch-metric); re-recordable per lifecycle",
     "result": "inconclusive"
   },
   "review_history": [],
@@ -83,7 +83,7 @@
       "disposition": "merge",
       "from": "approved",
       "owner": "fleet-maintainer",
-      "reason": "Promoted on the 1.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 1.7.3 waits on the tag.",
+      "reason": "Promoted on the 0.7.3 closeout: repro evidence-class rule is canonical in agents/code-reviewer.md. record-release for 0.7.3 waits on the tag.",
       "to": "promoted"
     }
   ],

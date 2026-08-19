@@ -1,8 +1,8 @@
 # REL-173 released-artifact retest — conditions
 
-- **Artifact under test:** installed plugin `sde-agents@latent-sre` version 1.7.3, updated from
-  the `latent-sre` directory marketplace after tag `sde-agents--v1.7.3` (main `f6cfdb3`) was
-  pushed. `claude plugin list` confirmed `Version: 1.7.3 / Status: enabled` before the run.
+- **Artifact under test:** installed plugin `sde-agents@latent-sre` version 0.7.3, updated from
+  the `latent-sre` directory marketplace after tag `sde-agents--v0.7.3` (main `f6cfdb3`) was
+  pushed. `claude plugin list` confirmed `Version: 0.7.3 / Status: enabled` before the run.
 - **Instrument:** one headless session (`claude -p`, main loop `sonnet`, `--allowedTools
   Workflow`, no `--plugin-dir` — the installed artifact, not the working tree) in a scratch
   two-commit git repository, prompting a single invocation of the `sde-agents:deep-review`
