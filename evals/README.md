@@ -588,7 +588,7 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **25,743 lines across 25 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, and the 2026-08-19 settling and EVAL-009 batches, after the
+Baselines now total **23,499 lines across 25 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, and the 2026-08-19 settling and EVAL-009 batches, after the
 original retirement cut 31,656 across 28 —
 a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and
