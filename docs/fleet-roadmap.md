@@ -761,23 +761,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode the
   same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
-  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
-  response is scored as a contract failure. A run that observed a model other than the requested pin
-  measured the wrong thing and must be excluded, not published in the rate. Reproduced 2026-08-18;
-  owes a test that exercises the branch. Source: PR #147 round 4.
-- **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
-  inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
-  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write fails
-  — the expensive failure EVAL-004 was added to prevent, by another route.
-  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this blocker.
-  Reproduced 2026-08-18. Source: PR #147 round 4.
-- **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
-  `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
-  returns that empty string rather than `None`, and the branch records FAIL. A session that emitted
-  the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
-  the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
-  Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
 - **ORACLE-015** — the absence-of-verification vocabulary added for ORACLE-003 admits bare
   `cannot`/`unable`, so `Verified: the test cannot fail` and `Verified: service unavailable` are
   exempted as disclosures although both assert an unsupported RESULT. Reproduced 2026-08-18. Same
@@ -793,14 +776,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   constructions pass, only the active form fires. Note the boundary this sits on: `exact_fields`
   cannot see prose contradicting a closed-set term (ORACLE-002, accepted), so this negative is the
   only control, and it covers one voice. Source: PR #147 round 6.
-- **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
-  the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
-  scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
-  Reproduced 2026-08-18: `transcript_stats` over a partial stream carrying one success `result`
-  event returns `completed=True`, and the run's own note reads `timed out after Ns before the
-  session concluded`. The note contradicts the flag, so an explicit timeout should override
-  `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
-  partial-completion timeout on both transports. Source: PR #147 round 6.
 - **ORACLE-017** — `loop-capture-is-not-closure` rejects the compliant sentence `This item is
   not closed because the owner is missing` because its catch-all negation reaches backward from
   `missing` into the closure clause. Bind polarity to the missing/absent predicate so closure

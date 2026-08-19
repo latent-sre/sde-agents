@@ -56,6 +56,11 @@ CLAUDE = shutil.which("claude")
 # means an operator can delete or ignore this file without touching the measurement.
 FAILING_EVIDENCE_FILENAME = "failing-run-evidence.json"
 
+# The preflight guard below refuses a blocker sitting at either fixed artifact path, so both
+# names have to be the SAME fact the writes use: a guard checking a path the writer does not
+# use would pass every check while protecting nothing (EVAL-006).
+BENCHMARK_FILENAME = "benchmark.json"
+
 # NOT under tempfile.gettempdir(), deliberately. The CLI's sandbox write-blocks the %TEMP% tree,
 # and a behavioral session launched with its cwd there cannot Write even under acceptEdits —
 # observed directly on CLI 2.1.220 (2026-07-29): packet-slots-builder's builder had both Write
@@ -481,6 +486,35 @@ def output_dir_problem(path: Path) -> str | None:
             return f"{path} exists and is not a directory"
         if not os.access(path, os.W_OK | os.X_OK):
             return f"{path} is not writable"
+        # EVAL-006: a writable directory is not enough. The batch writes two FIXED names inside
+        # it, so a directory sitting at either one cleared every check above, the batch of real
+        # sessions was bought, and `write_text` then raised IsADirectoryError - EVAL-004's
+        # expensive failure by another route. Overwriting an ordinary file from a previous batch
+        # is a normal re-run and stays allowed; only a blocker that is not a file is refused.
+        for name in (BENCHMARK_FILENAME, FAILING_EVIDENCE_FILENAME):
+            artifact = path / name
+            # Lexical, mirroring the output-directory check above and for the identical
+            # reason: `exists()` follows the link, so a dangling symlink at a fixed
+            # artifact name read as absent, the batch was bought, and the write then
+            # followed the link and raised (Codex review, PR #151).
+            if artifact.is_symlink() and not artifact.exists():
+                return f"{artifact} is a dangling symlink, so {name} cannot be written"
+            if artifact.exists() and not artifact.is_file():
+                return f"{artifact} exists and is not a file, so {name} cannot be written"
+        # Writability is asked of benchmark.json ALONE, deliberately. Directory write access does
+        # not permit truncating a file already inside it, so a benchmark copied from another run
+        # is a regular file that clears every check above and then refuses the write after the
+        # batch is paid for (Codex review round 5). The sidecar is exempt because it is not
+        # simply rewritten: the runner normalizes a pre-existing regular file back to 0600 and
+        # then reopens it, and OutputDirReuseSequenceTest pins that recovery by staging the file
+        # 0400 on purpose. Refusing a read-only sidecar here would break a path the runner is
+        # built to handle. A sidecar owned by ANOTHER user still fails that chmod at write time;
+        # ownership is not knowable from the mode bits, so it stays fail-closed there.
+        benchmark = path / BENCHMARK_FILENAME
+        if benchmark.is_file() and not os.access(benchmark, os.W_OK):
+            return (
+                f"{benchmark} is not writable, so {BENCHMARK_FILENAME} cannot be rewritten"
+            )
         return None
     # Lexical, not `exists()`: a dangling symlink ANYWHERE on the way up is followed by
     # `exists()` and skipped, so `dangling-link/results` walked past it to a writable parent and
@@ -506,7 +540,11 @@ def _session_reached_a_result(stats: dict) -> bool:
     so every Codex timeout, nonzero exit, failure event and missing completion — which set no such
     flag — read as "completed and answered nothing" and were graded as contract failures,
     recreating the corrupted-rate defect for that lane (PR #147 review). Both transports already
-    report `completed`, and both clear it on exactly the failures that must be excluded.
+    report `completed`, and both mark the failures that must be excluded - but `completed`
+    alone was never sufficient: a nonzero exit, a model mismatch and a timeout can all arrive
+    with a completion event already in the transcript, so each marks `session_failed` instead
+    of pretending the event was absent (EVAL-005, EVAL-008, and the nonzero-exit route found
+    with them).
     """
     return bool(stats.get("completed")) and not stats.get("session_failed")
 
@@ -630,8 +668,19 @@ def run_session(
         # encoding=, so testing for str discarded every timed-out run's partial transcript and
         # reported None usage for a session already paid for.
         partial = eval_routing.decode_stream(exc.stdout)
-        return "", set(), f"timed out after {timeout}s before the session concluded", \
-            eval_routing.transcript_stats(partial)
+        # EVAL-008: a stream cut off by the timeout can still carry a success `result` event,
+        # so `transcript_stats` reports completed=True and the empty text was graded as a
+        # contract failure - while this very note reads "before the session concluded". The
+        # note contradicted the flag; the explicit timeout is the authoritative reading, and
+        # the run is a measurement failure that must be excluded from the rate.
+        timed_out_stats = eval_routing.transcript_stats(partial)
+        timed_out_stats["session_failed"] = True
+        return (
+            "",
+            set(),
+            f"timed out after {timeout}s before the session concluded",
+            timed_out_stats,
+        )
     except Exception as exc:
         return "", set(), f"run failed: {exc}", eval_routing.transcript_stats("")
 
@@ -2219,7 +2268,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         try:
-            (args.output_dir / "benchmark.json").write_text(
+            (args.output_dir / BENCHMARK_FILENAME).write_text(
                 json.dumps({
                     "runs_per_case": args.runs,
                     "conditions": conditions,
@@ -2240,11 +2289,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         except OSError as exc:
             print(
-                f"error: could not write {args.output_dir / 'benchmark.json'}: {exc}",
+                f"error: could not write {args.output_dir / BENCHMARK_FILENAME}: {exc}",
                 file=sys.stderr,
             )
             return 2
-        print(f"\nwrote {args.output_dir / 'benchmark.json'}")
+        print(f"\nwrote {args.output_dir / BENCHMARK_FILENAME}")
         if failing_payload and not args.retain_run_evidence:
             print(
                 f"wrote {evidence_path} (raw model text from failing runs; inspect before "
