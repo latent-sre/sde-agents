@@ -468,6 +468,26 @@ and the digest case left `workspace_unchanged: true` with no edit and no `accept
 on trust. HANDOFF-001 remains unaccepted — the plan gates a paired capture on "exact hash-command
 evidence", which does not exist.
 
+**Salvaged parallel evidence (2026-08-12 arc, landed from branch
+`claude/sonnet-testing-cf6bfc`):** three producer batches plus digest diagnostics under
+`evals/baselines/2026-08-12-handoff-001-*/` (rationale decisions.md beside the two
+producer batches that carry one; the digest diagnostics and the r2 rerun are raw
+captures only). Their product: the three
+producer grader repairs now in `handoff-producer-preserves-discovered-constraints` (firing tests
+in `HandoffProducerGraderRepairsTest`; the retained runs tuned the amendments, so rate acceptance
+folds into this item's paid re-runs). Still open from that arc: the producer's parsed-membership
+`must_match` missed at 2/3 in the retained 2026-08-18 rerun
+(`2026-08-18-handoff-001-producer-r2-x3`) — the last unexplained miss on that
+contract — and the `disable_mlock` forbidden sibling carries the same fixed-width-lookbehind
+blind spot the live-apply repair fixed, deliberately left until evidence indicts it
+(producer-amended-x3 decisions.md watch item). Residual limits of the ported patterns, recorded against interest: the co-occurrence
+guard's clause exemption includes `assum\w*`/`fail\w*`, so an endorsement phrased inside
+an assumption-labelled clause is exempt, and the parity requirement skips any sentence
+carrying a negator even when the assertion itself is affirmative. The arc's runner half is deliberately **not**
+ported: main's 2026-08-15 `--allowedTools` fix supersedes its grant mechanism, its digest-case
+redesign would move evaluator bytes this item's pending re-run counts on, and its per-command
+outcome evidence is EVAL-010.
+
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
 proven to fail without it by mutation; an empty allowlist deliberately gets no permission flag,
@@ -735,6 +755,31 @@ the audit-shaped alternative is a scheduled manual pass, not silence.
 `retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
+
+#### EVAL-010 — per-command Bash outcome evidence in the behavioral runner
+
+**Status:** `ready` — donor code preserved on origin branch `claude/sonnet-testing-cf6bfc`
+(runner half of `3be1e3e`/`6c06755`).
+
+**Outcome:** A behavioral case that prescribes a command produces evidence naming each observed
+Bash command with its outcome (ok / denied / error / no-result), so a FAIL names its own cause
+instead of collapsing harness-denial and contract-violation into one boolean — the 2026-08-12
+arc paid three diagnosis re-buys for exactly that collapse (promoted lesson `lc_a3bedde1`).
+
+**Source:** the salvaged sonnet-testing arc; candidates `lc_a3bedde1`/`lc_d4a94758`;
+`evals/README.md` doctrine paragraph (2026-08-12 rules).
+
+**Prerequisites:** None — but the donor diff predates the 2026-08-15 runner-grant fix, the
+LEARN-002 offline round, and PR #151's result classification, all of which moved
+`scripts/eval_behavioral.py`. Re-derive against the current module; a cherry-pick would revert
+newer behavior silently.
+
+**Acceptance:** Failing-run evidence carries per-command outcomes; the donor branch's six runner
+tests re-derived and green against the current module; T0 and the full suite green; any new
+probe or control obeys the probe-exercises-the-real-artifact doctrine.
+
+**Next action:** Re-derive `3be1e3e`'s evidence recording onto the current `run_session`,
+taking the donor branch's test names as the spec.
 
 #### EVAL-009 — settle the ci-actions-harden rate with a paired same-n capture
 

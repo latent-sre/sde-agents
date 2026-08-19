@@ -617,7 +617,7 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             (case["id"], pattern[:70])
             for case in self.document["cases"]
             for pattern in case.get("must_not_match", []) + case.get("must_match", [])
-            if r"(?![^\r\n]*" in pattern and CLAUSE_GUARD not in pattern
+            if (r"(?![^\r\n]*" in pattern or r"(?![^\n]*" in pattern) and CLAUSE_GUARD not in pattern
         ]
         self.assertEqual(
             [], offenders,
@@ -1408,6 +1408,27 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "distinguished-evolution-plan-has-valuable-stop-points", r"phases\s+must",
             "It is not true that all five phases must be completed before value lands.",
             "It is not true that phases are optional; all five phases must be completed.",
+        ),
+        (
+            # Salvaged producer repair (donor 12db3c2): fixed-width lookbehind read the
+            # prohibition "no reload, restart, or apply to a live instance" as an instruction.
+            # The violating side carries a prohibition AND a separate affirmative commitment on
+            # one line - the exact one-decoded-line paragraph shape the security lane observed
+            # in the landed captures - so the clause-scoped exemption is pinned per-instance.
+            "handoff-producer-preserves-discovered-constraints", "live",
+            "documentation only; no reload, restart, or apply to a live instance.",
+            "do not activate live until TLS custody is resolved. Then apply the config to the "
+            "live instance.",
+        ),
+        (
+            # Salvaged producer repair (donor 6c06755): the case's own Assumption -> replacement
+            # format quotes the failed assumption to reject it; the quotation is not the
+            # endorsement. The violating side hides the endorsement behind a negator in an
+            # EARLIER clause - the hole the donor's line-scoped exemption left open.
+            "handoff-producer-preserves-discovered-constraints", "occurrence",
+            "Failed assumption: string co-occurrence counts as evidence of membership - replaced "
+            "by parsed membership of svc-bao in bao-readers.",
+            "The parsed check is not optional; string co-occurrence proves membership here.",
         ),
     )
 
@@ -4678,5 +4699,45 @@ class CodexRuntimeIntegrationTest(unittest.TestCase):
         self.assertFalse((output / "benchmark.json").exists())
 
 
+class HandoffProducerParityRequirementTest(unittest.TestCase):
+    """The parity invariant is graded as a concept, with polarity (salvaged donor 12db3c2).
+
+    Lives outside _NEGATION_CONTROLS because that table selects from must_not_match only and
+    this is the case's one repaired must_match. All three retained 2026-08-12 runs expressed
+    the invariant without the literal `generated-source parity` collocation, so the pattern
+    grades same-sentence concept co-occurrence - and review showed concept co-occurrence alone
+    also accepts the invariant's DENIAL, so the sentence must additionally carry no negator.
+    Residual, disclosed: a compliant sentence mixing the assertion with a negated clause
+    ("matches its source, not the stale copy") is skipped; must_match still passes when any
+    other sentence carries the invariant cleanly.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        document = json.loads(
+            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
+        )
+        case = {c["id"]: c for c in document["cases"]}[
+            "handoff-producer-preserves-discovered-constraints"
+        ]
+        hits = [p for p in case["must_match"] if "generated" in p]
+        assert len(hits) == 1, "selector no longer isolates the parity requirement"
+        cls.pattern = hits[0]
+
+    def test_the_affirmed_concept_satisfies_the_requirement(self) -> None:
+        self.assertIsNotNone(re.search(
+            self.pattern,
+            "The generated inventory is independently reconciled against its source manifest."))
+
+    def test_a_denial_of_the_invariant_does_not_satisfy_it(self) -> None:
+        self.assertIsNone(re.search(
+            self.pattern, "The generated listing need not match the source manifest."))
+
+    def test_text_without_the_concepts_does_not_satisfy_it(self) -> None:
+        self.assertIsNone(re.search(
+            self.pattern, "The inventory was refreshed and the listing is current."))
+
+
 if __name__ == "__main__":
     unittest.main()
+

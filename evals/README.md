@@ -349,7 +349,20 @@ SHA-256 values. The digest-negative case uses the same seam to require exactly o
 read-only hash command over the exact work-order bytes, correlate its computed result, and prove a
 seeded workspace stayed unchanged. Model-authored Python is never executed as grader code; receipt
 patterns prove only transfer identity while the two trusted oracles prove end state and
-stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero. The runner
+stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero.
+
+Two doctrine rules paid for on 2026-08-12 (CLI 2.1.228; the salvaged sonnet-testing arc,
+`evals/baselines/2026-08-12-handoff-001-*/`) govern this layer. First, tool *surface* is not
+*permission*: `--tools Bash` alone leaves every command approval-gated and headless has no
+approver, so a case whose required action is a command passes only when the runner also grants
+it — `run_session` passes `--allowedTools` beside `--tools` (2026-08-15 fix) — and a prescribed
+command stays short and literal enough for an exact grant to express. Second, when an assertion
+can fail for causes owned by different actors — the harness denied the command, or the component
+ran other commands beside it — the evidence owes the discriminator (each observed command with
+its outcome; EVAL-010 ports that recording), and any probe used to diagnose this layer must
+exercise the exact case artifacts: a stand-in outside the discriminating class (`echo` for an
+interpreter, a short command for a long one) makes every control arm pass vacuously and proves
+nothing. The runner
 prints the
 selected case and session count before starting;
 `evals/behavioral/contracts.json` is the authoritative inventory.
@@ -575,13 +588,14 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **18,026 lines across 14 top-level directories**, up from 9,371 across 13 with the
-CTX-002 paired-capture set added (PR #154), and down from 31,656 across 28 on original retirement —
-a 70% cut with nothing a reader consumes removed. What remains: 1,369 lines of distilled record
-under `history/`, the raw of the partially-summarized directories, and four directories with no
-summary at all
-(`2026-07-30-donor-grafts`, `2026-07-31-p0-p1`, `2026-08-10-gate-001-field-probes`,
-`2026-08-10-gate-001-first-live`) where the raw *is* the record.
+Baselines now total **20,252 lines across 23 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired-capture set (PR #154) and the salvaged 2026-08-12 sonnet-testing arc, after the
+original retirement cut 31,656 across 28 —
+a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
+under `history/`, the raw of the partially-summarized directories, and
+the directories with no summary at all — the set is whatever `git ls-files evals/baselines`
+shows minus the summarized ones, not a list this paragraph could keep current (it went stale at
+four entries while eleven existed) — where the raw *is* the record until someone who understands
+the round writes its summary.
 
 Reproduce both totals with `git ls-files -z evals/baselines | xargs -0 wc -l | tail -1`, and the
 same over `evals/baselines/history` for the distilled figure — newline counts over tracked files,
