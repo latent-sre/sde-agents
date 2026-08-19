@@ -1,6 +1,6 @@
 ---
 name: sre-tool
-description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify — with spawned builders and reviewers. Use when building a new operator-facing or SRE tool — a dashboard, CLI, automation service, monitor, or internal web tool — or substantially changing one, when the work is big enough to run the full engineering ladder from requirements through review. For a feature, fix, or refactor inside an existing codebase rather than a net-new tool, use sde-agents:sde-fullstack; for a focused change to one layer, use sde-agents:backend-craft or sde-agents:frontend-craft.
+description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify — with spawned builders and reviewers. Use when building or substantially changing an operator-facing or SRE tool — dashboard, CLI, automation service, monitor, internal web tool. For a feature, fix, or refactor inside an existing codebase, sde-agents:sde-fullstack; for one layer, sde-agents:backend-craft or sde-agents:frontend-craft.
 argument-hint: [what the tool should do]
 ---
 

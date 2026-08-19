@@ -1,6 +1,6 @@
 ---
 name: lab-incident
-description: Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for "X is down", "the lab is unreachable", "everything broke after the update", "nothing loads" — an active outage affecting someone right now. Every mitigation is an apply under sde-agents:homelab-platform's change tiers, which holds the authority. Not for an incident that is already over (sde-agents:postmortem writes it up), not for a bug or failing test with no live outage (sde-agents:root-cause), and not for a routine health sweep (sde-agents:lab-audit).
+description: Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for "X is down", "the lab is unreachable", "everything broke after the update", "nothing loads" — an active outage affecting someone right now. Mitigations apply under sde-agents:homelab-platform's change tiers. Not for a resolved incident (sde-agents:postmortem), a bug with no live outage (sde-agents:root-cause), or a routine health sweep (sde-agents:lab-audit).
 argument-hint: [what is down]
 ---
 

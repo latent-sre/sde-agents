@@ -1,6 +1,6 @@
 ---
 name: upgrade-campaign
-description: Plans and sequences a batch of version upgrades across a home lab — what to update, in what order, with a rollback per step and a verification per service. Use for "update everything", "monthly patching", "upgrade my stack", or a specific major-version move with breaking changes. Each apply runs under sde-agents:homelab-platform's change tiers. Not for a single routine image bump (ask sde-agents:homelab-platform directly) and not for a service that is currently broken (sde-agents:lab-incident).
+description: Plans and sequences a batch of version upgrades across a home lab — what to update, in what order, a rollback per step, a verification per service. Use for "update everything", "monthly patching", "patch day", "upgrade my stack", or a major-version move with breaking changes. Applies run under sde-agents:homelab-platform's change tiers. Not for a single routine image bump (sde-agents:homelab-platform) or a currently broken service (sde-agents:lab-incident).
 argument-hint: [what to upgrade, or "everything"]
 ---
 

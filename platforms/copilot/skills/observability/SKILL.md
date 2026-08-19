@@ -1,6 +1,6 @@
 ---
 name: "observability"
-description: "Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, and collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Applying any of it to the live lab routes through homelab-platform's change tiers. Not for responding to a live outage (lab-incident) and not for the fleet's own routing evals."
+description: "Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Lab applies route through homelab-platform's change tiers; a live outage is lab-incident."
 argument-hint: "[what to instrument, query, or alert on]"
 ---
 

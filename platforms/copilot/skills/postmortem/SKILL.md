@@ -1,6 +1,6 @@
 ---
 name: "postmortem"
-description: "Writes a blameless postmortem after an incident, outage, or near-miss is resolved — timeline, impact, trigger vs root cause, mitigative vs preventative actions, where we got lucky. Use for \"write up what happened\", \"do a retro on the outage\", \"document that incident\", or after any recovery worth learning from. Not for a live failure (lab-incident mitigates first, under homelab-platform's tiers), not for diagnosing an undiagnosed bug (root-cause owns that loop), and not for routine operating docs (runbook — though a postmortem's actions often update one)."
+description: "Writes a blameless postmortem after an incident, outage, or near-miss is resolved — timeline, impact, trigger vs root cause, mitigative vs preventative actions. Use for \"write up what happened\", \"do a retro on the outage\", \"document that incident\", or any recovery worth learning from. Not for a live failure (lab-incident), an undiagnosed bug (root-cause), or routine operating docs (runbook)."
 argument-hint: "[the incident to write up]"
 ---
 

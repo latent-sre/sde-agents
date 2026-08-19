@@ -1,6 +1,6 @@
 ---
 name: prompt-craft
-description: The lightweight inline method for prompt work — success criteria, baseline, minimal change, fresh retest. Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, or tool descriptions — including requests like "write me an agent for X", "my skill never triggers", or "the model keeps ignoring this instruction". The first stop for prompt work — escalate to sde-agents:prompt-engineer only when the fix needs fresh-context reps, before/after evals, or spans a prompt suite; for multi-agent systems, sde-agents:multi-agent-architect.
+description: The lightweight inline method for prompt work — success criteria, baseline, minimal change, fresh retest. Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, tool descriptions — "write me an agent for X", "my skill never triggers", "the model keeps ignoring this instruction". First stop for prompt work; escalate to sde-agents:prompt-engineer only for fresh-context reps, before/after evals, or a prompt suite; for multi-agent systems, sde-agents:multi-agent-architect.
 argument-hint: [what to create or fix]
 ---
 
