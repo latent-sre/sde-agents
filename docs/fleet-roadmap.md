@@ -517,10 +517,12 @@ an assumption-labelled clause is exempt, and the parity requirement skips any se
 carrying a negator even when the assertion itself is affirmative. The arc's runner half is deliberately **not**
 ported: main's 2026-08-15 `--allowedTools` fix supersedes its grant mechanism, its digest-case
 redesign would move evaluator bytes this item's pending re-run counts on, and its per-command
-outcome evidence is EVAL-010. Retirement trigger for the salvaged raw: the producer batches and
-digest diagnostics retire once the producer contract settles green in LEARN-002's second batch
-(their diagnostic value expires with confirmation); the 2026-08-18 rerun capture retires with
-them — the parsed-membership miss it retained evidence for is repaired with a pinned control.
+outcome evidence is EVAL-010. Retirement trigger for the salvaged raw: the producer batches
+retire once the producer contract settles green in LEARN-002's second batch. The digest
+diagnostics retire only after `handoff-builder-rejects-digest-mismatch` resolves in HANDOFF-001
+with a written receipt grammar and distilled outcome summary (producer confirmation alone does not
+consume them). The 2026-08-18 rerun capture retires with the producer batches — the
+parsed-membership miss it retained evidence for is repaired with a pinned control.
 
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test

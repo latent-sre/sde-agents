@@ -93,10 +93,11 @@ and this note is the evidence either ruling would cite.
 
 These benchmarks are the 'before' side of LEARN-002's second settling batch (the
 two-consecutive-batches clause) and of HANDOFF-001's next confirmation, so they retire only
-after that second batch is captured and its comparison recorded. The local-only
-`failing-run-evidence.json` sidecars (gitignored by design) may be deleted from disk once the
-widen-vs-redesign ruling lands and any resulting repairs are confirmed — this file's quoted
-excerpts are the durable record.
+after **both** hold: (1) that second batch is captured and its comparison recorded, and (2)
+the HANDOFF-001 confirmation run records the digest-mismatch case outcome under its finalized
+receipt grammar. The local-only `failing-run-evidence.json` sidecars (gitignored by design) may
+be deleted from disk once the widen-vs-redesign ruling lands and any resulting repairs are
+confirmed — this file's quoted excerpts are the durable record.
 
 ## Near-holds recorded as variance candidates at n=3 (no action)
 

@@ -32,11 +32,13 @@ craft quartet ×5, root-cause ×2, prompt-tooling ×2, host-onboard, iterate-dra
 
 ## Retirement trigger
 
-The `before/` and `after(-repair)/` benchmarks are **machine-reusable 'before' capital** via
-`scripts/eval_baseline.py` — `homelab-ops/before` is additionally the capture LANE-001's
-ride-along requires to exist before `onboarding-map`'s description moves. Retire nothing here
-until **both** hold: (1) CTX-002 and LANE-001 are closed (the held eng-ladder and onboarding-map
-trims will consume these benchmarks as their 'before' sides), and (2) `eval_baseline.py` reports
-the benchmarks STALE for every remaining consumer. After that, this summary is the record and
-the raw retires per `evals/README.md`'s retention rules. `disposition/` retires with CTX-002's
-close regardless — its verdicts are recorded above and in `2026-08-19-eval009/decisions.md`.
+The `before/` and `after(-repair)/` captures are historical paired evidence that may serve as
+'before' capital only where `scripts/eval_baseline.py` reports `REUSABLE` at consumption time;
+for consumers where it reports `STALE`, a fresh before capture is still owed. `homelab-ops/before`
+is additionally the capture LANE-001's ride-along requires to exist before `onboarding-map`'s
+description moves, whether reused or freshly recaptured. Retire nothing here until **both** hold:
+(1) CTX-002 and LANE-001 are closed, and (2) every remaining consumer has either consumed this
+directory under a resolver-`REUSABLE` verdict or recorded its own replacement before capture.
+After that, this summary is the record and the raw retires per `evals/README.md`'s retention
+rules. `disposition/` retires with CTX-002's close regardless — its verdicts are recorded above
+and in `2026-08-19-eval009/decisions.md`.
