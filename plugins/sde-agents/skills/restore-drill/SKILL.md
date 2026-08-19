@@ -1,6 +1,6 @@
 ---
 name: "restore-drill"
-description: "Rehearses restoring a service from its backup and records the measured result — proving the backup is real before you need it. Use for \"test my backups\", \"can I actually restore this\", \"practice a recovery\", or a scheduled restore rehearsal. Not for restoring during a live outage (that is lab-incident's mitigation, working the service's recovery doc) and not for designing the backup itself (backend-craft's database-reliability reference, or service-onboard step 3)."
+description: "Rehearses restoring a service from its backup and records the measured result — proving the backup is real before you need it. Use for \"test my backups\", \"can I actually restore this\", \"practice a recovery\", or a scheduled restore rehearsal. Not for a live-outage restore (lab-incident) or designing the backup itself (backend-craft or service-onboard)."
 argument-hint: "[the service whose restore to rehearse]"
 ---
 

@@ -736,6 +736,33 @@ the audit-shaped alternative is a scheduled manual pass, not silence.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
 
+#### EVAL-009 — settle the ci-actions-harden rate with a paired same-n capture
+
+**Status:** `ready` — imported from PR #154's review (Codex P2 finding, Copilot draft repaired:
+the draft reused EVAL-005, an ID PR #151 closed the day before, cross-referenced it as EVAL-004,
+and cited a `--select` flag the runner does not have).
+
+**Outcome:** Whether the CTX-002 trim regressed `pos-ci-actions-harden` is settled by evidence at
+matching sample sizes, not asymmetric ones. The stored sides: before 2/3 (n=3, pre-edit bytes
+`8b41239`), after-repair 0/3 then 3/6 (final bytes; the n=6 passes the 0.5 threshold). The n=6
+run has no same-n before side, so "variance" rests on wide confidence intervals — the honest
+reading is "insufficient evidence of regression", recorded as exactly that in PR #154.
+
+**Source:** `evals/baselines/2026-08-18-ctx-002/` (before, after-repair, disposition/ci-actions-n6);
+PR #154 review thread.
+
+**Prerequisites:** None. The before side needs a checkout at `8b41239`; per the one-writer rule it
+runs in its own worktree, not the live checkout.
+
+**Acceptance:** Paired `--case pos-ci-actions-harden --runs 6` captures, sonnet clean-room: one at
+`8b41239`, one at current bytes. After ≥ before closes as variance; after < before at same n is a
+real regression — repair the description's lost anchors and re-capture. Either way the disposition
+lands in the CTX-002 evidence directory's record.
+
+**Next action:** `python3 scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --case
+pos-ci-actions-harden --runs 6 --model sonnet --clean-room` on each side, worktree-isolated for
+the historical checkout.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they

@@ -575,7 +575,8 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **9,371 lines across 13 top-level directories**, down from 31,656 across 28 —
+Baselines now total **18,026 lines across 14 top-level directories**, up from 9,371 across 13 with the
+CTX-002 paired-capture set added (PR #154), and down from 31,656 across 28 on original retirement —
 a 70% cut with nothing a reader consumes removed. What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and four directories with no
 summary at all

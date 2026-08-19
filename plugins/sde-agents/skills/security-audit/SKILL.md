@@ -1,6 +1,6 @@
 ---
 name: "security-audit"
-description: "An adversary-eyes security sweep of the running home lab — trust zones and what the proxy actually fronts, authn on every exposed service, management planes reachable from the wrong zone, default credentials, secrets posture and rotation, image and stack vulnerabilities triaged into upgrade-campaign priorities, and personal-data governance at home scale. Use for \"security-audit my lab\", \"what could an attacker reach\", \"check my exposure\", or after standing up anything internet-facing. Surveys and reports; fixes route to homelab-platform. For a diff, the security pass in code-reviewer; for threat-modeling a codebase, application-security-auditor; for hygiene (backups, drift, capacity), lab-audit."
+description: "An adversary-eyes security sweep of the running home lab — exposure, trust zones, authn on exposed services, management planes reachable from the wrong zone, default credentials, secrets posture, vulnerabilities triaged into upgrade-campaign priorities. Use for \"security-audit my lab\", \"what could an attacker reach\", \"check my exposure\", or after standing up anything internet-facing. Reports only; fixes go to homelab-platform. For a diff, code-reviewer; a codebase threat model, application-security-auditor; hygiene, lab-audit."
 argument-hint: "[scope - a zone, a service, or the whole lab]"
 ---
 

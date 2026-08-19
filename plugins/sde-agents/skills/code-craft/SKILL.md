@@ -1,6 +1,6 @@
 ---
 name: "code-craft"
-description: "Language-level engineering craft — the idioms, traps, and testing discipline of the language you're writing in, plus how to change working code safely. Use when writing or reviewing Python, TypeScript, Bash, PowerShell, or Go, when adding tests to existing code, or when refactoring something that already works. Complements the layer skills: backend-craft owns the service, frontend-craft the UI, and sde-fullstack the end-to-end feature — this owns what good code looks like inside those layers."
+description: "Language-level engineering craft — the idioms, traps, and testing discipline of the language at hand, plus how to change working code safely. Use when writing or reviewing Python, TypeScript, Bash, PowerShell, or Go, when adding tests to existing code, or when refactoring something that already works. backend-craft owns the service, frontend-craft the UI, sde-fullstack the end-to-end feature — this owns the code inside those layers."
 argument-hint: "[the language or the code to change]"
 ---
 
