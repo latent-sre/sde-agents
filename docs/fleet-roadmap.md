@@ -960,6 +960,29 @@ evidence; two observed misses trigger a dedicated behavioral contract and defini
 
 **Next action:** Evaluate on the next qualifying UI task.
 
+#### EVAL-005 — collect paired n=6 before/after for ci-actions `pos-ci-actions-harden`
+
+**Status:** `ready`
+
+**Outcome:** Establish whether the CTX-002 trim caused a real routing regression for
+`pos-ci-actions-harden` or the 0/3 after-repair result is variance. The before n=3 was 2/3 (67%);
+the after-repair n=6 is 3/6 (50%). The after-only n=6 disposition run
+(`evals/baselines/2026-08-18-ctx-002/disposition/ci-actions-n6/`) cannot establish variance
+without a matching before-side at n=6.
+
+**Source:** CTX-002 paired capture (PR #154); Codex review P2 finding.
+
+**Prerequisites:** none.
+
+**Acceptance:** Paired n=6 runs on before (pre-PR bytes) and after (current bytes) for the
+`craft-vs-fullstack` cluster, single-case selection `pos-ci-actions-harden`. If the before n=6
+shows ≥ the after n=6 rate, dispose as variance; if after < before at the same n, repair the
+description to restore the lost anchor tokens and re-capture.
+
+**Next action:** Run `scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --select
+pos-ci-actions-harden --runs 6` on both the current tree and a checkout at `8b41239` (the
+pre-edit commit).
+
 #### LAB-001 — provide a fallback service compose asset
 
 **Status:** `deferred`
