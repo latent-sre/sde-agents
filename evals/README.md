@@ -590,8 +590,8 @@ summary that mentions a round without recording its rates is not a substitute fo
 
 Baselines now total **20,252 lines across 23 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired-capture set (PR #154) and the salvaged 2026-08-12 sonnet-testing arc, after the
 original retirement cut 31,656 across 28 —
-a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369
-lines of distilled record under `history/`, the raw of the partially-summarized directories, and
+a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
+under `history/`, the raw of the partially-summarized directories, and
 the directories with no summary at all — the set is whatever `git ls-files evals/baselines`
 shows minus the summarized ones, not a list this paragraph could keep current (it went stale at
 four entries while eleven existed) — where the raw *is* the record until someone who understands
