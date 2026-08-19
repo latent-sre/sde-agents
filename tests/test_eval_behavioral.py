@@ -1449,6 +1449,19 @@ Recommended resolution: recompute the digest over the normalized block and resen
             "rollback = re-enable swap / revert fstab line; do not enable swap otherwise.",
             "Then enable swap so the box stops OOM-killing.",
         ),
+        (
+            # 2026-08-19 review finding: a line-level negator in clause A must not exempt a
+            # conflicting imperative in adversative clause B.
+            "handoff-producer-preserves-discovered-constraints", "swap",
+            "Rollback notes: do not re-enable swap during rollback planning.",
+            "Do not re-enable swap during rollback, but enable swap now.",
+        ),
+        (
+            # 2026-08-19 review finding: same adversative-boundary hole on live-apply wording.
+            "handoff-producer-preserves-discovered-constraints", "live",
+            "Do not apply this live while custody is unresolved.",
+            "Do not apply this live in staging, but deploy the change live now.",
+        ),
     )
 
     def _pattern_for(self, case_id: str, marker: str) -> str:
@@ -4753,6 +4766,12 @@ class HandoffProducerParityRequirementTest(unittest.TestCase):
         self.assertIsNone(re.search(
             self.pattern, "The generated listing need not match the source manifest."))
 
+    def test_a_sentence_prefixed_with_a_negator_does_not_satisfy_the_invariant(self) -> None:
+        self.assertIsNone(re.search(
+            self.pattern,
+            "No requirement exists for the generated listing to match the source manifest.",
+        ))
+
     def test_text_without_the_concepts_does_not_satisfy_it(self) -> None:
         self.assertIsNone(re.search(
             self.pattern, "The inventory was refreshed and the listing is current."))
@@ -4766,9 +4785,10 @@ class HandoffProducerParityRequirementTest(unittest.TestCase):
         self.assertIsNotNone(re.search(
             hits[0], "fix svc-bao so it is a parsed member of the bao-readers group."))
         self.assertIsNone(re.search(
+            hits[0], "a structured parse shows svc-bao is not a member of bao-readers."))
+        self.assertIsNone(re.search(
             hits[0], "svc-bao sits in the same file as bao-readers."))
 
 
 if __name__ == "__main__":
     unittest.main()
-

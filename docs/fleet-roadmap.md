@@ -806,6 +806,108 @@ probe or control obeys the probe-exercises-the-real-artifact doctrine.
 **Next action:** Re-derive `3be1e3e`'s evidence recording onto the current `run_session`,
 taking the donor branch's test names as the spec.
 
+### Small items
+
+The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
+do not leak into session memory or issue lists as a shadow queue. One line each — ID, the
+observable fix, source. No prerequisites and no acceptance section: the fix plus green
+deterministic gates closes a line, and closing it means deleting it. A line that turns out to
+need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
+naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
+
+- **HOST-010** — VS Code discovers zero fleet skills. Its skill-discovery paths are
+  `.agents/skills`, `.github/skills` and `.claude/skills`; the 20 adapted copies sit in
+  `platforms/copilot/skills/`, which no host reads. Moving them to `.github/skills/` was scoped
+  out of the 2026-08-18 lane retirement. Source:
+  `docs/decisions/2026-07-30-multi-platform-packaging.md` amendment 2026-08-18.
+- **HOST-011** — `platforms/copilot/skills/` is generated output with no consumer since the
+  Copilot CLI lane was retired: no manifest references it and no host discovers it. Retire it, or
+  relocate it as HOST-010's fix. Source: same amendment.
+- **HOST-012** — Installing this repository as a VS Code plugin loads the canonical Claude fleet,
+  including `hooks/hooks.json`, because VS Code treats any directory holding
+  `.claude-plugin/plugin.json` as an installable plugin and Claude Code requires that file at the
+  root. Documented as unsupported in `README.md`; reopen only if a nested Agent Plugins 1.0 root
+  is wanted, which format 3 cannot share with `.github/agents`. Source: same amendment.
+- **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
+  the same fact by hand in two files. A drift test now pins them together
+  (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
+- **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
+  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the
+  empty response is scored as a contract failure. A run that observed a model other than the
+  requested pin measured the wrong thing and must be excluded, not published in the rate.
+  Reproduced 2026-08-18; owes a test that exercises the branch. Source: PR #147 round 4.
+- **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
+  inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
+  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write
+  fails — the expensive failure EVAL-004 was added to prevent, by another route.
+  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this
+  blocker. Reproduced 2026-08-18. Source: PR #147 round 4.
+- **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
+  `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
+  returns that empty string rather than `None`, and the branch records FAIL. A session that
+  emitted the call and then exited nonzero or truncated proves nothing about the guard either way,
+  so it is the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already
+  draw. Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
+- **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
+  the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
+  scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
+  Reproduced 2026-08-18: `transcript_stats` over a partial stream carrying one success `result`
+  event returns `completed=True`, and the run's own note reads `timed out after Ns before the
+  session concluded`. The note contradicts the flag, so an explicit timeout should override
+  `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
+  partial-completion timeout on both transports. Source: PR #147 round 6.
+- **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
+  Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
+  Decide whether the block is broker-only or restore a precisely defined non-broker state.
+  Deferred because the approved follow-up explicitly forbids agent and skill edits. Source: PR
+  #147 post-merge review thread.
+- **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
+  run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
+  and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
+  #147 post-merge review thread.
+- **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
+  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
+  in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
+  undocumented guarantee this fleet depends on, so the failure is either a real regression or the
+  oracle failing to consume an async agent launch — the
+  [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) reproduced
+  that exact both-canaries-absent signature. **Still open: only a probe run can settle it, and one
+  now will.** As of 2026-08-17 the two outcomes no longer render alike — an uncorrelated spawn
+  reports INCONCLUSIVE naming the correlation gap, while a result the oracle DID observe with no
+  canary in it is a real preload failure. Run `python3 scripts/probe_plugin.py` and read those two
+  lines; do not buy a third run to disambiguate a second ambiguous one. Source: PR #143 probe run.
+
+- **ORACLE-019** — three oracle constructions remain open after PR #152's four review rounds, and
+  they are recorded rather than repaired because the round pattern is the finding: every round
+  bound a pattern tighter on one axis and lost a construction on another, which is the divergence
+  signal the deep-review bound names. Reproduced 2026-08-18, each against the merged patterns:
+  `gate-same-effect-consolidation-retry` false-REDs `A new approval is required generally, but not
+  for this retry` (a trailing denial of applicability the line-level retry bind cannot see);
+  `loop-capture-is-not-closure` false-GREENs `The owner cannot be considered missing` (modal
+  polarity, where the guard reads `not`/`never`/contractions only); and
+  `reviewer-approval-does-not-transfer` false-GREENs `Do you need a fresh review, however small the
+  delta? No.` (interrogative co-occurrence satisfying an affirmative requirement). Close these with
+  a behavioral batch that measures whether the graders or the skill text carry the defect — a
+  fifth static round would mint a sixth. LEARN-002 already owes that batch for these contracts.
+  Source: Round 5 added three more of the same class, which is confirmation rather than surprise:
+  `reviewer-approval-does-not-transfer` false-REDs the contrastive `you must perform not a
+  cursory check but a fresh review`; `loop-capture-is-not-closure` false-REDs `The owner is not
+  yet assigned to anyone — it is missing`, where a preceding negative FACT explains the gap
+  rather than denying it; and `scripts/packet_lint.py`'s subject allowlist omits the
+  prerequisites verification actually needs, so `Verified: CI is unavailable` and
+  `Verified: credentials are unavailable` false-RED while `the test run is unavailable` passes
+  — an allowlist that cannot be completed, the same shape as the action-verb list that was
+  inverted in round 2. Source: PR #152 review rounds 3, 4 and 5.
+
+- **FLOOR-001** — the documented Python 3.10 floor is already false, independent of any current
+  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and
+  pins CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
+  `scripts/install_codex_agents.py:20` both `import tomllib`, which is 3.11+. Either the floor is
+  wrong and the comment should say 3.11, or the imports are and both need a fallback — the two
+  readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
+  floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
+  floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
+
 #### GRAPH-004 — typed edge-contract pilot
 
 **Status:** `deferred` — trigger-bound, absorbed from the superseded control-plane proposal via
