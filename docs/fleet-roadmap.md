@@ -470,15 +470,20 @@ evidence", which does not exist.
 
 **Salvaged parallel evidence (2026-08-12 arc, landed from branch
 `claude/sonnet-testing-cf6bfc`):** three producer batches plus digest diagnostics under
-`evals/baselines/2026-08-12-handoff-001-*/`, each with its decisions.md. Their product: the three
+`evals/baselines/2026-08-12-handoff-001-*/` (rationale decisions.md beside the two
+producer batches that carry one; the digest diagnostics and the r2 rerun are raw
+captures only). Their product: the three
 producer grader repairs now in `handoff-producer-preserves-discovered-constraints` (firing tests
 in `HandoffProducerGraderRepairsTest`; the retained runs tuned the amendments, so rate acceptance
 folds into this item's paid re-runs). Still open from that arc: the producer's parsed-membership
 `must_match` missed at 2/3 in the retained 2026-08-18 rerun
-(`2026-08-12-handoff-001-producer-r2-x3` sibling evidence) — the last unexplained miss on that
+(`2026-08-18-handoff-001-producer-r2-x3`) — the last unexplained miss on that
 contract — and the `disable_mlock` forbidden sibling carries the same fixed-width-lookbehind
 blind spot the live-apply repair fixed, deliberately left until evidence indicts it
-(producer-amended-x3 decisions.md watch item). The arc's runner half is deliberately **not**
+(producer-amended-x3 decisions.md watch item). Residual limits of the ported patterns, recorded against interest: the co-occurrence
+guard's clause exemption includes `assum\w*`/`fail\w*`, so an endorsement phrased inside
+an assumption-labelled clause is exempt, and the parity requirement skips any sentence
+carrying a negator even when the assertion itself is affirmative. The arc's runner half is deliberately **not**
 ported: main's 2026-08-15 `--allowedTools` fix supersedes its grant mechanism, its digest-case
 redesign would move evaluator bytes this item's pending re-run counts on, and its per-command
 outcome evidence is EVAL-010.
