@@ -1906,7 +1906,7 @@
         "(?i)(?=[^.\\n]*(?:pars\\w*|structured))(?=[^.\\n]*\\bsvc-bao\\b)(?=[^.\\n]*\\bbao-readers\\b)[^.\\n]*(?:membership|relationship)",
         "(?i)Raft",
         "(?i)service_count[^.\\n]{0,35}7[^.\\n]{0,15}8",
-        "(?i)generated[- ]source parity",
+        "(?i)(?=[^.\\n]*\\bgenerated\\b)(?=[^.\\n]*\\b(?:parity|agree\\w*|reconcil\\w*|independent\\w*|match\\w*)\\b)[^.\\n]*\\b(?:source|artifact|manifest|listing)\\b",
         "(?i)TLS[^.\\n]{0,50}(?:block|pending|missing|custody)",
         "(?i)(?:Tier\\s*1|staged|unapplied)"
       ],
@@ -1915,8 +1915,8 @@
         "(?i)\\b(?:do not|don't|never|must not)\\s+(?:remove|drop|delete)\\s+(?:the\\s+)?disable_mlock\\b",
         "(?i)\\benable\\s+swap\\b",
         "(?i)\\boperator validate-config\\b[^.\\n]{0,30}\\b(?:must not|do not|never)\\s+(?:be\\s+)?(?:used|run)\\b",
-        "(?i)\\b(?:string\\s+)?co-?occurrence\\b[^.\\n]{0,35}\\b(?:is sufficient|proves|is evidence|counts as)\\b",
-        "(?i)(?<!not )(?<!never )\\b(?:proceed|continue|apply|deploy|activate)\\b[^.\\n]{0,35}\\blive\\b"
+        "(?im)^(?![^\\n]*\\b(?:reject\\w*|assum\\w*|not\\b|never\\b)\\b)[^\\n]*\\b(?:string\\s+)?co-?occurrence\\b[^.\\n]{0,35}\\b(?:is sufficient|proves|is evidence|counts as)\\b",
+        "(?im)^(?![^\\n]*\\b(?:no|not|never|without)\\b[^\\n]{0,80}\\b(?:proceed|continue|apply|deploy|activate)\\b)[^\\n]*?\\b(?:proceed|continue|apply|deploy|activate)\\b[^.\\n]{0,35}\\blive\\b"
       ],
       "expected": "The producer emits one manager-owned Work Order v1 and carries all three observed failed assumptions in the correct direction: supported validation replaces the removed flag, swap denial replaces the removed field, and relationship acceptance parses membership rather than counting strings. The work order remains Tier 1 and names the live blocker.",
       "tags": [

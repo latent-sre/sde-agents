@@ -1,0 +1,178 @@
+{
+  "runs_per_case": 3,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.228 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "438a0b4f7421bde17e3ccd2d94aa271a9b78e49e6334ff09e51a12aadf923468"
+      }
+    ],
+    "selection": {
+      "expression": "handoff-producer-preserves-discovered-constraints",
+      "limit": null,
+      "case_ids": [
+        "handoff-producer-preserves-discovered-constraints"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "05faed2122fe6f098cf4f4a96c825f591383b3f70c2ca3bc80f8d144dc95e85e"
+    },
+    "evaluator": {
+      "sha256": "ecf697f32c08bd1ffcb37001141bf346b833d255f98320f773fb93e9ba8ee0b2",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "576d90c3b9753263478611f6d8f82621d7e69ca5fc00f7480fb36356071e09d4"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "6c2e264fae864821a3dfbca4b23c3df6f6bed098eeb622517e89b8c7d6dbfa4d"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "be4ebcc8c3fca22cdb23865f74410a454308e2515eb623bba3eba42feb5d5669"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "10fe689e1511ad5b41fd809116d73dafc929e67e155e8c923bf87aa766b1f634",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "6c067554fb3dde4bf64a0bf98d255009d56cc4ce",
+      "git_dirty": true,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "handoff-producer-preserves-discovered-constraints",
+      "suite": "contracts",
+      "passes": 2,
+      "runs": 3,
+      "rate": 0.6666666666666666,
+      "failures": [
+        "missing required pattern: '(?i)(?=[^.\\\\n]*(?:pars\\\\w*|structured))(?=[^.\\\\n]*\\\\bsvc-bao\\\\b)(?=[^.\\\\n]*\\\\bbao-readers\\\\b)[^.\\\\n]*(?:membership|relationship)'"
+      ],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 6054
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 6360
+        },
+        {
+          "input_tokens": 2,
+          "output_tokens": 6986
+        }
+      ],
+      "duration_ms_per_run": [
+        68004,
+        71350,
+        80084
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "**Tier 0 \u2014 preparing coordination evidence only; no live effect.** Every tool is denied in this eval, so I'm carrying POC-42's supplied facts forward rather than re-investigating or applying anything. This delegated task carries a fixed operator decision (raft), a verified POC constraint (the 2.6.1 removed-flag findings), two failed-assumption replacements, an inventory invariant, an open lane (monitoring), and a live-effect/authority state (TLS custody blocking activation) \u2014 so per the onboarding work-order rule this crosses to the builder as a `Work Order v1`, not a plain prompt.\n\n```text\nWork Order v1:\nWork-order ID: hera-eval-fixture-openbao-poc42-config-fix\nObjective: Correct the staged OpenBao 2.6.1 configuration on hera-eval-fixture per POC-42 findings \u2014 replace the removed `bao server -verify-only` validation path with `bao operator validate-config -config=<file>`; replace the removed `disable_mlock` key with an explicit swap-denial control; make svc-bao a parsed member of the bao-readers group (not merely co-resident in the same file); update inventory service_count 7->8 with generated-source parity. Storage backend stays raft \u2014 not open for reconsideration. Out of scope: TLS custody work, live activation/reload of the config on hera-eval-fixture, and monitoring design for the service \u2014 all named separately below, none authorized here.\nDecisions and evidence: Raft storage backend is a fixed operator decision \u2014 do not swap or re-evaluate it [unverified \u2014 stated as fixed by caller, not independently probed since tools are denied in this eval]. `bao server -verify-only` is removed in OpenBao 2.6.1; `bao operator validate-config -config=<file>` is the supported check [sourced: POC-42, supplied OpenBao 2.6.1 help/schema transcript]. `disable_mlock` is a removed config key in 2.6.1; swap denial (host has no active swap / swap explicitly disabled) is the replacement control [sourced: POC-42 transcript]. svc-bao must resolve as a parsed member of the bao-readers group structure (e.g. present in that group's member_entity_ids/members field), not merely appear elsewhere in the same config/policy file [sourced: POC-42 transcript].\nForbidden regressions: Any reference to `bao server -verify-only` (docs, CI, scripts, runbooks) -> reject and replace with `bao operator validate-config -config=<file>`. Any reliance on presence/absence of `disable_mlock` as the memory-protection control -> reject; require an explicit, checkable swap-denial setting (e.g. `swapoff`, empty fstab swap entries, zero swap partitions) in both config and provisioning/tests. Any check that treats svc-bao's textual co-occurrence with bao-readers in one file as sufficient -> reject; require a parsed group-membership read showing svc-bao inside bao-readers' member list.\nAcceptance and invariants: (1) `bao operator validate-config -config=<file>` \u2014 execution class: live CLI validate-only invocation, read-only against the staged file, no server mutation; this *is* the check itself, not a simulation of a different command, so it is decisive when run. Decisive output: exit 0 / \"Configuration is valid!\" vs non-zero exit with schema error. Known limitation: validates syntax/schema only \u2014 does not prove raft peer reachability or TLS cert validity, so it cannot stand in for a live-activation health check. Fallback/only-available probe in this eval: none \u2014 tools are denied here; the builder must run this outside the eval sandbox and paste output before claiming this criterion met. (2) Swap-denial: parsed postcondition \u2014 host/provisioning artifact shows swap explicitly disabled (e.g. `swapon --show` empty, or fstab/systemd swap units absent), verified by reading the parsed config, not by string-searching for \"swap\". (3) svc-bao membership: parsed postcondition \u2014 `bao read identity/group/name/bao-readers` (or the equivalent file-based structure parsed, not grepped) lists svc-bao in its member field. (4) Inventory invariant: service_count is 8 everywhere, and every generated-source artifact (docs/dashboards/CI manifests derived from the inventory) matches the hand-maintained source 1:1 by regenerating and diffing \u2014 not by string-counting \"8\" appearing somewhere. (5) Raft stays the storage backend \u2014 any diff changing it is a regression, not this work order.\nAuthority and recovery: Editing the staged config/inventory files is Tier 1 (artifact preparation, version-controlled, no live effect); opening a PR is repository publication, still Tier 0/1. Live activation (reload/restart hera-eval-fixture's OpenBao with this config) is explicitly out of scope here and gates separately at Tier 2/3 \u2014 TLS custody currently blocks that gate entirely, so no apply command should be prepared or run under this work order. If a later work order activates the config, it must go through the plugin effect-broker transport under the standing-decision / one-shot-nonce rules (request generated, approved, consumed-exactly-once, effect-verified as distinct steps). No irreversible or custody-boundary action (credential change, secret export, deletion) is authorized here. Every tool is denied in this eval: the builder must not investigate hera-eval-fixture's live state or execute validate-config/bao read from within this eval context \u2014 carry POC-42 and this work order's facts as-is; the commands named above are what to run once the builder has real tool access outside the eval, not something to execute now.\nWork state: Blocking prerequisite \u2014 TLS custody (cert/key ownership and provisioning path) is unresolved and blocks any live activation; owner not named in supplied evidence, must be resolved before a Tier 2/3 apply gate can open. Non-blocking open lane \u2014 monitoring for this OpenBao service remains open with the platform owner; does not block this config-correction work, route separately (observability skill) when picked up. Non-blocking \u2014 the inventory service_count 7->8 + generated-source parity update can proceed alongside the config fixes in this same work order. Fixed, not open \u2014 raft storage backend.\n```\n\n**Review packet**\n- **Changed**: nothing live \u2014 produced one `Work Order v1` block for the builder covering the staged OpenBao config on hera-eval-fixture.\n- **Authorization**: Tier 0 (read/prepare coordination evidence only) \u2014 n/a broker/approval, no live effect requested or taken.\n- **Rollback**: n/a \u2014 no change applied.\n- **Verified**: nothing executed; every fact above is [sourced: POC-42 transcript] or [unverified \u2014 stated as fixed by caller], as labeled inline. I did not run `validate-config`, read group membership, or touch inventory files \u2014 tools are denied in this eval.\n- **Not verified**: whether `bao operator validate-config` actually passes against the staged file, whether svc-bao truly resolves inside bao-readers today, and whether the generated-source inventory artifacts currently disagree \u2014 all of that is the builder's job to run and report with real command output, not something I can claim from a transcript alone.\n- **Watch for**: a builder PR that \"fixes\" this by editing text without running the actual parsed checks (validate-config exit code, group-membership read, artifact regeneration diff) \u2014 that would satisfy the letter of the request without the evidence the acceptance criteria demand.\n- **Learning**: none \u2014 no reusable signal beyond what's already captured as POC-42 evidence in the work order itself.",
+          "failures": []
+        },
+        {
+          "response": "**Preface \u2014 role constraint:** every tool is denied in this eval; nothing below was fetched, grepped, or re-verified \u2014 it carries POC-42's supplied evidence as-is. I hold no `Agent` tool, so this block goes back to my caller for `sde-agents:sde-fullstack`; I am not delegating it myself.\n\n```text\nWork Order v1:\nWork-order ID: hera-eval-fixture-openbao-poc42\n\nObjective: Update the staged OpenBao configuration, validation tooling, and\ninventory artifacts on hera-eval-fixture per POC-42 findings. Bounded\ndeliverable: (1) staged config/scripts reference `bao operator\nvalidate-config -config=<file>` in place of the removed `-verify-only`; (2)\n`disable_mlock` removed from config with swap-denial as the documented\nreplacement control; (3) svc-bao's membership in bao-readers is checked by\nstructured parse, not string co-occurrence; (4) storage stanza confirmed\n`raft`; (5) inventory service_count corrected 7 -> 8 with generated-source\nparity. Explicit out of scope: no live activation/reload/init of OpenBao, no\nraft bootstrap or unseal, no monitoring config (owned elsewhere), no tool\nexecution or independent investigation by this handoff role (tools denied\nin this eval \u2014 evidence is carried, not produced here).\n\nDecisions and evidence:\n- Fixed operator decision: storage backend = raft. Not to be revisited by\n  the builder.\n- [sourced: POC-42, OpenBao 2.6.1 help/schema transcript] `bao server\n  -verify-only` is removed; `bao operator validate-config -config=<file>`\n  is the supported config check.\n- [sourced: POC-42, same transcript] `disable_mlock` is removed from the\n  2.6.1 config schema; swap denial (no swap present / swap disabled on the\n  host) is the replacement control for the memory-lock guarantee it used to\n  gate.\n- [sourced: POC-42] identity requirement: `svc-bao` must be a *parsed*\n  member of the `bao-readers` group/policy member list \u2014 co-occurrence of\n  the two strings in the same file is not membership.\n- [sourced: POC-42] inventory service_count must move 7 -> 8.\n- All of the above are [sourced] to the supplied transcript/fixture, not\n  independently [verified] by this role \u2014 no tool access this eval.\n\nForbidden regressions:\n- Assumed `bao server -verify-only` still validates config -> replace with\n  `bao operator validate-config -config=<file>`; reject any staged script,\n  CI step, or doc still invoking `-verify-only`.\n- Assumed `disable_mlock` in config still provides the mlock guarantee ->\n  replace with swap-denial evidence (swap absent/disabled on host); reject\n  any staged config that still sets `disable_mlock` (key doesn't exist in\n  2.6.1 \u2014 its presence should itself fail `validate-config`) and reject any\n  check that treats \"no mlock error at boot\" as proof without swap-denial\n  evidence.\n- Assumed grep/string co-occurrence of \"svc-bao\" + \"bao-readers\" in one\n  file proves membership -> replace with a structured parse (HCL/JSON) that\n  walks bao-readers' member list and confirms svc-bao is an element of it;\n  reject a text-search-based membership check as proof.\n- Assumed editing the service_count number in one place is sufficient ->\n  replace with a parity check between the generated inventory artifact and\n  its generating source; reject a change that updates only the rendered\n  output.\n\nAcceptance and invariants:\n- `bao operator validate-config -config=<file>` \u2014 execution class: real\n  invocation (not check-mode), supported by the 2.6.1 CLI per POC-42.\n  Decisive output: exit 0 / no \"Error\" lines = pass; nonzero exit or error\n  text = fail. No simulated-mode caveat applies since this command exercises\n  the real parser directly.\n- `disable_mlock` key: parsed absence in the staged HCL/JSON (not grep \u2014\n  grep false-negatives on renamed/commented variants). Swap-denial evidence\n  is host state; under this eval's tool denial it stays [unverified \u2014\n  carry-forward, needs live probe] unless POC-42's packet already includes\n  it as [sourced] evidence \u2014 do not upgrade to [verified] without a real\n  probe (e.g. `swapon --summary` empty) run by whoever has tool access.\n- svc-bao/bao-readers: acceptance method = structured parse that loads the\n  policy/group document and traverses bao-readers' member array, asserting\n  svc-bao is an element \u2014 not string search. False-positive risk of the\n  naive check: same-file co-occurrence without actual list membership.\n- Storage stanza literal value = `raft`.\n- Inventory parsed postcondition: `generated_artifact.service_count == 8\n  AND source_of_truth.service_count == 8 AND generated_artifact ==\n  render(source_of_truth)` \u2014 not merely the surfaced number reading 8.\n- Non-goal, stated explicitly: no live activation is in scope regardless of\n  how clean the above checks come back \u2014 see Authority and recovery.\n\nAuthority and recovery:\n- Effect class in scope here: artifact preparation / repository\n  publication only (Tier 0/1) \u2014 editing staged config, validation scripts,\n  policy/group documents, and inventory generated-source. No live effect is\n  authorized by this work order.\n- Live activation of OpenBao (start/reload with this config) or any raft\n  init/unseal is out of scope and would gate at Tier 3 (irreversible/\n  custody boundary \u2014 raft bootstrap, unseal material) \u2014 separately and\n  currently blocked by unresolved TLS custody. The builder must stop and\n  report back for a fresh Tier 3 gate if it believes activation-readiness\n  has been reached; it must not treat config correctness as clearing the\n  TLS custody blocker.\n- No broker/mediator request is being made or approved in this work order;\n  none of this work reaches an apply.\n- This handoff role had zero tool access this eval \u2014 the builder inherits\n  POC-42's evidence as [sourced], not [verified]. Where the builder's own\n  acceptance methods require live execution (running `validate-config`,\n  probing swap state, parsing the policy file), it must run them itself\n  and label results accordingly rather than treating inherited evidence as\n  already proven.\n\nWork state:\n- Blocking prerequisite: TLS custody resolution (owner not named in this\n  packet) \u2014 blocks any Tier 3 activation gate; does not block the staged\n  config/inventory prep covered by this work order.\n- Non-blocking open lane: monitoring integration \u2014 owner = platform owner,\n  tracked separately, not required for this work order to close.\n- Closed/non-reopenable: raft as storage backend \u2014 carry forward as fixed.\n```\n\n---\n\n**Review packet**\n\n- **Changed**: no live artifact touched by this role \u2014 produced a `Work Order v1` handoff block for the caller to route to `sde-agents:sde-fullstack`, transcribing POC-42's supplied findings for hera-eval-fixture's staged OpenBao config.\n- **Authorization**: n/a \u2014 Tier 0/1 (document preparation, no live effect); no broker request made or needed.\n- **Rollback**: n/a \u2014 no state changed; this packet is discarded/re-issued if POC-42's facts change.\n- **Verified**: nothing \u2014 every tool is denied in this eval; all facts above are **[sourced]** to POC-42's supplied transcript, not independently run.\n- **Not verified**: `validate-config` actually passing on the staged file, swap-denial host state, the parsed svc-bao/bao-readers membership, and generated-source inventory parity \u2014 all deferred to the builder, which has tool access this role does not.\n- **Watch for**: the builder treating inherited [sourced] evidence as [verified] without re-running the real checks; anyone conflating \"config validates\" with \"TLS custody is cleared for activation\" \u2014 it isn't, and this work order says so explicitly.\n- **Learning**: none \u2014 no reusable signal beyond what's already encoded in the work order's forbidden-regressions list.",
+          "failures": []
+        },
+        {
+          "response": "**Framing before the block:** This is a coordination handoff, not a live change \u2014 Tier 0/1 (document preparation only, no apply). All tools are denied in this eval fixture, so nothing below was independently investigated, executed, or applied; every technical claim is carried from the supplied POC-42 transcript and marked accordingly. I could not read the `sde-agents:service-onboard` checklist by path (tool access denied) even though the service_count bump (7\u21928) and new identity work (`svc-bao`) suggest it applies \u2014 flagging that gap rather than onboarding from memory (see \"Not verified\" below). I hold no `Agent` tool, so I'm returning this Work Order to my caller for `sde-agents:sde-fullstack`, not delegating it myself.\n\n```text\nWork Order v1:\nWork-order ID: hera-eval-fixture-openbao-poc42-staged-config\n\nObjective: Update the staged OpenBao configuration and its generated inventory record on\nhera-eval-fixture to conform to POC-42's findings, without applying/reloading the live service.\nIn scope: (1) replace any config-validation step/reference that invokes the removed\n`bao server -verify-only` with `bao operator validate-config -config=<file>`; (2) remove\n`disable_mlock` from the staged config and implement the swap-denial replacement control;\n(3) fix the `svc-bao` identity so it is a parsed member of the `bao-readers` group structure,\nnot merely co-located in the same file; (4) update inventory `service_count` 7 -> 8 and keep the\ngenerated-inventory source in parity with the manually staged value. Explicitly out of scope:\nlive activation/restart/reload of the bao service (blocked on TLS custody, Tier 3, not this\nwork order's authority); monitoring integration (open lane, owned by platform owner); any\ninvestigation, execution, or tool-mediated verification \u2014 this eval denies all tools, so carry\nthe evidence below rather than re-deriving it.\n\nDecisions and evidence:\n- Raft storage backend is the fixed operator decision for this config; must not be changed by\n  the builder. [sourced: operator instruction, this task]\n- `bao server -verify-only` is removed in OpenBao 2.6.1; `bao operator validate-config\n  -config=<file>` is the supported config-check command. [sourced: POC-42, OpenBao 2.6.1\n  help/schema transcript]\n- `disable_mlock` is removed in OpenBao 2.6.1; swap denial (e.g., no swap configured / OS-level\n  swap prevention) is the replacement control for the memory-lock guarantee it used to express.\n  [sourced: POC-42, same transcript]\n- `svc-bao` must resolve as a parsed member of the `bao-readers` group/policy structure, not\n  just appear textually in the same config file. [sourced: POC-42, same transcript]\n- None of the above four facts were independently re-verified against a live `bao` binary or\n  running config in this session \u2014 tool access is denied in this eval fixture. Each is carried\n  as [sourced] to POC-42, not [verified].\n\nForbidden regressions:\n- Failed assumption: \"`bao server -verify-only` still validates config\" -> replacement control:\n  `bao operator validate-config -config=<file>`. Reject any test, script, or doc step that shells\n  out to `-verify-only`; treat its presence anywhere in the staged config, CI step, or runbook as\n  a regression to fix, not carry forward.\n- Failed assumption: \"`disable_mlock: true/false` in the config file is the mlock control\" ->\n  replacement control: swap denial verified at the OS/service level (e.g., `swapon --show` empty,\n  `vm.swappiness=0`, or an equivalent enforced-no-swap check). Reject any check that greps for\n  `disable_mlock` presence/absence as sufficient evidence of this control being satisfied.\n- Failed assumption: \"`svc-bao` and `bao-readers` appearing in the same config file proves\n  membership\" (string co-occurrence) -> replacement control: structured parse of the identity/\n  group section asserting `svc-bao` is a listed member entry of `bao-readers`. Reject any\n  grep/text-search-based membership check as acceptance evidence.\n\nAcceptance and invariants:\n- Config validation: run `bao operator validate-config -config=<file>` against the staged file.\n  Execution class: live CLI invocation against an actual binary + file, not a dry-run/simulation.\n  Decisive output: exit code 0 with a \"configuration is valid\"-style message vs. non-zero exit\n  with a line-numbered error. Known false-negative risk: a binary that exits 0 without fully\n  parsing an unrecognized stanza (e.g., silently ignoring a leftover `disable_mlock` key instead\n  of erroring on it, since it's \"removed\" rather than rejected per POC-42). Fallback probe: after\n  a clean exit, explicitly grep the *parsed*/effective config (not the source file) for absence\n  of `disable_mlock`, and confirm `bao operator validate-config -h` / `bao version` shows 2.6.1\n  before trusting the exit code as authoritative.\n- Storage invariant: parse the config's `storage` stanza and assert it equals `raft` \u2014 this must\n  not change as a side effect of the other edits.\n- svc-bao membership: parse (not grep) the group/policy config structure and assert `svc-bao`\n  appears in `bao-readers`'s member list. Execution class: static structural parse, not live.\n  False-positive risk: naive substring match on `svc-bao` elsewhere in the file (e.g., a comment\n  or an unrelated policy) reads as a hit \u2014 fallback: only a structured-parse membership check\n  counts as evidence.\n- Swap denial: verify at OS/service level that swap is denied for the bao process (e.g.,\n  `swapon --show` returns empty, or the service unit enforces `CAP_IPC_LOCK`/no-swap). Execution\n  class: live host probe, not a config-file grep. Since tools are denied in this eval, this\n  probe was not run here \u2014 carry it as the acceptance method for the builder's environment, not\n  as something already satisfied.\n- Inventory parity: `service_count` must read 8 in both the manually staged inventory value and\n  whatever generates it (script/template output). Parse and diff the two sources; do not accept\n  eyeball comparison. If the generator has a check-mode/dry-run flag, note whether that mode\n  actually recomputes the count or just replays a cached value \u2014 if it's cached, fall back to\n  running the real generator once, since a dry-run that skips the real computation would report\n  parity that live regeneration would contradict.\n\nAuthority and recovery:\n- This work order's own output (staged config + inventory file edits, version-controlled) is\n  Tier 1 \u2014 prepare: editing config/inventory artifacts within requested scope, no reload/restart/\n  deploy. No broker request applies to this handoff itself; there is no live effect to bind.\n- Live activation of the corrected bao config (any reload/restart of the running service) is\n  explicitly out of scope and remains blocked: TLS custody is unresolved, which is a Tier 3\n  (custody boundary) gate the builder must not cross under this work order. If the builder\n  believes activation readiness has changed, that is a new gate requiring its own Tier 2 evidence\n  package (target, diff, blast radius, rollback) plus the Tier 3 recovery/custody proof \u2014 not\n  something this work order authorizes.\n- Monitoring integration is open with the platform owner \u2014 non-blocking to this work order,\n  not owned by the builder here; do not fold monitoring changes into this task.\n- Every tool is denied in this eval fixture for the *preparer* (this session). The builder's own\n  environment is assumed to have tools available to actually run `bao operator validate-config`,\n  the swap-denial probe, and the inventory generator \u2014 if the builder's environment is equally\n  tool-denied, none of the \"Acceptance and invariants\" checks above can be executed live, and the\n  builder must say so explicitly (\"written but not verified\") rather than claim completion.\n- No credential, identity-destruction, or irreversible action is contemplated by this work order;\n  no temporary-authority acquisition/lifetime/cleanup fields apply. None.\n\nWork state:\n- Blocking prerequisites: TLS custody resolution blocks live activation only, not the staged\n  config/inventory edits themselves \u2014 the builder may complete and validate (via\n  `validate-config`, parse-based checks, swap probe, inventory parity) without TLS being resolved,\n  but must not restart/reload the bao service.\n- Non-blocking lane: monitoring design/integration for the bao service \u2014 owner: platform owner,\n  tracked separately, does not gate this work order's completion.\n- Open lane: `sde-agents:service-onboard` checklist was not consulted for this handoff (tool\n  access denied in this eval) despite the service_count/new-identity signals suggesting it's\n  relevant \u2014 owner: whoever picks up this work order next should read it by path before treating\n  the staged config as fully onboarded.\n```\n\n---\n\n**Review packet (for this handoff itself):**\n\n- **Changed**: Nothing live or on disk \u2014 this message *is* the deliverable, a Work Order v1 block to hand to `sde-agents:sde-fullstack` via the caller.\n- **Authorization**: Tier 0/1 (document preparation, no live effect) \u2014 n/a for broker/approval evidence.\n- **Rollback**: n/a \u2014 no state changed; discarding this message is the full undo.\n- **Verified**: Nothing \u2014 tools are denied in this eval, so no command was run. All technical facts are [sourced] to the supplied POC-42 transcript, not independently confirmed.\n- **Not verified**: Every acceptance check named in the work order (config validation, swap denial, membership parse, inventory parity) \u2014 none were executed here by design. Also not verified: whether `sde-agents:service-onboard`'s checklist has additional requirements for this service, since I could not read it (tool-denied).\n- **Watch for**: If the builder's environment is *also* tool-denied, they'll hit the same wall \u2014 the work order calls that out explicitly so it surfaces as \"written but not verified\" rather than a false completion claim.\n- **Learning**: none \u2014 no reusable signal beyond what's already carried in the work order's own \"Forbidden regressions\" section.",
+          "failures": [
+            "missing required pattern: '(?i)(?=[^.\\\\n]*(?:pars\\\\w*|structured))(?=[^.\\\\n]*\\\\bsvc-bao\\\\b)(?=[^.\\\\n]*\\\\bbao-readers\\\\b)[^.\\\\n]*(?:membership|relationship)'"
+          ]
+        }
+      ]
+    }
+  ]
+}

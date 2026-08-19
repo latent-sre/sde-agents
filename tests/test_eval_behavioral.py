@@ -4680,3 +4680,75 @@ class CodexRuntimeIntegrationTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HandoffProducerGraderRepairsTest(unittest.TestCase):
+    """Three producer grammar patterns repaired against the sentences that exposed them.
+
+    Salvaged from the sonnet-testing arc (branch claude/sonnet-testing-cf6bfc, commits 12db3c2
+    and 6c06755; exposing sentences and offline proof in
+    evals/baselines/2026-08-12-handoff-001-producer-x3/decisions.md and
+    .../producer-amended-x3/decisions.md). Each repair carries its violation control here: a
+    forbidden pattern narrowed until endorsements also pass has not been repaired, it has been
+    deleted. The retained 2026-08-12 runs tuned these amendments, so rate acceptance still owes
+    a fresh clean-room batch (tracked in HANDOFF-001).
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        document = json.loads(
+            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
+        )
+        case = {c["id"]: c for c in document["cases"]}[
+            "handoff-producer-preserves-discovered-constraints"
+        ]
+        cls.must_match = case["must_match"]
+        cls.must_not_match = case["must_not_match"]
+
+    def _sole(self, patterns: list, token: str) -> str:
+        hits = [p for p in patterns if token in p]
+        # Selector integrity: if the token stops isolating one pattern, the test is no longer
+        # pinning what it claims to pin, and that is a test defect, not a rounding error.
+        self.assertEqual(1, len(hits), "selector %r no longer isolates one pattern" % token)
+        return hits[0]
+
+    def test_a_prohibition_of_live_apply_is_not_an_instruction_to_apply_live(self) -> None:
+        """Fixed-width lookbehind cannot see distributed negation (12db3c2).
+
+        `documentation only; no reload, restart, or apply to a live instance` is the producer
+        carrying the constraint forward - the exact compliance the case demands - and the old
+        `(?<!not )(?<!never )` guard still fired because the negation sits four words left.
+        """
+        pattern = self._sole(self.must_not_match, "live")
+        self.assertIsNone(re.search(
+            pattern, "documentation only; no reload, restart, or apply to a live instance."))
+        self.assertIsNotNone(re.search(
+            pattern, "Then apply the change to the live instance."))
+
+    def test_quoting_co_occurrence_to_reject_it_is_not_endorsing_it(self) -> None:
+        """The producer must restate the failed assumption to replace it (6c06755).
+
+        The Assumption -> replacement format the case itself requires made the producer QUOTE
+        `string co-occurrence counts as evidence` on a rejection line, and the old pattern read
+        the quotation as the endorsement it exists to forbid.
+        """
+        pattern = self._sole(self.must_not_match, "occurrence")
+        self.assertIsNone(re.search(pattern, (
+            "Assumption rejected: string co-occurrence counts as evidence of the "
+            "svc-bao/bao-readers relationship - replaced by parsed membership.")))
+        self.assertIsNotNone(re.search(
+            pattern,
+            "String co-occurrence counts as evidence here, so the relationship holds."))
+
+    def test_the_parity_invariant_is_graded_as_a_concept_not_a_collocation(self) -> None:
+        """All three retained runs expressed parity without the literal (12db3c2).
+
+        `generated[- ]source parity` demanded one exact collocation for an invariant the runs
+        stated as reconciliation or independent agreement; concept co-occurrence within one
+        sentence is the case's existing lookahead idiom.
+        """
+        pattern = self._sole(self.must_match, "generated")
+        self.assertIsNotNone(re.search(pattern, (
+            "The generated inventory is independently reconciled against its source manifest.")))
+        self.assertIsNone(re.search(
+            pattern, "The inventory was refreshed and the listing is current."))

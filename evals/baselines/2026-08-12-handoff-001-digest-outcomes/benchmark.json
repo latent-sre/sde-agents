@@ -1,0 +1,175 @@
+{
+  "runs_per_case": 1,
+  "conditions": {
+    "runtime": "claude",
+    "cli_version": "2.1.228 (Claude Code)",
+    "model_requested": "sonnet",
+    "models_observed": [
+      "claude-sonnet-5"
+    ],
+    "plugin_dir": ".",
+    "timeout_s": 600,
+    "concurrency": 3,
+    "auth_provider": {
+      "provider": "anthropic",
+      "auth": "credentials-file-copy"
+    },
+    "run_evidence_retained": true,
+    "clean_room": true
+  },
+  "provenance": {
+    "schema": "sde-agents/eval-provenance/v3",
+    "eval_sources": [
+      {
+        "path": "evals/behavioral/contracts.json",
+        "sha256": "0fb6d24edbbe40ee906ba1817cb8ecad0da7b158dabf9fcf6f96d0dc4165350a"
+      }
+    ],
+    "selection": {
+      "expression": "handoff-builder-rejects-digest-mismatch",
+      "limit": null,
+      "case_ids": [
+        "handoff-builder-rejects-digest-mismatch"
+      ],
+      "canonicalization": "JSON UTF-8, sorted object keys, compact separators, array order preserved",
+      "sha256": "191236b7642231c6f7b2516f95478979f638cf8fbb4f19bdfa8280e6c8367b91"
+    },
+    "evaluator": {
+      "sha256": "ecf697f32c08bd1ffcb37001141bf346b833d255f98320f773fb93e9ba8ee0b2",
+      "files": [
+        {
+          "path": "scripts/eval_behavioral.py",
+          "sha256": "576d90c3b9753263478611f6d8f82621d7e69ca5fc00f7480fb36356071e09d4"
+        },
+        {
+          "path": "scripts/eval_clean_room.py",
+          "sha256": "6c2e264fae864821a3dfbca4b23c3df6f6bed098eeb622517e89b8c7d6dbfa4d"
+        },
+        {
+          "path": "scripts/eval_routing.py",
+          "sha256": "eba546321b93decbdbf87f5c45c9aeec920067b53832d6a2369f7433d10650ef"
+        },
+        {
+          "path": "scripts/packet_lint.py",
+          "sha256": "be4ebcc8c3fca22cdb23865f74410a454308e2515eb623bba3eba42feb5d5669"
+        }
+      ],
+      "runtime": {
+        "implementation": "CPython",
+        "python_version": "3.12.10"
+      }
+    },
+    "plugin": {
+      "sha256": "10fe689e1511ad5b41fd809116d73dafc929e67e155e8c923bf87aa766b1f634",
+      "files_hashed": 110,
+      "scope": {
+        "strategy": "runtime allowlist plus referenced repository-local dependencies",
+        "included": [
+          ".claude-plugin",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "README.md",
+          "agents",
+          "agents/distinguished-architect.md",
+          "agents/homelab-platform.md",
+          "agents/principal-engineer.md",
+          "agents/prompt-engineer.md",
+          "agents/sde-fullstack.md",
+          "hooks",
+          "hooks/hooks.json",
+          "learning/README.md",
+          "plugin.json",
+          "scripts/effect_broker.py",
+          "scripts/eval_behavioral.py",
+          "scripts/eval_routing.py",
+          "scripts/learning_ledger.py",
+          "scripts/packet_lint.py",
+          "scripts/probe_plugin.py",
+          "scripts/readonly-guard.py",
+          "scripts/run_state.py",
+          "scripts/validate_fleet.py",
+          "scripts/verification_sandbox.py",
+          "skills",
+          "skills/backend-craft/SKILL.md",
+          "skills/ci-actions/SKILL.md",
+          "skills/code-craft/SKILL.md",
+          "skills/code-craft/references/typescript.md",
+          "skills/frontend-craft/SKILL.md",
+          "skills/lab-incident/SKILL.md",
+          "skills/observability/SKILL.md",
+          "skills/prompt-craft/SKILL.md",
+          "skills/prompt-craft/references/claude-code-frontmatter.md",
+          "skills/service-onboard/SKILL.md",
+          "skills/sre-tool/SKILL.md",
+          "workflows"
+        ],
+        "excluded": [
+          ".git/**",
+          "evals/**",
+          "unreferenced docs/**",
+          "tests/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".codex-plugin/**",
+          ".github/**",
+          ".probe-tmp/**",
+          ".superpowers/**",
+          "platforms/**",
+          "plugins/**",
+          "unreferenced repository-only root documents",
+          "all other top-level entries outside the runtime allowlist",
+          "**/__pycache__/**, **/*.pyc, editor and OS transient files"
+        ]
+      },
+      "git_head": "c3748fcd303997585b0b6c626b7f614843a5a2f5",
+      "git_dirty": true,
+      "git_scope": "containing worktree"
+    }
+  },
+  "cases": [
+    {
+      "id": "handoff-builder-rejects-digest-mismatch",
+      "suite": "contracts",
+      "passes": 1,
+      "runs": 1,
+      "rate": 1.0,
+      "failures": [],
+      "notes": [],
+      "usage_per_run": [
+        {
+          "input_tokens": 4,
+          "output_tokens": 579
+        }
+      ],
+      "duration_ms_per_run": [
+        17223
+      ],
+      "run_evidence_per_run": [
+        {
+          "response": "Handoff receipt: input-required\nWork-order ID: source-free-staged-build-v1\nWork-order digest: sha256:c7d8b7a35feffd4d7776b482b081f00f7d9ffad8bcc47f02b9542b0373dcfd1b\nConflicts: Work-order digest\nRecommended resolution: Recomputed digest via `python -I hash-work-order.py` yields `sha256:c7d8b7a35feffd4d7776b482b081f00f7d9ffad8bcc47f02b9542b0373dcfd1a`, which does not match the supplied digest (differs in final hex character: ...1a vs ...1b). Please re-issue the Work Order block with a corrected digest (or confirm the correct block content) before I proceed.",
+          "failures": []
+        }
+      ],
+      "semantic_evidence_per_run": [
+        {
+          "oracle": "handoff-digest-rejection",
+          "claimed_digest": "c7d8b7a35feffd4d7776b482b081f00f7d9ffad8bcc47f02b9542b0373dcfd1b",
+          "computed_digest": "c7d8b7a35feffd4d7776b482b081f00f7d9ffad8bcc47f02b9542b0373dcfd1a",
+          "hash_command_sha256": "1870df45d4453f301e66aff1d0e3c559d790e40205f3a1537074e2396de3d647",
+          "hash_command_observed": true,
+          "bash_commands": [
+            {
+              "command": "python -I hash-work-order.py",
+              "outcome": "ok"
+            }
+          ],
+          "workspace_unchanged": true,
+          "workspace_sha256": {
+            "workspace-sentinel.txt": "edd52eda19385eb6c8ed9ff0ded476ca9a07174c49e4143072da82aa0481623d"
+          }
+        }
+      ]
+    }
+  ]
+}
