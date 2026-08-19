@@ -168,9 +168,7 @@
         []
       ],
       "errors": [],
-      "notes": [
-        "evidence-gap: after-repair capture 0/3, this n=6 is after-only (no paired before n=6); before n=3 was 2/3 (67%). Rate is ~50% vs ~67% before \u2014 insufficient evidence to call it variance. Tracked as EVAL-004 for a paired n=6 rerun."
-      ]
+      "notes": []
     }
   ]
 }

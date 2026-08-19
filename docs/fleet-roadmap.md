@@ -736,6 +736,33 @@ the audit-shaped alternative is a scheduled manual pass, not silence.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
 
+#### EVAL-009 — settle the ci-actions-harden rate with a paired same-n capture
+
+**Status:** `ready` — imported from PR #154's review (Codex P2 finding, Copilot draft repaired:
+the draft reused EVAL-005, an ID PR #151 closed the day before, cross-referenced it as EVAL-004,
+and cited a `--select` flag the runner does not have).
+
+**Outcome:** Whether the CTX-002 trim regressed `pos-ci-actions-harden` is settled by evidence at
+matching sample sizes, not asymmetric ones. The stored sides: before 2/3 (n=3, pre-edit bytes
+`8b41239`), after-repair 0/3 then 3/6 (final bytes; the n=6 passes the 0.5 threshold). The n=6
+run has no same-n before side, so "variance" rests on wide confidence intervals — the honest
+reading is "insufficient evidence of regression", recorded as exactly that in PR #154.
+
+**Source:** `evals/baselines/2026-08-18-ctx-002/` (before, after-repair, disposition/ci-actions-n6);
+PR #154 review thread.
+
+**Prerequisites:** None. The before side needs a checkout at `8b41239`; per the one-writer rule it
+runs in its own worktree, not the live checkout.
+
+**Acceptance:** Paired `--case pos-ci-actions-harden --runs 6` captures, sonnet clean-room: one at
+`8b41239`, one at current bytes. After ≥ before closes as variance; after < before at same n is a
+real regression — repair the description's lost anchors and re-capture. Either way the disposition
+lands in the CTX-002 evidence directory's record.
+
+**Next action:** `python3 scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --case
+pos-ci-actions-harden --runs 6 --model sonnet --clean-room` on each side, worktree-isolated for
+the historical checkout.
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
@@ -967,29 +994,6 @@ status. Do not manufacture a component solely to close this item.
 evidence; two observed misses trigger a dedicated behavioral contract and definition repair.
 
 **Next action:** Evaluate on the next qualifying UI task.
-
-#### EVAL-005 — collect paired n=6 before/after for ci-actions `pos-ci-actions-harden`
-
-**Status:** `ready`
-
-**Outcome:** Establish whether the CTX-002 trim caused a real routing regression for
-`pos-ci-actions-harden` or the 0/3 after-repair result is variance. The before n=3 was 2/3 (67%);
-the after-repair n=6 is 3/6 (50%). The after-only n=6 disposition run
-(`evals/baselines/2026-08-18-ctx-002/disposition/ci-actions-n6/`) cannot establish variance
-without a matching before-side at n=6.
-
-**Source:** CTX-002 paired capture (PR #154); Codex review P2 finding.
-
-**Prerequisites:** none.
-
-**Acceptance:** Paired n=6 runs on before (pre-PR bytes) and after (current bytes) for the
-`craft-vs-fullstack` cluster, single-case selection `pos-ci-actions-harden`. If the before n=6
-shows ≥ the after n=6 rate, dispose as variance; if after < before at the same n, repair the
-description to restore the lost anchor tokens and re-capture.
-
-**Next action:** Run `scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --select
-pos-ci-actions-harden --runs 6` on both the current tree and a checkout at `8b41239` (the
-pre-edit commit).
 
 #### LAB-001 — provide a fallback service compose asset
 
