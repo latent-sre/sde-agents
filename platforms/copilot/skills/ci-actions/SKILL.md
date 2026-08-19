@@ -1,6 +1,6 @@
 ---
 name: "ci-actions"
-description: "Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and the untrusted-input traps that turn a build into a credential leak. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff, code-reviewer; for applying to the live lab, homelab-platform."
+description: "Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and the untrusted-input traps that turn a build into a credential leak. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff for vulnerabilities, code-reviewer carries the review-side checklist; for applying to the live lab, homelab-platform."
 argument-hint: "[the workflow or pipeline to build or harden]"
 ---
 
