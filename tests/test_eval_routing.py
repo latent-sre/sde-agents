@@ -676,11 +676,24 @@ class CaseFileTest(unittest.TestCase):
         def newline_count(paths) -> int:
             return sum(path.read_bytes().count(b"\n") for path in paths if path.is_file())
 
-        baseline_lines = newline_count(baselines.rglob("*"))
+        # Count what git ships, not what this machine holds: the README's reproduce command is
+        # `git ls-files ... | wc -l`, and a raw rglob also counts gitignored artifacts (the
+        # behavioral runner's failing-run-evidence.json sidecars live beside committed benchmarks
+        # by design), so a local run overstated the figure by 2,244 lines and shipped it in a
+        # commit CI then failed (PR #156). --others --exclude-standard keeps pre-commit runs
+        # honest about files that are about to be committed.
+        tracked = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z",
+             "evals/baselines"],
+            capture_output=True, check=True, cwd=REPO,
+        ).stdout.decode("utf-8")
+        shipped = [REPO / name for name in tracked.split("\0") if name]
+        baseline_lines = newline_count(shipped)
         baseline_dirs = len([path for path in baselines.iterdir() if path.is_dir()])
         # Every file under history/, not just Markdown: the restored tool-event evidence is part of
         # the distilled record it sits beside.
-        summary_lines = newline_count((baselines / "history").rglob("*"))
+        history = baselines / "history"
+        summary_lines = newline_count(p for p in shipped if history in p.parents)
 
         rows = (
             (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),

@@ -97,7 +97,8 @@ vocabularies once more, or redesign those four contracts' grammars structurally 
 `researcher-unestablished-claim` co-location precedent). `verifier-envelope-mismatch-fails-closed`
 is now measured genuinely tool-denied and cannot complete by construction (all three sessions
 died reaching for the identity check its own method mandates) — decide: grant its one read-only
-command via the proven `--allowedTools` mechanism, or stipulate the check in the fixture.
+command via the proven `--allowedTools` mechanism, or stipulate the check in the fixture. The settling directory's decisions.md carries its own
+retirement trigger — its benchmarks are the second batch's 'before' side.
 
 **Next action:** **One paid batch, and one operator ruling.** Every offline repair this docket
 owed is landed and pinned in both directions (see the numbered list below); none of it is
@@ -334,6 +335,11 @@ description (`scripts/eval_baseline.py` may satisfy the 'before' side); doctor c
 200k-window model after the trim, recording how many entries survive at the default budget —
 survivors are maximized here; full survival on bundled-rich hosts closes in CTX-004.
 
+**Evidence capital:** `evals/baselines/2026-08-18-ctx-002/` holds this item's paired v4
+benchmarks; they are the reusable 'before' sides for the held eng-ladder and onboarding-map
+trims and must not be retired while this item or LANE-001 is open — the directory's decisions.md
+carries the full retirement trigger.
+
 **Next action:** Trim the three largest entries first — `self-improve-loop` (951-char
 description), `deep-review` (~940-char workflow meta description), `onboarding-map` (873) — the
 listing needs ~3.9k chars cut. The consuming-repo mitigation available meanwhile is
@@ -511,7 +517,10 @@ an assumption-labelled clause is exempt, and the parity requirement skips any se
 carrying a negator even when the assertion itself is affirmative. The arc's runner half is deliberately **not**
 ported: main's 2026-08-15 `--allowedTools` fix supersedes its grant mechanism, its digest-case
 redesign would move evaluator bytes this item's pending re-run counts on, and its per-command
-outcome evidence is EVAL-010.
+outcome evidence is EVAL-010. Retirement trigger for the salvaged raw: the producer batches and
+digest diagnostics retire once the producer contract settles green in LEARN-002's second batch
+(their diagnostic value expires with confirmation); the 2026-08-18 rerun capture retires with
+them — the parsed-membership miss it retained evidence for is repaired with a pinned control.
 
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
@@ -587,7 +596,9 @@ the paired routing run; the smoke run follows the next release.
 authorizes nothing" a fourth time; the body's three other copies were reconciled in `eb53758`, but
 the description drives routing and this skill sits in the `homelab-ops` cluster whose paired
 'before' capture this item owes at merge base `4fef0ce`. Trimming it first would invalidate that
-side. Optional to acceptance; not to be made without the capture — and this item's closeout owes
+side. The CTX-002 round stored a qualifying capture at
+`evals/baselines/2026-08-18-ctx-002/before/homelab-ops/` (merge base differs from `4fef0ce` —
+re-verify with `eval_baseline.py` before reuse); that benchmark must outlive this item. Optional to acceptance; not to be made without the capture — and this item's closeout owes
 the ride-along a disposition (worked, re-homed to a named live item, or dropped with reason)
 rather than a silent close that strands it in archive evidence.
 
@@ -621,7 +632,9 @@ runtime is no longer the binding cause. Two identities moved since the capture:
 `scripts/eval_clean_room.py` (a `routing_evaluator_paths()` member, edited by `4bddd9d`/`8253f2c`
 the day after) and the plugin hash. Reuse remains identity-bound in general — the evaluator
 identity does pin the runtime, so another Python would also diverge — but on every host today
-this cluster owes a fresh capture, not a reuse.
+this cluster owes a fresh capture, not a reuse. (`evals/baselines/2026-08-11-ladder/`, salvaged
+2026-08-19, is a pre-PR#145 historical anchor only — never a 'before'; it retires when this item
+closes.)
 
 **Acceptance:** For each half the operator elects: (a) **Mode 3 trim** — the rescan's remedy is
 description **plus** body: remove the growth-feedback clause from the description and the body's
@@ -907,6 +920,9 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
   floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
   floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
+
+
+## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot
 
