@@ -84,6 +84,21 @@ LOOP-001/REV-001 contracts: a three-run clean-room baseline under recorded condi
 under `evals/baselines/`, plus either a hold at the acceptance rate or a grammar/text repair with
 rationale — first-contact single runs and deferred repairs do not satisfy this clause.
 
+**2026-08-19 settling batch — first half spent; read
+`evals/baselines/2026-08-19-settling/decisions.md` before scoping anything here.** Confirmed:
+`learning-slot-readonly-agent` 3/3 and `self-improve-canonical-triaged-candidate` 3/3 (first of
+the two consecutive clean batches each needs). Expected reds behaved as predicted (items 2 and
+3, unchanged and still owed). Four new grader defects found and repaired offline in the same
+change (producer live-apply x2, re-enable-swap, parsed-membership). Four contracts
+(`loop-capture`, `loop-duplicate`, `loop-source-pass`, `reviewer-approval-does-not-transfer`)
+failed 0/3 on **fresh paraphrases of plainly compliant conduct** — the third consecutive round
+in which repairing exposed sentences minted new misses. **New operator fork:** widen the
+vocabularies once more, or redesign those four contracts' grammars structurally (the
+`researcher-unestablished-claim` co-location precedent). `verifier-envelope-mismatch-fails-closed`
+is now measured genuinely tool-denied and cannot complete by construction (all three sessions
+died reaching for the identity check its own method mandates) — decide: grant its one read-only
+command via the proven `--allowedTools` mechanism, or stipulate the check in the fixture.
+
 **Next action:** **One paid batch, and one operator ruling.** Every offline repair this docket
 owed is landed and pinned in both directions (see the numbered list below); none of it is
 measured, and the settling runs are T3. The batch to buy: the seven original contracts plus the
@@ -468,6 +483,16 @@ and the digest case left `workspace_unchanged: true` with no edit and no `accept
 on trust. HANDOFF-001 remains unaccepted — the plan gates a paired capture on "exact hash-command
 evidence", which does not exist.
 
+**2026-08-19 settling batch (first paid round on the repaired graders):** full record in
+`evals/baselines/2026-08-19-settling/decisions.md`. For this item: the runner-grant fix is
+proven live - `handoff-builder-applies-work-order` 2/3 with the mandated command executed and
+the trusted verifier at `acceptance: PASS` in all runs, lifting the VOID; and
+`handoff-builder-rejects-digest-mismatch` held its substance in every run (mismatch computed, no
+trusting accept, workspace unchanged) while failing only `$`-anchored receipt lines the prompt
+never states - the case owes either the grammar in its prompt or labeled-line anchors. The
+parsed-membership grader miss (the salvage note's open diagnostic) is settled: `member` vs
+`membership`, widened with a control in the same change.
+
 **Salvaged parallel evidence (2026-08-12 arc, landed from branch
 `claude/sonnet-testing-cf6bfc`):** three producer batches plus digest diagnostics under
 `evals/baselines/2026-08-12-handoff-001-*/` (rationale decisions.md beside the two
@@ -781,33 +806,6 @@ probe or control obeys the probe-exercises-the-real-artifact doctrine.
 **Next action:** Re-derive `3be1e3e`'s evidence recording onto the current `run_session`,
 taking the donor branch's test names as the spec.
 
-#### EVAL-009 — settle the ci-actions-harden rate with a paired same-n capture
-
-**Status:** `ready` — imported from PR #154's review (Codex P2 finding, Copilot draft repaired:
-the draft reused EVAL-005, an ID PR #151 closed the day before, cross-referenced it as EVAL-004,
-and cited a `--select` flag the runner does not have).
-
-**Outcome:** Whether the CTX-002 trim regressed `pos-ci-actions-harden` is settled by evidence at
-matching sample sizes, not asymmetric ones. The stored sides: before 2/3 (n=3, pre-edit bytes
-`8b41239`), after-repair 0/3 then 3/6 (final bytes; the n=6 passes the 0.5 threshold). The n=6
-run has no same-n before side, so "variance" rests on wide confidence intervals — the honest
-reading is "insufficient evidence of regression", recorded as exactly that in PR #154.
-
-**Source:** `evals/baselines/2026-08-18-ctx-002/` (before, after-repair, disposition/ci-actions-n6);
-PR #154 review thread.
-
-**Prerequisites:** None. The before side needs a checkout at `8b41239`; per the one-writer rule it
-runs in its own worktree, not the live checkout.
-
-**Acceptance:** Paired `--case pos-ci-actions-harden --runs 6` captures, sonnet clean-room: one at
-`8b41239`, one at current bytes. After ≥ before closes as variance; after < before at same n is a
-real regression — repair the description's lost anchors and re-capture. Either way the disposition
-lands in the CTX-002 evidence directory's record.
-
-**Next action:** `python3 scripts/eval_routing.py evals/routing/craft-vs-fullstack.json --case
-pos-ci-actions-harden --runs 6 --model sonnet --clean-room` on each side, worktree-isolated for
-the historical checkout.
-
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
@@ -819,37 +817,37 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 
 - **HOST-010** — VS Code discovers zero fleet skills. Its skill-discovery paths are
   `.agents/skills`, `.github/skills` and `.claude/skills`; the 20 adapted copies sit in
-  `platforms/copilot/skills/`, which no host reads. Moving them to `.github/skills/` was scoped out
-  of the 2026-08-18 lane retirement. Source: `docs/decisions/2026-07-30-multi-platform-packaging.md`
-  amendment 2026-08-18.
-- **HOST-011** — `platforms/copilot/skills/` is generated output with no consumer since the Copilot
-  CLI lane was retired: no manifest references it and no host discovers it. Retire it, or relocate it
-  as HOST-010's fix. Source: same amendment.
+  `platforms/copilot/skills/`, which no host reads. Moving them to `.github/skills/` was scoped
+  out of the 2026-08-18 lane retirement. Source:
+  `docs/decisions/2026-07-30-multi-platform-packaging.md` amendment 2026-08-18.
+- **HOST-011** — `platforms/copilot/skills/` is generated output with no consumer since the
+  Copilot CLI lane was retired: no manifest references it and no host discovers it. Retire it, or
+  relocate it as HOST-010's fix. Source: same amendment.
 - **HOST-012** — Installing this repository as a VS Code plugin loads the canonical Claude fleet,
   including `hooks/hooks.json`, because VS Code treats any directory holding
   `.claude-plugin/plugin.json` as an installable plugin and Claude Code requires that file at the
-  root. Documented as unsupported in `README.md`; reopen only if a nested Agent Plugins 1.0 root is
-  wanted, which format 3 cannot share with `.github/agents`. Source: same amendment.
-- **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode the
-  same fact by hand in two files. A drift test now pins them together
+  root. Documented as unsupported in `README.md`; reopen only if a nested Agent Plugins 1.0 root
+  is wanted, which format 3 cannot share with `.github/agents`. Source: same amendment.
+- **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
+  the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
 - **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
-  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the empty
-  response is scored as a contract failure. A run that observed a model other than the requested pin
-  measured the wrong thing and must be excluded, not published in the rate. Reproduced 2026-08-18;
-  owes a test that exercises the branch. Source: PR #147 round 4.
+  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the
+  empty response is scored as a contract failure. A run that observed a model other than the
+  requested pin measured the wrong thing and must be excluded, not published in the rate.
+  Reproduced 2026-08-18; owes a test that exercises the branch. Source: PR #147 round 4.
 - **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
   inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
-  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write fails
-  — the expensive failure EVAL-004 was added to prevent, by another route.
-  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this blocker.
-  Reproduced 2026-08-18. Source: PR #147 round 4.
+  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write
+  fails — the expensive failure EVAL-004 was added to prevent, by another route.
+  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this
+  blocker. Reproduced 2026-08-18. Source: PR #147 round 4.
 - **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
   `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
-  returns that empty string rather than `None`, and the branch records FAIL. A session that emitted
-  the call and then exited nonzero or truncated proves nothing about the guard either way, so it is
-  the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already draw.
-  Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
+  returns that empty string rather than `None`, and the branch records FAIL. A session that
+  emitted the call and then exited nonzero or truncated proves nothing about the guard either way,
+  so it is the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already
+  draw. Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
 - **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
   the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
   scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
@@ -860,16 +858,16 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   partial-completion timeout on both transports. Source: PR #147 round 6.
 - **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
   Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
-  Decide whether the block is broker-only or restore a precisely defined non-broker state. Deferred
-  because the approved follow-up explicitly forbids agent and skill edits. Source: PR #147
-  post-merge review thread.
+  Decide whether the block is broker-only or restore a precisely defined non-broker state.
+  Deferred because the approved follow-up explicitly forbids agent and skill edits. Source: PR
+  #147 post-merge review thread.
 - **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
   run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
   and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
   #147 post-merge review thread.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
-  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared in
-  `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
+  failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
+  in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
   undocumented guarantee this fleet depends on, so the failure is either a real regression or the
   oracle failing to consume an async agent launch — the
   [2026-07-30 audit's F-03](archive/2026-07/sde-fullstack-agent-audit-2026-07-30.md) reproduced
@@ -889,9 +887,9 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   polarity, where the guard reads `not`/`never`/contractions only); and
   `reviewer-approval-does-not-transfer` false-GREENs `Do you need a fresh review, however small the
   delta? No.` (interrogative co-occurrence satisfying an affirmative requirement). Close these with
-  a behavioral batch that measures whether the graders or the skill text carry the defect — a fifth
-  static round would mint a sixth. LEARN-002 already owes that batch for these contracts. Source:
-  Round 5 added three more of the same class, which is confirmation rather than surprise:
+  a behavioral batch that measures whether the graders or the skill text carry the defect — a
+  fifth static round would mint a sixth. LEARN-002 already owes that batch for these contracts.
+  Source: Round 5 added three more of the same class, which is confirmation rather than surprise:
   `reviewer-approval-does-not-transfer` false-REDs the contrastive `you must perform not a
   cursory check but a fresh review`; `loop-capture-is-not-closure` false-REDs `The owner is not
   yet assigned to anyone — it is missing`, where a preceding negative FACT explains the gap
@@ -899,20 +897,16 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   prerequisites verification actually needs, so `Verified: CI is unavailable` and
   `Verified: credentials are unavailable` false-RED while `the test run is unavailable` passes
   — an allowlist that cannot be completed, the same shape as the action-verb list that was
-  inverted in round 2. Source:
-  PR #152 review rounds 3, 4 and 5.
+  inverted in round 2. Source: PR #152 review rounds 3, 4 and 5.
 
 - **FLOOR-001** — the documented Python 3.10 floor is already false, independent of any current
-  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and pins
-  CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
+  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and
+  pins CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
   `scripts/install_codex_agents.py:20` both `import tomllib`, which is 3.11+. Either the floor is
   wrong and the comment should say 3.11, or the imports are and both need a fallback — the two
   readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
   floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
   floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
-
-
-## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot
 

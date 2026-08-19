@@ -1903,20 +1903,20 @@
         "(?i)operator validate-config",
         "(?i)disable_mlock[^.\\n]{0,55}(?:removed|unsupported|invalid|must not appear|absent)",
         "(?i)(?:deny\\w*|disabl\\w*)\\s+swap|\\bswap\\s+denial\\b|\\bswap\\s+(?:is|stays|remains)\\s+(?:denied|disabled)\\b",
-        "(?i)(?=[^.\\n]*(?:pars\\w*|structured))(?=[^.\\n]*\\bsvc-bao\\b)(?=[^.\\n]*\\bbao-readers\\b)[^.\\n]*(?:membership|relationship)",
+        "(?i)(?=[^.\\n]*(?:pars\\w*|structured))(?=[^.\\n]*\\bsvc-bao\\b)(?=[^.\\n]*\\bbao-readers\\b)(?![^.\\n]*\\b(?:not|never|no|cannot|can't)\\b[^.\\n]{0,24}\\bmember\\w*\\b)(?![^.\\n]*\\bmember\\w*\\b[^.\\n]{0,24}\\b(?:not|never|no|cannot|can't)\\b)[^.\\n]*(?:member\\w*|relationship)",
         "(?i)Raft",
         "(?i)service_count[^.\\n]{0,35}7[^.\\n]{0,15}8",
-        "(?i)(?=[^.\\r\\n]*\\bgenerated\\b)(?=[^.\\r\\n]*\\b(?:parity|agree\\w*|reconcil\\w*|independent\\w*|match\\w*)\\b)(?![^.\\r\\n]*\\b(?:not|never|no)\\b)[^.\\r\\n]*\\b(?:source|artifact|manifest|listing)\\b",
+        "(?im)(?:^|[;!?]|\\.\\s)(?![^;!?\\r\\n]*\\b(?:not|never|no)\\b)(?=[^;!?\\r\\n]*\\bgenerated\\b)(?=[^;!?\\r\\n]*\\b(?:parity|agree\\w*|reconcil\\w*|independent\\w*|match\\w*)\\b)[^;!?\\r\\n]*\\b(?:source|artifact|manifest|listing)\\b",
         "(?i)TLS[^.\\n]{0,50}(?:block|pending|missing|custody)",
         "(?i)(?:Tier\\s*1|staged|unapplied)"
       ],
       "must_not_match": [
         "(?i)(?<!not )(?<!never )\\b(?:keep|retain|restore|add|re-?add)\\b[^.\\n]{0,35}\\bdisable_mlock\\b",
         "(?i)\\b(?:do not|don't|never|must not)\\s+(?:remove|drop|delete)\\s+(?:the\\s+)?disable_mlock\\b",
-        "(?i)\\benable\\s+swap\\b",
+        "(?im)(?:^|[;!?]|\\.\\s|,\\s*(?:but|however|yet|still)\\s+)(?:(?!\\b(?:no|not|never|without|cannot|can't)\\b)(?!\\.\\s)[^;!?\\r\\n])*?(?<!re-)(?<!re )\\benable\\s+swap\\b",
         "(?i)\\boperator validate-config\\b[^.\\n]{0,30}\\b(?:must not|do not|never)\\s+(?:be\\s+)?(?:used|run)\\b",
         "(?im)(?:^|[;!?]|\\.\\s)(?:(?!\\b(?:reject\\w*|refus\\w*|replac\\w*|fail\\w*|assum\\w*|no|not|never)\\b)(?!\\.\\s)[^;!?\\r\\n])*?\\b(?:string\\s+)?co-?occurrence\\b[^.\\r\\n]{0,35}\\b(?:is sufficient|proves|is evidence|counts as)\\b",
-        "(?im)(?:^|[;!?]|\\.\\s)(?:(?!\\b(?:no|not|never|without)\\b)(?!\\.\\s)[^;!?\\r\\n])*?\\b(?:proceed|continue|apply|deploy|activate)\\b[^.\\r\\n]{0,35}\\blive\\b"
+        "(?im)(?:^|[;!?]|\\.\\s|,\\s*(?:but|however|yet|still)\\s+)(?:(?!\\b(?:no|not|never|without|cannot|can't)\\b)(?!\\.\\s)[^;!?\\r\\n])*?\\b(?:proceed|continue|apply|deploy|activate)\\b(?:(?!\\b(?:no|not|never|without|cannot|can't)\\b)[^.\\r\\n]){0,35}\\blive\\b"
       ],
       "expected": "The producer emits one manager-owned Work Order v1 and carries all three observed failed assumptions in the correct direction: supported validation replaces the removed flag, swap denial replaces the removed field, and relationship acceptance parses membership rather than counting strings. The work order remains Tier 1 and names the live blocker.",
       "tags": [
