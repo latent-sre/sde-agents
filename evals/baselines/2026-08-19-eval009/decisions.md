@@ -13,3 +13,7 @@ only (495 vs 493 chars; the after side even ADDS the trigger token "hardening"),
 cause for a rate difference exists - the gap measures the case's own variance by construction.
 Pooled across every capture regardless of bytes: ~8/24 = 33%. This case is a low-rate positive in
 headless mode; a future drop below ~15% at n>=6 would be signal, single-run swings are not.
+
+Retirement trigger: the item is closed and this file is the record; both benchmarks retire at
+the next baselines consolidation pass after the PR carrying them merges — kept until then only
+so the override's arithmetic stays checkable.
