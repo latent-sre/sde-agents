@@ -221,7 +221,10 @@ FORBIDDEN_AGENT_TOOLS = {
 RUNTIME_CONTROL_WIRING = {
     "scripts/verification_sandbox.py": "agents/verification-engineer.md",
     "scripts/run_state.py": "skills/sre-tool/SKILL.md",
-    "scripts/effect_broker.py": "agents/homelab-platform.md",
+    # effect_broker.py deliberately has no agent consumer: homelab-platform retired the
+    # broker mandate in favour of host-native managed approval, so no role is required to
+    # name it. It remains an operator-run control (README documents it) and keeps its own
+    # typed-evidence check via RUNTIME_EVIDENCE_PRODUCERS below.
 }
 RUNTIME_EVIDENCE_PRODUCERS = {
     "scripts/verification_sandbox.py",
