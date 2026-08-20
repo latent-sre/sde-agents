@@ -745,24 +745,17 @@ and the coverage gap that hid them is either closed or stated where a reader of 
 **Source:** 2026-08-17 ledger audit (this session), verifying all 28 then-promoted and 4 retired
 records against their destinations. Four findings, each verified at revision `a83b66c`:
 
-1. **`lc_6216159a` — the host-specific half never landed.** Its destination is the researcher's
-   Method 3 and its expected behavior names a concrete redirect fact (one vendor docs host is a
-   redirect shell for another, so callers should target the real host). `agents/researcher.md` has
-   never contained that host name — `git log -S` over that path returns empty — while the
-   *generalized* clause (read the raw artifact when a claim hinges on a literal string) did ship in
-   the same promotion commit. So the promotion was partial. Its retest reference additionally
-   asserts the destination text shipped, which the tree contradicts. Complication to settle first:
-   a later investigation records that same domain as egress-blocked here, which may make the
-   original lesson unactionable as written — resolve which fact is current before writing prose.
-2. **`lc_546acdcc` — the rule is in no live governing artifact.** Its lesson (a change to
-   workflow-shape bytes is exercised by at least one live workflow load before the release
-   containing it closes; validator-green is never reported as loadable) has the strongest field
-   evidence in the store — the same file shipped validator-green and unloadable twice, in opposite
-   directions — and no standing rule behind it. Its declared destination, LOOP-001, closed to an
-   archive record, and `AGENTS.md` has no "Editing a workflow" playbook. `probe_plugin.py` drives a
-   live workflow but writes its own throwaway file, so it cannot catch this class. Note the named
-   consumer: `lc_b96e0c0a` (now `proposed`) wants that same missing playbook for the complementary
-   half — which offline instrument is *invalid* — so one playbook entry closes both.
+1. **`lc_6216159a` — host-specific half dropped with reason, 2026-08-20.** Its destination is the
+   researcher's Method 3. The *generalized* clause (read the raw artifact when a claim hinges on a
+   literal string) already shipped; the host name never did. Encoding that host would be false
+   here (egress-blocked) and an enumerated list would be false in environments without the proxy.
+   Method 3 now states the path-conditional rule that covers both a blocked fetch and a redirect
+   shell: excerpts are `[sourced]`, never `[verified]`, and the packet names the gap. The
+   promoted record stays promoted for the generalized half that did land.
+2. **`lc_546acdcc` — landed 2026-08-20.** `AGENTS.md` now has the "Editing a workflow" playbook:
+   whole-file `node --check` is named invalid (the runtime wraps the body), offline proof is the
+   validator meta contract plus the extracted `meta` export, and validator-green is never
+   reported as loadable. That playbook is also the destination of `lc_b96e0c0a`.
 3. **`lc_36adb3d0` — promoted, failure class still reachable.** Its lesson is that a red check
    which can be silently merged over is no gate. `.github/workflows/validate.yml` runs only
    `ubuntu-latest` on `pull_request` (all three OSes on push and the weekly sweep), so a
@@ -777,8 +770,8 @@ records against their destinations. Four findings, each verified at revision `a8
    destination-drift coverage. This is scoped deliberately (its docstring says "pending"), which is
    why findings 1–3 needed a manual audit and why `lc_0fe6c3d1`'s line-pin could drift unnoticed.
 
-**Prerequisites:** None. Finding 1 owes the egress-versus-redirect question first; findings 2–4 are
-independent.
+**Prerequisites:** None. Findings 1 and 2 landed 2026-08-20 (path-conditional Method 3 clause;
+Editing a workflow playbook). Findings 3–4 remain.
 
 **Acceptance:** Findings 1 and 2 land their prose with the reader check the doc-side rule requires,
 or are dropped with a stated reason. Finding 3 records its narrowing. Finding 4 either extends
@@ -786,8 +779,9 @@ drift coverage to terminal states with a firing test, or states the limitation i
 `learning/README.md` where a reader of `promoted` would see it — proportionality decides which, and
 the audit-shaped alternative is a scheduled manual pass, not silence.
 
-**Next action:** Settle finding 1's egress-versus-redirect question, then write the single
-"Editing a workflow" playbook entry that closes finding 2 and `lc_b96e0c0a` together.
+**Next action:** Finding 3 — scope-narrow `lc_36adb3d0` or renew its `review` so `promoted` does not
+read as "this class is closed". Finding 4 — extend drift coverage to terminal states with a firing
+test, or state the limitation in `learning/README.md`.
 
 **Known un-correctable by CLI:** `lc_0fe6c3d1`'s destination pins
 `agents/homelab-platform.md:27`, where the rule now sits near line 55. The ledger enforces

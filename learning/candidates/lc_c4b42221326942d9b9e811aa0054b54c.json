@@ -19,8 +19,8 @@
   },
   "observation": "A ledger rework changed record shape and migrated on first write. A normalizing reader kept both shapes readable, so nothing broke -- but that reader was an implementation detail rather than a stated choice, and two consequences rode in unchosen. Convergence is unguaranteed rather than automatic: the retest path refuses a settled pass, so those records move only if a later release cycle happens to archive them, which may never occur. And rollback silently changed meaning -- stripping the new key from an already-migrated record also deletes the attempt the old shape held.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Traced in the reverted implementation: the reader normalizes both shapes and a later release cycle does migrate a settled record, so neither readability nor convergence is impossible. What is missing is the decision and its rollback statement, not a forced migration.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: Changing a validated on-disk record shape playbook states migration decision and rollback meaning.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Traced in the reverted implementation: the reader normalizes both shapes and a later release cycle does migrate a settled record, so neither readability nor convergence is impossible. What is missing is the decision and its rollback statement, not a forced migration.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:46.585904Z",
+      "destination": "AGENTS.md Change playbooks (record-shape change)",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Changing a validated on-disk record shape playbook states migration decision and rollback meaning.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:46.736597Z",
+      "destination": "AGENTS.md Change playbooks (record-shape change)",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Changing a validated on-disk record shape playbook states migration decision and rollback meaning.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-11T04:44:44.962543Z"
+  "updated_at": "2026-08-20T21:45:46.736597Z"
 }

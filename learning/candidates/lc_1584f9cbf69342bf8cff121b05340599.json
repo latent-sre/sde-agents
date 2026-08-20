@@ -19,8 +19,8 @@
   },
   "observation": "A test fixture that shells out to a real version-control status command inherits the invoking developer's global configuration, and two host settings silently decided its verdict. A global excludes-file entry covering the file under test would make a non-vacuity proof pass whether or not the repository rule existed, a false green. A global setting suppressing untracked-file display failed three cases on that machine alone, a false red, reproduced by pointing the tool at a synthetic global config: three failures before pinning the setting locally, none after.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Two verified occurrences in one pull request: a global excludes entry made a non-vacuity proof green independent of the repository rule, and a global setting hiding untracked files produced three machine-local failures. The site fix landed in the fleet-doctor test, which now pins both host settings locally and records the reproduction. The transferable rule has no owner: a fixture that shells out to a real external command pins every host setting that decides that command's output, and the proof is reproducing the hostile setting rather than assuming the default is safe.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: Tests that stay useful now requires pinning host settings when a fixture runs a real external command.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Two verified occurrences in one pull request: a global excludes entry made a non-vacuity proof green independent of the repository rule, and a global setting hiding untracked files produced three machine-local failures. The site fix landed in the fleet-doctor test, which now pins both host settings locally and records the reproduction. The transferable rule has no owner: a fixture that shells out to a real external command pins every host setting that decides that command's output, and the proof is reproducing the hostile setting rather than assuming the default is safe.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:44.234795Z",
+      "destination": "skills/code-craft/references/tdd.md Tests that stay useful",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Tests that stay useful now requires pinning host settings when a fixture runs a real external command.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:44.379498Z",
+      "destination": "skills/code-craft/references/tdd.md Tests that stay useful",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Tests that stay useful now requires pinning host settings when a fixture runs a real external command.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-17T11:56:38.915504Z"
+  "updated_at": "2026-08-20T21:45:44.379498Z"
 }

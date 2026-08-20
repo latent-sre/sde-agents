@@ -874,7 +874,16 @@ class LearningLedger:
 
     def _load_all(self) -> list[dict[str, object]]:
         if not self._prepare(create=False):
-            return []
+            # Read paths used to treat a missing store as zero records, so a mispointed
+            # --root was indistinguishable from a clean empty ledger and the fleet
+            # validator's ledger gate would pass against the wrong tree. Intake still
+            # creates the store (`_writer` uses create=True). An existing empty
+            # candidates directory remains a real empty ledger.
+            raise LedgerError(
+                f"candidate store does not exist: {self.candidates_dir}. "
+                "A missing store is not an empty ledger; a mispointed --root would "
+                "otherwise report zero candidates."
+            )
         records: list[dict[str, object]] = []
         for path in sorted(self.candidates_dir.iterdir(), key=lambda item: item.name):
             if path.name in {".gitkeep", ".learning-ledger.lock"}:

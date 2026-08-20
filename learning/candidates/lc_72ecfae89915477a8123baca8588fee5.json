@@ -3,7 +3,7 @@
   "candidate_id": "lc_72ecfae89915477a8123baca8588fee5",
   "created_at": "2026-08-10T06:31:41.452934Z",
   "destination": "AGENTS.md Validate before you push (instrument-pairing guidance)",
-  "disposition": "add",
+  "disposition": "skip",
   "evidence": {
     "environment": "Fleet source repository, round/loop-rev-001",
     "provenance": "verified",
@@ -19,8 +19,8 @@
   },
   "observation": "Two review instruments with different postures — the fleet's read-only prose/threat lanes and an executing adversarial reviewer — produced nearly disjoint finding sets across two full cycles of the same branch: the static lanes caught documentation-truth, ownership-registry, and contract-drift defects no execution would surface, while the executing reviewer caught lifecycle-semantics defects (views that lose records, unrecordable state cycles) that six prior static rounds of a comparable change class never found.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Round retro 2026-08-10; near-zero overlap measured across two cycles. Awaits an operator cost ruling before implementation.",
+  "promotion_state": "rejected",
+  "reason": "Rejected 2026-08-20: operator cost ruling never made; encoding a standing two-instrument mandate would add session load this pass is reducing. Evidence retained in this record.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,16 @@
       "owner": "fleet-maintainer",
       "reason": "Round retro 2026-08-10; near-zero overlap measured across two cycles. Awaits an operator cost ruling before implementation.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:47.318926Z",
+      "destination": "AGENTS.md Validate before you push (instrument-pairing guidance)",
+      "disposition": "skip",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Rejected 2026-08-20: operator cost ruling never made; encoding a standing two-instrument mandate would add session load this pass is reducing. Evidence retained in this record.",
+      "to": "rejected"
     }
   ],
-  "updated_at": "2026-08-10T06:31:41.797371Z"
+  "updated_at": "2026-08-20T21:45:47.318926Z"
 }

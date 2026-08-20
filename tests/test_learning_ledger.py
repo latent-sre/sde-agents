@@ -1492,6 +1492,38 @@ class LearningLedgerTests(TempDirTestCase):
         with self.assertRaisesRegex(learning_ledger.LedgerError, "writer lock is present"):
             self.ledger.check()
 
+    def test_read_path_errors_when_the_candidate_store_is_missing(self) -> None:
+        """A mispointed --root with no learning/candidates used to list/check as OK: 0
+        candidates, indistinguishable from a clean empty ledger, so the fleet validator's
+        ledger gate would pass against the wrong tree."""
+        missing = str(self.ledger.candidates_dir)
+        with self.assertRaises(learning_ledger.LedgerError) as listed:
+            self.ledger.list_records("pending")
+        self.assertIn("candidate store does not exist", str(listed.exception))
+        self.assertIn(missing, str(listed.exception))
+        self.assertIn("mispointed --root", str(listed.exception))
+        with self.assertRaises(learning_ledger.LedgerError) as checked_api:
+            self.ledger.check()
+        self.assertIn("candidate store does not exist", str(checked_api.exception))
+        self.assertIn(missing, str(checked_api.exception))
+        checked = self._cli("check")
+        self.assertNotEqual(0, checked.returncode)
+        self.assertIn("candidate store does not exist", checked.stderr)
+        self.assertIn("mispointed --root", checked.stderr)
+        added = self._add()
+        self.assertEqual(added["candidate_id"], self.ledger.check()[0]["candidate_id"])
+
+    def test_an_existing_empty_store_is_still_an_empty_ledger(self) -> None:
+        """The missing-store error is not a ban on a real empty ledger: intake creates the
+        directories, and a store with no JSON records remains OK: 0 candidates."""
+        created = self.root / "learning" / "candidates"
+        created.mkdir(parents=True)
+        self.assertEqual([], self.ledger.list_records("pending"))
+        self.assertEqual([], self.ledger.check())
+        checked = self._cli("check")
+        self.assertEqual(0, checked.returncode)
+        self.assertIn("0 learning candidates validated", checked.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

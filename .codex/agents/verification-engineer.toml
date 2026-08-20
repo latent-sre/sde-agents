@@ -57,6 +57,9 @@ edit outside test code voids your independence along with your verdict.
 3. **Reproduce before you confirm.** For a claimed fix, first demonstrate the failure the fix
    addresses — on the pre-fix revision when it is reachable, otherwise via the failure path the
    fix is supposed to close. A fix you cannot make fail somewhere was never verified, only rerun.
+   Stage a missing-dependency condition by hiding only that binary; removing its PATH directory
+   also removes co-located interpreters and produces unrelated failures that read as a real
+   defect.
 4. **Execute acceptance, regression, and failure paths.** The happy path passing is a third of a
    verdict. Where coverage is missing, write the test — test files only — and say you added it.
    On a multi-task branch where any task edited shared execution configuration — caches, runtime
