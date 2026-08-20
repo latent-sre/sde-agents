@@ -465,12 +465,12 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         # Prose written under a reused label is a heading for discussion, not a second declaration.
         elaborated = (
-            "Instrument: fresh request required\n"
-            "- **Instrument**: the prior nonce is spent, so I must prepare a fresh request.\n"
+            "Transport: managed gate\n"
+            "- **Transport**: the gate prompts again, so this run passes through it.\n"
         )
         self.assertEqual(
             [],
-            packet_lint.lint_exact_fields(elaborated, {"Instrument": "fresh request required"}),
+            packet_lint.lint_exact_fields(elaborated, {"Transport": "managed gate"}),
         )
         for conflicting in (
             "Gate: consolidated\nGate: new\n",
@@ -592,13 +592,13 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         machine-readable lines scattered below, which defeats their purpose (review round 5). The
         window tolerates a heading or blank lines, which are rendering, not placement.
         """
-        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        expected = {"Gate": "consolidated", "Transport": "managed gate"}
         self.assertEqual(
             [],
             packet_lint.lint_exact_fields(
                 "Gate: consolidated\n"
                 "Effect class: reversible live activation\n"
-                "Instrument: fresh request required\n",
+                "Transport: managed gate\n",
                 expected,
             ),
         )
@@ -607,14 +607,14 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             packet_lint.lint_exact_fields(
                 "## Retry\n\nGate: consolidated\n\n"
                 "Effect class: reversible live activation\n\n"
-                "Instrument: fresh request required\n",
+                "Transport: managed gate\n",
                 expected,
             ),
         )
         scattered = (
             "Gate: consolidated\n"
             + "\n".join(f"explanatory prose line {i}" for i in range(12))
-            + "\nInstrument: fresh request required\n"
+            + "\nTransport: managed gate\n"
         )
         findings = packet_lint.lint_exact_fields(scattered, expected)
         self.assertTrue(any("one block" in f for f in findings), findings)
@@ -664,7 +664,7 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         for label, constant in (
             ("Gate", packet_lint.GATE_STATES),
-            ("Instrument", packet_lint.INSTRUMENT_STATES),
+            ("Transport", packet_lint.TRANSPORT_STATES),
         ):
             with self.subTest(label=label):
                 declared = re.search(rf"`{label}: <([^>]+)>`", canonical).group(1)
@@ -676,11 +676,11 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
     def test_gate_slots_grade_case_insensitively_but_free_text_stays_exact(self) -> None:
         """The gate slots replace prose matching, so case and a trailing stop must not decide a
         verdict; a free-text label has no closed set and keeps byte-exact comparison."""
-        expected = {"Gate": "consolidated", "Instrument": "fresh request required"}
+        expected = {"Gate": "consolidated", "Transport": "managed gate"}
         for rendering in (
-            "Gate: consolidated\nInstrument: fresh request required\n",
-            "Gate: Consolidated.\nInstrument: Fresh request required\n",
-            "**Gate**: consolidated\n- Instrument: fresh request required\n",
+            "Gate: consolidated\nTransport: managed gate\n",
+            "Gate: Consolidated.\nTransport: Managed gate\n",
+            "**Gate**: consolidated\n- Transport: managed gate\n",
         ):
             with self.subTest(rendering=rendering):
                 self.assertEqual([], packet_lint.lint_exact_fields(rendering, expected))
@@ -688,7 +688,7 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         # A value outside the set is still a finding -- tolerance is for rendering, not meaning.
         self.assertTrue(
             packet_lint.lint_exact_fields(
-                "Gate: consolidated for now\nInstrument: fresh request required\n", expected
+                "Gate: consolidated for now\nTransport: managed gate\n", expected
             )
         )
         # Free-text labels are unaffected by the vocabulary path.
@@ -861,16 +861,16 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
 
     _TWO_EFFECTS = [
         {"Gate": "consolidated", "Effect class": "reversible live activation",
-         "Instrument": "fresh request required"},
+         "Transport": "managed gate"},
         {"Gate": "new", "Effect class": "irreversible or custody boundary",
-         "Instrument": "fresh request required"},
+         "Transport": "managed gate"},
     ]
 
     @staticmethod
     def _set(gate: str, effect_class: str) -> str:
         return (
             f"Gate: {gate}\nEffect class: {effect_class}\n"
-            "Instrument: fresh request required\n"
+            "Transport: managed gate\n"
         )
 
     def test_two_simultaneous_effects_need_two_complete_declaration_sets(self) -> None:
@@ -898,7 +898,7 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         # precisely because the collapsing one would fold a repeated slot into its twin.
         decorated = self._set("consolidated", "reversible live activation") + (
             "\n**Gate**: new\n**Effect class**: irreversible or custody boundary\n"
-            "**Instrument**: fresh request required\n"
+            "**Transport**: managed gate\n"
         )
         self.assertEqual([], packet_lint.lint_effect_sets(decorated, self._TWO_EFFECTS))
 
@@ -977,14 +977,14 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         """
         expected = [
             {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Instrument": "fresh request required", "effect": "retry"},
+             "Transport": "managed gate", "effect": "retry"},
             {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Instrument": "fresh request required", "effect": "deletion"},
+             "Transport": "managed gate", "effect": "deletion"},
         ]
 
         def declaration(gate: str, effect_class: str) -> str:
             return (f"Gate: {gate}\nEffect class: {effect_class}\n"
-                    "Instrument: fresh request required\n")
+                    "Transport: managed gate\n")
 
         retry = declaration("consolidated", "reversible live activation")
         deletion = declaration("new", "irreversible or custody boundary")
@@ -1001,7 +1001,7 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
                         "each block sits under the wrong effect")
         scattered = ("Effect: retry\nGate: consolidated\n" + "prose\n" * 20
                      + "Effect class: reversible live activation\n" + "prose\n" * 20
-                     + "Instrument: fresh request required\n"
+                     + "Transport: managed gate\n"
                      f"Effect: deletion\n{deletion}")
         self.assertTrue(packet_lint.lint_effect_sets(scattered, expected),
                         "a set scattered through prose is not a block")
@@ -1108,9 +1108,9 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         """
         expected = [
             {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Instrument": "fresh request required", "effect": "retry"},
+             "Transport": "managed gate", "effect": "retry"},
             {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Instrument": "fresh request required", "effect": "deletion"},
+             "Transport": "managed gate", "effect": "deletion"},
         ]
         retry = self._set("consolidated", "reversible live activation")
         deletion = self._set("new", "irreversible or custody boundary")
@@ -1128,9 +1128,9 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         """PR #148: a matching final heading cannot hide a conflicting structured heading."""
         expected = [
             {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Instrument": "fresh request required", "effect": "retry"},
+             "Transport": "managed gate", "effect": "retry"},
             {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Instrument": "fresh request required", "effect": "deletion"},
+             "Transport": "managed gate", "effect": "deletion"},
         ]
         retry = self._set("consolidated", "reversible live activation")
         deletion = self._set("new", "irreversible or custody boundary")

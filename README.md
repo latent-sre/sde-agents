@@ -211,11 +211,16 @@ invoke the fleet-owned copy. Claude can resolve that copy through `${CLAUDE_PLUG
 Copilot, VS Code, and Codex artifacts do not package these scripts, so their instructions require an
 operator-provided trusted copy instead of retaining a path that would not exist.
 
-The effect flow has three actors: the agent emits a canonical request; the user approves that exact
-request; an operator-owned mediator holding the key and replay ledger signs and executes it. Never
-pass the key to an agent prompt, environment, argv, progress file, or workspace. If the mediator is
-unavailable, Tier 2/3 work stops at the prepared request—the agent does not fall back to executing
-after a prose “yes.” Verification is similar: an unavailable pinned container boundary makes the
+`effect_broker.py` is an available control, not a required one: no agent names it, and
+`homelab-platform` retired the mandate that Tier 2/3 work route through it
+(`docs/decisions/2026-08-20-effect-transport-policy.md`). Where an operator does run it, the flow
+has three actors: the agent emits a canonical request; the user approves that exact request; an
+operator-owned mediator holding the key and replay ledger signs and executes it. Never pass the key
+to an agent prompt, environment, argv, progress file, or workspace. What no configuration waives is
+the boundary itself: a prose “yes” never becomes execution authority on its own, so `homelab-platform`
+executes an approved Tier 2/3 effect only through a control that interposes on the exact command —
+a trusted host-native managed gate is the normal one — and hands the command to the operator when
+no such control is present. Verification is similar: an unavailable pinned container boundary makes the
 affected criterion inconclusive rather than authorizing target-controlled code on the host.
 
 `scripts/fleet_doctor.py` and `scripts/probe_hosts.py` observe this system but do not enforce it.

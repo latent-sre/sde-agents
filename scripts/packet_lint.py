@@ -288,7 +288,7 @@ EXACT_FIELD_LABELS = (
     "Owner",
     "Runbook disposition",
     "Gate",
-    "Instrument",
+    "Transport",
     "Effect class",
 )
 # Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These three
@@ -299,7 +299,7 @@ EXACT_FIELD_LABELS = (
 # closing it, with every graded transcript behaviorally correct (ORACLE-001). A closed value set
 # has no paraphrase surface to chase.
 GATE_STATES = ("consolidated", "new")
-INSTRUMENT_STATES = ("fresh request required",)
+TRANSPORT_STATES = ("managed gate", "operator handoff")
 EFFECT_CLASSES = (
     "artifact preparation",
     "repository publication",
@@ -315,7 +315,7 @@ EFFECT_CLASSES = (
 # Only labels listed here are graded against a closed set; everything else keeps exact comparison.
 EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
     "Gate": GATE_STATES,
-    "Instrument": INSTRUMENT_STATES,
+    "Transport": TRANSPORT_STATES,
     "Effect class": EFFECT_CLASSES,
 }
 LEARNING_NONE_VALUE = "none — no reusable signal"
@@ -862,7 +862,7 @@ def _collapse_agreeing_vocabulary_restatements(
     return [min(naming, key=lambda item: len(_strip_sentence_punctuation(item[1])))]
 
 
-EFFECT_SET_LABELS = ("Gate", "Effect class", "Instrument")
+EFFECT_SET_LABELS = ("Gate", "Effect class", "Transport")
 
 
 def effect_identity_key(value: str) -> str:
@@ -875,7 +875,7 @@ def _effect_set_blocks(text: str) -> list[tuple[dict[str, str], int, int, str]]:
 
     A new block starts wherever a slot that is already present recurs, which is what "one set per
     effect" looks like on the page. This reads RAW occurrences, because every slot legitimately
-    repeats here and two effects sharing a value (`Instrument: fresh request required` twice, the
+    repeats here and two effects sharing a value (`Transport: managed gate` twice, the
     common case) must stay two.
 
     The span and the preamble are what let the caller check the two things a bag of values cannot.

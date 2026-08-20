@@ -871,11 +871,13 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   session concluded`. The note contradicts the flag, so an explicit timeout should override
   `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
   partial-completion timeout on both transports. Source: PR #147 round 6.
-- **GATE-005** — the homelab effect block now has only `Instrument: fresh request required`, but
-  Tier 0/1 preparation and broker-absent operator continuation have no signed broker request.
-  Decide whether the block is broker-only or restore a precisely defined non-broker state.
-  Deferred because the approved follow-up explicitly forbids agent and skill edits. Source: PR
-  #147 post-merge review thread.
+- **GATE-005** — CLOSED 2026-08-20. The slot was broker-only, and the broker is gone: the effect
+  transport correction replaced `Instrument: fresh request required` with
+  `Transport: <managed gate|operator handoff>`, which is defined for every state the item named.
+  Owner: [`decisions/2026-08-20-effect-transport-policy.md`](decisions/2026-08-20-effect-transport-policy.md).
+  Residual, trigger-bound: `scripts/effect_broker.py` now has no agent consumer and left
+  `RUNTIME_CONTROL_WIRING`; decide whether to keep or delete the script when something next needs
+  that answer. Source: PR #147 post-merge review thread.
 - **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
   run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
   and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
