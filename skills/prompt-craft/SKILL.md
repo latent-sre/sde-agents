@@ -4,7 +4,7 @@ description: The lightweight inline method for prompt work — success criteria,
 argument-hint: [what to create or fix]
 ---
 
-For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `sde-agents:prompt-engineer` agent with the target file, the observed failure, and the success criteria.
+For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `sde-agents:prompt-engineer` agent with the target file, the observed failure, and the success criteria. For designing a *system* of agents — orchestration, rosters, handoff contracts — rather than a single prompt or skill, use `sde-agents:multi-agent-architect`.
 
 ## Method
 

@@ -1,6 +1,6 @@
 ---
 name: "self-improve-loop"
-description: "Runs bounded, evidence-driven improvement loops and the fleet's learning closeout. After a completed non-trivial task, scan for durable learning; run a learning retro after corrections, failed verification, stale or missing guidance, or repeated friction — \"do a retro on this task\", \"run the micro-retro\", \"capture the lessons learned\", \"what did we miss\" — or decide how a learning should be captured and verified. Routes lessons to deterministic checks, agent or skill text, runbooks, or references, with add/merge/supersede/drop disposition. Not for an undiagnosed failure (use root-cause), direct operating-doc authoring (use runbook), a resolved-incident write-up (use postmortem), or a one-shot prompt fix (use prompt-craft)."
+description: "Runs bounded, evidence-driven improvement loops and the fleet's learning closeout. After a completed non-trivial task, scan for durable learning; run a learning retro after corrections, failed verification, stale or missing guidance, or repeated friction — \"do a retro on this task\", \"run the micro-retro\", \"capture the lessons learned\", \"what did we miss\" — or decide how a learning should be captured and verified. Routes lessons to deterministic checks, agent or skill text, runbooks, or references with add/merge/supersede/drop disposition. Not for a resolved-incident write-up (postmortem), an undiagnosed failure (root-cause), or operating-doc authoring (runbook)."
 argument-hint: "[completed work, evidence, and improvement criteria]"
 ---
 
@@ -163,13 +163,10 @@ promote it only when the applicable gates hold:
    failure paths do not regress. Reusing only the examples that tuned the candidate is not proof.
 3. **Fresh evaluator, comparable conditions** — a separate context or deterministic verifier
    judges the candidate; the author is not its sole grader or approver. Record every condition the
-   comparison depends on — model with the timeout pinned to it, runtime and version, exact
-   artifact, grader, seed or repetitions, budget, and the configuration state each run inherited
-   (clean-room or the ambient one) — by hand, or via the repository's eval harness when one
-   exists. These are not bookkeeping: a shorter timeout drops runs out of every rate, and
-   clean-room and ambient runs measure different competitions, so results differing on any of
-   them must not be diffed. Results are rates over runs, not booleans; a change inside the
-   measured noise is inconclusive.
+   comparison depends on, and never diff two results that disagree on one. Results are rates over
+   runs, not booleans; a change inside the measured noise is inconclusive. The conditions to
+   capture, and why each one moves the result:
+   [references/promotion-evidence.md](references/promotion-evidence.md).
 4. **Exact-artifact proof** — evaluate the bytes users will receive. For this fleet that includes
    regenerated host adapters and their parity check, not only the canonical source.
 
@@ -190,15 +187,11 @@ retained-feedback lifecycle lives in [references/learning-ledger.md](references/
 
 ## Improvement patterns
 
-- **Evaluator → optimizer:** one role proposes; a separate role critiques against explicit criteria;
-  the proposer revises. Use `code-reviewer` or `verification-engineer` as the
-  independent lens appropriate to the claim.
-- **Act → verify → repeat:** order checks cheapest and surest first — deterministic checks, observed
-  end-to-end signals, then reasoning review. One change per iteration makes causality legible.
-- **Unattended outer loop:** only for decomposable, test-backed work in an isolated branch or
-  workspace. Every iteration starts fresh, does one bounded item, runs a hard verifier, records
-  durable state, and stops on red. Cap iterations, forbid live effects, and require human review
-  before merge. This repository still ships no unattended loop scaffold.
+Three shapes, each governed by the promotion gate above: **evaluator → optimizer** (a separate role
+critiques; the author is never the sole grader), **act → verify → repeat** (cheapest and surest
+checks first, one change per iteration), and the **unattended outer loop** — for which this
+repository ships no scaffold. Conditions each one needs:
+[references/improvement-patterns.md](references/improvement-patterns.md).
 
 ## Output
 

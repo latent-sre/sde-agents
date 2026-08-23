@@ -1,6 +1,6 @@
 ---
 name: "lab-incident"
-description: "Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for \"X is down\", \"the lab is unreachable\", \"everything broke after the update\", \"nothing loads\" — an active outage affecting someone right now. Mitigations apply under homelab-platform's change tiers. Not for a resolved incident (postmortem), a bug with no live outage (root-cause), or a routine health sweep (lab-audit)."
+description: "Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for \"X is down\", \"the lab is unreachable\", \"everything broke after the update\", \"nothing loads\" — an active outage affecting someone right now. Mitigations apply under homelab-platform's change tiers. Not for a resolved incident (postmortem) or a routine health sweep (lab-audit)."
 argument-hint: "[what is down]"
 ---
 

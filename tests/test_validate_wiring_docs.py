@@ -170,6 +170,38 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertEqual([], issues)
 
+    def test_oversized_copilot_agent_profile_is_reported(self) -> None:
+        """CTX-004's Copilot-cap tripwire. Past GitHub's 30,000-character `.agent.md` cap the host
+        rejects the profile and that agent is simply absent on Copilot and VS Code, with no error
+        raised in this repository — so a size rule firing below the cap is the only signal we can
+        produce. Mutation rather than a fixture: the rule must hold against the real generated
+        tree, and a fixture-only test would pass while the rule pointed at nothing.
+        """
+
+        def mutate(repo: Path) -> None:
+            path = repo / ".github" / "agents" / "repository-investigator.agent.md"
+            threshold = int(validate_fleet.COPILOT_AGENT_CHAR_CAP
+                            * validate_fleet.COPILOT_AGENT_BUDGET_FRACTION)
+            grown = path.read_text(encoding="utf-8") + ("\nfiller line past the tripwire." * 900)
+            assert len(grown) > threshold, "mutation did not clear the threshold it is testing"
+            path.write_text(grown, encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(
+            any("repository-investigator.agent.md" in i and "tripwire" in i for i in issues),
+            issues,
+        )
+        self.assertTrue(
+            any(f"{validate_fleet.COPILOT_AGENT_CHAR_CAP}-character" in i for i in issues),
+            "the message must name the hard cap it protects",
+        )
+
+    def test_live_generated_profiles_sit_under_the_copilot_tripwire(self) -> None:
+        """Negative control for the rule above. Without it the tripwire could be satisfied by a
+        threshold so low that the real tree fails — 'enforced' while blocking every run.
+        """
+        self.assertEqual([], validate_fleet.validate_copilot_agent_size(Path(__file__).parent.parent))
+
 
 if __name__ == "__main__":
     unittest.main()

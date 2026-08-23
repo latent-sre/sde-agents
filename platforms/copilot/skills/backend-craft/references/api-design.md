@@ -53,6 +53,31 @@ Pick these once and hold them across every endpoint — consistency is the featu
 - Error codes are API contract: enumerate them in the OpenAPI spec, and treat renaming one as a
   breaking change.
 
+### Member semantics
+
+`type`, `title`, `status`, `detail`, and `instance` are the standard RFC 9457 members:
+
+- **`type`** names the problem *class* as a URI — use `about:blank` when the status code already
+  says it all.
+- **`detail`** explains this *occurrence*, not the class. Two requests hitting the same `type`
+  should differ here and nowhere else.
+
+Anything beyond those five rides as a **top-level extension member** — never nested in an
+`{"error": {...}}` envelope, which is the wrapping SKILL.md forbids:
+
+- **`request_id`** on every response, so a user-reported error is greppable in the logs.
+- **`errors`** as an array on a 422 for validation issues:
+  `"errors": [{"field": "email", "detail": "not a valid email address"}]`.
+
+The same shape covers 404s and 500s — a client should never parse two error formats.
+
+### Serving it
+
+Set `Content-Type: application/problem+json`, and prefer the framework's native support over
+hand-rolling the serializer: Spring `ProblemDetail`, ASP.NET `ProblemDetails`, FastAPI/Starlette
+problem middleware. Hand-rolled versions drift from the spec in exactly the places clients depend
+on — content type, top-level placement, and which members are optional.
+
 ## Evolving a published surface
 
 A surface is **published** when a consumer you cannot coordinate with builds on it. An API whose

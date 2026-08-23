@@ -1,6 +1,6 @@
 ---
 name: "ci-actions"
-description: "Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and the untrusted-input traps that turn a build into a credential leak. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff for vulnerabilities, code-reviewer carries the review-side checklist; for applying to the live lab, homelab-platform."
+description: "Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and untrusted-input traps. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff for vulnerabilities, code-reviewer carries the review-side checklist; for applying to the live lab, homelab-platform."
 argument-hint: "[the workflow or pipeline to build or harden]"
 ---
 
@@ -43,48 +43,19 @@ boundary that also happens to run tests.
    no build steps, and keep the job to labelling or commenting. Untrusted PR code belongs in a plain
    `pull_request` job, which has no secrets.
 
-## Everything else worth doing, briefly
+## Everything else worth doing
 
-- **Concurrency**: cancel superseded runs (`concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }`) so a busy branch doesn't queue ten builds.
-- **Timeouts on every job** (`timeout-minutes:`) — a hung job holds a runner until the platform's
-  6-hour cap.
-- **Cache the dependency store, not the build output**, and key it on the lockfile hash. A cache key
-  that ignores the lockfile serves stale dependencies, which is a debugging nightmare that looks like
-  flakiness. Never cache anything derived from untrusted PR code into a shared key.
-- **Pin the runner image** (`ubuntu-24.04`, not `ubuntu-latest`) when reproducibility matters —
-  `latest` moves and breaks builds on the platform's schedule, not yours.
-- **Secrets are per-job and never echoed.** Don't pass a secret as a command-line argument (it shows
-  in process listings); use `env:` or stdin. Prefer OIDC (`id-token: write` + a cloud trust policy)
-  over long-lived stored credentials where the deploy target can trust a workload identity; a LAN
-  target takes the same rule through whatever its transport is — a dedicated, job-scoped credential
-  (an SSH key when SSH is the transport), never a reused operator credential.
-- **Fork PRs don't get secrets, by design** — a workflow that requires a secret to pass will always
-  fail on fork contributions. Split it: the required checks run without secrets, the secret-needing
-  job runs post-merge or on a label.
-- **Lint the workflows**: `actionlint` for correctness (it catches expression and shell errors CI
-  would otherwise find at runtime) and `zizmor` for these security patterns. Run them locally when
-  you edit a workflow; promote them to CI jobs once workflows change often enough that finding the
-  error at runtime costs more than the jobs do. `assets/ci.reusable.yml` pre-wires them for that
-  case — CI checking the CI is worth a job when someone else's edit can break it, not on a
-  repository where the only author already ran the linter.
-- **Release integrity, once the artifact leaves the lab**: build provenance/attestation and an SBOM,
-  generated in the release job, so a consumer can verify what they got. The payoff is a consumer who
-  cannot just ask you — a public image, a published package, a release a stranger pulls. For an
-  image only your own hosts pull, the build is the answer only when deployment pins the built
-  digest — a mutable tag through a registry is a boundary where different bytes can come back, so
-  pin the digest or keep the attestation.
-- Fail the build on the checks you care about; a workflow with `continue-on-error` everywhere is a
-  status badge, not a gate.
+Breadth rather than essentials, each item independently checkable, so read the one you need:
+run control (concurrency, per-job `timeout-minutes`, failing the build instead of
+`continue-on-error`), caching the dependency store keyed on the lockfile hash, pinning the runner
+image, secret handling and OIDC, the fork-PR secret boundary, `actionlint`/`zizmor` linting, and
+release provenance/SBOM. All of it: [`references/hardening.md`](references/hardening.md).
 
-## Self-hosted runners
-
-A self-hosted runner executing untrusted PR code is remote code execution on your own hardware,
-persisting between jobs. So: **never run fork PRs on a self-hosted runner** (restrict it to trusted
-branches and post-merge jobs), make it **ephemeral** (`--ephemeral`, one job then re-register, or a
-container/VM per job) so nothing survives to the next job, give it no standing credentials beyond the
-job's, and put it on a segmented network — a lab runner that can reach every host is a lateral-movement
-path. Standing up a runner in the home lab is an apply under `homelab-platform`'s change
-tiers, including the network placement.
+**Self-hosted runners** carry one rule that must not wait for a lookup: a self-hosted runner
+executing untrusted PR code is remote code execution on your own hardware, persisting between
+jobs — **never run fork PRs on one**. Ephemerality, credential scope, and network segmentation are
+in the same reference. Standing one up in the lab is an apply under
+`homelab-platform`'s change tiers, including the network placement.
 
 ## Starting a workflow
 

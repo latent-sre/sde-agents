@@ -1,6 +1,6 @@
 ---
 name: "security-audit"
-description: "An adversary-eyes security sweep of the running home lab — exposure, trust zones, authn on exposed services, management planes reachable from the wrong zone, default credentials, secrets posture, vulnerabilities triaged into upgrade-campaign priorities. Use for \"security-audit my lab\", \"what could an attacker reach\", \"check my exposure\", or after standing up anything internet-facing. Reports only; fixes go to homelab-platform. For a diff, code-reviewer; a codebase threat model, application-security-auditor; hygiene, lab-audit."
+description: "An adversary-eyes security sweep of the running home lab — exposure, trust zones, authn on exposed services, management planes reachable from the wrong zone, default credentials, secrets posture, vulnerabilities triaged into upgrade-campaign priorities. Use for \"security-audit my lab\", \"what could an attacker reach\", \"check my exposure\", or after standing up anything internet-facing. Reports only; fixes go to homelab-platform, hygiene to lab-audit."
 argument-hint: "[scope - a zone, a service, or the whole lab]"
 ---
 
@@ -15,7 +15,9 @@ argument-hint: "[scope - a zone, a service, or the whole lab]"
 
 Audit the lab the way an attacker reads it: not "is it well-kept" but "can someone get in, move,
 or take." Every finding is evidence-cited and carries the path an attacker would actually walk —
-`lab-audit` owns the hygiene sweep; this skill owns the adversary's question.
+`lab-audit` owns the hygiene sweep; this skill owns the adversary's question. A code
+diff instead goes to `code-reviewer`, and threat-modelling a codebase with no running
+lab in front of you to `application-security-auditor`.
 
 All checks are read-only. This portable adapter has no cross-host write-tool deny, and shell access can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection
 commands only — every fix routes to `homelab-platform`, and vulnerability findings

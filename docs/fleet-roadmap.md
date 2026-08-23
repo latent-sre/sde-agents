@@ -296,21 +296,84 @@ the pinned behavioral suite. One pilot definition before any fleet-wide edit.
 conditions with no negative-case regression and behavioral contracts green; a written stop rule if
 the pilot regresses; regenerated adapters and the deterministic gates green.
 
-**Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
-highest-density candidate) and the exact paired-measurement conditions before editing anything.
-Named audit material from the 2026-08-09 estate feedback: the Learning-bullet specification is
-~9 of 15 packet bullet-lines in each of 11 always-loaded definitions for a field whose ordinary
-value is one line — a compression candidate gated on the pinned learning-slot behavioral
+**Learning-bullet audit, measured 2026-08-20.** The estate-feedback estimate is confirmed exactly
+and is now a number: the slot is **9 lines / 804 chars** in the intake form and **11 lines / 919
+chars** in the lifecycle-owner form, carried by **11 agents — 8 intake, 3 owner** — for
+**9,189 chars (~2,297 tokens) of boilerplate charged on every spawn of those agents**.
+
+The compression is cheaper than it looks, and more constrained. Cheaper: the text is not
+hand-written prose in eleven places, it is **validator-pinned** — `validate_fleet.py` holds
+`LEARNING_INTAKE_PACKET_SLOT` and `LEARNING_LIFECYCLE_OWNER_PACKET_SLOT` and enforces each as a
+**verbatim substring** of the owning agent's packet (`if expected_slot not in packet_text`), so a
+partial rollout cannot drift silently — the gate catches any agent left behind. More constrained:
+that same check means the constant and all eleven definitions move in one change or none, and the
+packet grammar is graded by `scripts/packet_lint.py`'s tests plus the behavioral contracts that
+read those literal lines, so the pilot cannot be one definition in isolation for this particular
+candidate. Pick a different pilot for the rules→judgment experiment, or scope this one as a
+fleet-wide slot revision with its own paired evidence.
+
+**Next action:** Operator review of the drafted spec
+[`superpowers/specs/ctx-001-claude5-definition-modernization.md`](superpowers/specs/ctx-001-claude5-definition-modernization.md)
+(written 2026-08-20; drafted status starts no round). It carries the audit above, fixes the
+measurement conditions, and **proposes `root-cause` as the pilot rather than `sde-fullstack`** —
+the highest-density candidate cannot be piloted in isolation, because its named compression target
+is the validator-pinned Learning slot that moves fleet-wide or not at all, while `root-cause` is
+small, reference-less, carries no preload canary, and is preloaded by `sde-fullstack`, so one
+split is measurable as both a definition change and a per-spawn reduction. The superseded framing
+follows, kept because the spec argues against it: open a bounded spec choosing the pilot definition
+(`sde-fullstack` is the highest-density candidate) and the exact paired-measurement conditions
+before editing anything.
+Named audit material from the 2026-08-09 estate feedback, now measured above: the Learning-bullet
+specification is ~9 of 15 packet bullet-lines in each of 11 always-loaded definitions for a field
+whose ordinary value is one line — a compression candidate gated on the pinned learning-slot behavioral
 contracts holding.
 
 #### CTX-002 — fit the model-visible skill listing inside the 8,000-char host budget
 
-**Status:** `ready` — pass 1 of the three-pass context remediation (CTX-002 listing layer,
-CTX-003 invocation layer, CTX-004 environment and enforcement); passes 1 and 3 share no files
-with pass 2 and may run independently of it.
+**Status:** `ready`, trimmed to its evidence-backed floor 2026-08-20 — pass 1 of the three-pass
+context remediation (CTX-002 listing layer, CTX-003 invocation layer, CTX-004 environment and
+enforcement); passes 1 and 3 share no files with pass 2 and may run independently of it.
 
-**Outcome:** The fleet's model-visible listing (non-DMI skills plus workflows, currently ~11.9k
-chars across 19 entries) fits the 8,000-char worst-case budget with stated headroom — which
+**Measured floor (2026-08-20).** The listing is **9,444 chars / 19 entries** by `fleet_doctor`,
+down from 9,983 — a net **-539**. 15 descriptions trimmed with **zero case-anchored phrases lost**, verified by
+re-deriving each original from `git show HEAD:<path>` and auditing the cumulative delta rather
+than trusting the per-edit checks. Remaining safe yield across the 17 non-held entries is
+~100–150 chars, so **8,000 is not reachable by trimming**: the floor is ~9,150, and even
+releasing both held entries reaches only ~8,600. That is not a shortfall in this pass — it is the
+quantified form of the Outcome's own caveat below, and the residual belongs to CTX-004's
+`skillListingBudgetFraction` lever. Two entries were deliberately **not** touched:
+`onboarding-map` (900) is LANE-001's discovery surface, and `eng-ladder` (616) is the literal
+subject of LADDER-002's open "which repairs to buy" ruling; trimming either pre-empts an operator
+decision.
+
+The method, and the traps it caught: a differential token audit over all 111 routing-case
+prompts, rebuilt from the instrument `1103342` used and `f232f77` proved necessary. It blocked
+three cuts that would otherwise have shipped — `root-cause` losing `outage`/`change`/`first`,
+`prompt-craft` losing `multi-agent`, `restore-drill` losing `need` — every one a **negative**-case
+anchor. The durable lesson: a pointer being unmeasured *as a pointer* (its target never appears in
+any `expect_fires`) does **not** mean the words inside that clause are unmeasured, because
+negatives measure them constantly; pointer-level and token-level analysis must be intersected, and
+neither alone is sufficient. Where a pointer was genuinely free, its steering was relocated into
+the skill body rather than deleted (`sre-tool`, `root-cause`, `security-audit`, `prompt-craft`) — a
+description clause drives *selection*, while the same clause in the body still drives wrong-skill
+self-correction after selection. `root-cause`'s outage boundary existed **only** in its
+description and would have been lost outright.
+
+**A set-level pass found what the per-entry audit could not, and it was a defect this round
+introduced.** After every description was audited individually, the 19-entry listing was rendered
+as the model actually receives it and read as a whole. `sre-tool` was then the only entry with no
+boundary clause at all, while still claiming "dashboard, CLI, automation service, monitor,
+internal web tool" — vocabulary `frontend-craft` and `backend-craft` also claim. Its boundary had
+been cut (-157) on the reasoning that `sre-tool` has no positive case, so nothing could measure a
+regression. That reasoning was inverted: the cut removed a **boundary**, not a trigger, and
+`proportionality`'s five negatives require `sre-tool` to fire on *nothing*, so dropping "for a
+feature inside an existing codebase, use `sde-agents:sde-fullstack`" makes over-firing more
+likely, not less. The clause is restored, at the cost of the 157 chars above. The durable rule:
+**audit each description against the cases, then read the rendered listing as a set** — cross-entry
+ambiguity is invisible to a per-entry instrument.
+
+**Outcome:** The fleet's model-visible listing (non-DMI skills plus workflows, 9,983 chars across
+19 entries when this pass began) fits the 8,000-char worst-case budget with stated headroom — which
 fully fixes Codex (whose 8,000 budget carries no bundled-skill share) and maximizes surviving
 entries on 200k-context Claude hosts. Bundled skills are budget-exempt and charged first, so
 trimming alone cannot guarantee full survival where the bundled share is large (measured
@@ -338,20 +401,87 @@ survivors are maximized here; full survival on bundled-rich hosts closes in CTX-
 **Evidence capital:** `evals/baselines/2026-08-18-ctx-002/` holds this item's paired v4
 benchmarks; they are the reusable 'before' sides for the held eng-ladder and onboarding-map
 trims and must not be retired while this item or LANE-001 is open — the directory's decisions.md
-carries the full retirement trigger.
+carries the full retirement trigger. Its `after-repair/` capture (at `f232f77`) is also the valid
+**before** side for the 2026-08-20 floor pass, since those bytes are what that pass edited;
+`evals/baselines/2026-08-20-ctx-002-floor/after/` carries the paired 'after' sweep.
 
-**Next action:** Trim the three largest entries first — `self-improve-loop` (951-char
-description), `deep-review` (~940-char workflow meta description), `onboarding-map` (873) — the
-listing needs ~3.9k chars cut. The consuming-repo mitigation available meanwhile is
+**Next action:** Two decisions, then this item closes. (1) Operator ruling on whether the held
+`onboarding-map` and `eng-ladder` entries may be trimmed ahead of LANE-001 and LADDER-002 — worth
+~500 safe chars, and still short of 8,000. (2) Accept that the acceptance condition as written
+("fits the 8,000 budget") is unreachable by trimming and re-read it as "trimmed to its measured
+floor", handing the residual to CTX-004. The consuming-repo mitigation available meanwhile is
 `skillListingBudgetFraction: 0.05` in `.claude/settings.json` (verified full restoration in the
 investigation container; 0.02 measured partial there — calibrate with a live listing probe, not
-by assumption).
+by assumption). The stale figures this entry previously carried (`~11.9k` listing, a 951-char
+`self-improve-loop`, an 873-char `onboarding-map`, "needs ~3.9k cut") predated `1103342` and
+`f232f77` and are corrected above; `deep-review` is left alone because `680eb97` deliberately
+restored the listing-gate contract clauses an earlier trim removed.
 
 #### CTX-003 — shrink the per-spawn preload footprint without hollowing the probe's proof
 
-**Status:** `ready` — pass 2 of the three-pass context remediation; independent of CTX-002 and
-CTX-004, and the heaviest pass (behavioral-contract rounds), so it runs when there is appetite
-for that instrument rather than blocking the other two.
+**Status:** `ready`, first reduction landed 2026-08-20 — pass 2 of the three-pass context
+remediation; independent of CTX-002 and CTX-004, and the heaviest pass (behavioral-contract
+rounds), so it runs when there is appetite for that instrument rather than blocking the other two.
+
+**Landed 2026-08-20 (offline half).** `sde-fullstack`'s preload set measures **46,483 bytes
+(~11,620 tokens), down from 48,716 (~12,179)** — **−2,233 bytes, ~−559 tokens per spawn**.
+`self-improve-loop` −673 (its condition-recording methodology and loop shapes moved to new
+`references/promotion-evidence.md` and `references/improvement-patterns.md`), `frontend-craft`
+−796 (the templated-default catalogue moved into `references/design-language.md`; the two
+parallel "existing stack / existing design system wins" carve-outs merged into one; the
+interface-copy examples returned to `references/ux-writing.md`, which already declares it "owns
+the *wording*"), `backend-craft` −764. Because `self-improve-loop` is charged to three agents,
+the fleet-wide saving across a spawn-heavy session is ~−3,579 bytes. Both preload canaries
+verified intact (`req_8f3a2c`, `color courage`); adapters regenerated; validator and 995 tests
+green.
+
+**Instrument note — automated duplication detection does not work here, and the negative it
+produces is not evidence.** A shared-n-gram detector over SKILL.md against each skill's own
+`references/` was built and *proven against a known case*: it fires on `backend-craft`'s
+problem+json sentence at HEAD but **misses** that file's `/v1` bullet, which restated
+`references/api-design.md` fact-for-fact in different word order. Loosening it to 4-grams surfaces
+mostly false positives, because a pointer sentence naming its reference shares that reference's
+vocabulary by construction. Treat the tool as a reading list, never as a measure: "no duplication
+found" from it means only "no near-verbatim reuse found".
+
+Its ~3,100 chars of surviving candidates were then read, and the review is the durable result —
+**one of four was real**, so do not re-derive this list:
+
+- `frontend-craft` → `ux-writing.md`: **real, acted on.** The reference declares "This file owns
+  the *wording*" and the body restated its examples anyway.
+- `observability` → `alerting.md`/`dashboards.md`/`promql.md`: **not actionable, inverse
+  ownership.** Those references declare "The universal rules live in `skills/observability/SKILL.md`.
+  On any conflict, SKILL.md wins", and they elaborate the rule (each incident question expanded
+  into a panel spec) rather than restate it. Cutting the body would invert the stated contract.
+- `security-audit` → `checks.md`: **false positive.** The `disallowed-tools`/cooperative-read-only
+  caveat appears nowhere in the reference; the overlap was shared routing vocabulary.
+- `self-improve-loop` → `learning-ledger.md`/`discovery-routing.md`: two of three are the
+  contract-bearing packet grammar that `scripts/packet_lint.py` and the behavioral contracts read
+  literally; the third is a summary plus pointer. Leave them.
+
+The generalizable rule this surfaced: **check which artifact declares ownership before removing
+either copy.** `ux-writing.md` claims the wording; `alerting.md` cedes universal rules to its
+SKILL.md. Identical-looking overlap resolves in opposite directions depending on that line.
+
+`backend-craft`'s largest single cut was **pure duplication, not compression**: its `/v1` bullet
+restated `references/api-design.md`'s "Evolving a published surface" almost verbatim — the
+two-live-versions limit, the `Sunset`/`410 Gone` protocol, the breaking-change taxonomy, and the
+already-loaded-client caveat were all already in the reference. Worth checking the other craft
+skills for the same shape before compressing anything by hand.
+
+**Correction to this item's own framing.** The Outcome below says `self-improve-loop` "is
+preloaded by three agents that already carry the Learning closeout stanza inline", which reads as
+redundancy worth removing — dropping those preloads would save ~34.8 KB. It is **not** available.
+`validate_fleet.py` keeps two packet slots, and `LEARNING_LIFECYCLE_OWNER_PACKET_SLOT` — the one
+those three agents carry — literally reads "after the preloaded loop runs". The stanza is the
+*output contract*; the preloaded body is the *process that produces it*. Removing the preload
+would fail the pinned `SELF_IMPROVE_LOOP_PRELOAD_AGENTS` drift check and violate the recorded
+authority rationale ("broad preloading … could read as write authority that a read-only role does
+not hold"). The remaining lever is body compression only.
+
+**Owed:** the before/after behavioral-contract runs this item's Acceptance requires. 16 contracts
+cover `self-improve-loop` alone; none has been bought against the reduced bodies, so the
+reduction is `[verified]` as a byte measurement and `[unverified]` as a behavior claim.
 
 **Outcome:** The per-spawn context cost of preloading drops measurably — `sde-fullstack`
 currently loads ~12.1k tokens of skill bodies (48,317 bytes across five preloads) on top of its

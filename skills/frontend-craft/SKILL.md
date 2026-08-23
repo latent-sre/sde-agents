@@ -1,6 +1,6 @@
 ---
 name: frontend-craft
-description: Design-forward, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. Owns the UI layer; for the backend layer, sde-agents:backend-craft; for end-to-end work spanning both, sde-agents:sde-fullstack.
+description: Design-forward, failure-first web-UI engineering rules — layout, visual character, state, resilience UX, accessibility, testing. Use when building or changing a web UI — pages, dashboards, forms, admin panels, config editors — from a single page to a full SPA. Owns the UI layer; the backend layer is sde-agents:backend-craft, end-to-end sde-agents:sde-fullstack.
 argument-hint: [the UI to build or change]
 ---
 
@@ -10,9 +10,7 @@ argument-hint: [the UI to build or change]
 
 This skill is general-purpose — any web UI, not just operator tooling — held to an SRE-grade bar: failure-first, verifiable, operable. The examples lean ops-flavored; the engineering rules are domain-neutral and apply to a SaaS product or a hobby project the same way. The stack and the design language, though, are **defaults with a carve-out**:
 
-**An existing repository's stack always wins.** The library names below (TanStack, Tailwind, shadcn) are the **default stack** — chosen in `references/stack.md` for greenfield work. In a repo built on other libraries, match that repo and apply the same rules through its equivalents; never rewrite toward the default stack as part of a task.
-
-**An existing design system wins the same way.** The **default design language** (sidebar rail, dark-first, the accent-and-glow language) lives in `references/design-language.md` and applies only to greenfield or unbranded work. In a repo or brand with an established design system — a light-first identity, Material, a corporate token set, a settled shell convention — match it and apply the same discipline (hierarchy, spacing, designed states, accessibility) through its vocabulary; never restyle toward this default as part of a task.
+**What already exists wins — stack and design system alike.** The library names below (TanStack, Tailwind, shadcn; `references/stack.md`) and the default design language (sidebar rail, dark-first, accent-and-glow; `references/design-language.md`) are **greenfield defaults only**. In a repo built on other libraries, or one with an established design system — a light-first identity, Material, a corporate token set, a settled shell convention — match what is there and apply the same rules and the same discipline (hierarchy, spacing, designed states, accessibility) through its vocabulary. Never rewrite or restyle toward these defaults as part of a task.
 
 ## Layout — organized, uncluttered, space-efficient
 
@@ -28,9 +26,9 @@ This skill is general-purpose — any web UI, not just operator tooling — held
 <!-- "color courage" in the next sentence is a load-bearing preload canary: the plugin probe
      (scripts/probe_plugin.py, FRONTEND_CANARY) asks sde-fullstack to quote it as proof this
      skill was preloaded. Reword around that two-word phrase, never through it. -->
-Organized and uncluttered is the floor, not the ceiling: keep the color courage turned up — never ship something mistakable for an unstyled admin template. The default design language — app shell, dark-first surfaces, the accent-and-glow palette, motion timings — lives in [`references/design-language.md`](references/design-language.md); read it **before** styling greenfield or unbranded work (in a branded repo, the existing design system wins — see above). Two rules are universal regardless of design system: animate `opacity` and `transform` only (compositor-friendly — no layout thrash), and respect `prefers-reduced-motion`.
+Organized and uncluttered is the floor, not the ceiling: keep the color courage turned up — never ship something mistakable for an unstyled admin template. Read [`references/design-language.md`](references/design-language.md) — app shell, surfaces, palette, motion timings — **before** styling greenfield or unbranded work. Two rules are universal regardless of design system: animate `opacity` and `transform` only (compositor-friendly — no layout thrash), and respect `prefers-reduced-motion`.
 
-**Self-critique as you build** — screenshot what you made and look at it: would a stranger read it as a templated default? Generated UIs cluster around a few stock looks (cream page + serif display + terracotta accent; near-black + one acid accent; hairline-rule broadsheet) and stock component tells (uniform rounded-2xl, purple-to-indigo gradients, a shadow on every surface) — a look you fell into is not a decision you made; change one real thing. Spend your boldness in one place: one deliberate risk you can justify, everything around it quiet. Bespoke or branded work sources its distinctive choices from the subject's own world — its materials, instruments, vernacular — never a house style carried from the last project. (A brief or design system that *asks* for a stock look wins, as always.)
+**Self-critique as you build** — screenshot what you made and look at it: would a stranger read it as a templated default? A look you fell into is not a decision you made; change one real thing, and spend your boldness in one place — one deliberate risk you can justify, everything around it quiet. The stock palettes and component tells to check yourself against, and the rule for bespoke or branded work, are catalogued in [`references/design-language.md`](references/design-language.md).
 
 ## State and data
 
@@ -57,10 +55,9 @@ The SRE lens is just good engineering pointed at the screen: assume every call c
 
 ## Interface copy — words are design material
 
-- Words exist to make the UI easier to understand and use, never to decorate — same intent as spacing and color. Write from the user's side of the screen: name things by what people control and recognize, never by system architecture ("Notifications," not "webhook config"). Specific beats clever.
-- A control says exactly what happens when used ("Save changes," not "Submit"), and an action keeps one name through its whole flow — the button that says **Publish** produces the toast that says **Published**. One term per concept everywhere; consistent vocabulary is how people learn the product.
+- Words exist to make the UI easier to understand and use, never to decorate — same intent as spacing and color. One term per concept everywhere; consistent vocabulary is how people learn the product.
 - **Real content only** — never lorem or placeholder filler. If the content doesn't exist yet, writing it is part of the job.
-- The *mechanics* of loading/error/empty states live in Resilience UX above; their *wording* lives in `references/ux-writing.md` (see the table below).
+- [`references/ux-writing.md`](references/ux-writing.md) **owns the wording** — naming from the user's side, one name per action through a whole flow, and the text of loading/error/empty states. Their *mechanics* stay in Resilience UX above. Read it before writing or changing user-facing text.
 
 ## Accessibility (baseline, not optional)
 

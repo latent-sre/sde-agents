@@ -89,3 +89,31 @@ generated UIs cluster, so sameness is the failure mode to watch. What keeps it a
 - One orchestrated moment lands harder than scattered effects: per view, pick the moment that
   serves the state change — hover lifts, staggered entrances, *and* animated numbers all at once
   read as generated, not designed. When in doubt, less.
+
+## The templated-default tells
+
+Expansion of the self-critique rule in [SKILL.md](../SKILL.md): *screenshot what you made and look
+at it — would a stranger read it as a templated default?* This is the catalogue that makes that
+question answerable. A look you fell into is not a decision you made.
+
+**Stock palettes** generated UIs cluster around:
+
+- cream page + serif display + terracotta accent
+- near-black + one acid accent
+- hairline-rule broadsheet
+
+**Stock component tells:**
+
+- uniform `rounded-2xl` on every surface
+- purple-to-indigo gradients
+- a shadow on every surface
+
+Recognising one of these in your own output is the signal to change one real thing — not to
+restyle everything. Spend boldness in one place: one deliberate risk you can justify, everything
+around it quiet.
+
+Bespoke or branded work sources its distinctive choices from the subject's own world — its
+materials, instruments, vernacular — never a house style carried from the last project.
+
+A brief or design system that *asks* for a stock look wins, as always: these are tells of
+un-chosen defaults, not a ban on the styles themselves.

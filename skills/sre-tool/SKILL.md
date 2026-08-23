@@ -1,12 +1,12 @@
 ---
 name: sre-tool
-description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify — with spawned builders and reviewers. Use when building or substantially changing an operator-facing or SRE tool — dashboard, CLI, automation service, monitor, internal web tool. For a feature, fix, or refactor inside an existing codebase, sde-agents:sde-fullstack; for one layer, sde-agents:backend-craft or sde-agents:frontend-craft.
+description: The full build pipeline for operator tooling — requirements, right-sized design, build, review, verify. Use when building or substantially changing an operator-facing or SRE tool — dashboard, CLI, automation service, monitor, internal web tool. For a feature, fix, or refactor inside an existing codebase, sde-agents:sde-fullstack; for one layer, sde-agents:backend-craft or sde-agents:frontend-craft.
 argument-hint: [what the tool should do]
 ---
 
 Announce at start: "Running the sre-tool pipeline: requirements → right-sized design → build → review → verify."
 
-**Right-size before Phase 0 — the exit is the first gate, not a buried clause.** A scoped change with an obvious owner and an existing pattern to copy is not pipeline work: hand it straight to `sde-agents:sde-fullstack` (or work the matching craft skill inline) and skip every phase below. The pipeline's ceremony exists for work that earns it — a net-new tool, multiple components, real blast radius, or gates the user must hold. Exiting immediately *is* the right-sized answer; running six phases on a small ask is a proportionality bug, not thoroughness.
+**Right-size before Phase 0 — the exit is the first gate, not a buried clause.** A scoped change with an obvious owner and an existing pattern to copy is not pipeline work: hand it straight to `sde-agents:sde-fullstack` (or work the matching craft skill inline — `sde-agents:backend-craft` for one service layer, `sde-agents:frontend-craft` for one UI layer) and skip every phase below. The pipeline's ceremony exists for work that earns it — a net-new tool, multiple components, real blast radius, or gates the user must hold. Exiting immediately *is* the right-sized answer; running six phases on a small ask is a proportionality bug, not thoroughness.
 
 This pipeline assumes a **spawn-capable context** — Phases 2–3 drive builders and reviewers via the Agent tool. If you cannot spawn agents where you are running, say so up front and degrade deliberately: work the phases inline (Phase 0–1 as written, the build under the craft skills), and flag in the final report that the Phase-3 review was not independent — an inline self-review never counts as the gate.
 For safety-critical work, name both consequences: the Phase-3 independent-review gate is

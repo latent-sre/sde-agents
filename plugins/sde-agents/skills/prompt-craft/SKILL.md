@@ -10,7 +10,7 @@ argument-hint: "[what to create or fix]"
 > Resolve them from the installed plugin using the host's agent or skill picker; do not add
 > Claude's plugin namespace.
 
-For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `prompt-engineer` agent with the target file, the observed failure, and the success criteria.
+For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `prompt-engineer` agent with the target file, the observed failure, and the success criteria. For designing a *system* of agents — orchestration, rosters, handoff contracts — rather than a single prompt or skill, use `multi-agent-architect`.
 
 ## Method
 

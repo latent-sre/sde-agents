@@ -1,6 +1,6 @@
 ---
 name: observability
-description: Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Lab applies route through sde-agents:homelab-platform's change tiers; a live outage is sde-agents:lab-incident.
+description: Designs monitoring — metrics, logs, traces, alerts that page on symptoms, dashboards, collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Lab applies route through sde-agents:homelab-platform's change tiers; a live outage is sde-agents:lab-incident.
 argument-hint: [what to instrument, query, or alert on]
 ---
 

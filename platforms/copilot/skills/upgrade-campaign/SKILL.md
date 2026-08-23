@@ -1,6 +1,6 @@
 ---
 name: "upgrade-campaign"
-description: "Plans and sequences a batch of version upgrades across a home lab — what to update, in what order, a rollback per step, a verification per service. Use for \"update everything\", \"monthly patching\", \"patch day\", \"upgrade my stack\", or a major-version move with breaking changes. Applies run under homelab-platform's change tiers. Not for a single routine image bump (homelab-platform) or a currently broken service (lab-incident)."
+description: "Plans and sequences version upgrades across a home lab — what to update, in what order, a rollback per step, a verification per service. Use for \"update everything\", \"monthly patching\", \"patch day\", \"upgrade my stack\", or a major-version move with breaking changes. Applies run under homelab-platform's change tiers. Not for a single routine image bump (homelab-platform) or a currently broken service (lab-incident)."
 argument-hint: "[what to upgrade, or \"everything\"]"
 ---
 

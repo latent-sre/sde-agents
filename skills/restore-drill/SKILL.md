@@ -1,6 +1,6 @@
 ---
 name: restore-drill
-description: Rehearses restoring a service from its backup and records the measured result — proving the backup is real before you need it. Use for "test my backups", "can I actually restore this", "practice a recovery", or a scheduled restore rehearsal. Not for a live-outage restore (sde-agents:lab-incident) or designing the backup itself (sde-agents:backend-craft or sde-agents:service-onboard).
+description: Rehearses restoring a service from its backup and records the measured result — proving it works before you need it. Use for "test my backups", "can I actually restore this", "practice a recovery", or a scheduled restore rehearsal. Not for a live-outage restore (sde-agents:lab-incident) or designing the backup itself (sde-agents:backend-craft or sde-agents:service-onboard).
 argument-hint: [the service whose restore to rehearse]
 ---
 

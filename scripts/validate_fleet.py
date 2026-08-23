@@ -2037,6 +2037,43 @@ GENERATED_ADAPTER_TREES = (
 )
 
 
+# GitHub rejects a `.agent.md` custom-agent file over 30,000 characters outright, so the FIRST
+# signal of an oversized profile is a host refusing to load that agent -- silently, from this
+# repository's point of view, because nothing here reads the host's inventory. The tripwire fires
+# well below the cap so growth is caught while there is still room to act on it.
+#
+# Calibration, not a round number: `homelab-platform.agent.md` measured 24,631 (82%) when CTX-004
+# opened and 23,780 (79%) after the effect-transport change. GATE-003, GATE-004 and ORACLE-005
+# had previously driven that body to 86% by adding 1,701 characters for three small items, and
+# nobody measured until the number was asked for. A 0.85 fraction sits above today's largest body
+# and below that historical peak, so the exact growth event that motivated this rule would have
+# tripped it.
+COPILOT_AGENT_CHAR_CAP = 30_000
+COPILOT_AGENT_BUDGET_FRACTION = 0.85
+
+
+def validate_copilot_agent_size(root: Path) -> list[str]:
+    """No generated Copilot/VS Code agent may approach GitHub's 30,000-character hard cap."""
+    issues: list[str] = []
+    base = root / ".github" / "agents"
+    if not base.is_dir():
+        return issues
+    threshold = int(COPILOT_AGENT_CHAR_CAP * COPILOT_AGENT_BUDGET_FRACTION)
+    for path in sorted(base.glob("*.agent.md")):
+        size = len(read_text(path))
+        if size <= threshold:
+            continue
+        issues.append(
+            f".github/agents/{path.name}: generated profile is {size} characters, over the "
+            f"{threshold}-character tripwire ({COPILOT_AGENT_BUDGET_FRACTION:.0%} of GitHub's "
+            f"{COPILOT_AGENT_CHAR_CAP}-character `.agent.md` cap). Past the cap the host rejects "
+            f"the profile and that agent is simply absent on Copilot and VS Code, with no error "
+            f"raised here. Shrink the canonical agents/{path.stem}.md body -- the projection is a "
+            f"consequence and cannot be edited to fix this."
+        )
+    return issues
+
+
 def validate_workflow_host_boundary(root: Path) -> list[str]:
     """No generated non-Claude adapter may reference a plugin workflow."""
     issues: list[str] = []
@@ -2150,6 +2187,7 @@ def validate_repo(
     issues.extend(validate_workflow_line_endings(root))
     issues.extend(validate_workflow_meta_contract(root))
     issues.extend(validate_workflow_host_boundary(root))
+    issues.extend(validate_copilot_agent_size(root))
     issues.extend(validate_learning_ledger(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
