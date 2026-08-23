@@ -36,11 +36,15 @@ below:
 - Claude Code's permission callback supports `once`, `always`, and `no`; an `always` decision can
   persist an operator-selected permission, while permission modes and deny/ask/allow rules remain
   distinct controls. Its bypass mode disables ordinary prompts, so bypass is not evidence of a
-  decision. Sources: [user-input permission callback](https://code.claude.com/docs/en/agent-sdk/user-input),
-  [permission modes](https://code.claude.com/docs/en/permission-modes).
+  decision. A `PreToolUse` hook can return `permissionDecision: ask` before execution, giving the
+  fleet a host-owned way to prove interposition without issuing the effect. Sources:
+  [user-input permission callback](https://code.claude.com/docs/en/agent-sdk/user-input),
+  [permission modes](https://code.claude.com/docs/en/permission-modes),
+  [hooks](https://code.claude.com/docs/en/hooks).
 - Codex command approval exposes `accept`, `acceptForSession`, and an exec-policy amendment response.
   Its exec-policy engine reports the matched rules and effective `allow`, `prompt`, or `forbidden`
-  decision. Sources: [command approval protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md),
+  decision, and `codex execpolicy check` evaluates an argv without executing it. Sources:
+  [command approval protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md),
   [exec-policy contract](https://github.com/openai/codex/blob/main/codex-rs/execpolicy/README.md).
 
 The inference used here is narrow: both hosts can carry a decision either at invocation time or in
@@ -73,9 +77,14 @@ access-path boundaries.
 ### 1. A managed prompt may be the one human decision
 
 For a new Tier 2 effect, the agent first presents the visible effect, target, exact invocation,
-blast radius, rollback, and verification. If a trusted managed prompt then displays and binds that
-invocation, accepting the prompt is the explicit human decision. A separate chat confirmation is
-not required.
+blast radius, rollback, and verification. The agent first obtains non-executing, pre-invocation
+evidence that the effective host control will prompt for that exact argv and identifies the matched
+rule or hook. If that trusted managed prompt then displays and binds the invocation, accepting it is
+the explicit human decision. A separate chat confirmation is not required.
+
+The command itself is never used to discover whether a prompt will fire: an allow or bypass mode
+could execute the effect before a human decision. If interposition cannot be proven, the agent uses
+a qualifying standing policy or hands the exact command to the operator.
 
 If the operator already approved the exact effect or a finite plan in conversation, the host may
 still prompt because transport enforcement is per invocation. The second click is not described as
@@ -88,6 +97,11 @@ outside the agent's writable authority, bounded to the executable/arguments/targ
 a reversible effect with rollback and verification. Wrapper shells, variable targets, unrestricted
 argument tails, broad prefixes admitting unshown effects, session-wide bypass, agent-writable rules,
 and undocumented claims of a rule do not qualify.
+
+The durable review artifact records the policy location or identifier, a stable identity for the
+matched rule such as its digest or version, and the effective exact match. A later session can then
+identify the authorization actually used rather than trusting a transient claim that some rule
+matched.
 
 Tier 3 and irreversible/custody effects never use standing authorization. If a standing allow would
 prevent a fresh managed prompt from interposing on Tier 3, the agent hands the command to the
@@ -121,7 +135,9 @@ behavior, one useful health signal, rollback, and an end-to-end check. Four pred
 - privilege or resource contention → least-privilege isolation, limits, and capacity visibility.
 
 A false predicate is recorded as not applicable. It does not require backup machinery, a public
-route, dedicated metrics/dashboard, a full runbook, or an extra restart rehearsal.
+route, dedicated metrics/dashboard, a full runbook, or an extra restart rehearsal. The canonical
+inventory or runbook persists all four outcomes and their supporting operator facts, whether the
+service takes the light or risk-triggered path.
 
 ## Typed packet and compatibility decision
 
@@ -135,6 +151,12 @@ is no on-disk record migration: these fields are evaluation-time declarations, a
 transcripts are immutable evidence. Rollback removes the two additive values together with the
 definitions and cases that emit them; a new packet using those values would then correctly fail an
 older linter rather than be silently reinterpreted.
+
+The onboarding operating record is unversioned Markdown rather than a validated schema. No bulk
+migration rewrites existing lab repositories; the writer adds all four predicate outcomes whenever
+it creates or next updates a service's canonical inventory or runbook record, and an older record
+without them is reported as incomplete rather than treated as proof. Rolling this fleet change back
+leaves those additive facts readable and inert, so no reverse migration is required.
 
 ## Controls deliberately preserved
 
@@ -156,18 +178,21 @@ sections only where their current words would contradict the new behavior.
 
 ## Verification
 
-- Offline behavioral contracts cover the managed-prompt decision, standing Tier 2 versus Tier 3,
-  finite-plan/sentinel reuse, and paired light versus risk-triggered onboarding.
+- Offline behavioral contracts cover proven versus unproven managed-prompt interposition, standing
+  Tier 2 versus Tier 3 with durable rule identity, independent finite-plan stop conditions, and
+  paired light versus risk-triggered onboarding with durable predicate outcomes.
+- The red-first proportionality class produced 18 failures when those assertions were absent; its
+  13 tests now pass, including one-at-a-time omission mutations for every reviewed condition.
 - `packet_lint.py` mirrors the two additive values and its canonical-source drift test remains the
   owner check.
 - Adapter regeneration wrote 182 files; `python3 scripts/validate_fleet.py` validated 11 agents and
-  20 skills, and `python3 scripts/run_tests.py` passed 998 tests across 33 modules.
-- `claude plugin validate . --strict` passed. `fleet_doctor.py` reported no failures and three
-  warnings: this candidate worktree is dirty, the unchanged fleet skill descriptions already total
-  about 9,983 characters against the host's 8,000-character default, and the installed Codex agents
-  do not yet match this uninstalled candidate. Publication still owes a clean candidate check and
-  intentional host synchronization; neither warning is presented as green.
-- The canonical agent body is 26,958 bytes and the largest generated projection is 27,673 bytes.
+  20 skills, and `python3 scripts/run_tests.py` passed 1,005 tests across 33 modules.
+- `claude plugin validate . --strict` passed. On the clean committed candidate, `fleet_doctor.py`
+  reported no failures and two warnings: the unchanged fleet skill descriptions total about 9,983
+  characters against the host's 8,000-character default, and the installed Codex agents do not yet
+  match this uninstalled candidate. Intentional host synchronization remains an installation step;
+  neither warning is presented as green.
+- The canonical agent body is 28,129 bytes and the largest generated projection is 28,844 bytes.
   This round did not claim a body-size improvement; the separately authorized compaction round owns
   that work.
 - The paid behavioral lane remains an explicit operator purchase; offline oracle controls prove

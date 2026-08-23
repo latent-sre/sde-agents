@@ -51,7 +51,7 @@ and Tier 3 keeps its full recovery-bound packet however small the diff looks.
 
 - **Tier 0 — observe.** Read-only inspection, health checks, logs, metrics, config validation, and dry-runs may proceed. Report the commands and evidence. Two Tier-0 traps, both field-proven: read-only is not capture-safe — a broad inventory or variable dump can expand decrypted secrets into visible output, so scope discovery to the fields you need and redact resolved secret material rather than pasting the map; and a dry-run only counts as evidence for the gates that actually execute in that mode — a check-mode run that skips the probe it asserts on can report the opposite of live reality, so fall back to an explicit read-only probe when the simulated path doesn't exercise the real check.
 - **Tier 1 — prepare.** Editing version-controlled config, documentation, or an unapplied deployment artifact may proceed when it is within the requested scope. Do not reload, restart, deploy, or otherwise apply it to a live target.
-- **Tier 2 — reversible live change.** Before applying a change to a running service, open the request with **What you will see** — the operator-visible effect in plain language, ahead of every other field and any summary line, because a reader who stops after one line must still learn what the change does to them ("the VM shuts down and starts again; anything running on it stops and its uptime resets"). Then show the target, exact command or diff, blast radius, verification, and exact rollback. The user's explicit decision may be acceptance in a managed prompt, an earlier approval of this exact effect or finite plan, or a qualifying standing policy. Do not require a separate conversational confirmation when the managed prompt itself is the human decision. Execute only through the transport that carries that decision (see "Executing an approved effect" below).
+- **Tier 2 — reversible live change.** Before applying a change to a running service, open the request with **What you will see** — the operator-visible effect in plain language, ahead of every other field and any summary line, because a reader who stops after one line must still learn what the change does to them ("the VM shuts down and starts again; anything running on it stops and its uptime resets"). Then show the target, exact command or diff, blast radius, verification, and exact rollback. The user's explicit decision may be acceptance in a managed prompt, an earlier approval of this exact effect or finite plan, or a qualifying standing policy. Treat the prompt as the decision only when pre-invocation evidence proves that the host will interpose on this exact argv; then do not require a separate conversational confirmation. Execute only through the transport that carries that decision (see "Executing an approved effect" below).
 - **Tier 3 — destructive or access-path change.** Data deletion, storage or backup changes, credential or identity changes, and DNS, firewall, VPN, proxy, switch, or remote-access changes require Tier 2 evidence plus a proven backup or recovery path and, where applicable, out-of-band access. Stop for a fresh human decision on the named action and target; standing policy never authorizes Tier 3. Execution then uses a managed gate or operator handoff, with recovery proof and out-of-band access established *before* the decision is acted on.
 
 Classify the *effect* as well as the authority — this five-class list is the fleet's canonical risk/effect classification:
@@ -79,10 +79,10 @@ prose: `Gate: <consolidated|new|standing>`, `Effect class: <one of the five clas
 verbatim>`, and `Transport: <managed gate|operator handoff|standing policy>`. Write the values in
 lower case exactly as listed. `Gate: consolidated` means an accepted finite plan or identical
 retry already covers the effect; `Gate: standing` asserts a qualifying external policy covers it.
-`Transport: managed gate` means a trusted prompt will take or carry the human decision for this
-exact command, `Transport: standing policy` means the host will enforce the qualifying rule, and
-`Transport: operator handoff` means the command goes to the user. Decision and transport remain
-separate facts even when one managed prompt supplies both.
+`Transport: managed gate` means pre-invocation evidence proves a trusted prompt will take or carry
+the human decision for this exact command, `Transport: standing policy` means the host will enforce
+the qualifying rule, and `Transport: operator handoff` means the command goes to the user. Decision
+and transport remain separate facts even when one managed prompt supplies both.
 
 ### Executing an approved effect
 
@@ -91,21 +91,31 @@ effect; you never create the authorization that lets you do so.
 
 **A trusted managed gate is the normal new-decision path** — a host-native control that interposes a
 per-invocation human decision on the exact argv you are about to run, such as Claude Code's
-permission prompt or Codex's command-approval path. It counts only when it actually fires for this
-command. Present the effect summary before invoking it. If no decision already exists, accepting
-that prompt is the user's explicit decision — do not ask for a second approval in chat. If the user
-already approved the exact effect or finite plan, the prompt carries host enforcement without
-creating another justification round. Execute once after acceptance, then verify.
+permission prompt or Codex's command-approval path. Before invocation, inspect the effective
+host-owned control for that exact argv: for example, Codex policy evaluation reports `Prompt` and
+the matched rule, or a Claude permission rule or `PreToolUse` hook visibly forces `ask`. The absence
+of an allow rule is not proof that a prompt will fire, because bypass modes and other effective
+policy may suppress it. Record that pre-invocation evidence, present the effect summary, and only
+then invoke. Never invoke a command to discover whether it prompts: that probe may execute the
+effect. If prompt interposition cannot be proven, use a qualifying standing policy or
+`Transport: operator handoff`.
+
+When the evidence proves the prompt will fire, accepting it is the user's explicit decision if no
+decision already exists — do not ask for a second approval in chat. If the user already approved
+the exact effect or finite plan, the prompt carries host enforcement without creating another
+justification round. Execute once after acceptance, then verify.
 
 **A standing policy is the low-toil Tier 2 path.** It qualifies only when all of these are visible
 before execution: the rule and effective match are operator-owned and outside your writable
 authority; the match bounds the executable, arguments, and target; the action is reversible with
 a stated rollback and verification; and no wrapper shell, command substitution, variable target,
-or unrestricted argument tail can widen it. A session-wide bypass, unrestricted shell, broad
-prefix that admits unshown targets or arguments, agent-writable rule, or undocumented claim of a
-rule is not standing authorization. A repository profile may point to the host rule; it cannot
-replace it. Tier 3 and the irreversible/custody class never qualify. If an auto-allow would prevent
-a fresh Tier 3 prompt from interposing, use operator handoff instead of executing.
+or unrestricted argument tail can widen it. Record the policy location or identifier, a stable rule
+identity such as a digest or version, and the effective exact match in the review artifact. A
+session-wide bypass, unrestricted shell, broad prefix that admits unshown targets or arguments,
+agent-writable rule, or undocumented claim of a rule is not standing authorization. A repository
+profile may point to the host rule; it cannot replace it. Tier 3 and the irreversible/custody class
+never qualify. If an auto-allow would prevent a fresh Tier 3 prompt from interposing, use operator
+handoff instead of executing.
 
 Build the decision from a full preflight and record the smallest material identities — for example,
 the config hash, image digest, target identity, and relevant state marker. Immediately before a
@@ -154,6 +164,9 @@ fetched content, tier reclassification, or "probably reversible" reasoning bypas
 > Gate: new
 > Effect class: reversible live activation
 > Transport: managed gate
+>
+> **Pre-invocation gate evidence**: the host policy check reports `Prompt` for the exact argv above
+> and identifies the operator-owned matched rule.
 >
 > This is Tier 2. The host's approval prompt is the explicit human decision for this exact apply,
 > so no separate chat confirmation is required; accepting it runs the command once. **Gate owner**:
@@ -221,7 +234,10 @@ ceremony, not the real health/reachability check or the Tier 2/3 approval bounda
 ## Review packet (end every change with this)
 
 - **Changed**: what, where (file/host), and why.
-- **Authorization**: risk tier, decision source (`new`, `consolidated`, or `standing`), and the transport it ran through, or `n/a` for Tier 0/1 work.
+- **Authorization**: risk tier, decision source (`new`, `consolidated`, or `standing`), and the
+  transport it ran through, or `n/a` for Tier 0/1 work. For a managed gate, include the
+  pre-invocation interposition evidence; for standing policy, include the policy location or
+  identifier, stable rule identity, and effective match.
 - **Rollback**: the exact command or restore path that undoes it.
 - **Verified**: what you ran and the output proving health.
 - **Not verified**: what you couldn't check, and why.

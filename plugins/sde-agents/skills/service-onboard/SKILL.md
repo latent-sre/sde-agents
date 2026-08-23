@@ -75,8 +75,12 @@ useful health signal, rollback, and an end-to-end check.
 7. **Operating record** — inventory the lab repository for an existing canonical runbook and owner.
    Work `runbook` to update one you relied on or create one when the service is
    household-critical, recovery is non-obvious, or an operation will recur. Otherwise an inventory
-   entry with health, rollback, and owner is enough. If a required runbook cannot yet be created,
-   propose the exact gap using that skill's closed grammar. A runbook grants no execution authority.
+   entry with health, rollback, and owner is enough. Persist all four predicate outcomes in either
+   record, with the supporting operator facts: state class and loss tolerance, trust boundary and
+   exposure, household criticality and recovery expectation, and privilege or resource contention.
+   Record a false predicate as `not applicable` with its supporting fact; do not leave it implicit.
+   If a required runbook cannot yet be created, propose the exact gap using that skill's closed
+   grammar. A runbook grants no execution authority.
 8. **End-to-end verify** — within the approved change tier, exercise the final URL or real consumer
    path and observe the chosen health signal. Restart once and prove automatic recovery only for a
    household-critical service or custom lifecycle; initial startup plus the end-to-end check is
