@@ -19,8 +19,9 @@ step in order; when one is skipped, say so explicitly and why — silence reads 
 **under** that agent — it is not self-sufficient standalone. Nearly every step changes a live
 host, and several touch the paths you or the operator are connected through: classify each apply
 under homelab-platform's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change,
-needs approval · 3 destructive/access-path, needs approval + proven recovery) — SSH, firewall,
-and user changes are Tier 3 by definition, because getting them wrong locks the operator out.
+needs an authorized decision · 3 destructive/access-path, needs a fresh decision + proven
+recovery) — SSH, firewall, and user changes are Tier 3 by definition, because getting them wrong
+locks the operator out.
 This checklist grants no permission of its own. Whichever way you arrived here (homelab-platform
 reads it by path; it may also be model-invocable as a plugin skill), the authority stays with
 homelab-platform: if you reached it without that agent's tier discipline, stop and route through
@@ -44,20 +45,22 @@ is the shape to create in *the lab's* repository.
 4. **Host firewall and management exposure** — default-deny inbound where the lab's pattern allows
    it; management planes (SSH, IPMI, hypervisor UI) reachable only from the management network or
    VPN, never the WAN. Every open port is either justified in writing or closed.
-5. **systemd health** — units the host exists to run are enabled with restart policies; failed
-   units are zero at handoff (`systemctl --failed` is the evidence); anything the household would
-   miss gets a health check.
+5. **systemd health** — units the host exists to run have deliberate enablement and restart
+   behavior; failed units are zero at handoff (`systemctl --failed` is the evidence); anything the
+   household would miss gets a health check and restart-recovery evidence.
 6. **Disks, filesystems, and mounts** — layout recorded in the lab repo, mounts in fstab or units
    (not hand-mounted), capacity headroom stated, and SMART/health monitoring on physical disks.
 7. **Time and DNS** — NTP syncing against the lab's chosen source, correct timezone, and the
    host's resolver pointing where the lab profile says — with the fallback path stated if that
    resolver is itself a lab service.
-8. **Telemetry enrollment** — node metrics scraped and logs shipped per the lab's stack; designing
-   the queries, alerts, or dashboards is the `observability` skill's job. An alert
-   exists if the household would notice this host being down.
-9. **Backup enrollment and restore ownership** — anything stateful on this host joins the backup
-   set now, the restore path is named (not assumed), and the first
-   `restore-drill` rehearsal is scheduled rather than implied.
+8. **Telemetry enrollment** — provide one host health and capacity signal in the lab's existing
+   stack. Ship logs when the lab already centralizes them or a named diagnostic question requires
+   it. Designing queries, alerts, or dashboards is `observability`'s job; alert when the
+   household would notice this host being down.
+9. **Backup enrollment and restore ownership** — inventory host-local state and its loss tolerance.
+   Irreplaceable state and recovery material join the backup set, name a restore owner and path,
+   and schedule the first `restore-drill`. Recreatable caches, images, and source-derived
+   state are recorded but do not need backup machinery solely because they live on disk.
 10. **Config tracking, validation, and rollback** — the host's config lives in the lab repo
     (files, or the automation the lab already uses), every applied change had its validate step,
     and the rollback for each Tier 2/3 change was stated before the apply. The services this host

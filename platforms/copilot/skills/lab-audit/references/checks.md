@@ -29,26 +29,30 @@ row 1; a finding here that needs an attack path belongs there.
 
 - Read: `docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'`; `docker inspect <name>` for
   restart policy, healthcheck, and limits; `docker compose config` rendered from the repo file.
-- Finding: `:latest` or untagged images; missing `restart:`; missing healthcheck; exited or
-  restart-looping containers; no resource limits on hosts that also run stateful services.
-- Fix class: pin the tag / add policy, healthcheck, limits in compose — Tier 1 edit, Tier 2 apply.
+- Finding: `:latest` or untagged images; restart behavior is undeclared; no useful health signal;
+  exited or restart-looping containers; privileged or resource-contentious workloads have no
+  isolation or limits.
+- Fix class: pin the tag; declare restart behavior; add the smallest useful health signal; add
+  isolation or limits where its predicate fires — Tier 1 edit, Tier 2 apply.
 
 ## 3. Certificates
 
 - Read: `openssl x509 -in <cert> -noout -enddate -subject` for every cert path the proxy config
   names. Live-endpoint probes (`openssl s_client`, curl) are network calls — when the session
   can't run them, the row lands in the denominator, not in silence.
-- Finding: `[P1]` expiry ≤30 days with no renewal evidence (timer, cron, recent renewal log);
-  services still on plain HTTP with nothing in front.
+- Finding: `[P1]` expiry ≤30 days with no renewal evidence (timer, cron, recent renewal log); a
+  service crossing a trust boundary still uses plain HTTP with nothing in front.
 - Fix class: repair the renewal path, or move the service behind the proxy.
 
 ## 4. Backups
 
-- Read: the backup tool's config and its last-run state or log; the stateful set (every service
-  whose volumes hold data you can't recreate); runbook Recovery slots and Last-verified lines.
-- Finding: `[P0]` stateful service absent from the backup set; last success older than the
-  service's cadence; restore never tested — a backup that has never been restored is a hope, not
-  a backup (the rehearsal routes to `restore-drill`).
+- Read: the backup tool's config and its last-run state or log; the irreplaceable-state set (every
+  service whose data matters and cannot be recreated from a declared source); documented loss
+  tolerances; runbook Recovery slots and Last-verified lines where those runbooks are required.
+- Finding: `[P0]` irreplaceable state absent from the backup set; last success older than the
+  service's cadence; required restore never tested — a backup that has never been restored is a
+  hope, not a backup (the rehearsal routes to `restore-drill`). Recreatable or explicitly
+  disposable state is not a backup finding when its loss tolerance is recorded.
 - Fix class: add to the backup set; schedule the restore drill.
 
 ## 5. Monitoring gaps
@@ -56,9 +60,11 @@ row 1; a finding here that needs an attack path belongs there.
 - Read: scrape/probe target lists and alert rules from the monitoring config in the repo; the
   receiver/route config those alerts point at. Live API queries land in the denominator when the
   session can't make them; config-vs-config answers most of this check.
-- Finding: a service with no scrape target or probe; an alert routed to a receiver that no longer
-  exists; a rule for a service that's gone.
-- Fix class: add the target or fix the route — `observability` designs it,
+- Finding: no useful health signal for an operated service; a household-critical service has no
+  actionable alert; an alert routes to a receiver that no longer exists; a rule targets a service
+  that's gone. Missing per-service metrics or a dashboard is not itself a finding without a named
+  question they were supposed to answer.
+- Fix class: add the smallest signal or fix the route — `observability` designs it,
   `homelab-platform` applies it.
 
 ## 6. Drift

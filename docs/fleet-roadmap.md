@@ -410,6 +410,33 @@ the rule's message with the consequence named; regenerated adapters and green ti
 **Next action:** The Copilot-cap tripwire — it is prerequisite-free, small, and the 82%
 measurement is already committed evidence.
 
+#### CTX-005 — shrink `homelab-platform`'s always-loaded body
+
+**Status:** `ready` — operator-directed next round; deliberately excluded from the proportional
+operations change so policy behavior and body diet remain attributable.
+
+**Outcome:** The always-loaded homelab agent keeps its safety and proportional-authorization
+behavior with less context cost. The 2026-08-23 candidate measures 26,816 canonical characters,
+26,767 in the Copilot projection (89.2% of that host's 30,000-character cap), and 27,531 in the
+Codex projection. Conditional explanation such as the worked example and builder Work Order is
+compressed or moved behind an existing reachable boundary only when its consumer remains proven.
+
+**Source:**
+[Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
+whose operator ruling explicitly defers the body reduction to the next round; CTX-004 owns the
+separate cap tripwire.
+
+**Prerequisites:** Land or otherwise freeze the proportional-operations candidate as the measured
+baseline. Do not mix another policy change into the diet.
+
+**Acceptance:** Before/after character counts use the same instrument; every affected homelab
+behavioral contract passes in the required fresh lane; the probe and full offline suite stay green;
+generated adapters match canonical sources; and the outcome names what was removed, compressed,
+or kept because a future session, script, grader, or guard consumes it.
+
+**Next action:** Inventory the worked example, Work Order, repeated tier explanations, and review
+packet by consumer, then choose the smallest candidate move and its before/after behavioral cases.
+
 #### LABSEC-002 — add a guard-enforced lab inspector
 
 **Status:** `ready` — DEPLOY-001 accepted Option A on 2026-07-31, and normal-session probes proved
