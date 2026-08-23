@@ -636,7 +636,7 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 50 of the 73 cases are no-tool planning-only sessions — and since 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and 42 of those 47 had a granted tool still reachable. The expense
+**Where the cost actually is.** 50 of the 74 cases are no-tool planning-only sessions — and since 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and 42 of those 47 had a granted tool still reachable. The expense
 concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
 Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
 per-contract work.
@@ -681,7 +681,7 @@ cluster. Re-baseline whenever membership changes.
 **Suite size, as of 2026-08-17:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 73
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 74
 deterministic contracts — the 72nd and 73rd are `gate-managed-gate-executes-once` and
 `gate-preflight-drift-reopens-gate`, the positive and drift halves of the effect-transport
 correction that retired the broker mandate. Both numbers are worth knowing before starting a paired round: the
