@@ -19,8 +19,8 @@
   },
   "observation": "Twice in two consecutive rounds, a fix to flagged stale text left the same stale semantic standing elsewhere in the same artifact: fixes were scoped to the flagged lines, and the residue became the next round's critical. The second occurrence was fixed correctly only because the brief said sweep the whole file, not just the flagged lines.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: Receiving review findings now requires sweeping the whole artifact (and paraphrase copies) for stale semantics, not only the flagged lines.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Round retro 2026-08-10, recurrence 2 across consecutive rounds; one-sentence merge into the existing findings discipline at the next canonical-edit round.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:45.703484Z",
+      "destination": "agents/sde-fullstack.md Receiving review findings",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Receiving review findings now requires sweeping the whole artifact (and paraphrase copies) for stale semantics, not only the flagged lines.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:45.848164Z",
+      "destination": "agents/sde-fullstack.md Receiving review findings",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Receiving review findings now requires sweeping the whole artifact (and paraphrase copies) for stale semantics, not only the flagged lines.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-10T06:31:42.924840Z"
+  "updated_at": "2026-08-20T21:45:45.848164Z"
 }

@@ -198,6 +198,13 @@ preloading — route to it via a slash command or an agent that works its checkl
 Regenerate afterward: Copilot retains that explicit-invocation frontmatter, while Codex expresses
 the same policy through each skill's generated OpenAI agent-policy file.
 
+**Editing a workflow** — files under `workflows/`. The Workflow runtime wraps the body, so a
+whole-file `node --check` (or equivalent syntax parse) fails identically on committed and edited
+bytes at the top-level `return`; that instrument is invalid here. Offline proof is
+`python3 scripts/validate_fleet.py` (the meta contract) plus evaluating the extracted `meta`
+export; validator-green is never reported as loadable. A change to workflow-shape bytes is
+exercised by at least one live workflow load before the release containing it closes.
+
 **Touching the Claude guard or hook** — read the docstrings in `scripts/readonly-guard.py` and the
 README guard section first; then run the tests *and* the probe. Non-negotiables: the allowlist grows by
 adding a *reader*, never an interpreter (no `python`, `pytest`, `npm`, `make`, no exemption for
@@ -217,6 +224,11 @@ rule you are adding — or, for an invariant about this repo's real wiring, a mu
 fails without your change. Match the existing error-message
 register: each message says what broke *and why it would have failed silently*.
 
+**Changing a validated on-disk record shape** — state the migration decision (one-shot,
+version-gated, or a permanent compatibility reader with the dual-form cost accepted) and say
+what rollback does to a record that already moved. Unstated dual-shape readability is not a
+decision.
+
 **Adding a defensive branch to a fleet script** — a crash-recovery, authority, or
 input-validation guard lands in the same change as a test that makes it fire; when the trigger is
 hard to stage, prove the branch non-vacuous by mutation (remove it and watch the test fail). An
@@ -225,7 +237,10 @@ validator rules exist to catch, and it will pass every existing check because no
 branch is there. The doc-side twin is equally binding: prose that calls an invariant "validated"
 or "enforced" lands with the reader check and its firing test, or it is reworded as writer
 behavior — a prose claim of enforcement with no guard behind it survives every check for the
-same reason an untested guard does (executed-verification finding, 2026-08-10).
+same reason an untested guard does (executed-verification finding, 2026-08-10). A diagnostic
+that names an external authority as the source of truth compares against a value independently
+obtained from that authority — captured once and reused is fine — never against a copy the
+compared party authored itself.
 
 **Retiring a tripwire whose risk is structurally gone** — the symmetric half of the
 defensive-branch rule above. A tripwire test names the silent failure it watches for (its
@@ -309,7 +324,11 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   against a tree nothing else is writing: a benchmark against a moving tree or an overwritten
   edit never announces itself (learn-001 outcome, 2026-08-02). The parallel test runner is
   sanctioned — its workers assert against isolated copies (`tests/support.py`) — but two
-  adapter tests touch the live checkout, so the suite itself obeys the same rule.
+  adapter tests touch the live checkout, so the suite itself obeys the same rule. Read a named
+  revision as that revision's bytes (`git show <rev>:<path>`), not a working tree standing in
+  for it: HEAD identity is not byte identity, and `git status` does not report every divergence
+  (untracked-but-ignored paths; tracked paths with assume-unchanged or skip-worktree). A tree
+  read records that it was tree-based so a later reader knows which guarantee it carries.
 - **The source wins on drift.** When a deliberate paraphrase disagrees with its owner, fix the
   paraphrase; a defect in the source is fixed at the source and re-propagated to its copies.
   The ownership list lives in `README.md` under "Working on the fleet itself".

@@ -54,7 +54,11 @@ external-research session.
    source, then cite that. When a claim hinges on a literal string, an exact quote, a count, or a
    version, read the raw artifact deterministically (GitHits code/docs readers, raw file
    endpoints) rather than trusting a summarized fetch — summarizing readers have fabricated
-   details and missed literal strings that a direct read finds.
+   details and missed literal strings that a direct read finds. When the primary path is
+   unreachable — egress-blocked, a redirect shell, or a summarizing reader — quotes from
+   search excerpts or the summarizing fetch are [sourced], never [verified], and the packet
+   names the gap. Do not encode an enumerated domain list: which hosts block varies by
+   environment. If this session's fetch of that URL failed, the excerpt is not a page read.
    Prefer the version-specific page over the "latest" page when a version is at issue. For
    current library, framework, SDK, API, CLI, or cloud-service contracts, use Context7 when it is
    available. For public OSS source, tests, package facts, dependencies, advisories, changelogs, and

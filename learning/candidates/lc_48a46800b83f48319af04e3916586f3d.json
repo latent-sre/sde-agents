@@ -19,8 +19,8 @@
   },
   "observation": "learning_ledger.py invoked with --root pointing at a directory with no candidates store answered OK: 0 candidates and an empty list view instead of erroring, so a mispointed root reads as a confidently empty ledger.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Verified at head: a root with no candidates store reports zero candidates validated rather than an error, so a mispointed root is indistinguishable from a clean empty ledger and the fleet validator's ledger gate would pass against the wrong tree. No test pins either behavior, so this is unguarded behavior rather than a decided contract. Per the defensive-branch playbook the guard lands with the test that makes it fire. Owner decides one boundary: erroring belongs on the read path only, since intake legitimately creates the store on first use.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: list/check error when the candidate store is missing; existing empty store remains OK: 0. Firing tests in test_learning_ledger.py.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Verified at head: a root with no candidates store reports zero candidates validated rather than an error, so a mispointed root is indistinguishable from a clean empty ledger and the fleet validator's ledger gate would pass against the wrong tree. No test pins either behavior, so this is unguarded behavior rather than a decided contract. Per the defensive-branch playbook the guard lands with the test that makes it fire. Owner decides one boundary: erroring belongs on the read path only, since intake legitimately creates the store on first use.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:44.526012Z",
+      "destination": "scripts/learning_ledger.py read-path root resolution, with its firing test in tests/test_learning_ledger.py",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: list/check error when the candidate store is missing; existing empty store remains OK: 0. Firing tests in test_learning_ledger.py.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:44.676405Z",
+      "destination": "scripts/learning_ledger.py read-path root resolution, with its firing test in tests/test_learning_ledger.py",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: list/check error when the candidate store is missing; existing empty store remains OK: 0. Firing tests in test_learning_ledger.py.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-17T11:56:39.023730Z"
+  "updated_at": "2026-08-20T21:45:44.676405Z"
 }

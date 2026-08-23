@@ -470,7 +470,9 @@ packet modes or shapes, malformed or non-substantive positive regexes, and a cas
 one non-empty `expect_fires` XOR `expect_all_fires` contract, an explicit runtime-tool allowlist,
 and a positive semantic output oracle are configuration errors. Typed `exact_fields` assertions
 require one literal label with one exact value; a matching substring or duplicate conflicting line
-cannot satisfy them. A
+cannot satisfy them. An exact-value oracle quotes a literal the prompt states or a fleet document
+defines, and the prompt's wording for a relation matches the oracle word for word — a correct
+answer that reds on spelling is an instrument defect, not a contract failure. A
 `runbook_required_gaps` list additionally binds a proposal case to its prompt-declared gap set as a
 floor — every declared gap must be reported, and reporting a further gap from the closed vocabulary
 is allowed because a prompt that names six unavailable things has not said the other two are

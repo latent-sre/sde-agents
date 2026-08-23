@@ -19,8 +19,8 @@
   },
   "observation": "Direct WebFetch of arxiv.org, anthropic.com, cognition.com, and simonwillison.net is egress-blocked behind the agent proxy, so researcher packets citing those domains carry search-excerpt-mediated quotes rather than deterministic page reads",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Two independent verified occurrences share the behavior and boundary, so this is recurrence rather than an anecdote: several primary domains block direct fetch behind the agent proxy while search excerpts still return, so packets citing those pages carry excerpt-mediated quotes that read as deterministic reads. Method 3 covers an unavailable evidence service but not a reachable-but-blocked primary domain. The clause must be path-conditional, never an enumerated domain list, which would be false for environments without this proxy. Carries the residual deltas of the two records superseded into it.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: Method 3 path-conditional clause — blocked/redirect/summarizing primary paths yield [sourced] excerpts, never [verified]; no domain list.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,25 @@
       "owner": "fleet-maintainer",
       "reason": "Two independent verified occurrences share the behavior and boundary, so this is recurrence rather than an anecdote: several primary domains block direct fetch behind the agent proxy while search excerpts still return, so packets citing those pages carry excerpt-mediated quotes that read as deterministic reads. Method 3 covers an unavailable evidence service but not a reachable-but-blocked primary domain. The clause must be path-conditional, never an enumerated domain list, which would be false for environments without this proxy. Carries the residual deltas of the two records superseded into it.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:45.124577Z",
+      "destination": "agents/researcher.md Method section 3 retrieval-path fidelity clause",
+      "disposition": "merge",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Method 3 path-conditional clause — blocked/redirect/summarizing primary paths yield [sourced] excerpts, never [verified]; no domain list.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:45.270489Z",
+      "destination": "agents/researcher.md Method section 3 retrieval-path fidelity clause",
+      "disposition": "merge",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Method 3 path-conditional clause — blocked/redirect/summarizing primary paths yield [sourced] excerpts, never [verified]; no domain list.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-17T11:56:39.129272Z"
+  "updated_at": "2026-08-20T21:45:45.270489Z"
 }

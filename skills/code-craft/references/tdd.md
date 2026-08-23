@@ -67,6 +67,10 @@ this bug can't come back is that this test exists. (The diagnosis that precedes 
   the assertion green with the entire guarded block deleted, and for such content that test was
   its only automated protection. Parse the artifact and assert on its structure, then prove the
   guard by deleting the block and watching the test fail.
+- **A fixture that runs a real external command pins every host setting that decides what the
+  command prints**, in the fixture's own local configuration, before asserting on its output.
+  Reproduce the hostile setting and record the before/after rather than assuming the default is
+  safe. Tests that mock or synthesize that output have no host configuration to inherit.
 
 ## Verify
 

@@ -33,6 +33,7 @@ A prompt is a spec and a contract between human and model. If the model didn't d
 | Complies, but output has the wrong shape | Positive recipe: state what the output IS — its parts, in order | A list of don'ts |
 | Omits a required element | A required slot in a template it must fill | Prose reminders near the template |
 | Behavior should depend on a condition | Conditional keyed to an observable predicate | Unconditional rule + exemption clauses |
+| Output order or precedence loses to an earlier sentence in the same file | Reword the incumbent claim that already occupies that position, then measure; report the residual rate rather than claiming the new rule holds | Adding a new rule lower in the file and leaving the earlier claim intact |
 
 **The description trap.** For agents and skills, the frontmatter description states *when to trigger* — never a summary of the workflow. Agents given a workflow summary execute the summary and skip the body. "Never triggers" usually means the description doesn't match the words users actually say; "fires too often" means it's topic-shaped instead of action-shaped. Trigger evals earn their verdicts only when the queries are realistic — file paths, backstory, typos, casual register — and the negatives are near-misses from adjacent domains; an obviously-irrelevant negative tests nothing. Keep trigger tasks substantive: models answer trivial one-step asks directly without consulting any skill, so "read this file" measures nothing about a description.
 

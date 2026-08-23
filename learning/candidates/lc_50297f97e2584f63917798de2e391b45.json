@@ -3,7 +3,7 @@
   "candidate_id": "lc_50297f97e2584f63917798de2e391b45",
   "created_at": "2026-08-10T06:31:13.682452Z",
   "destination": "docs/fleet-roadmap.md ACK-001",
-  "disposition": "add",
+  "disposition": "drop",
   "evidence": {
     "environment": "sde-agents 1.6.0, superpowers SDD coordinator session, 26 dispatches",
     "provenance": "sourced",
@@ -19,8 +19,8 @@
   },
   "observation": "Learning packets returned to a caller that is a conversation rather than a process have no receiving-side control: a persisted packet and a dropped one produce identical-looking output, so drops stay invisible until someone audits the destination file. Emission was reliable in both observed runs; the loss was entirely on the receiving side.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Triage 2026-08-10: two independent occurrences share the behavior, boundary, and expected result, so this is recurrence rather than an anecdote. Add rather than merge: the loop states that read-only roles return the packet to the caller and stops there, which is correct for foreign repositories but leaves no control when the caller is a conversation; no existing rule covers the receiving side. Not the third self-referential record lc_502daaf warns about, whose theme is this repository's own round-closeout intake; this one is shipped-agent behavior in field sessions. Imported as ACK-001 at decision-needed because the three candidate mechanisms differ in size and only the owner can pick.",
+  "promotion_state": "retired",
+  "reason": "Retired 2026-08-20: already imported as roadmap ACK-001 (decision-needed). The ledger is not a second tracker; pending here duplicated the live item.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,16 @@
       "owner": "fleet-maintainer",
       "reason": "Triage 2026-08-10: two independent occurrences share the behavior, boundary, and expected result, so this is recurrence rather than an anecdote. Add rather than merge: the loop states that read-only roles return the packet to the caller and stops there, which is correct for foreign repositories but leaves no control when the caller is a conversation; no existing rule covers the receiving side. Not the third self-referential record lc_502daaf warns about, whose theme is this repository's own round-closeout intake; this one is shipped-agent behavior in field sessions. Imported as ACK-001 at decision-needed because the three candidate mechanisms differ in size and only the owner can pick.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:47.167346Z",
+      "destination": "docs/fleet-roadmap.md ACK-001",
+      "disposition": "drop",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Retired 2026-08-20: already imported as roadmap ACK-001 (decision-needed). The ledger is not a second tracker; pending here duplicated the live item.",
+      "to": "retired"
     }
   ],
-  "updated_at": "2026-08-10T06:31:31.419148Z"
+  "updated_at": "2026-08-20T21:45:47.167346Z"
 }

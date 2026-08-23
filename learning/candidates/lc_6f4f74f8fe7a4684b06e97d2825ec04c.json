@@ -19,8 +19,8 @@
   },
   "observation": "A builder read repository bytes off a shared checkout parked on an unrelated branch and treated them as its assigned base. An import present only on the parked branch was assumed present on the base; the resulting NameError was caught by the builder's own mutation proof rather than by any gate.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Second occurrence of the class; the first (an adversarial review that followed a dirty nested worktree and reviewed the wrong branch) is in operator memory. The clean-tree half was added at review: HEAD identity alone is not byte identity, and that holds in a single-branch repository too.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: One writer per checkout now requires reading a named revision as that revision, not a working tree standing in for it.",
   "recurrence": {
     "count": 2,
     "sources": [
@@ -64,7 +64,25 @@
       "owner": "fleet-maintainer",
       "reason": "Second occurrence of the class; the first (an adversarial review that followed a dirty nested worktree and reviewed the wrong branch) is in operator memory. The clean-tree half was added at review: HEAD identity alone is not byte identity, and that holds in a single-branch repository too.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:44.824185Z",
+      "destination": "AGENTS.md One writer per checkout (confirm the base before reading it)",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: One writer per checkout now requires reading a named revision as that revision, not a working tree standing in for it.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:44.971258Z",
+      "destination": "AGENTS.md One writer per checkout (confirm the base before reading it)",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: One writer per checkout now requires reading a named revision as that revision, not a working tree standing in for it.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-11T04:44:46.078939Z"
+  "updated_at": "2026-08-20T21:45:44.971258Z"
 }

@@ -19,8 +19,8 @@
   },
   "observation": "A whole-file node syntax check rejects the workflow at the body top-level return statement, and it does so identically on unmodified committed bytes and on edited bytes, so the obvious offline instrument reports a failure that is not the editor's change and reads as a break in the fleet's only workflow, which already has a history of load failures.",
   "owner": "fleet-maintainer",
-  "promotion_state": "proposed",
-  "reason": "Verified: a whole-file parse of the shipped workflow fails identically on committed and edited bytes, because the runtime wraps the body, which is what makes the top-level return still present in that file legal. The validator's meta contract is documented, but no file names the invalid instrument, so the next editor's first offline check reports a false break in the fleet's only workflow, which already has two load-failure incidents. A second record now wants this same missing playbook, which is the named consumer the proportionality gate asks for.",
+  "promotion_state": "promoted",
+  "reason": "Landed 2026-08-20: Editing a workflow playbook names whole-file node syntax check invalid and requires validator meta contract plus live load before release.",
   "recurrence": {
     "count": 1,
     "sources": [
@@ -56,7 +56,25 @@
       "owner": "fleet-maintainer",
       "reason": "Verified: a whole-file parse of the shipped workflow fails identically on committed and edited bytes, because the runtime wraps the body, which is what makes the top-level return still present in that file legal. The validator's meta contract is documented, but no file names the invalid instrument, so the next editor's first offline check reports a false break in the fleet's only workflow, which already has two load-failure incidents. A second record now wants this same missing playbook, which is the named consumer the proportionality gate asks for.",
       "to": "proposed"
+    },
+    {
+      "at": "2026-08-20T21:45:46.295601Z",
+      "destination": "AGENTS.md Change playbooks, a new Editing a workflow entry",
+      "disposition": "add",
+      "from": "proposed",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Editing a workflow playbook names whole-file node syntax check invalid and requires validator meta contract plus live load before release.",
+      "to": "approved"
+    },
+    {
+      "at": "2026-08-20T21:45:46.443430Z",
+      "destination": "AGENTS.md Change playbooks, a new Editing a workflow entry",
+      "disposition": "add",
+      "from": "approved",
+      "owner": "fleet-maintainer",
+      "reason": "Landed 2026-08-20: Editing a workflow playbook names whole-file node syntax check invalid and requires validator meta contract plus live load before release.",
+      "to": "promoted"
     }
   ],
-  "updated_at": "2026-08-17T11:56:39.341077Z"
+  "updated_at": "2026-08-20T21:45:46.443430Z"
 }
