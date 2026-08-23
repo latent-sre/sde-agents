@@ -298,8 +298,8 @@ EXACT_FIELD_LABELS = (
 # negative. Three repair rounds on `gate-same-effect-consolidation` each moved the miss instead of
 # closing it, with every graded transcript behaviorally correct (ORACLE-001). A closed value set
 # has no paraphrase surface to chase.
-GATE_STATES = ("consolidated", "new")
-TRANSPORT_STATES = ("managed gate", "operator handoff")
+GATE_STATES = ("consolidated", "new", "standing")
+TRANSPORT_STATES = ("managed gate", "operator handoff", "standing policy")
 EFFECT_CLASSES = (
     "artifact preparation",
     "repository publication",

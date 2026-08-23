@@ -10,10 +10,11 @@ Monitoring exists to answer one question at 3 a.m.: **is this broken, and where?
 serves that. A dashboard nobody reads during an incident and an alert nobody can act on are both
 cost without coverage.
 
-Three fleet components *demand* monitoring — `sde-agents:homelab-platform` (Prime directives),
-`sde-agents:service-onboard` (step 6), `sde-agents:lab-audit` (findings) — and this skill is where
-the how lives. The lab's stack is Prometheus, Grafana, Loki, and Alloy; the rules are
-stack-neutral, and those are the worked examples.
+Three fleet components route observability questions here — `sde-agents:homelab-platform`,
+`sde-agents:service-onboard`, and `sde-agents:lab-audit`. Their risk predicates decide whether the
+answer is one health signal, an alert, metrics, or a dashboard; this skill supplies the smallest
+design that answers the named question. The worked examples use Prometheus, Grafana, Loki, and
+Alloy, but the rules are stack-neutral.
 
 **Applies are not yours.** Writing a rule file, dashboard JSON, or scrape config is authoring;
 reloading Prometheus, importing to Grafana, or restarting Alloy is an apply under
@@ -34,8 +35,11 @@ reloading Prometheus, importing to Grafana, or restarting Alloy is an apply unde
 - **The most valuable metric in a home lab is a timestamp**: `*_last_success_timestamp_seconds` for
   every backup, sync, and scheduled job. Alerting on "hasn't succeeded in N hours" catches the
   silent failures that no error rate ever shows, because a job that never ran emits no errors.
-- Every service exposes `/healthz` and `/readyz` distinctly (see `sde-agents:backend-craft`) and a
-  metrics endpoint the scraper can reach.
+- Every service has one externally observable health signal appropriate to its lifecycle: an
+  existing container health check, service status, synthetic probe, or application endpoint may
+  satisfy it. A custom orchestrated service exposes distinct liveness and readiness only when the
+  orchestrator makes different decisions from them (see `sde-agents:backend-craft`). Add a metrics
+  endpoint only when a named operational question needs time-series evidence.
 
 ## Logs
 
@@ -54,9 +58,10 @@ reloading Prometheus, importing to Grafana, or restarting Alloy is an apply unde
 - **Alert on what a user would notice**: the site is erroring, the page is slow, the backup hasn't
   succeeded, the certificate expires in days. Not on CPU being high — CPU being high while
   everything works is not an incident.
-- **Every alert answers three things**: what's broken, how bad, what to do. That third one is a link
-  to the service's runbook (`sde-agents:runbook`), so the alert and the recovery path are the same
-  artifact.
+- **Every alert answers three things**: what's broken, how bad, what to do. Link the service's
+  runbook when recovery is non-obvious or the service is household-critical; otherwise name the
+  first action and owner directly so a lightweight service does not need a document solely to
+  satisfy the alert.
 - **If an alert isn't actionable, delete it.** Alert fatigue is not a discipline problem; it is a
   design defect, and the fix is fewer alerts, not more willpower.
 - **Symptom alerts page; cause alerts inform.** Saturation and capacity trends belong on a
@@ -70,9 +75,10 @@ reloading Prometheus, importing to Grafana, or restarting Alloy is an apply unde
 
 ## Dashboards
 
-- **One dashboard per service, answering the incident questions in reading order**: is it up, is it
-  erroring, is it slow, is it saturated. A dashboard that requires knowing where to look has failed
-  its purpose.
+- **A dashboard must answer a recurring question.** Put a simple service on the shared overview or
+  rely on its probe and alert. Give a service its own dashboard when it is household-critical,
+  operationally complex, or repeatedly needs the same multi-signal diagnosis; then order it as:
+  is it up, is it erroring, is it slow, is it saturated.
 - Overview at the top (a few big numbers), detail below. Time range and interval as variables so
   the same panel works at 5 minutes and 7 days.
 - **Dashboards as code**, provisioned from the repo — a dashboard edited only in the UI is lost with
@@ -92,7 +98,8 @@ both unverified. Before "done":
   A rule that only ever evaluated to zero is written, not verified.
 - Reloads were validated first: `promtool check rules` / `promtool check config`, `alloy fmt`, the
   dashboard JSON imports cleanly.
-- The runbook link in the alert resolves to a runbook that exists.
+- When an alert links a runbook, the link resolves; otherwise its inline first action and owner are
+  present and actionable.
 
 ## Before you write it — load the reference for what you're building
 

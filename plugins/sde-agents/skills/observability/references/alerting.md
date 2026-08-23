@@ -42,10 +42,11 @@ groups:
           runbook_url: "https://git.lan/lab/docs/runbooks/backups.md"
 ```
 
-Four things that rule set gets right and most don't: a `for:` that isn't zero, a `runbook_url` on
-every alert, an `absent()` companion so a dead target can't hide, and a staleness alert on the job
-whose failure is otherwise silent (26h, not 24h — a daily job that runs at a slightly different time
-must not page every morning).
+Four things that rule set gets right and most don't: a `for:` that isn't zero, a recovery link for
+these household-critical examples, an `absent()` companion so a dead target can't hide, and a
+staleness alert on the job whose failure is otherwise silent (26h, not 24h — a daily job that runs
+at a slightly different time must not page every morning). A lightweight service without a runbook
+still needs an actionable annotation, but it may name the first action and owner inline.
 
 ## Thresholds you can defend
 

@@ -12,13 +12,16 @@ disable-model-invocation: true
 > Claude's plugin namespace.
 > This skill is explicit-only through Copilot's frontmatter switch.
 
-The checklist that keeps the lab from rotting. Work through every step in order; when one is skipped, say so explicitly and why — silence reads as "done."
+The checklist that keeps the lab from rotting. Work through every applicable step in order; mark a
+non-applicable step with the predicate that made it unnecessary — silence reads as "done."
 
 `homelab-platform` owns change authority for everything below, and this checklist runs
-**under** that agent — it is not self-sufficient standalone. Steps 2–5 apply config, storage,
-proxy, DNS, and TLS to a live lab: classify each apply under homelab-platform's change tiers
-(Tier 0 observe · 1 prepare · 2 reversible live change, needs approval · 3
-destructive/access-path, needs approval + proven recovery) and get the approval each requires.
+**under** that agent — it is not self-sufficient standalone. Applicable steps may change config,
+storage, networking, and security on a live lab: classify each apply under homelab-platform's tiers
+(Tier 0 observe · 1 prepare · 2 reversible live change, needs an authorized decision · 3
+destructive/access-path, needs a fresh decision + proven recovery) and use the decision and
+transport that owner requires. A disclosed finite Tier 2 plan may share one decision; Tier 3 may
+not.
 This checklist grants no permission of its own — a step being on the list is not approval to run
 it. Whichever way you arrived here (homelab-platform reads it by path, or a user invokes the slash
 command), the authority stays with homelab-platform: if you reached it without that agent's tier
@@ -33,28 +36,62 @@ variable map into output — field-proven during a real onboarding, not hypothet
 
 **Read the lab's own profile before step 1.** The lab repo's project context should state the stack, hosts, conventions, and quirks; those facts outrank any default in this checklist, and proposing something the lab's profile rules out wastes a round. If the lab has no such file, [`assets/lab-profile.template.md`](assets/lab-profile.template.md) is the shape to create in *the lab's* repository (not in this plugin — the plugin ships method, the lab owns its facts).
 
-1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names). A host that is itself new to the lab first works `host-onboard`; this checklist assumes the machine under it is already a lab citizen.
-2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`); restart policy; health check; resource limits.
-3. **Storage** — named volumes or explicit paths for state; added to the backup set; confirm the restore path actually exists, don't assume it.
-4. **Network** — reverse proxy entry, DNS record, TLS. No direct port exposure without written justification.
-5. **Security** — auth in front (SSO, basic auth, or app-native); default credentials changed; not WAN-reachable unless genuinely required.
-6. **Observability** — health or metrics endpoint scraped or probed; an alert exists if the household would notice this service being down, and it links to the runbook from step 7. Designing the query, alert threshold, or dashboard is the `observability` skill's job — use it rather than inventing a rule here.
-7. **Runbook contract** — inventory the lab repository for the canonical runbook and its owner,
-   then work the `runbook` skill: update the owned runbook when one exists; create one
-   only when none exists and this service's operation is repeatable, bounded, source-backed, and
-   assigned to an owner; otherwise propose the exact gap. The required structure and its
-   fill-or-honestly-mark rule are owned by `runbook` — on any conflict that skill wins,
-   and its slots are not restated here. The caller's authority remains the ceiling: a runbook
-   grants no authority to execute its steps.
-8. **End-to-end verify** — within the approved change tier, reach the final URL as a normal user,
-   restart the service once, wait for the documented Health criteria, and confirm automatic
-   recovery. Bind the evidence to the deployed version and config identity. If access or approval
-   prevents a step, mark that step `unverified` and hand it to the named owner; do not claim the
-   service or runbook is verified.
+## Applicability predicates
 
-Finish with the review packet: what was deployed; the service rollback (how to remove it cleanly);
-the runbook disposition and canonical path; the version/config identity tested; exact evidence
-from step 8; and every item you could not verify, kept distinct from the ones that did not apply —
+Classify these once before step 1. They add controls to the small universal floor; a false predicate
+removes its dependent work rather than demanding an exception packet.
+
+- **Irreplaceable persistent data** — loss would matter and the state cannot be recreated from a
+  declared source. Requires backup inclusion, a named restore path, and restore evidence. Ephemeral
+  or deliberately disposable state records its loss tolerance instead.
+- **Trust-boundary exposure** — users or callers cross from a less-trusted network or identity
+  boundary. Requires the lab's proxy/TLS/auth pattern and a probe through that real boundary.
+- **Household-critical** — someone would notice the service being down or recovery cannot wait for
+  the next maintenance window. Requires actionable alerting, recovery documentation, and restart
+  recovery evidence.
+- **Privilege or resource contention** — the service needs elevated/device access or shares scarce
+  CPU, memory, disk, or I/O. Requires least-privilege isolation, limits where the platform supports
+  them, and capacity visibility.
+
+Every service still gets version-pinned source configuration, deliberate restart behavior, one
+useful health signal, rollback, and an end-to-end check.
+
+1. **Placement** — which host, what resource envelope (CPU/RAM/disk), and what conflicts exist (ports, storage paths, names). A host that is itself new to the lab first works `host-onboard`; this checklist assumes the machine under it is already a lab citizen.
+2. **Config as code** — compose file or unit in the lab repo; image version pinned (never `latest`);
+   deliberate restart behavior; one health signal. Add hard resource limits only when privilege or
+   contention makes them protective; otherwise the stated resource envelope is enough.
+3. **Storage** — declare the state as none, ephemeral, recreatable, or irreplaceable. Use named
+   volumes or explicit paths where state exists. Only irreplaceable state joins the backup set and
+   owes an existing restore path; record the loss tolerance for everything else.
+4. **Network** — bind to the smallest consumer network or loopback. Add reverse proxy, DNS, TLS,
+   and an external-path probe when the service crosses a trust boundary. Direct exposure beyond
+   the declared consumer boundary needs written justification.
+5. **Security** — remove or change default credentials always. Add SSO, basic auth, or app-native
+   auth when exposure or data sensitivity requires an identity boundary. Privileged/device access
+   gets the narrowest identity, device grant, and isolation that still works.
+6. **Observability** — provide one useful health signal: an existing container health check,
+   service status, or external probe may be enough. Household-critical services get an actionable
+   alert. Add metrics or a dashboard only for a named operational question. Query, threshold, and
+   dashboard design belongs to `observability`.
+7. **Operating record** — inventory the lab repository for an existing canonical runbook and owner.
+   Work `runbook` to update one you relied on or create one when the service is
+   household-critical, recovery is non-obvious, or an operation will recur. Otherwise an inventory
+   entry with health, rollback, and owner is enough. Persist all four predicate outcomes in either
+   record, with the supporting operator facts: state class and loss tolerance, trust boundary and
+   exposure, household criticality and recovery expectation, and privilege or resource contention.
+   Record a false predicate as `not applicable` with its supporting fact; do not leave it implicit.
+   If a required runbook cannot yet be created, propose the exact gap using that skill's closed
+   grammar. A runbook grants no execution authority.
+8. **End-to-end verify** — within the approved change tier, exercise the final URL or real consumer
+   path and observe the chosen health signal. Restart once and prove automatic recovery only for a
+   household-critical service or custom lifecycle; initial startup plus the end-to-end check is
+   enough for a routine disposable service. Bind evidence to the deployed version and config
+   identity. Mark blocked checks `unverified` with an owner rather than claiming completion.
+
+Finish with the review packet: what was deployed; which four predicates fired or did not; the
+service rollback (how to remove it cleanly); the operating-record disposition and canonical path;
+the version/config identity tested; exact evidence from step 8; and every item you could not verify,
+kept distinct from the ones that did not apply —
 each unverified item naming its owner: the operator by default, or the specific person or system
 that must resolve it. The owner is a durable name, never the emitting session — the packet's
 reader is a later session that cannot tell a self-owned gap from an unassigned one, and that is

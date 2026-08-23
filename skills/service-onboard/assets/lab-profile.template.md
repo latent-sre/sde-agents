@@ -33,7 +33,10 @@ because an agent will act on it.
 ## Conventions this lab expects
 
 - Image tags are **pinned**; `:latest` is a finding.
-- Every service has: a health check, a backup path, and a runbook.
+- Every service has: pinned source configuration, deliberate restart behavior, one useful health
+  signal, rollback, and an end-to-end check. Backup/restore, proxy/TLS/auth, alert/runbook, and
+  isolation/limits follow the service-onboard applicability predicates. Its canonical inventory or
+  runbook records all four predicate outcomes and the facts that support them.
 - Config is in the repo and applied from there — never edited live and left undocumented.
 - <naming convention for containers, volumes, networks>
 - <how a change reaches the lab: git push then pull, or applied by hand>

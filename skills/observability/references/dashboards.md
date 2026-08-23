@@ -5,7 +5,8 @@ Read before building a Grafana dashboard or wiring provisioning. The universal r
 
 ## Layout: the incident questions, in reading order
 
-One dashboard per service, top to bottom:
+Build a dedicated service dashboard only when `SKILL.md`'s recurring-question predicate fires;
+otherwise use the shared overview, probe, or alert. A dedicated dashboard reads top to bottom:
 
 1. **Is it up?** — a stat panel per instance, green/red, plus uptime. Answerable in one second.
 2. **Is it erroring?** — error rate and error ratio; the ratio panel paired with a traffic panel so

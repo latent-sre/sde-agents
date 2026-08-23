@@ -634,7 +634,10 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 50 of the 73 cases are no-tool planning-only sessions — and since 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and 42 of those 47 had a granted tool still reachable. The expense
+**Where the cost actually is.** 56 of the 79 cases are no-tool planning-only sessions — and since
+2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist
+over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and the
+original audit found a granted tool still reachable in 42 of 47 such cases. The expense
 concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
 Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
 per-contract work.
@@ -676,13 +679,13 @@ there); the capture under `baselines/2026-07-24/` records the later 5-member / 1
 are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
 
-**Suite size, as of 2026-08-17:** 111 routing cases across the ten clusters (49 positives, 62
+**Suite size, as of 2026-08-23:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 73
-deterministic contracts — the 72nd and 73rd are `gate-managed-gate-executes-once` and
-`gate-preflight-drift-reopens-gate`, the positive and drift halves of the effect-transport
-correction that retired the broker mandate. Both numbers are worth knowing before starting a paired round: the
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 79
+deterministic contracts. The six newest cover proven and unproven managed-prompt interposition,
+standing Tier 2 policy, finite-plan sentinel reuse, and the paired light/risk-triggered onboarding
+boundary. Both numbers are worth knowing before starting a paired round: the
 'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
 capture reusable.
 

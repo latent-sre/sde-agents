@@ -24,6 +24,13 @@ Announce at start: "Using lab-incident: mitigate → confirm → diagnose after.
 tier exemption — an outage makes the blast-radius question *more* important, not less, because the
 system is already degraded and a second change lands on top of the first.
 
+One exact reversible mitigation may contain a bounded command sequence — for example, revert the
+known-bad config, validate it, reload, then probe. Disclose that sequence once and let
+`homelab-platform` take one Tier 2 decision for it; every live command still passes its host
+transport. A speculative alternative, changed target, unexpected result, or widened blast radius
+stops the sequence and opens a new decision. Do not pre-approve a decision tree while the system is
+changing underneath it.
+
 ## Step 1 — read the signals before touching anything (60 seconds, not 10 minutes)
 
 One pass, time-boxed, to tell an outage from a symptom: what is actually broken, how wide, and

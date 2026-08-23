@@ -696,6 +696,23 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             packet_lint.lint_exact_fields("Owner: Fleet-Maintainer\n", {"Owner": "fleet-maintainer"})
         )
 
+    def test_standing_tier2_authorization_has_closed_gate_and_transport_values(self) -> None:
+        """A host policy is typed authorization, not an ungraded prose exception.
+
+        The canonical agent owns the vocabulary; this focused test goes red before that vocabulary
+        and its linter mirror are extended, then keeps a compliant standing-policy declaration from
+        being rejected as an agent regression.
+        """
+        self.assertIn("standing", packet_lint.GATE_STATES)
+        self.assertIn("standing policy", packet_lint.TRANSPORT_STATES)
+        self.assertEqual(
+            [],
+            packet_lint.lint_exact_fields(
+                "Gate: standing\nTransport: standing policy\n",
+                {"Gate": "standing", "Transport": "standing policy"},
+            ),
+        )
+
     def test_closed_vocabulary_fields_tolerate_a_final_full_stop(self) -> None:
         """`Promotion state: quarantined.` is the same value; `quarantined and approved` is not."""
         intake = (

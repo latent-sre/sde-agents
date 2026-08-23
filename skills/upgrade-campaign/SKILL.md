@@ -10,8 +10,12 @@ argument-hint: [what to upgrade, or "everything"]
 verification each is the deliverable. The failure mode this skill exists to prevent is the
 twelve-service upgrade that half-works, where nobody can tell which change broke what.
 
-Every apply is under `sde-agents:homelab-platform`'s change tiers, per service, with its own approval.
-A campaign is not a blanket approval — it is a plan the operator approves step by step.
+Every apply is under `sde-agents:homelab-platform`'s change tiers. Routine, unrelated, reversible
+leaf-service bumps may form one **finite ordered Tier 2 plan** when the operator sees every exact
+command and target, visible effect, rollback, and verification before deciding. That one decision
+removes repeated conversational approval; each command still passes through its own host transport
+and each service is verified before the next. Notable, major, one-way, shared-dependency, or Tier 3
+steps get a separate decision and do not hide inside the routine plan.
 
 ## Rule one: one service at a time, verified between
 
@@ -36,10 +40,10 @@ even then, verify each before starting the next.
    service upgrade into an outage. Within the same tier, do the boring leaf services first: they
    build confidence and their failures are cheap.
 4. **Classify each step**: routine bump (same major, no notes), notable (minor with config changes),
-   or major (breaking, migration required, possibly one-way). Majors get their own session and their
-   own approval — the approval is the same per-apply tier grant every step owes, sought on its own
-   so a breaking change cannot ride through inside a routine-looking batch, and the session is a
-   fresh context that holds one migration's notes instead of fifteen bumps'.
+   or major (breaking, migration required, possibly one-way). Routine leaf bumps may share the
+   bounded plan above. Notable and major changes get their own decision; majors also get their own
+   session, so a breaking migration cannot ride through a routine-looking batch and one fresh
+   context holds its notes instead of fifteen bumps'.
 5. **Identify the one-way doors before you start.** A database schema migration the new version runs
    on boot, a storage format change, a config file rewritten in place — for each one, the rollback is
    *restore from backup*, not "revert the tag". Say so in the plan, and confirm the backup is fresh
@@ -61,9 +65,11 @@ even then, verify each before starting the next.
 - **Record it**: new version, date, anything that had to change in config. Where the upgrade changed
   a documented step, the runbook edit happens now (`sde-agents:runbook`).
 
-**Stop the campaign on the first failure.** Roll that service back, verify it recovered, and stop —
-don't continue down the list with an unexplained failure behind you. The remaining services keep
-their current versions, which is a perfectly good state.
+**Stop the campaign on the first failure, unexpected result, or material drift.** Roll that service
+back when an apply occurred, verify recovery, and stop — do not continue down the list or silently
+alter a command covered by the plan. A changed target, digest, command, or blast radius re-enters
+`sde-agents:homelab-platform`'s gate. The remaining services keep their current versions, which is
+a perfectly good state.
 
 ## After
 
