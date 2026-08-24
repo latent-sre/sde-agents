@@ -226,6 +226,48 @@ def _bash_command_evidence(
     return commands, results, findings
 
 
+def _bash_outcome(result: tuple[str, bool] | None) -> str:
+    """Classify a command result so a failure artifact names the responsible boundary."""
+
+    if result is None:
+        return "no-result"
+    body, is_error = result
+    normalized = " ".join(body.split()).casefold()
+    # Match the CLI's observed refusal messages as complete messages. Approval language from an
+    # executed command belongs to the command, not the harness, and must remain an error.
+    permission_denied = re.fullmatch(
+        r"(?:text )?(?:this command requires approval|"
+        r"permission to use [a-z0-9:_-]+ has been denied)\.?",
+        normalized,
+    ) is not None
+    if is_error and permission_denied:
+        return "denied"
+    return "error" if is_error else "ok"
+
+
+def _bash_command_outcomes(
+    commands: list[tuple[str, str]],
+    results: dict[str, tuple[str, bool]],
+    expected_command: str | None,
+    *,
+    include_command: bool = False,
+) -> list[dict]:
+    """Describe command outcomes without putting raw command text in benchmarks by default."""
+
+    evidence = []
+    for ordinal, (tool_id, command) in enumerate(commands, start=1):
+        record = {
+            "ordinal": ordinal,
+            "expected_command": command == expected_command,
+            "command_sha256": hashlib.sha256(command.encode("utf-8")).hexdigest(),
+            "outcome": _bash_outcome(results.get(tool_id)),
+        }
+        if include_command:
+            record["command"] = command
+        evidence.append(record)
+    return evidence
+
+
 def _evaluate_digest_rejection(
     cwd: Path, prompt: str, transcript: str,
 ) -> tuple[list[str], dict]:
@@ -237,6 +279,7 @@ def _evaluate_digest_rejection(
         "computed_digest": None,
         "hash_command_sha256": None,
         "hash_command_observed": False,
+        "bash_commands": [],
         "workspace_unchanged": False,
         "workspace_sha256": {},
     }
@@ -265,6 +308,12 @@ def _evaluate_digest_rejection(
             f"semantic oracle {oracle}: prompt does not supply the exact digest command"
         )
     commands, results, transcript_findings = _bash_command_evidence(transcript)
+    # Comparison-grade evidence identifies commands without retaining their potentially sensitive
+    # text. The raw form is routed separately to a failing-run artifact below, where it has a
+    # diagnostic consumer and the existing owner-only/opt-in retention controls apply.
+    evidence["bash_commands"] = _bash_command_outcomes(
+        commands, results, expected_command
+    )
     findings += [f"semantic oracle {oracle}: {finding}" for finding in transcript_findings]
     if len(commands) != 1 or commands[0][1] != expected_command:
         findings.append(
@@ -689,6 +738,18 @@ def run_session(
     stats = eval_routing.transcript_stats(proc.stdout or "")
     stats["semantic_findings"] = semantic_findings
     stats["semantic_evidence"] = semantic_evidence
+    if semantic_oracle == "handoff-digest-rejection":
+        commands, results, _findings = _bash_command_evidence(proc.stdout or "")
+        try:
+            expected_command = _handoff_digest_command(_handoff_work_order(prompt))
+        except ValueError:
+            expected_command = None
+        # Transient by name and by collection below: this raw text is popped before artifact
+        # assembly and copied only into evidence for a failing run. Keeping it outside
+        # semantic_evidence prevents every passing benchmark from becoming a command-text dump.
+        stats["_diagnostic_bash_commands"] = _bash_command_outcomes(
+            commands, results, expected_command, include_command=True
+        )
     fired = eval_routing.components_fired(proc.stdout or "")
     # Behavioral assertions require a completed answer. Routing intentionally preserves a
     # non-error result paired with a non-zero process exit, but doing that here would grade text
@@ -1966,6 +2027,9 @@ def main(argv: list[str] | None = None) -> int:
                     runner_error = "not run"
                 else:
                     failures, note, stats, response, runner_error = record
+                diagnostic_bash_commands = stats.pop(
+                    "_diagnostic_bash_commands", None
+                )
                 results[case["id"]].append(failures)
                 runner_errors[case["id"]].append(runner_error)
                 if note:
@@ -1981,20 +2045,26 @@ def main(argv: list[str] | None = None) -> int:
                 if case.get("semantic_oracle") in _WORKSPACE_SEMANTIC_ORACLES:
                     semantic_evidence[case["id"]].append(stats.get("semantic_evidence"))
                 if args.retain_run_evidence:
-                    run_evidence[case["id"]].append({
+                    retained_run = {
                         "response": response,
                         "failures": failures,
-                    })
+                    }
+                    if failures and diagnostic_bash_commands is not None:
+                        retained_run["bash_commands"] = diagnostic_bash_commands
+                    run_evidence[case["id"]].append(retained_run)
                 # A failing run is the only run whose text has a diagnostic consumer, so it is the
                 # only one retained by default. Passing runs stay opt-in under
                 # --retain-run-evidence: retaining them costs the same sensitive-output exposure
                 # for text nobody is going to read.
                 if failures:
-                    failing_evidence[case["id"]].append({
+                    failed_run = {
                         "run_index": run_index,
                         "failures": failures,
                         "response": response,
-                    })
+                    }
+                    if diagnostic_bash_commands is not None:
+                        failed_run["bash_commands"] = diagnostic_bash_commands
+                    failing_evidence[case["id"]].append(failed_run)
                 if stats["model"]:
                     observed_models.add(stats["model"])
     print(" " * 40, end="\r")

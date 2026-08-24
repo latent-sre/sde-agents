@@ -844,31 +844,6 @@ test, or state the limitation in `learning/README.md`.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
 
-#### EVAL-010 — per-command Bash outcome evidence in the behavioral runner
-
-**Status:** `ready` — donor code preserved on origin branch `claude/sonnet-testing-cf6bfc`
-(runner half of `3be1e3e`/`6c06755`).
-
-**Outcome:** A behavioral case that prescribes a command produces evidence naming each observed
-Bash command with its outcome (ok / denied / error / no-result), so a FAIL names its own cause
-instead of collapsing harness-denial and contract-violation into one boolean — the 2026-08-12
-arc paid three diagnosis re-buys for exactly that collapse (promoted lesson `lc_a3bedde1`).
-
-**Source:** the salvaged sonnet-testing arc; candidates `lc_a3bedde1`/`lc_d4a94758`;
-`evals/README.md` doctrine paragraph (2026-08-12 rules).
-
-**Prerequisites:** None — but the donor diff predates the 2026-08-15 runner-grant fix, the
-LEARN-002 offline round, and PR #151's result classification, all of which moved
-`scripts/eval_behavioral.py`. Re-derive against the current module; a cherry-pick would revert
-newer behavior silently.
-
-**Acceptance:** Failing-run evidence carries per-command outcomes; the donor branch's six runner
-tests re-derived and green against the current module; T0 and the full suite green; any new
-probe or control obeys the probe-exercises-the-real-artifact doctrine.
-
-**Next action:** Re-derive `3be1e3e`'s evidence recording onto the current `run_session`,
-taking the donor branch's test names as the spec.
-
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
