@@ -894,12 +894,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
   the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
-  `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
-  returns that empty string rather than `None`, and the branch records FAIL. A session that
-  emitted the call and then exited nonzero or truncated proves nothing about the guard either way,
-  so it is the probe's INCONCLUSIVE case — the same distinction PROBE-002 and PROBE-003 already
-  draw. Reproduced 2026-08-18 against the probe added in this branch. Source: PR #147 round 4.
 - **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
   the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
   scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
