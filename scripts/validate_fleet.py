@@ -2031,8 +2031,8 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
 # same unusable instruction bypass the rule when it moves from Markdown into a shell asset.
 GENERATED_ADAPTER_TREES = (
     ".github/agents",
+    ".github/skills",
     ".codex/agents",
-    "platforms/copilot/skills",
     "plugins/sde-agents/skills",
 )
 

@@ -297,7 +297,13 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
         # scanned here. A shell asset carrying the same unusable instruction must not bypass
         # the host boundary merely because its extension was absent from a validator tuple.
         with repo_copy() as dst:
-            resource = dst / "platforms" / "copilot" / "skills" / "probe" / "scripts" / "run.sh"
+            resource = (
+                dst
+                / generate_platform_adapters.COPILOT_SKILLS
+                / "probe"
+                / "scripts"
+                / "run.sh"
+            )
             resource.parent.mkdir(parents=True)
             resource.write_text("Run /sde-agents:deep-review before merging.\n", encoding="utf-8")
             issues = validate_fleet.validate_workflow_host_boundary(dst)
@@ -339,7 +345,11 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
         # A local import must not make the host-boundary scan certify a different file set.
         with repo_copy() as dst:
             byproduct = (
-                dst / "platforms" / "copilot" / "skills" / "probe" / "__pycache__" / "probe.pyc"
+                dst
+                / generate_platform_adapters.COPILOT_SKILLS
+                / "probe"
+                / "__pycache__"
+                / "probe.pyc"
             )
             byproduct.parent.mkdir(parents=True)
             byproduct.write_bytes(b"runtime cache /sde-agents:deep-review")

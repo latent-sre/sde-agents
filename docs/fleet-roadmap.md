@@ -878,14 +878,6 @@ deterministic gates closes a line, and closing it means deleting it. A line that
 need prerequisites or acceptance evidence beyond itself graduates to a full item above. A line
 naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` rule 7.
 
-- **HOST-010** — VS Code discovers zero fleet skills. Its skill-discovery paths are
-  `.agents/skills`, `.github/skills` and `.claude/skills`; the 20 adapted copies sit in
-  `platforms/copilot/skills/`, which no host reads. Moving them to `.github/skills/` was scoped
-  out of the 2026-08-18 lane retirement. Source:
-  `docs/decisions/2026-07-30-multi-platform-packaging.md` amendment 2026-08-18.
-- **HOST-011** — `platforms/copilot/skills/` is generated output with no consumer since the
-  Copilot CLI lane was retired: no manifest references it and no host discovers it. Retire it, or
-  relocate it as HOST-010's fix. Source: same amendment.
 - **HOST-012** — Installing this repository as a VS Code plugin loads the canonical Claude fleet,
   including `hooks/hooks.json`, because VS Code treats any directory holding
   `.claude-plugin/plugin.json` as an installable plugin and Claude Code requires that file at the
