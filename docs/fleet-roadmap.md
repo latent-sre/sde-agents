@@ -894,12 +894,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
   the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
-  inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
-  `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write
-  fails — the expensive failure EVAL-004 was added to prevent, by another route.
-  `test_a_failed_benchmark_write_returns_two_after_the_sidecar_landed` already stages this
-  blocker. Reproduced 2026-08-18. Source: PR #147 round 4.
 - **PROBE-004** — the `--agent` guard probe reads a Bash `tool_use` with no correlated
   `tool_result` as evidence the command ran unguarded: `bash_results` supplies `""`, `result_for`
   returns that empty string rather than `None`, and the branch records FAIL. A session that
