@@ -894,14 +894,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
   the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **EVAL-008** — a session that times out AFTER emitting a result event leaves `completed=True` in
-  the partial transcript, so `_session_reached_a_result` calls it gradeable and the empty text is
-  scored as a contract failure — the corrupted-rate defect EVAL-005 names, by a third route.
-  Reproduced 2026-08-18: `transcript_stats` over a partial stream carrying one success `result`
-  event returns `completed=True`, and the run's own note reads `timed out after Ns before the
-  session concluded`. The note contradicts the flag, so an explicit timeout should override
-  `completed` rather than the predicate gaining a third clause. Owes a firing regression for the
-  partial-completion timeout on both transports. Source: PR #147 round 6.
 - **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
   run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
   and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
