@@ -329,6 +329,34 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
                     f"{tree}: declared adapter tree is not scanned; issues={issues}",
                 )
 
+    def test_adapter_roots_come_from_the_tree_under_validation(self) -> None:
+        # `--root` may validate a checkout whose generator owns a newer host tree than the
+        # validator process. Reading the executing checkout's tuple would omit that tree and
+        # silently certify a workflow reference that the target checkout actually distributes.
+        with repo_copy() as dst:
+            generator = dst / "scripts" / "generate_platform_adapters.py"
+            original = generator.read_text(encoding="utf-8")
+            mutated = original.replace(
+                "GENERATED_ROOTS = (\n",
+                'GENERATED_ROOTS = (\n    Path("target-only-adapters"),\n',
+                1,
+            )
+            self.assertNotEqual(original, mutated, "generator root declaration was not mutated")
+            generator.write_text(mutated, encoding="utf-8")
+
+            planted = dst / "target-only-adapters" / "boundary-probe.md"
+            planted.parent.mkdir(parents=True)
+            planted.write_text(
+                "Run /sde-agents:deep-review before merging.\n", encoding="utf-8"
+            )
+
+            issues = validate_fleet.validate_workflow_host_boundary(dst)
+
+        self.assertTrue(
+            any("no workflow runtime" in i and "target-only-adapters" in i for i in issues),
+            issues,
+        )
+
     def test_untracked_python_cache_is_not_treated_as_a_shipped_workflow_reference(self) -> None:
         # The adapter generator already excludes runtime bytecode from distributable outputs.
         # A local import must not make the host-boundary scan certify a different file set.
