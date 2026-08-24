@@ -309,6 +309,49 @@ class RunSessionValidationTest(unittest.TestCase):
         self.assertEqual(0, stats["semantic_evidence"]["verifier_exit"])
         self.assertFalse(observed["cwd"].exists())
 
+    def test_digest_session_separates_safe_and_diagnostic_command_evidence(self) -> None:
+        case = next(
+            case
+            for case in eval_behavioral.load_cases(
+                "handoff-builder-rejects-digest-mismatch"
+            )
+        )
+        work_order = eval_behavioral._handoff_work_order(case["prompt"])
+        command = eval_behavioral._handoff_digest_command(work_order)
+        digest = hashlib.sha256(work_order).hexdigest()
+        stdout = "\n".join((
+            json.dumps({"message": {"content": [{
+                "type": "tool_use", "id": "hash-1", "name": "Bash",
+                "input": {"command": command},
+            }]}}),
+            json.dumps({"message": {"content": [{
+                "type": "tool_result", "tool_use_id": "hash-1",
+                "content": digest, "is_error": False,
+            }]}}),
+            json.dumps({
+                "type": "result", "is_error": False,
+                "result": "Handoff receipt: input-required",
+            }),
+        ))
+        proc = mock.Mock(returncode=0, stdout=stdout, stderr="")
+
+        with mock.patch.object(eval_behavioral, "CLAUDE", "claude"), mock.patch.object(
+            eval_behavioral.subprocess, "run", return_value=proc
+        ):
+            _text, _fired, _note, stats = eval_behavioral.run_session(
+                case["prompt"], REPO, timeout=10,
+                semantic_oracle="handoff-digest-rejection",
+            )
+
+        safe = stats["semantic_evidence"]["bash_commands"][0]
+        diagnostic = stats["_diagnostic_bash_commands"][0]
+        safe_diagnostic = {
+            key: value for key, value in diagnostic.items() if key != "command"
+        }
+        self.assertNotIn("command", safe)
+        self.assertEqual(command, diagnostic["command"])
+        self.assertEqual(safe, safe_diagnostic)
+
 
 class ScratchCwdTest(unittest.TestCase):
     """%TEMP% write-blocking voided packet-slots-builder's premise (observed CLI 2.1.220)."""
@@ -350,6 +393,184 @@ class HandoffFunctionalWorkspaceTest(unittest.TestCase):
                 ]
             }) + "\n",
             encoding="utf-8",
+        )
+
+    @staticmethod
+    def _digest_case_inputs() -> tuple[str, str, str]:
+        case = next(
+            case
+            for case in eval_behavioral.load_cases(
+                "handoff-builder-rejects-digest-mismatch"
+            )
+        )
+        work_order = (
+            case["prompt"]
+            .split("---BEGIN WORK ORDER---\n", 1)[1]
+            .split("---END WORK ORDER---", 1)[0]
+            .encode("utf-8")
+        )
+        command = eval_behavioral._handoff_digest_command(work_order)
+        return case["prompt"], command, hashlib.sha256(work_order).hexdigest()
+
+    @staticmethod
+    def _event(block: dict) -> str:
+        return json.dumps({"message": {"content": [block]}})
+
+    @classmethod
+    def _bash_transcript(
+        cls,
+        command: str,
+        *,
+        content: str | list[dict[str, str]] = "",
+        is_error: bool = False,
+        include_result: bool = True,
+        tool_id: str = "hash-1",
+    ) -> str:
+        events = [cls._event({
+            "type": "tool_use", "id": tool_id, "name": "Bash",
+            "input": {"command": command},
+        })]
+        if include_result:
+            events.append(cls._event({
+                "type": "tool_result", "tool_use_id": tool_id,
+                "content": content, "is_error": is_error,
+            }))
+        return "\n".join(events)
+
+    def _digest_evidence(self, transcript: str) -> tuple[list[str], dict]:
+        prompt, _command, _digest = self._digest_case_inputs()
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            eval_behavioral.prepare_semantic_workspace(
+                cwd, "handoff-digest-rejection"
+            )
+            failures, evidence = eval_behavioral.evaluate_semantic_workspace(
+                cwd,
+                "handoff-digest-rejection",
+                prompt=prompt,
+                transcript=transcript,
+            )
+        return failures, evidence
+
+    @staticmethod
+    def _safe_bash_command(
+        command: str, outcome: str, *, ordinal: int = 1, expected: bool = True,
+    ) -> dict:
+        return {
+            "ordinal": ordinal,
+            "expected_command": expected,
+            "command_sha256": hashlib.sha256(command.encode("utf-8")).hexdigest(),
+            "outcome": outcome,
+        }
+
+    def test_digest_evidence_records_ok_for_a_successful_bash_result(self) -> None:
+        _prompt, command, digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(command, content=digest)
+
+        failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual([], failures)
+        self.assertEqual(
+            [self._safe_bash_command(command, "ok")], evidence["bash_commands"]
+        )
+
+    def test_digest_evidence_records_denied_for_an_approval_error(self) -> None:
+        _prompt, command, _digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(
+            command,
+            content="Permission to use Bash has been denied.",
+            is_error=True,
+        )
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [self._safe_bash_command(command, "denied")],
+            evidence["bash_commands"],
+        )
+
+    def test_digest_evidence_records_error_for_a_non_permission_failure(self) -> None:
+        _prompt, command, _digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(
+            command, content="process exited with status 1", is_error=True
+        )
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [self._safe_bash_command(command, "error")], evidence["bash_commands"]
+        )
+
+    def test_digest_application_approval_language_remains_an_error(self) -> None:
+        _prompt, command, _digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(
+            command,
+            content="deployment requires approval from security",
+            is_error=True,
+        )
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [self._safe_bash_command(command, "error")], evidence["bash_commands"]
+        )
+
+    def test_digest_evidence_records_no_result_for_an_unanswered_command(self) -> None:
+        _prompt, command, _digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(command, include_result=False)
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [self._safe_bash_command(command, "no-result")],
+            evidence["bash_commands"],
+        )
+
+    def test_digest_evidence_records_every_command_in_transcript_order(self) -> None:
+        _prompt, command, digest = self._digest_case_inputs()
+        transcript = "\n".join((
+            self._bash_transcript(command, content=digest),
+            self._bash_transcript(
+                "ls -la",
+                content="This command requires approval",
+                is_error=True,
+                tool_id="extra-1",
+            ),
+            self._bash_transcript(
+                "whoami", include_result=False, tool_id="extra-2"
+            ),
+        ))
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [
+                self._safe_bash_command(command, "ok"),
+                self._safe_bash_command(
+                    "ls -la", "denied", ordinal=2, expected=False
+                ),
+                self._safe_bash_command(
+                    "whoami", "no-result", ordinal=3, expected=False
+                ),
+            ],
+            evidence["bash_commands"],
+        )
+
+    def test_digest_evidence_reads_nested_approval_error_content(self) -> None:
+        _prompt, command, _digest = self._digest_case_inputs()
+        transcript = self._bash_transcript(
+            command,
+            content=[{
+                "type": "text", "text": "This command requires approval",
+            }],
+            is_error=True,
+        )
+
+        _failures, evidence = self._digest_evidence(transcript)
+
+        self.assertEqual(
+            [self._safe_bash_command(command, "denied")],
+            evidence["bash_commands"],
         )
 
     def test_seeded_fixture_fails_then_passing_end_state_is_evidence(self) -> None:
@@ -4527,6 +4748,73 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
         self.assertEqual(
             [evidence], payload["cases"][0]["semantic_evidence_per_run"]
         )
+
+    def test_digest_failure_keeps_raw_command_only_in_protected_evidence(self) -> None:
+        _prompt, command, _digest = HandoffFunctionalWorkspaceTest._digest_case_inputs()
+        safe_command = HandoffFunctionalWorkspaceTest._safe_bash_command(
+            command, "denied"
+        )
+        raw_command = {**safe_command, "command": command}
+        evidence = {
+            "oracle": "handoff-digest-rejection",
+            "computed_digest": "a" * 64,
+            "hash_command_observed": False,
+            "workspace_unchanged": True,
+            "bash_commands": [safe_command],
+        }
+        stats = {
+            **self._stats(),
+            "semantic_findings": [],
+            "semantic_evidence": evidence,
+            "_diagnostic_bash_commands": [raw_command],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            payload = self._run_main(
+                output,
+                [stats],
+                responses=[self._FAILING],
+                case_id="handoff-builder-rejects-digest-mismatch",
+            )
+            sidecar = self._evidence(output)
+            benchmark_text = (output / "benchmark.json").read_text(encoding="utf-8")
+
+        self.assertNotIn(command, benchmark_text)
+        self.assertEqual(
+            [evidence], payload["cases"][0]["semantic_evidence_per_run"]
+        )
+        self.assertIsNotNone(sidecar)
+        self.assertEqual(
+            [raw_command], sidecar["cases"][0]["failing_runs"][0]["bash_commands"]
+        )
+
+    def test_opt_in_digest_failure_retains_command_outcome_in_benchmark(self) -> None:
+        _prompt, command, _digest = HandoffFunctionalWorkspaceTest._digest_case_inputs()
+        safe_command = HandoffFunctionalWorkspaceTest._safe_bash_command(
+            command, "denied"
+        )
+        raw_command = {**safe_command, "command": command}
+        stats = {
+            **self._stats(),
+            "semantic_findings": [],
+            "semantic_evidence": {
+                "oracle": "handoff-digest-rejection",
+                "bash_commands": [safe_command],
+            },
+            "_diagnostic_bash_commands": [raw_command],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            payload = self._run_main(
+                output,
+                [stats],
+                responses=[self._FAILING],
+                retain_run_evidence=True,
+                case_id="handoff-builder-rejects-digest-mismatch",
+            )
+
+        retained = payload["cases"][0]["run_evidence_per_run"][0]
+        self.assertEqual([raw_command], retained["bash_commands"])
 
     def test_behavioral_runner_and_imported_graders_use_registered_compiled_buffers(self) -> None:
         paths = eval_behavioral.behavioral_evaluator_paths()

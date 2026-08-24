@@ -377,6 +377,13 @@ grammar-versus-text call then costs a second paid session — 22 of the 76 sessi
 2026-08-10 calibration round were that re-buy, and a grader repaired without the sentence it
 misread is a grader tuned into agreeing with itself.
 
+The digest-rejection oracle applies the same boundary to Bash evidence. Its comparison-grade
+`semantic_evidence_per_run` records each command's ordinal, expected-command match, SHA-256, and
+`ok` / `denied` / `error` / `no-result` outcome, but not raw command text. When the run fails, the
+protected evidence form adds that raw command beside the outcome so diagnosis does not need a
+second session. The default sidecar is owner-only; the `--retain-run-evidence` form is the explicit
+opt-in exception below.
+
 For the wider case, `--retain-run-evidence` adds an ordered `run_evidence_per_run` list to
 `benchmark.json` containing **every** run's final response and failures, passing runs included; it
 requires `--output-dir`, and it supersedes the separate file rather than duplicating it. Both are

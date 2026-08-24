@@ -50,9 +50,8 @@ default component paths are `agents/`, `skills/` and `hooks/hooks.json` — so i
 correctly on a host that does not send the active agent on `PreToolUse`. Claude Code requires that
 manifest at the repository root, so this cannot be prevented from inside the repository.
 
-Skills are not yet reachable on this lane: VS Code discovers skills from `.agents/skills`,
-`.github/skills` and `.claude/skills`, and the adapted copies currently live under
-`platforms/copilot/skills/`. Tracked in `docs/fleet-roadmap.md`.
+Generated skills live under `.github/skills/`, one of VS Code's workspace discovery paths, so the
+adapted skill copies are available alongside the generated agents when the folder is open.
 
 ### Codex
 
@@ -176,7 +175,7 @@ control, and the hosts do not expose equivalent hook payloads:
 | Host | Agents and skills | Read-only posture | Important boundary |
 |---|---|---|---|
 | Claude Code | Canonical `agents/` and `skills/` | Session hook allowlists Bash for the guarded roles | Namespaced component references and `${CLAUDE_PLUGIN_ROOT}` are canonical-plugin-only |
-| VS Code | Generated `.github/agents/`, discovered from an open workspace folder | Guarded roles receive no `execute` tool | Its `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused; skills are not yet on a discovered path |
+| VS Code | Generated `.github/agents/` and `.github/skills/`, discovered from an open workspace folder | Guarded roles receive no `execute` tool | Its `PreToolUse` payload does not identify the active agent, so the Claude guard is not reused |
 | Codex | Standalone `.codex/agents/*.toml`; generated skills in `plugins/sde-agents/` | Roles without canonical write tools request `sandbox_mode = "read-only"` | Parent permissions can override agent sandbox defaults, and custom-agent TOML has no per-agent tool allowlist |
 
 Claude-specific MCP tool identifiers are not promised on other hosts. Generated agents direct the

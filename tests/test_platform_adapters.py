@@ -21,6 +21,47 @@ _remove_directory_link = remove_directory_link
 
 
 class PlatformAdapterTests(unittest.TestCase):
+    def test_vscode_skill_relocation_reports_and_removes_the_retired_root(self) -> None:
+        # VS Code discovers `.github/skills` without repository-specific settings. The former
+        # Copilot CLI output root had no consumer, and regeneration must remove that stale tree
+        # instead of leaving two plausible skill fleets behind.
+        old_relative = Path("platforms/copilot/skills")
+        new_relative = Path(".github/skills")
+        self.assertEqual(new_relative, generate_platform_adapters.COPILOT_SKILLS)
+        self.assertIn(old_relative, generate_platform_adapters.RETIRED_GENERATED_ROOTS)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            manifest = root / ".claude-plugin" / "plugin.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text("{}\n", encoding="utf-8")
+            old_skill = root / old_relative / "probe" / "SKILL.md"
+            old_skill.parent.mkdir(parents=True)
+            old_skill.write_text("stale generated skill\n", encoding="utf-8")
+            expected = {new_relative / "probe" / "SKILL.md": b"generated skill\n"}
+
+            with mock.patch.object(
+                generate_platform_adapters,
+                "expected_outputs",
+                return_value=expected,
+            ):
+                issues = generate_platform_adapters.validate_generated_outputs(root)
+                self.assertTrue(
+                    any(
+                        str(root / old_relative) in issue
+                        and "retired generated adapter root still exists" in issue
+                        for issue in issues
+                    ),
+                    issues,
+                )
+                generate_platform_adapters.write_generated_outputs(root)
+
+            self.assertFalse((root / old_relative).exists())
+            self.assertEqual(
+                b"generated skill\n",
+                (root / new_relative / "probe" / "SKILL.md").read_bytes(),
+            )
+
     def test_definition_parts_uses_one_coherent_source_snapshot(self) -> None:
         first = "---\nname: first\ndescription: First\n---\n\nfirst body\n"
         second = "---\nname: second\ndescription: Second\n---\n\nsecond body"
@@ -111,7 +152,7 @@ class PlatformAdapterTests(unittest.TestCase):
         )
         paths = (
             REPO / "skills" / relative,
-            REPO / "platforms" / "copilot" / "skills" / relative,
+            REPO / ".github" / "skills" / relative,
             REPO / "plugins" / "sde-agents" / "skills" / relative,
         )
         try:
@@ -220,7 +261,7 @@ class PlatformAdapterTests(unittest.TestCase):
     def test_validation_rejects_links_at_every_generated_tree_depth(self) -> None:
         placements = (
             ("root", generate_platform_adapters.COPILOT_SKILLS, Path(".")),
-            ("parent", Path("platforms"), Path("copilot") / "skills"),
+            ("parent", Path(".github"), Path("skills")),
             (
                 "descendant",
                 generate_platform_adapters.COPILOT_SKILLS / "redirected",
@@ -306,7 +347,7 @@ class PlatformAdapterTests(unittest.TestCase):
     def test_write_rejects_links_at_every_generated_tree_ancestor(self) -> None:
         placements = (
             ("root", generate_platform_adapters.COPILOT_SKILLS, Path(".")),
-            ("parent", Path("platforms"), Path("copilot") / "skills"),
+            ("parent", Path(".github"), Path("skills")),
         )
         for name, link_relative, sentinel_parent in placements:
             with self.subTest(placement=name), tempfile.TemporaryDirectory() as temporary:
@@ -532,7 +573,7 @@ class PlatformAdapterTests(unittest.TestCase):
 
     def test_host_skills_have_no_live_claude_namespace_references(self) -> None:
         roots = (
-            REPO / "platforms" / "copilot" / "skills",
+            REPO / generate_platform_adapters.COPILOT_SKILLS,
             REPO / "plugins" / "sde-agents" / "skills",
         )
         for root in roots:
@@ -570,9 +611,7 @@ class PlatformAdapterTests(unittest.TestCase):
             with self.subTest(skill=name):
                 copilot_skill = (
                     REPO
-                    / "platforms"
-                    / "copilot"
-                    / "skills"
+                    / generate_platform_adapters.COPILOT_SKILLS
                     / name
                     / "SKILL.md"
                 )
@@ -616,7 +655,10 @@ class PlatformAdapterTests(unittest.TestCase):
         self.assertNotIn("disable-model-invocation", canonical_fields)
 
         copilot_skill = (
-            REPO / "platforms" / "copilot" / "skills" / "onboarding-map" / "SKILL.md"
+            REPO
+            / generate_platform_adapters.COPILOT_SKILLS
+            / "onboarding-map"
+            / "SKILL.md"
         )
         copilot_fields = validate_fleet.parse_frontmatter(copilot_skill)
         self.assertNotIn("disable-model-invocation", copilot_fields)

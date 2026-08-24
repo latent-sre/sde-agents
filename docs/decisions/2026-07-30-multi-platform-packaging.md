@@ -175,3 +175,19 @@ and Claude Code requires that file at the root. Skills are not yet on a VS-Code-
 policy, and the nested Codex plugin root all stand unchanged. The nesting rationale is in fact
 strengthened: the same reasoning that kept Claude's hook out of `plugins/sde-agents/` is what the
 repository root could not offer VS Code.
+
+## Amendment, 2026-08-24 — VS Code skills moved onto a discovered path
+
+The generated VS Code skill tree moves from the retired Copilot CLI location
+`platforms/copilot/skills/` to `.github/skills/`, a default VS Code workspace discovery path. The
+generator owns the relocation and retains the old path as a retired root so regeneration removes
+stale copies instead of leaving two plausible skill fleets. HOST-010 and HOST-011 close together:
+the same move makes the adapted skills reachable and eliminates the orphaned output tree.
+
+Evidence: the current official
+[Agent Skills documentation](https://github.com/microsoft/vscode-docs/blob/main/docs/agent-customization/agent-skills.md)
+lists `.github/skills/` as a default project location. VS Code's source declares the same workspace
+root in
+[`promptFileLocations.ts`](https://github.com/microsoft/vscode/blob/40f27cc166304afa356ab59fea79468e23113fce/src/vs/workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.ts#L169),
+and its end-to-end discovery suite exercises a skill at that path in
+[`customizationDiscoverySuite.ts`](https://github.com/microsoft/vscode/blob/40f27cc166304afa356ab59fea79468e23113fce/src/vs/platform/agentHost/test/node/e2e/suites/customizationDiscoverySuite.ts#L95).

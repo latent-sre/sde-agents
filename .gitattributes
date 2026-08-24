@@ -11,5 +11,5 @@
 .codex/agents/** linguist-generated=true
 .claude/agents/** linguist-generated=true
 .github/agents/** linguist-generated=true
-platforms/copilot/** linguist-generated=true
+.github/skills/** linguist-generated=true
 plugins/sde-agents/skills/** linguist-generated=true

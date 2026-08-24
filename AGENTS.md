@@ -297,10 +297,10 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   imports only the Python standard library. Never add a dependency, a requirements file, or an
   install step.
 - **Never hand-edit a generated adapter.** The generated trees are `.github/agents/`,
-  `.codex/agents/`, `platforms/copilot/skills/`, and `plugins/sde-agents/skills/`. Edit the
+  `.github/skills/`, `.codex/agents/`, and `plugins/sde-agents/skills/`. Edit the
   canonical file or the generator and regenerate — byte-drift validation proves the result. Adding
-  or retiring a tree edits both lists: `GENERATED_ROOTS` and validate_fleet's
-  `GENERATED_ADAPTER_TREES`.
+  or retiring a tree edits `generate_platform_adapters.py`'s `GENERATED_ROOTS`; the validator
+  derives its scan targets from that tuple.
 - **One parser per fact.** A script that needs frontmatter, `tools:` values, or namespaced
   references builds on the records from `scripts/fleet_records.py`; to read a new fact, extend
   the records. A second parser lets two reports about the same tree disagree with nothing to

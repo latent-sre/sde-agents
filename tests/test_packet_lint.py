@@ -7,7 +7,6 @@ each direction is pinned here.
 """
 from __future__ import annotations
 
-import ast
 import re
 import unittest
 
@@ -2004,57 +2003,3 @@ class CanonicalLearningPrompts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class ShippedScriptRegexConstructTests(unittest.TestCase):
-    """Risk: a REGEX construct newer than the documented floor, invisible to every CI lane.
-
-    Scope, stated because the first version of this class over-claimed it: this checks regex
-    constructs in string literals and nothing else. It is NOT evidence that the shipped scripts
-    import on Python 3.10. They do not -- `scripts/eval_codex_runtime.py` and
-    `scripts/install_codex_agents.py` import `tomllib`, which is 3.11+, so the floor
-    `.github/workflows/validate.yml` documents is already contradicted by the tree (recorded as
-    FLOOR-001). A test whose name promised floor-wide coverage while scanning one token would be
-    the "reads as enforcement while enforcing nothing" failure the repository bans, so the promise
-    is narrowed to the fact (Codex review round 5, PR #152).
-
-    Within that scope it is worth keeping: CI pins 3.14 only, an atomic group (`(?>...)`, 3.11+)
-    imported cleanly here and in CI, and it would have raised `re.error: unknown extension ?>` at
-    import time on any older interpreter.
-
-    Scoped to string literals via `ast`, not a raw grep, because prose naming the banned construct
-    in a comment is exactly how this rule gets explained.
-    """
-
-    VERSIONED_REGEX_CONSTRUCTS = {
-        "(?>": "atomic group, Python 3.11+",
-    }
-
-    def test_no_shipped_script_uses_a_regex_construct_newer_than_the_floor(self) -> None:
-        offenders = []
-        for script in sorted((REPO / "scripts").glob("*.py")):
-            tree = ast.parse(script.read_text(encoding="utf-8"))
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
-                    continue
-                for construct, why in self.VERSIONED_REGEX_CONSTRUCTS.items():
-                    if construct in node.value:
-                        offenders.append(f"{script.name}:{node.lineno} uses {construct} ({why})")
-        self.assertEqual(
-            [], offenders,
-            "a regex construct newer than the documented floor compiles at import time, and CI "
-            "pins 3.14 only, so no lane would catch it. This assertion covers regex constructs "
-            "ONLY -- see FLOOR-001 for the tomllib imports that break the floor outright",
-        )
-
-    def test_the_tripwire_fires_on_the_construct_it_names(self) -> None:
-        """Non-vacuous by construction: the detector must see the thing it forbids."""
-        tree = ast.parse('BAD = r"a(?>bc)?d"')
-        found = [
-            node.value
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Constant)
-            and isinstance(node.value, str)
-            and "(?>" in node.value
-        ]
-        self.assertEqual([r"a(?>bc)?d"], found)

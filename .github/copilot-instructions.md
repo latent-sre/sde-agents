@@ -36,7 +36,7 @@ the highest-value findings in this repo:
   hook, whose scoping field is absent from their `PreToolUse` payload — enforced structurally, by
   keeping that host's own hook-config path empty, never by a manifest field.
 - **Generated output must match the generator byte for byte.** Any edit under `.github/agents/`,
-  `.codex/agents/`, `platforms/copilot/skills/`, or `plugins/sde-agents/skills/` must trace to a
+  `.github/skills/`, `.codex/agents/`, or `plugins/sde-agents/skills/` must trace to a
   canonical or generator change and a regeneration.
 
 ## House rules that make some "improvements" wrong here

@@ -297,30 +297,25 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
         # scanned here. A shell asset carrying the same unusable instruction must not bypass
         # the host boundary merely because its extension was absent from a validator tuple.
         with repo_copy() as dst:
-            resource = dst / "platforms" / "copilot" / "skills" / "probe" / "scripts" / "run.sh"
+            resource = (
+                dst
+                / generate_platform_adapters.COPILOT_SKILLS
+                / "probe"
+                / "scripts"
+                / "run.sh"
+            )
             resource.parent.mkdir(parents=True)
             resource.write_text("Run /sde-agents:deep-review before merging.\n", encoding="utf-8")
             issues = validate_fleet.validate_workflow_host_boundary(dst)
         self.assertTrue(any("no workflow runtime" in i and "run.sh" in i for i in issues), issues)
 
-    def test_the_validator_and_generator_agree_on_the_generated_tree_set(self) -> None:
-        # The same fact is encoded twice by hand: GENERATED_ROOTS drives generation, and
-        # GENERATED_ADAPTER_TREES drives this host-boundary scan. Nothing links them, so retiring
-        # or adding a tree in one file leaves the other scanning a set that no longer matches what
-        # ships -- and a tree quietly missing from the validator's tuple fails NO existing test,
-        # because every other check here iterates that same tuple and would simply cover less.
-        self.assertEqual(
-            sorted(p.as_posix() for p in generate_platform_adapters.GENERATED_ROOTS),
-            sorted(validate_fleet.GENERATED_ADAPTER_TREES),
-        )
-
     def test_every_declared_adapter_tree_is_actually_scanned(self) -> None:
         # Until `.claude/agents` was retired, only ONE of the four declared trees had coverage: a
         # declared-but-unscanned tree (typo, renamed directory, skipped branch) would leave the
         # boundary reading as enforced across all hosts while enforcing it on one. Plant the same
-        # unusable instruction in each declared tree and require the scan to name it. Pairs with
-        # the test above, which is what catches an entry disappearing from the tuple entirely.
-        for tree in validate_fleet.GENERATED_ADAPTER_TREES:
+        # unusable instruction in each generator-owned tree and require the scan to name it. The
+        # validator now reads this same tuple directly, so no equality tripwire is needed.
+        for tree in generate_platform_adapters.GENERATED_ROOTS:
             with self.subTest(tree=tree), repo_copy() as dst:
                 base = dst / tree
                 self.assertTrue(base.is_dir(), f"{tree} is declared but absent from the tree")
@@ -334,12 +329,44 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
                     f"{tree}: declared adapter tree is not scanned; issues={issues}",
                 )
 
+    def test_adapter_roots_come_from_the_tree_under_validation(self) -> None:
+        # `--root` may validate a checkout whose generator owns a newer host tree than the
+        # validator process. Reading the executing checkout's tuple would omit that tree and
+        # silently certify a workflow reference that the target checkout actually distributes.
+        with repo_copy() as dst:
+            generator = dst / "scripts" / "generate_platform_adapters.py"
+            original = generator.read_text(encoding="utf-8")
+            mutated = original.replace(
+                "GENERATED_ROOTS = (\n",
+                'GENERATED_ROOTS = (\n    Path("target-only-adapters"),\n',
+                1,
+            )
+            self.assertNotEqual(original, mutated, "generator root declaration was not mutated")
+            generator.write_text(mutated, encoding="utf-8")
+
+            planted = dst / "target-only-adapters" / "boundary-probe.md"
+            planted.parent.mkdir(parents=True)
+            planted.write_text(
+                "Run /sde-agents:deep-review before merging.\n", encoding="utf-8"
+            )
+
+            issues = validate_fleet.validate_workflow_host_boundary(dst)
+
+        self.assertTrue(
+            any("no workflow runtime" in i and "target-only-adapters" in i for i in issues),
+            issues,
+        )
+
     def test_untracked_python_cache_is_not_treated_as_a_shipped_workflow_reference(self) -> None:
         # The adapter generator already excludes runtime bytecode from distributable outputs.
         # A local import must not make the host-boundary scan certify a different file set.
         with repo_copy() as dst:
             byproduct = (
-                dst / "platforms" / "copilot" / "skills" / "probe" / "__pycache__" / "probe.pyc"
+                dst
+                / generate_platform_adapters.COPILOT_SKILLS
+                / "probe"
+                / "__pycache__"
+                / "probe.pyc"
             )
             byproduct.parent.mkdir(parents=True)
             byproduct.write_bytes(b"runtime cache /sde-agents:deep-review")
