@@ -415,7 +415,7 @@ measurement is already committed evidence.
 **Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
 safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
 new negative case passed 5/5, but three baseline-perfect contracts regressed to 4/5. The branch is
-local evidence, not a merge-ready result.
+draft evidence only, not a merge-ready result.
 
 **Outcome:** The corrected baseline is 27,987 canonical characters, 27,938 in the Copilot
 projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The initial
@@ -448,10 +448,11 @@ behavioral contract passes in the required fresh lane; the probe and full offlin
 generated adapters match canonical sources; and the outcome names what was removed, compressed,
 or kept because a future session, script, grader, or guard consumes it.
 
-**Next action:** Do not push or merge either candidate as completed CTX-005. The operator's one
-additional edit and one additional behavioral round are spent; do not retry this capture. If a
-later ruling reopens work, restart root-cause analysis from refreshed main and separate packet
-serialization reliability from grader-lexicon defects before proposing another body change.
+**Next action:** Keep the operator-requested pull request in draft as no-go evidence; do not mark it
+ready or merge either candidate as completed CTX-005. The operator's one additional edit and one
+additional behavioral round are spent; do not retry this capture. If a later ruling reopens work,
+restart root-cause analysis from refreshed main and separate packet serialization reliability from
+grader-lexicon defects before proposing another body change.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

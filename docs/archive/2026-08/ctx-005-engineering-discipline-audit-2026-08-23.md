@@ -1,8 +1,8 @@
 # CTX-005 engineering-discipline audit and evidence record
 
 **Status:** audit complete; an explicitly authorized safety repair restored the retry-state
-boundary, but fresh behavior remains a no-go. The branch is local evidence only; it was not pushed
-and no pull request was opened.
+boundary, but fresh behavior remains a no-go. The operator later authorized publication as a draft
+evidence pull request; that is not merge approval or authority for another edit or model retry.
 
 **Corpus:** named-revision bytes from `fcc8886592e23d2990c508f2959777fdf3e1969f`
 (`origin/main` after fetch/prune on 2026-08-23). PR #161 was closed unmerged at
@@ -435,16 +435,23 @@ loop-engineering stop condition.
   three namespaced agent spawns, craft-skill preloading, plugin-root expansion, reviewer/main-loop
   guard scoping, and guarded-main-session behavior passed. The conditional-reference canary then
   timed out after 900 seconds. It was not retried, so that runtime claim remains open.
-- The full offline T1 suite and fleet doctor were not rerun after this repair because the hard
-  behavioral gate had already failed; their earlier initial-candidate results do not validate the
-  repaired bytes.
+- The first publication-time `python3 scripts/run_tests.py` correctly failed because the added case
+  left `evals/README.md` at 79 total / 56 no-tool cases. Updating the owned inventory to 80 / 57
+  made the focused 80-test routing module and the full 1,008-test, 33-module suite pass.
+- `claude plugin validate . --strict` passed on the draft-publication bytes.
+- `python3 scripts/fleet_doctor.py` reported 11 passes, three warnings, zero failures, and no
+  inconclusive checks: the dirty publication tree, the CTX-002-owned listing budget, and the
+  intentionally unsynchronized no-go Codex profile. Its contract maps that report to exit 3; the
+  PowerShell execution wrapper surfaced it as generic nonzero exit 1, confirmed with a
+  `SystemExit(3)` control.
 
 The first probe launcher selected an inaccessible WindowsApps `pwsh` shim and failed before Python
 or a model session started. The actual probe was then launched once with system PowerShell. This is
 recorded as an environment correction, not a second probe result.
 
-Final disposition: keep the branch as local no-go evidence. Do not push it, open a pull request, or
-request an automated reviewer. Main remains unchanged and is the only accepted homelab body.
+Final disposition: publish the branch only as a draft evidence pull request after the operator's
+explicit request. Do not mark it ready, merge it, or request an automated reviewer. Main remains
+unchanged and is the only accepted homelab body.
 
 ## Discovery disposition
 
