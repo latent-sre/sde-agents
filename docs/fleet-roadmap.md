@@ -964,16 +964,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   — an allowlist that cannot be completed, the same shape as the action-verb list that was
   inverted in round 2. Source: PR #152 review rounds 3, 4 and 5.
 
-- **FLOOR-001** — the documented Python 3.10 floor is already false, independent of any current
-  branch. `.github/workflows/validate.yml` states the shipped scripts retain a 3.10 floor and
-  pins CI to 3.14 as the only lane, but `scripts/eval_codex_runtime.py:23` and
-  `scripts/install_codex_agents.py:20` both `import tomllib`, which is 3.11+. Either the floor is
-  wrong and the comment should say 3.11, or the imports are and both need a fallback — the two
-  readings differ in what an operator on 3.10 is promised. No lane can catch it: nothing runs the
-  floor. Found 2026-08-18 while narrowing a regex-construct tripwire that had over-claimed
-  floor-wide coverage; that test now states its scope. Source: PR #152 review round 5.
-
-
 ## Deferred decisions
 
 #### GRAPH-004 — typed edge-contract pilot

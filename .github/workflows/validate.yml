@@ -50,9 +50,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # Exercise the fleet on the current stable language line rather than letting each runner
-      # image choose an older interpreter. The shipped scripts retain their Python 3.10 floor;
-      # this pin is the forward-compatibility lane and guarantees unittest's `--durations` flag.
-      - name: Set up Python
+      # image choose an older interpreter. This is the forward-compatibility lane and guarantees
+      # unittest's `--durations` flag.
+      - name: Set up current stable Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: '3.14'
@@ -66,6 +66,23 @@ jobs:
         # module run so the slowest tests still surface in the log: the suite's slow-creep gets
         # rediscovered by reading CI instead of a profiling session.
         run: ${{ matrix.py }} scripts/run_tests.py -v --durations 10
+
+      # `tomllib` makes 3.11 the shipped floor. Re-run the complete offline gate at that exact
+      # boundary on Ubuntu (the PR leg) so a newer syntax or standard-library import cannot lower
+      # support silently. This shares the existing job instead of adding another billed runner.
+      - name: Set up minimum supported Python
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Validate the fleet on Python 3.11
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 scripts/validate_fleet.py
+
+      - name: Run repository unit tests on Python 3.11
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 scripts/run_tests.py -v
 
   ledger-drift:
     # Findings are advisory; inability to inspect the repository is blocking. A pending learning

@@ -191,11 +191,6 @@ _CLAIM_NEGATION_RE = re.compile(
     r"\b(?:nothing|none|n/?a|no\s+(?:commands?|output|evidence|checks?|runs?|verification)"
     r"|not\s+run|never\s+ran|did\s?n[o\u2019']?t\s+run"
     r"|(?:could\s?n[o\u2019']?t|could\s+not|cannot|can[\u2019']t|unable)"
-    # NO ATOMIC GROUPS. `(?>...)` is Python 3.11+, and the shipped scripts keep a 3.10 floor
-    # (.github/workflows/validate.yml) while CI pins 3.14 only -- so the construct imported
-    # fine here and would have raised `re.error: unknown extension ?>` on a supported
-    # interpreter, with no lane to catch it (Codex review, PR #152).
-    #
     # The disqualifying set is the OUTCOMES, not the actions: enumerating actions is unbounded
     # (run, rerun, retrieve, open, query, find) while outcomes are closed. Both optional words
     # sit INSIDE the lookahead as well as after it, so the engine cannot decline to consume
