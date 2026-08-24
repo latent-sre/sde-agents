@@ -636,7 +636,7 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 56 of the 79 cases are no-tool planning-only sessions — and since
+**Where the cost actually is.** 57 of the 80 cases are no-tool planning-only sessions — and since
 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist
 over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and the
 original audit found a granted tool still reachable in 42 of 47 such cases. The expense
@@ -684,10 +684,10 @@ cluster. Re-baseline whenever membership changes.
 **Suite size, as of 2026-08-23:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 79
-deterministic contracts. The six newest cover proven and unproven managed-prompt interposition,
-standing Tier 2 policy, finite-plan sentinel reuse, and the paired light/risk-triggered onboarding
-boundary. Both numbers are worth knowing before starting a paired round: the
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 80
+deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
+standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
+paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
 'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
 capture reusable.
 

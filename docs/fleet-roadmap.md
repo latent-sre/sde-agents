@@ -412,19 +412,42 @@ measurement is already committed evidence.
 
 #### CTX-005 — shrink `homelab-platform`'s always-loaded body
 
-**Status:** `ready` — operator-directed next round; deliberately excluded from the proportional
-operations change so policy behavior and body diet remain attributable.
+**Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
+safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
+new negative case passed 5/5, but three baseline-perfect contracts regressed to 4/5. The branch is
+no-go evidence only, not a merge-ready result.
 
-**Outcome:** The always-loaded homelab agent keeps its safety and proportional-authorization
-behavior with less context cost. The 2026-08-23 candidate measures 26,816 canonical characters,
-26,767 in the Copilot projection (89.2% of that host's 30,000-character cap), and 27,531 in the
-Codex projection. Conditional explanation such as the worked example and builder Work Order is
-compressed or moved behind an existing reachable boundary only when its consumer remains proven.
+**Outcome:** The corrected baseline is 27,987 canonical characters, 27,938 in the Copilot
+projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The initial
+24,082 / 24,045 / 24,809-character candidate missed the Copilot target by 45 characters but had
+silently broadened identical Tier 2 retries beyond confirmed transient failures. The authorized
+repair restored the no-material-state-change boundary, kept qualifiers outside closed declaration
+values, narrowed the example, and added the unknown-outcome case. Its tree-based sizes are
+24,884 / 24,847 / 25,611 characters, reductions of 3,103 / 3,091 / 3,091; Copilot has 17.18%
+headroom and remains 847 characters above the 24,000 target. Across the original 25 cases, fresh
+behavior improved from 45/125 at baseline to 55/125, and the new safety case passed 5/5. Acceptance
+still fails: `homelab-right-size-native-tier2` omitted a literal packet slot once,
+`gate-same-effect-consolidation-retry` duplicated its declaration block once, and
+`gate-owner-attribution-stacked` used a semantically correct hyphenated form outside the grader's
+current lexicon. All three baseline-perfect cases were 4/5. The one live probe proved loading,
+preloads, path expansion, and guard scoping before its conditional-reference canary timed out after
+900 seconds; no retry ran. The first review-response round fixed five deterministic contract
+defects: the worked example's exact pins, diff, rollback, and literal `Tier:` slot;
+retry-before-reconcile ordering; conditional prior-approval wording; and predicate-driven off-site
+backup. A second and final review-response round required the Tier 2 command plus any applicable
+diff, restored both false-result directions in Work Orders, required affirmative reconciliation,
+rejected negated or optional reconciliation, and accepted safe hypothetical or reconcile-first
+retry wording. Its tree-based sizes are 25,347 / 25,310 / 26,074 characters, reductions of 2,640 /
+2,628 / 2,628 from baseline; Copilot has 15.63% headroom and remains 1,310 characters above the
+target. No fresh model lane ran against either review-response tree, so neither supersedes the
+exact-hash 60/130 no-go result or establishes an accepted compact floor.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
 whose operator ruling explicitly defers the body reduction to the next round; CTX-004 owns the
-separate cap tripwire.
+separate cap tripwire; and the
+[CTX-005 discipline audit](archive/2026-08/ctx-005-engineering-discipline-audit-2026-08-23.md),
+which records the corpus, consumer inventory, external lanes, edit rounds, and exact no-go evidence.
 
 **Prerequisites:** Land or otherwise freeze the proportional-operations candidate as the measured
 baseline. Do not mix another policy change into the diet.
@@ -434,8 +457,12 @@ behavioral contract passes in the required fresh lane; the probe and full offlin
 generated adapters match canonical sources; and the outcome names what was removed, compressed,
 or kept because a future session, script, grader, or guard consumes it.
 
-**Next action:** Inventory the worked example, Work Order, repeated tier explanations, and review
-packet by consumer, then choose the smallest candidate move and its before/after behavioral cases.
+**Next action:** The operator-requested pull request is kept as no-go evidence; neither candidate was
+merged as completed CTX-005. The operator's additional edit/model round and the two bounded
+review-response rounds are spent; no further review-driven bytes or model capture retries are
+planned. If a later ruling reopens work, restarting root-cause analysis from refreshed main and
+separating packet serialization reliability from grader-lexicon defects before proposing another
+body change remains the recorded approach.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

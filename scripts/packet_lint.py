@@ -62,11 +62,12 @@ SHAPES: dict[str, tuple[str, ...]] = {
     "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
     # homelab-platform's Tier 2/3 approval request, presented BEFORE a live apply — the only shape
     # here that is not an end-of-task packet, so it requires no Learning closeout. The floor holds
-    # what no honest approval request can omit; `change` and `exact command` are deliberately absent
-    # because the agent declares "exact command **or** diff" and requiring either heading would fail
-    # the legal other one.
+    # what no honest approval request can omit; the agent now requires "exact command, any applicable
+    # diff" (not "exact command or diff"), so exact command is a required heading; tier: pins the
+    # classification line the agent declares literal.
     "tier2-approval-request": (
-        "what you will see", "target", "blast radius", "verification", "rollback",
+        "what you will see", "target", "exact command", "blast radius", "verification", "rollback",
+        "tier:",
     ),
     "design-packet": ("decisions", "assumptions", "weakest point"),
     "multi-agent-packet": ("decisions", "assumptions", "weakest seam", "cheapest test"),

@@ -184,8 +184,10 @@ def adapt_text(text: str, host: str) -> str:
     # This sentence is an operational lookup, not Claude-format documentation. A project-scoped
     # skill may live in a different directory on every target host.
     text = text.replace(
-        "the target repo's own `.claude/skills/service-onboard/SKILL.md` if it has one",
-        "the target repo's own project-scoped `service-onboard` skill if this host discovers one",
+        "the target repo's `.claude/skills/service-onboard/SKILL.md` when present, otherwise\n"
+        "  the installed `service-onboard` skill",
+        "the target repo's own project-scoped `service-onboard` skill if this host discovers one,"
+        " otherwise the installed `service-onboard` skill",
     )
     text = re.sub(
         r"once the plugin is installed \(that variable is substituted for you with an absolute "
