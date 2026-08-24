@@ -18,6 +18,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# The generator owns the generated-root set. Its validator access is lazy, so importing it here is
+# acyclic while letting both package imports and direct script execution resolve the same source.
+if __package__:
+    from . import generate_platform_adapters  # noqa: E402
+else:
+    import generate_platform_adapters  # noqa: E402
+
 # The fleet's one parser lives in fleet_records; these names are re-exported here because
 # generate_platform_adapters.py and the test suite reach them as attributes of this module. A
 # second frontmatter or reference parser would let the graph and the validator disagree about the
@@ -2029,14 +2036,6 @@ def validate_workflow_meta_contract(root: Path) -> list[str]:
 # skills. Match both the invocation form and the directory form. Generated skill resources may
 # use any extension, so scan bytes rather than maintaining a text-suffix allowlist that lets the
 # same unusable instruction bypass the rule when it moves from Markdown into a shell asset.
-GENERATED_ADAPTER_TREES = (
-    ".github/agents",
-    ".github/skills",
-    ".codex/agents",
-    "plugins/sde-agents/skills",
-)
-
-
 def validate_workflow_host_boundary(root: Path) -> list[str]:
     """No generated non-Claude adapter may reference a plugin workflow."""
     issues: list[str] = []
@@ -2046,7 +2045,7 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
         workflow_names = {p.stem for p in workflows_dir.glob("*.js")}
     if not workflow_names:
         return issues
-    for tree in GENERATED_ADAPTER_TREES:
+    for tree in generate_platform_adapters.GENERATED_ROOTS:
         base = root / tree
         if not base.is_dir():
             continue

@@ -309,24 +309,13 @@ class WorkflowHostBoundaryTests(unittest.TestCase):
             issues = validate_fleet.validate_workflow_host_boundary(dst)
         self.assertTrue(any("no workflow runtime" in i and "run.sh" in i for i in issues), issues)
 
-    def test_the_validator_and_generator_agree_on_the_generated_tree_set(self) -> None:
-        # The same fact is encoded twice by hand: GENERATED_ROOTS drives generation, and
-        # GENERATED_ADAPTER_TREES drives this host-boundary scan. Nothing links them, so retiring
-        # or adding a tree in one file leaves the other scanning a set that no longer matches what
-        # ships -- and a tree quietly missing from the validator's tuple fails NO existing test,
-        # because every other check here iterates that same tuple and would simply cover less.
-        self.assertEqual(
-            sorted(p.as_posix() for p in generate_platform_adapters.GENERATED_ROOTS),
-            sorted(validate_fleet.GENERATED_ADAPTER_TREES),
-        )
-
     def test_every_declared_adapter_tree_is_actually_scanned(self) -> None:
         # Until `.claude/agents` was retired, only ONE of the four declared trees had coverage: a
         # declared-but-unscanned tree (typo, renamed directory, skipped branch) would leave the
         # boundary reading as enforced across all hosts while enforcing it on one. Plant the same
-        # unusable instruction in each declared tree and require the scan to name it. Pairs with
-        # the test above, which is what catches an entry disappearing from the tuple entirely.
-        for tree in validate_fleet.GENERATED_ADAPTER_TREES:
+        # unusable instruction in each generator-owned tree and require the scan to name it. The
+        # validator now reads this same tuple directly, so no equality tripwire is needed.
+        for tree in generate_platform_adapters.GENERATED_ROOTS:
             with self.subTest(tree=tree), repo_copy() as dst:
                 base = dst / tree
                 self.assertTrue(base.is_dir(), f"{tree} is declared but absent from the tree")

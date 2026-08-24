@@ -883,9 +883,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   `.claude-plugin/plugin.json` as an installable plugin and Claude Code requires that file at the
   root. Documented as unsupported in `README.md`; reopen only if a nested Agent Plugins 1.0 root
   is wanted, which format 3 cannot share with `.github/agents`. Source: same amendment.
-- **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
-  the same fact by hand in two files. A drift test now pins them together
-  (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
   failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
   in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
