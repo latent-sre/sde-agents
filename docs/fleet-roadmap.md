@@ -415,7 +415,7 @@ measurement is already committed evidence.
 **Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
 safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
 new negative case passed 5/5, but three baseline-perfect contracts regressed to 4/5. The branch is
-draft evidence only, not a merge-ready result.
+no-go evidence only, not a merge-ready result.
 
 **Outcome:** The corrected baseline is 27,987 canonical characters, 27,938 in the Copilot
 projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The initial
@@ -431,7 +431,13 @@ still fails: `homelab-right-size-native-tier2` omitted a literal packet slot onc
 `gate-owner-attribution-stacked` used a semantically correct hyphenated form outside the grader's
 current lexicon. All three baseline-perfect cases were 4/5. The one live probe proved loading,
 preloads, path expansion, and guard scoping before its conditional-reference canary timed out after
-900 seconds; no retry ran.
+900 seconds; no retry ran. A later review-response round fixed five deterministic contract defects:
+the worked example's exact pins, diff, rollback, and literal `Tier:` slot; retry-before-reconcile
+ordering; conditional prior-approval wording; and predicate-driven off-site backup. Its tree-based
+sizes are 25,304 / 25,267 / 26,031 characters, reductions of 2,683 / 2,671 / 2,671 from baseline;
+Copilot has 15.78% headroom and remains 1,267 characters above the target. No fresh model lane ran
+against these review-response bytes, so they do not supersede the exact-hash 60/130 no-go result or
+establish an accepted compact floor.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
@@ -448,11 +454,11 @@ behavioral contract passes in the required fresh lane; the probe and full offlin
 generated adapters match canonical sources; and the outcome names what was removed, compressed,
 or kept because a future session, script, grader, or guard consumes it.
 
-**Next action:** Keep the operator-requested pull request in draft as no-go evidence; do not mark it
-ready or merge either candidate as completed CTX-005. The operator's one additional edit and one
-additional behavioral round are spent; do not retry this capture. If a later ruling reopens work,
-restart root-cause analysis from refreshed main and separate packet serialization reliability from
-grader-lexicon defects before proposing another body change.
+**Next action:** Keep the operator-requested pull request as no-go evidence; do not merge either
+candidate as completed CTX-005. The operator's one additional edit and one additional behavioral
+round are spent; do not retry this capture. If a later ruling reopens work, restart root-cause
+analysis from refreshed main and separate packet serialization reliability from grader-lexicon
+defects before proposing another body change.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

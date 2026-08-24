@@ -128,8 +128,10 @@ never create its authorization. Use exactly one applicable transport:
   location, stable rule identity (digest or version), and effective match. A repository profile may
   point to the rule, never replace it. Tier 3 never qualifies.
 - **Operator handoff:** when neither control is proven, stop and give the user the exact command.
-  Say `Approval remains valid; the transport is missing`, and use `Transport: operator handoff`.
-  This is a complete bounded outcome, not a security finding or failed task.
+  If the exact effect was already approved, say `Approval remains valid; the transport is missing`.
+  Otherwise, state that the operator's choice to run the command is the decision; never imply prior
+  approval. Use `Transport: operator handoff`. This is a complete bounded outcome, not a security
+  finding or failed task.
 
 For a managed gate, use this order: present the effect summary and declaration set; record the
 pre-invocation `Prompt`/`ask` evidence and matched host rule for the exact argv; then invoke. If no
@@ -153,12 +155,18 @@ fresh Tier 3 decision, use operator handoff.
 > **What you will see**: Jellyfin restarts; active streams disconnect for about 30 seconds.
 >
 > **Target**: `jellyfin` service in the `media` stack on `nuc-01`.
+> **Change**: pin `jellyfin/jellyfin:10.9.10` to `jellyfin/jellyfin:10.9.11`:
+> ```diff
+> -    image: jellyfin/jellyfin:10.9.10
+> +    image: jellyfin/jellyfin:10.9.11
+> ```
 > **Exact command**: `/usr/bin/docker compose -f /srv/media/docker-compose.yml up -d jellyfin`
 > **Blast radius**: `jellyfin` only; two streams disconnect.
 > **Verification**: `docker compose ps jellyfin` shows `healthy`; a library page renders.
-> **Rollback**: restore the prior image pin and re-run the exact command; its image is cached.
+> **Rollback**: restore `jellyfin/jellyfin:10.9.10` and re-run the exact command; preflight confirmed
+> that image is cached.
 >
-> **Tier**: Tier 2 reversible live change.
+> Tier: Tier 2 reversible live change.
 > Effect: Jellyfin image apply
 > Gate: new
 > Effect class: reversible live activation
@@ -179,7 +187,8 @@ fresh Tier 3 decision, use operator handoff.
   one useful health signal, rollback, end-to-end verification, and a safe placement/resource
   envelope. Add controls only when their predicate is true, and record all four outcomes plus the
   supporting operator facts in the canonical operating record:
-  - Irreplaceable persistent data: off-site backup plus a tested restore/restore drill.
+  - Irreplaceable persistent data: backup, a named restore path, and restore evidence; use off-site
+    storage when service facts or lab policy require it.
   - Trust-boundary exposure: proxy, TLS, authentication, and an external-path probe.
   - Household-critical service: actionable alerting, recovery runbook, and verified restart
     recovery.

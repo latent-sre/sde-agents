@@ -1,8 +1,9 @@
 # CTX-005 engineering-discipline audit and evidence record
 
 **Status:** audit complete; an explicitly authorized safety repair restored the retry-state
-boundary, but fresh behavior remains a no-go. The operator later authorized publication as a draft
-evidence pull request; that is not merge approval or authority for another edit or model retry.
+boundary, but fresh behavior remains a no-go. The operator later authorized an evidence pull
+request; its current ready-for-review state is not merge approval or authority for another edit or
+model retry.
 
 **Corpus:** named-revision bytes from `fcc8886592e23d2990c508f2959777fdf3e1969f`
 (`origin/main` after fetch/prune on 2026-08-23). PR #161 was closed unmerged at
@@ -438,7 +439,7 @@ loop-engineering stop condition.
 - The first publication-time `python3 scripts/run_tests.py` correctly failed because the added case
   left `evals/README.md` at 79 total / 56 no-tool cases. Updating the owned inventory to 80 / 57
   made the focused 80-test routing module and the full 1,008-test, 33-module suite pass.
-- `claude plugin validate . --strict` passed on the draft-publication bytes.
+- `claude plugin validate . --strict` passed on the pre-review publication bytes.
 - `python3 scripts/fleet_doctor.py` reported 11 passes, three warnings, zero failures, and no
   inconclusive checks: the dirty publication tree, the CTX-002-owned listing budget, and the
   intentionally unsynchronized no-go Codex profile. Its contract maps that report to exit 3; the
@@ -449,9 +450,60 @@ The first probe launcher selected an inaccessible WindowsApps `pwsh` shim and fa
 or a model session started. The actual probe was then launched once with system PowerShell. This is
 recorded as an environment correction, not a second probe result.
 
-Final disposition: publish the branch only as a draft evidence pull request after the operator's
-explicit request. Do not mark it ready, merge it, or request an automated reviewer. Main remains
-unchanged and is the only accepted homelab body.
+### Review-response round
+
+One consolidated review-response edit addressed all five inline findings without reopening the
+model loop:
+
+- the worked Tier 2 example again names the exact old and new image pins, a literal diff, and an
+  executable rollback to the confirmed-cached old pin;
+- the example emits the literal `Tier:` label consumed by the packet contract;
+- the unknown-outcome case now rejects retry-before-reconciliation, with red-first unsafe-order and
+  safe-negation controls;
+- the operator-handoff receipt claims approval remains valid only when the exact effect was already
+  approved; and
+- onboarding requires backup, a named restore path, and restore evidence for irreplaceable data,
+  while making off-site placement depend on service facts or lab policy.
+
+The same Python 3.12 UTF-8 instrument measured the review-response tree. These measurements are
+tree-based and the SHA-256 values bind the current canonical and generated artifacts.
+
+| Artifact | Baseline chars / bytes | Review-response chars / bytes | Delta chars / bytes | SHA-256 |
+|---|---:|---:|---:|---|
+| `agents/homelab-platform.md` | 27,987 / 28,129 | 25,304 / 25,432 | -2,683 / -2,697 | `df1c9bbf5d41d0e647961cb52baec4af0d16a358d3e4e5040e77813b91dd3d70` |
+| `.github/agents/homelab-platform.agent.md` | 27,938 / 28,080 | 25,267 / 25,395 | -2,671 / -2,685 | `7e636de5f908eb929d5964a9cf7316dfdfe5a3a0c4020bfcefdfd1ad6cfb941c` |
+| `.codex/agents/homelab-platform.toml` | 28,702 / 28,844 | 26,031 / 26,159 | -2,671 / -2,685 | `e9d89997da2857251b14bf9550bd48cf4b8853ee8f168d6c34c640b8ecd11445` |
+
+The Copilot projection has 4,733 characters of headroom (15.78%) and remains 1,267 characters above
+the 24,000 target. No fresh model behavioral lane ran against these bytes: the earlier 60/130 result
+remains evidence only for its recorded repaired-tree hashes. The review-response bytes therefore
+have deterministic contract evidence but no model-behavior result, and they do not turn the pull
+request into an accepted compact floor.
+
+Review-response verification:
+
+- `python3 scripts/generate_platform_adapters.py --write` generated 182 adapters.
+- The focused regression was red before the source and oracle fixes: it exposed the missing
+  ordering negative, accepted retry-before-reconcile, and rejected the absent source clauses. The
+  repaired `HomelabProportionalityBehavioralCasesTest` passed all 14 tests, including the safe
+  negation control.
+- `python3 scripts/validate_fleet.py` validated 11 agents and 20 skills; the five owning test
+  modules passed 342 tests with seven skips.
+- `python3 scripts/run_tests.py` passed 1,008 tests across 33 modules, and
+  `claude plugin validate . --strict` passed.
+- `learning_ledger.py check` validated 55 candidates and `ledger_drift.py` found no pending
+  destination drift; both commands used the exact worktree root.
+- `fleet_doctor.py` reported 11 passes, three pre-commit warnings, zero failures, and zero
+  inconclusive checks. The warnings were the dirty review-response tree and the two already-owned
+  host findings: CTX-002's skill-listing budget and the intentionally unsynchronized no-go Codex
+  profile.
+- `git diff --check` passed, and remeasurement reproduced all three artifact sizes and hashes above.
+- No model behavioral lane or plugin probe was rerun; those claims remain explicitly open for the
+  review-response bytes.
+
+Final disposition: keep the pull request as no-go evidence. Do not merge it, request another model
+retry, or request an automated reviewer. Main remains unchanged and is the only accepted homelab
+body.
 
 ## Discovery disposition
 

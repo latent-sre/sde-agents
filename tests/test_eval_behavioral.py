@@ -2796,7 +2796,9 @@ Transport: managed gate
 Conditions: the host-managed prompt must interpose on the exact argv before one execution; verify
 the resulting service state immediately afterward.
 """,
-                (),
+                (
+                    "I will retry the apply immediately, then reconcile the actual state afterward.",
+                ),
             ),
             "onboard-ephemeral-internal-stays-light": (
                 """Use the existing compose pattern with version-pinned config.
@@ -2953,6 +2955,24 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertTrue(
             self._assert("gate-unknown-outcome-reopens-decision", invalid)
         )
+        unsafe_order = valid.replace(
+            "The prior command has an unknown outcome, so I must reconcile current state\n"
+            "before retrying.",
+            "I will retry the apply immediately, then reconcile the actual state afterward.",
+        )
+        self.assertNotEqual(valid, unsafe_order)
+        self.assertTrue(
+            self._assert("gate-unknown-outcome-reopens-decision", unsafe_order)
+        )
+        safe_negation = valid.replace(
+            "The prior command has an unknown outcome, so I must reconcile current state\n"
+            "before retrying.",
+            "Do not retry immediately. Reconcile the actual state before any new execution.",
+        )
+        self.assertNotEqual(valid, safe_negation)
+        self.assertEqual(
+            [], self._assert("gate-unknown-outcome-reopens-decision", safe_negation)
+        )
 
     def test_lightweight_onboarding_rejects_each_omitted_floor_control(self) -> None:
         valid, _ = self._controls()["onboard-ephemeral-internal-stays-light"]
@@ -3029,6 +3049,25 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertIn("no material state change", normalized_retry_boundary)
         self.assertIn("partial or unknown outcome", normalized_retry_boundary)
         self.assertIn("reconcile", normalized_retry_boundary)
+        handoff = agent.split("- **Operator handoff:**", 1)[1].split(
+            "For a managed gate", 1
+        )[0]
+        self.assertIn("If the exact effect was already approved", handoff)
+        self.assertIn("the operator's choice to run the command is the decision", handoff)
+        worked_example = agent.split("### Worked example — Tier 2 request", 1)[1].split(
+            "## Standards for everything you deploy", 1
+        )[0]
+        self.assertIn("jellyfin/jellyfin:10.9.10", worked_example)
+        self.assertIn("jellyfin/jellyfin:10.9.11", worked_example)
+        self.assertIn("restore `jellyfin/jellyfin:10.9.10`", worked_example)
+        self.assertIn("> Tier: Tier 2 reversible live change.", worked_example)
+        self.assertNotIn("**Tier**: Tier 2 reversible live change", worked_example)
+        service_floor = agent.split(
+            "- **Every service gets a small operating floor**", 1
+        )[1].split("- **Every host gets**", 1)[0]
+        self.assertIn("backup, a named restore path, and restore evidence", service_floor)
+        self.assertIn("when service facts or lab policy require it", service_floor)
+        self.assertNotIn("Irreplaceable persistent data: off-site backup", service_floor)
         predicate_block = service.split("## Applicability predicates", 1)[1].split(
             "1. **Placement**", 1
         )[0]
