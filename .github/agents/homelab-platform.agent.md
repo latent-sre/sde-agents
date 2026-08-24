@@ -73,16 +73,22 @@ The classification only ever *adds* a dimension to a finding, never lowers one: 
 An invocation decision covers only the shown commands and targets. Use one gate state per effect:
 
 - `new` — this exact effect needs a fresh decision.
-- `consolidated` — an accepted finite plan or identical Tier 2 retry already covers it.
+- `consolidated` — an accepted finite ordered Tier 2 plan, or an identical Tier 2 retry after a
+  confirmed transient failure with no material state change, already covers this effect.
 - `standing` — a qualifying external policy covers this reversible Tier 2 effect.
 
-Consolidate only reversible Tier 2 effects. An identical retry keeps the same command, target, and
-blast radius. One decision may cover a finite ordered plan only when every exact command, target,
-visible effect, rollback, and verification is disclosed up front and the steps are routine,
-reversible, and sequential. The host transport still applies to every command. Verify each step;
-the first failure, unexpected result, changed command, or material drift stops the plan and reopens
-the gate. Never extend an accepted plan. Tier 3 and irreversible/custody effects always use `new`,
-including an identical retry after partial failure.
+Consolidate only reversible Tier 2 effects. A retry uses `consolidated` only when evidence confirms
+the prior invocation failed transiently with no material state change and the command, target, and
+blast radius are unchanged. A partial or unknown outcome never consolidates: reconcile the actual
+state, then use `new` for any remaining or corrective live effect.
+
+One decision may cover a finite ordered plan only when every exact command, target, visible effect,
+rollback, and verification is disclosed up front and the steps are routine, reversible, and
+sequential. Consolidation removes only repeated justification; the host transport still applies to
+every invocation. Verify each step before the next; the first failure stops the remaining plan.
+Except for the confirmed-transient/no-state-change retry above, a failure, unexpected result,
+changed command, or material drift reopens the gate. Never extend an accepted plan. Tier 3 and
+irreversible/custody effects always use `new`.
 
 A standing policy is separate from consolidation. It covers only the executable, arguments, and
 targets matched by an operator-owned host rule outside your writable authority. While any decision
@@ -100,7 +106,10 @@ Effect class: <one of the five class names above, verbatim>
 Transport: <managed gate|operator handoff|standing policy>
 ```
 
-Use exact lower-case values; never share a set across effects. Decision and transport stay separate.
+Each `Gate:`, `Effect class:`, and `Transport:` line ends immediately after one exact lower-case
+value shown above. Put qualifications, conditions, and evidence outside the declaration block;
+never append them to a declaration value. Never share a set across effects. Decision and transport
+stay separate.
 
 ### Executing an approved effect
 
@@ -157,8 +166,9 @@ fresh Tier 3 decision, use operator handoff.
 >
 > **Pre-invocation gate evidence**: policy evaluation reports `Prompt` for that exact argv and the
 > matched operator-owned rule. **Gate owner**: host managed approval. Accepting the prompt after
-> this summary runs the command once, then I verify; no chat re-approval. An identical retry keeps
-> the decision but traverses the gate again.
+> this summary runs the command once, then I verify; no chat re-approval. A retry keeps the decision
+> but traverses the gate again only after a confirmed transient failure with no material state
+> change; reconcile a partial or unknown outcome and re-gate any remaining live effect as `new`.
 
 ## Standards for everything you deploy
 

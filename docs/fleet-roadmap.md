@@ -412,22 +412,26 @@ measurement is already committed evidence.
 
 #### CTX-005 — shrink `homelab-platform`'s always-loaded body
 
-**Status:** `decision-needed` — the bounded 2026-08-23 experiment reached its five-round operator
-ceiling and is committed as local evidence, not a merge-ready result. Core homelab behavior improved,
-but one baseline-perfect closed-field contract regressed from 5/5 to 4/5.
+**Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
+safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
+new negative case passed 5/5, but three baseline-perfect contracts regressed to 4/5. The branch is
+local evidence, not a merge-ready result.
 
 **Outcome:** The corrected baseline is 27,987 canonical characters, 27,938 in the Copilot
-projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The final
-tree-based candidate is 24,082 / 24,045 / 24,809 characters, reductions of 3,905 / 3,893 / 3,893;
-Copilot has 19.85% headroom and misses the 24,000 target by 45 characters. Prime directives,
-Tier 3 recovery and out-of-band access, host-owned transport, exact declaration fields, Learning,
-and conditional-skill routing stay in the selected body. Repeated decision/transport explanation,
-the worked example, Work Order prose, and onboarding predicates were compressed; nothing moved to
-a new reference. The full paired lane improved from 45/125 to 52/125 repetitions, with all four
-core homelab cases at 5/5, but `gate-same-effect-consolidation-retry` fell from 5/5 to 4/5 because
-one response appended qualifications to the closed `Gate` and `Transport` values. The decision was
-safe and conservative, but the stateless receiver's exact grammar was not satisfied, so CTX-005's
-acceptance is unmet.
+projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The initial
+24,082 / 24,045 / 24,809-character candidate missed the Copilot target by 45 characters but had
+silently broadened identical Tier 2 retries beyond confirmed transient failures. The authorized
+repair restored the no-material-state-change boundary, kept qualifiers outside closed declaration
+values, narrowed the example, and added the unknown-outcome case. Its tree-based sizes are
+24,884 / 24,847 / 25,611 characters, reductions of 3,103 / 3,091 / 3,091; Copilot has 17.18%
+headroom and remains 847 characters above the 24,000 target. Across the original 25 cases, fresh
+behavior improved from 45/125 at baseline to 55/125, and the new safety case passed 5/5. Acceptance
+still fails: `homelab-right-size-native-tier2` omitted a literal packet slot once,
+`gate-same-effect-consolidation-retry` duplicated its declaration block once, and
+`gate-owner-attribution-stacked` used a semantically correct hyphenated form outside the grader's
+current lexicon. All three baseline-perfect cases were 4/5. The one live probe proved loading,
+preloads, path expansion, and guard scoping before its conditional-reference canary timed out after
+900 seconds; no retry ran.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
@@ -444,10 +448,10 @@ behavioral contract passes in the required fresh lane; the probe and full offlin
 generated adapters match canonical sources; and the outcome names what was removed, compressed,
 or kept because a future session, script, grader, or guard consumes it.
 
-**Next action:** Do not push or merge the candidate as completed CTX-005. The operator requested a
-local evidence commit after the five-round stop. If a later ruling reopens work, keep the closed
-enum values literal and move drift/interposition qualifications to prose after the declaration
-block, then buy one fresh paired behavioral lane; do not resume from retrying this capture.
+**Next action:** Do not push or merge either candidate as completed CTX-005. The operator's one
+additional edit and one additional behavioral round are spent; do not retry this capture. If a
+later ruling reopens work, restart root-cause analysis from refreshed main and separate packet
+serialization reliability from grader-lexicon defects before proposing another body change.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 
