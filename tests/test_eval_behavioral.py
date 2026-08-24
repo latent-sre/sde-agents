@@ -2800,6 +2800,7 @@ the resulting service state immediately afterward.
                     "I will retry the apply immediately, then reconcile the actual state afterward.",
                     "The outcome is unknown, but reconciliation is unnecessary. Wait for new "
                     "approval before executing again.",
+                    "You could reconcile the actual state before retrying.",
                 ),
             ),
             "onboard-ephemeral-internal-stays-light": (
