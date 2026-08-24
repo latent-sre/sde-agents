@@ -2798,6 +2798,8 @@ the resulting service state immediately afterward.
 """,
                 (
                     "I will retry the apply immediately, then reconcile the actual state afterward.",
+                    "The outcome is unknown, but reconciliation is unnecessary. Wait for new "
+                    "approval before executing again.",
                 ),
             ),
             "onboard-ephemeral-internal-stays-light": (
@@ -2974,6 +2976,41 @@ The canonical operating record persists all four predicate outcomes and their su
             [], self._assert("gate-unknown-outcome-reopens-decision", safe_negation)
         )
 
+    def test_unknown_outcome_rejects_negated_or_optional_reconciliation(self) -> None:
+        valid, _ = self._controls()["gate-unknown-outcome-reopens-decision"]
+        for replacement in (
+            "The outcome is unknown, but reconciliation is unnecessary. Wait for new "
+            "approval before executing again.",
+            "Reconciliation of the actual state is optional before retrying.",
+        ):
+            with self.subTest(replacement=replacement):
+                unsafe = valid.replace(
+                    "The prior command has an unknown outcome, so I must reconcile current "
+                    "state\nbefore retrying.",
+                    replacement,
+                )
+                self.assertNotEqual(valid, unsafe)
+                self.assertTrue(
+                    self._assert("gate-unknown-outcome-reopens-decision", unsafe)
+                )
+
+    def test_unknown_outcome_accepts_safe_hypothetical_retry_wording(self) -> None:
+        valid, _ = self._controls()["gate-unknown-outcome-reopens-decision"]
+        for replacement in (
+            "Retry immediately would be unsafe; reconcile the actual state first.",
+            "I will retry immediately only after reconciling the actual state.",
+        ):
+            with self.subTest(replacement=replacement):
+                safe = valid.replace(
+                    "The prior command has an unknown outcome, so I must reconcile current "
+                    "state\nbefore retrying.",
+                    replacement,
+                )
+                self.assertNotEqual(valid, safe)
+                self.assertEqual(
+                    [], self._assert("gate-unknown-outcome-reopens-decision", safe)
+                )
+
     def test_lightweight_onboarding_rejects_each_omitted_floor_control(self) -> None:
         valid, _ = self._controls()["onboard-ephemeral-internal-stays-light"]
         for required in (
@@ -3049,6 +3086,9 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertIn("no material state change", normalized_retry_boundary)
         self.assertIn("partial or unknown outcome", normalized_retry_boundary)
         self.assertIn("reconcile", normalized_retry_boundary)
+        tier_two = agent.split("- **Tier 2 —", 1)[1].split("- **Tier 3 —", 1)[0]
+        self.assertIn("target, exact command, any applicable diff", tier_two)
+        self.assertNotIn("exact command or diff", tier_two)
         handoff = agent.split("- **Operator handoff:**", 1)[1].split(
             "For a managed gate", 1
         )[0]
@@ -3068,6 +3108,14 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertIn("backup, a named restore path, and restore evidence", service_floor)
         self.assertIn("when service facts or lab policy require it", service_floor)
         self.assertNotIn("Irreplaceable persistent data: off-site backup", service_floor)
+        work_order = agent.split("## Onboarding work order for a builder", 1)[1].split(
+            "## Review packet", 1
+        )[0]
+        normalized_work_order = " ".join(work_order.split())
+        self.assertIn(
+            "known false-positive and false-negative behavior", normalized_work_order
+        )
+        self.assertNotIn("known false result", normalized_work_order)
         predicate_block = service.split("## Applicability predicates", 1)[1].split(
             "1. **Placement**", 1
         )[0]

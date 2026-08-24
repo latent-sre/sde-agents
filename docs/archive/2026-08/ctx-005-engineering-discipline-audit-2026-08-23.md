@@ -1,9 +1,9 @@
 # CTX-005 engineering-discipline audit and evidence record
 
 **Status:** audit complete; an explicitly authorized safety repair restored the retry-state
-boundary, but fresh behavior remains a no-go. The operator later authorized an evidence pull
-request; its current ready-for-review state is not merge approval or authority for another edit or
-model retry.
+boundary, but fresh behavior remains a no-go. Two later deterministic review-response rounds repair
+the reported contract defects without supplying new model evidence. The evidence pull request's
+ready-for-review state is not merge approval or authority for another model retry.
 
 **Corpus:** named-revision bytes from `fcc8886592e23d2990c508f2959777fdf3e1969f`
 (`origin/main` after fetch/prune on 2026-08-23). PR #161 was closed unmerged at
@@ -450,9 +450,9 @@ The first probe launcher selected an inaccessible WindowsApps `pwsh` shim and fa
 or a model session started. The actual probe was then launched once with system PowerShell. This is
 recorded as an environment correction, not a second probe result.
 
-### Review-response round
+### First review-response round
 
-One consolidated review-response edit addressed all five inline findings without reopening the
+The first consolidated review-response edit addressed five inline findings without reopening the
 model loop:
 
 - the worked Tier 2 example again names the exact old and new image pins, a literal diff, and an
@@ -499,11 +499,46 @@ Review-response verification:
   profile.
 - `git diff --check` passed, and remeasurement reproduced all three artifact sizes and hashes above.
 - No model behavioral lane or plugin probe was rerun; those claims remain explicitly open for the
-  review-response bytes.
+  first review-response bytes.
+
+### Second review-response round
+
+Four later inline findings identified two retained-contract losses and two polarity defects in the
+new unknown-outcome oracle. One bounded edit:
+
+- requires the exact Tier 2 command plus any applicable diff, because the invocation—not the
+  repository edit alone—is what the decision and transport bind;
+- restores HANDOFF-001's distinct known false-positive and false-negative behavior;
+- requires an affirmative reconcile-before-effect statement and rejects negated or optional
+  reconciliation; and
+- narrows retry-order rejection to affirmative commitments and ordered imperatives, accepting both
+  `Retry immediately would be unsafe; reconcile the actual state first` and a retry explicitly
+  conditioned on prior reconciliation.
+
+The identical UTF-8 instrument measured the second review-response tree:
+
+| Artifact | Baseline chars / bytes | Second-response chars / bytes | Delta chars / bytes | SHA-256 |
+|---|---:|---:|---:|---|
+| `agents/homelab-platform.md` | 27,987 / 28,129 | 25,347 / 25,475 | -2,640 / -2,654 | `7390c0d495ea8a7350c9744f358cd9d77925f222e8df30ef2eef81e6a412b73a` |
+| `.github/agents/homelab-platform.agent.md` | 27,938 / 28,080 | 25,310 / 25,438 | -2,628 / -2,642 | `2532183e8d8dbf902309aba15916414ace722b0e2cb9742fcc00f970fe30d6f8` |
+| `.codex/agents/homelab-platform.toml` | 28,702 / 28,844 | 26,074 / 26,202 | -2,628 / -2,642 | `03a8748c1492ee07d2a292a3a27a9b75fc17a018f01cafe548b0d22f74afe2cd` |
+
+Copilot has 4,690 characters of headroom (15.63%) and remains 1,310 characters above the target.
+The focused regression was red on all four findings. After the bounded repair, generation produced
+182 adapters and all 16 focused proportionality tests passed. The five owning modules passed 344
+tests with seven skips; `validate_fleet.py` validated 11 agents and 20 skills; and the full suite
+passed 1,010 tests across 33 modules. Strict Claude plugin validation passed. The exact-root ledger
+check validated 55 candidates and its drift check found no pending destination drift.
+`fleet_doctor.py` reported 11 passes, three pre-commit warnings, zero failures, and zero
+inconclusive checks; the dirty tree was the additional warning beside CTX-002's listing budget and
+the intentionally unsynchronized no-go Codex profile. `git diff --check` passed and identical
+remeasurement reproduced the sizes and hashes above. No fresh model lane or plugin probe ran, so
+these bytes remain deterministic no-go evidence rather than an accepted compact floor.
 
 Final disposition: keep the pull request as no-go evidence. Do not merge it, request another model
-retry, or request an automated reviewer. Main remains unchanged and is the only accepted homelab
-body.
+retry, or request an automated reviewer. This is the final review-driven edit round for this pull
+request; later findings are dispositioned without more bytes unless the operator explicitly reopens
+the loop. Main remains unchanged and is the only accepted homelab body.
 
 ## Discovery disposition
 

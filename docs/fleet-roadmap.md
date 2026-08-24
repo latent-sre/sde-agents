@@ -431,13 +431,16 @@ still fails: `homelab-right-size-native-tier2` omitted a literal packet slot onc
 `gate-owner-attribution-stacked` used a semantically correct hyphenated form outside the grader's
 current lexicon. All three baseline-perfect cases were 4/5. The one live probe proved loading,
 preloads, path expansion, and guard scoping before its conditional-reference canary timed out after
-900 seconds; no retry ran. A later review-response round fixed five deterministic contract defects:
-the worked example's exact pins, diff, rollback, and literal `Tier:` slot; retry-before-reconcile
-ordering; conditional prior-approval wording; and predicate-driven off-site backup. Its tree-based
-sizes are 25,304 / 25,267 / 26,031 characters, reductions of 2,683 / 2,671 / 2,671 from baseline;
-Copilot has 15.78% headroom and remains 1,267 characters above the target. No fresh model lane ran
-against these review-response bytes, so they do not supersede the exact-hash 60/130 no-go result or
-establish an accepted compact floor.
+900 seconds; no retry ran. The first review-response round fixed five deterministic contract
+defects: the worked example's exact pins, diff, rollback, and literal `Tier:` slot;
+retry-before-reconcile ordering; conditional prior-approval wording; and predicate-driven off-site
+backup. A second and final review-response round required the Tier 2 command plus any applicable
+diff, restored both false-result directions in Work Orders, required affirmative reconciliation,
+rejected negated or optional reconciliation, and accepted safe hypothetical or reconcile-first
+retry wording. Its tree-based sizes are 25,347 / 25,310 / 26,074 characters, reductions of 2,640 /
+2,628 / 2,628 from baseline; Copilot has 15.63% headroom and remains 1,310 characters above the
+target. No fresh model lane ran against either review-response tree, so neither supersedes the
+exact-hash 60/130 no-go result or establishes an accepted compact floor.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
@@ -455,10 +458,10 @@ generated adapters match canonical sources; and the outcome names what was remov
 or kept because a future session, script, grader, or guard consumes it.
 
 **Next action:** Keep the operator-requested pull request as no-go evidence; do not merge either
-candidate as completed CTX-005. The operator's one additional edit and one additional behavioral
-round are spent; do not retry this capture. If a later ruling reopens work, restart root-cause
-analysis from refreshed main and separate packet serialization reliability from grader-lexicon
-defects before proposing another body change.
+candidate as completed CTX-005. The operator's additional edit/model round and the two bounded
+review-response rounds are spent; do not add more review-driven bytes or retry the model capture.
+If a later ruling reopens work, restart root-cause analysis from refreshed main and separate packet
+serialization reliability from grader-lexicon defects before proposing another body change.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

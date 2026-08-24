@@ -62,7 +62,7 @@ and Tier 3 keeps its full recovery-bound packet however small the diff looks.
 
 - **Tier 0 — observe.** Read-only inspection, health checks, logs, metrics, config validation, and dry-runs may proceed. Report the commands and evidence. Two Tier-0 traps, both field-proven: read-only is not capture-safe — a broad inventory or variable dump can expand decrypted secrets into visible output, so scope discovery to the fields you need and redact resolved secret material rather than pasting the map; and a dry-run only counts as evidence for the gates that actually execute in that mode — a check-mode run that skips the probe it asserts on can report the opposite of live reality, so fall back to an explicit read-only probe when the simulated path doesn't exercise the real check.
 - **Tier 1 — prepare.** Editing version-controlled config, documentation, or an unapplied deployment artifact may proceed when it is within the requested scope. Do not reload, restart, deploy, or otherwise apply it to a live target.
-- **Tier 2 — reversible live change.** For every Tier 2 output, including a planning-only response, make **What you will see** the first substantive line — before any heading, preamble, classification, question, or rollback. State the operator-visible effect plainly so a reader who stops there learns exactly what happens ("the VM shuts down and starts again; anything running on it stops and its uptime resets"). Follow with the target, exact command or diff, blast radius, verification, exact rollback, and the literal line `Tier: Tier 2 reversible live change`. The user's explicit decision may be acceptance in a managed prompt, an earlier approval of this exact effect or finite plan, or a qualifying standing policy. Treat the prompt as the decision only when pre-invocation evidence proves that the host will interpose on this exact argv; then do not require a separate conversational confirmation. Execute only through the transport that carries that decision (see "Executing an approved effect" below).
+- **Tier 2 — reversible live change.** For every Tier 2 output, including a planning-only response, make **What you will see** the first substantive line — before any heading, preamble, classification, question, or rollback. State the operator-visible effect plainly so a reader who stops there learns exactly what happens ("the VM shuts down and starts again; anything running on it stops and its uptime resets"). Follow with the target, exact command, any applicable diff, blast radius, verification, exact rollback, and the literal line `Tier: Tier 2 reversible live change`. The user's explicit decision may be acceptance in a managed prompt, an earlier approval of this exact effect or finite plan, or a qualifying standing policy. Treat the prompt as the decision only when pre-invocation evidence proves that the host will interpose on this exact argv; then do not require a separate conversational confirmation. Execute only through the transport that carries that decision (see "Executing an approved effect" below).
 - **Tier 3 — destructive or access-path change.** Data deletion, storage or backup changes, credential or identity changes, and DNS, firewall, VPN, proxy, switch, or remote-access changes require Tier 2 evidence plus a proven backup or recovery path and, where applicable, out-of-band access. Stop for a fresh human decision on the named action and target; standing policy never authorizes Tier 3. Execution then uses a managed gate or operator handoff, with recovery proof and out-of-band access established *before* the decision is acted on.
 
 Classify the *effect* as well as the authority — this five-class list is the fleet's canonical risk/effect classification:
@@ -238,13 +238,14 @@ The coordinator sends the exact LF-normalized block (one final newline) with its
 echoes the block.
 
 Keep the identity header and all six labels; use `none` when content does not apply. Acceptance
-states execution class, mode support, decisive output, known false result, and fallback when a
-simulation skips the real probe—a skipped dry-run result/`rc` is not evidence. Parse postconditions,
-not string co-occurrence. For live effects, name transport and keep approved, executed once, and
-effect verified distinct. Irreversible work adds observable postconditions and ambiguous-response
-reconciliation; temporary authority adds acquisition, maximum lifetime, and guaranteed cleanup.
-Carry a field-scoped non-secret projection or source reference, never resolved secret material.
-Reuse `base_sha`, `candidate_sha`, and `tree_oid` for immutable Git evidence.
+states execution class, mode support, decisive output, known false-positive and false-negative
+behavior, and fallback when a simulation skips the real probe—a skipped dry-run result/`rc` is not
+evidence. Parse postconditions, not string co-occurrence. For live effects, name transport and keep
+approved, executed once, and effect verified distinct. Irreversible work adds observable
+postconditions and ambiguous-response reconciliation; temporary authority adds acquisition,
+maximum lifetime, and guaranteed cleanup. Carry a field-scoped non-secret projection or source
+reference, never resolved secret material. Reuse `base_sha`, `candidate_sha`, and `tree_oid` for
+immutable Git evidence.
 
 For an artifact-first request, start with the artifact—no preamble—then list each remaining lane as
 `<lane>: open — Owner: <owner>`. A simple build omits `Work Order v1` and emits exactly three lines:
