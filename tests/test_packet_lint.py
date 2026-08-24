@@ -1369,9 +1369,11 @@ class Tier2ApprovalRequestLeadSlot(unittest.TestCase):
         text = "\n".join(
             (
                 "**Target**: `media` stack on `nuc-01`.",
+                "**Exact command**: `/usr/bin/docker compose up -d jellyfin`.",
                 "**Blast radius**: the `jellyfin` container only; ~30s down.",
                 "**Verification**: `docker compose ps jellyfin` shows healthy.",
                 "**Rollback**: revert the line and re-run the same `up -d`.",
+                "Tier: Tier 2 reversible live change.",
                 "**What you will see**: Jellyfin stops and starts again.",
             )
         )
@@ -1391,14 +1393,54 @@ class Tier2ApprovalRequestLeadSlot(unittest.TestCase):
         text = "\n".join(
             (
                 "**Target**: `media` stack on `nuc-01`.",
+                "**Exact command**: `/usr/bin/docker compose up -d jellyfin`.",
                 "**Blast radius**: the `jellyfin` container only; ~30s down.",
                 "**Verification**: `docker compose ps jellyfin` shows healthy.",
                 "**Rollback**: revert the line and re-run the same `up -d`.",
+                "Tier: Tier 2 reversible live change.",
             )
         )
         findings = packet_lint.lint_packet(text, self.SHAPE)
         self.assertEqual(
             ["missing required packet slot: 'what you will see'"],
+            findings,
+        )
+
+    def test_an_absent_exact_command_is_a_missing_slot_finding(self) -> None:
+        # The agent now requires "exact command, any applicable diff" — exact command is always
+        # required and a response that omits it must fail the oracle. Firing test for the new slot.
+        text = "\n".join(
+            (
+                "**What you will see**: Jellyfin restarts.",
+                "**Target**: `media` stack on `nuc-01`.",
+                "**Blast radius**: the `jellyfin` container only; ~30s down.",
+                "**Verification**: `docker compose ps jellyfin` shows healthy.",
+                "**Rollback**: revert the image and re-run.",
+                "Tier: Tier 2 reversible live change.",
+            )
+        )
+        findings = packet_lint.lint_packet(text, self.SHAPE)
+        self.assertEqual(
+            ["missing required packet slot: 'exact command'"],
+            findings,
+        )
+
+    def test_an_absent_tier_declaration_is_a_missing_slot_finding(self) -> None:
+        # The agent requires the literal line "Tier: Tier 2 reversible live change." — a response
+        # that omits it must fail the oracle. Firing test for the new slot.
+        text = "\n".join(
+            (
+                "**What you will see**: Jellyfin restarts.",
+                "**Target**: `media` stack on `nuc-01`.",
+                "**Exact command**: `/usr/bin/docker compose up -d jellyfin`.",
+                "**Blast radius**: the `jellyfin` container only; ~30s down.",
+                "**Verification**: `docker compose ps jellyfin` shows healthy.",
+                "**Rollback**: revert the image and re-run.",
+            )
+        )
+        findings = packet_lint.lint_packet(text, self.SHAPE)
+        self.assertEqual(
+            ["missing required packet slot: 'tier:'"],
             findings,
         )
 

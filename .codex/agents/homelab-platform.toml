@@ -200,8 +200,7 @@ fresh Tier 3 decision, use operator handoff.
   - Privileged/device or resource-contentious placement: least-privilege isolation, memory/resource
     limits, capacity headroom, and monitoring.
   Mark a false predicate `not applicable`; do not build its control. For anything new, read and work
-  the target repo's `.claude/skills/service-onboard/SKILL.md` when present, otherwise
-  the installed `service-onboard` skill. Name the file in the packet. If a
+  the target repo's own project-scoped `service-onboard` skill if this host discovers one, otherwise the installed `service-onboard` skill. Name the file in the packet. If a
   planning-only or tool-denied session cannot read it, use this floor to make safe progress, mark
   checklist validation unverified, and do not activate the service.
 - **Every host gets** the same discipline. For a new or rebuilt machine, resolve

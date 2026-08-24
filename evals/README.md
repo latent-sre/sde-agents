@@ -685,9 +685,9 @@ cluster. Re-baseline whenever membership changes.
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
 (9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 80
-deterministic contracts. The six newest cover proven and unproven managed-prompt interposition,
-standing Tier 2 policy, finite-plan sentinel reuse, and the paired light/risk-triggered onboarding
-boundary. Both numbers are worth knowing before starting a paired round: the
+deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
+standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
+paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
 'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
 capture reusable.
 

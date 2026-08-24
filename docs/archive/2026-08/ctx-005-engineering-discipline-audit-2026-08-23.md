@@ -535,10 +535,10 @@ the intentionally unsynchronized no-go Codex profile. `git diff --check` passed 
 remeasurement reproduced the sizes and hashes above. No fresh model lane or plugin probe ran, so
 these bytes remain deterministic no-go evidence rather than an accepted compact floor.
 
-Final disposition: keep the pull request as no-go evidence. Do not merge it, request another model
-retry, or request an automated reviewer. This is the final review-driven edit round for this pull
-request; later findings are dispositioned without more bytes unless the operator explicitly reopens
-the loop. Main remains unchanged and is the only accepted homelab body.
+Final disposition: the pull request was kept as no-go evidence. It was not merged; no further
+model retry or automated review was requested. The review-driven edit rounds for this pull request
+are exhausted; later findings are dispositioned without more bytes unless the operator explicitly
+reopens the loop. Main remains unchanged and is the only accepted homelab body.
 
 ## Discovery disposition
 

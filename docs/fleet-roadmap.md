@@ -457,11 +457,12 @@ behavioral contract passes in the required fresh lane; the probe and full offlin
 generated adapters match canonical sources; and the outcome names what was removed, compressed,
 or kept because a future session, script, grader, or guard consumes it.
 
-**Next action:** Keep the operator-requested pull request as no-go evidence; do not merge either
-candidate as completed CTX-005. The operator's additional edit/model round and the two bounded
-review-response rounds are spent; do not add more review-driven bytes or retry the model capture.
-If a later ruling reopens work, restart root-cause analysis from refreshed main and separate packet
-serialization reliability from grader-lexicon defects before proposing another body change.
+**Next action:** The operator-requested pull request is kept as no-go evidence; neither candidate was
+merged as completed CTX-005. The operator's additional edit/model round and the two bounded
+review-response rounds are spent; no further review-driven bytes or model capture retries are
+planned. If a later ruling reopens work, restarting root-cause analysis from refreshed main and
+separating packet serialization reliability from grader-lexicon defects before proposing another
+body change remains the recorded approach.
 
 #### LABSEC-002 — add a guard-enforced lab inspector
 

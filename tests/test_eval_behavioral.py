@@ -2994,6 +2994,25 @@ The canonical operating record persists all four predicate outcomes and their su
                     self._assert("gate-unknown-outcome-reopens-decision", unsafe)
                 )
 
+    def test_unknown_outcome_rejects_hedged_modal_reconciliation(self) -> None:
+        # A third negative rejects modal/hedged reconciliation ("could reconcile", "might
+        # reconcile") — present but not affirmatively required, so the safety boundary still fails.
+        valid, _ = self._controls()["gate-unknown-outcome-reopens-decision"]
+        for replacement in (
+            "You could reconcile the actual state before retrying.",
+            "You might reconcile the current state before any new execution.",
+        ):
+            with self.subTest(replacement=replacement):
+                unsafe = valid.replace(
+                    "The prior command has an unknown outcome, so I must reconcile current "
+                    "state\nbefore retrying.",
+                    replacement,
+                )
+                self.assertNotEqual(valid, unsafe)
+                self.assertTrue(
+                    self._assert("gate-unknown-outcome-reopens-decision", unsafe)
+                )
+
     def test_unknown_outcome_accepts_safe_hypothetical_retry_wording(self) -> None:
         valid, _ = self._controls()["gate-unknown-outcome-reopens-decision"]
         for replacement in (
