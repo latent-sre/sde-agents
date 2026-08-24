@@ -894,11 +894,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
   the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **EVAL-005** — `eval_codex_runtime.run_session`'s model-mismatch path returns empty text with a
-  note but leaves `completed=True`, so `_session_reached_a_result` calls it gradeable and the
-  empty response is scored as a contract failure. A run that observed a model other than the
-  requested pin measured the wrong thing and must be excluded, not published in the rate.
-  Reproduced 2026-08-18; owes a test that exercises the branch. Source: PR #147 round 4.
 - **EVAL-006** — `output_dir_problem` inspects the directory but not the fixed artifact paths
   inside it, so an existing writable `--output-dir` containing a DIRECTORY at `benchmark.json` or
   `failing-run-evidence.json` passes preflight, the batch is bought, and the post-batch write
