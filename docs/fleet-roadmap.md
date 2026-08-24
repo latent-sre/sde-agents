@@ -894,10 +894,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
 - **HOST-013** — `GENERATED_ROOTS` (generator) and `GENERATED_ADAPTER_TREES` (validator) encode
   the same fact by hand in two files. A drift test now pins them together
   (`tests/test_validate_workflows.py`), but one parser should own the set. Source: same amendment.
-- **PROBE-005** — PR #147 changed the readonly guard's active-agent scoping contract but did not
-  run the required real `scripts/probe_plugin.py` lane. Run the probe on the pinned Claude CLI
-  and record the `--agent` result; mock tests cannot establish the runtime payload. Source: PR
-  #147 post-merge review thread.
 - **PROBE-002** — the 2026-08-17 probe run scored 12/19 with both `skills:` preload canaries
   failing: neither `backend-craft` (`req_8f3a2c`) nor `frontend-craft` ("color courage") appeared
   in `sde-fullstack`'s own spawn result, though both are listed in its `skills:`. Preloading is an
