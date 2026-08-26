@@ -41,6 +41,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WidgetPage"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         default:
           $ref: "#/components/responses/Problem"
     post:
@@ -74,6 +76,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ValidationProblem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         default:
           $ref: "#/components/responses/Problem"
 
@@ -100,6 +104,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         default:
           $ref: "#/components/responses/Problem"
 
@@ -122,6 +128,34 @@ components:
       description: >-
         Any error. RFC 9457 problem details at the top level of the body — never a nested
         error envelope — with request_id present so the log line is greppable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    RateLimited:
+      description: >-
+        Rate limited. Retry-After is required, not advisory: SKILL.md makes "429 asserting
+        Retry-After is present" a test every rate-limited route owes, and a bare `default`
+        Problem response documents no headers for that test to assert against.
+      headers:
+        Retry-After:
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+          description: Seconds to wait before retrying.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Requests allowed in the current window.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests left in the current window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix seconds when the window resets.
       content:
         application/problem+json:
           schema:
