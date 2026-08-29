@@ -935,6 +935,58 @@ prevent. Precedent: GATE-006 granted `Read` to the two `onboard-*` cases for exa
 floor) — the calibration evidence favours doing the instrument first, so the floor decision is made
 on honest numbers. Evidence: `evals/baselines/2026-08-29-gate-006/README.md`.
 
+#### PORT-002 — second mining round from save-toolkit, the sibling's delta since 2026-07-24
+
+**Status:** `decision-needed` (2026-08-29) — the scoping read is done and recorded; the operator
+picks the set before any graft is authored.
+
+**Outcome:** The lab-portable improvements `latent-sre/save-toolkit` (the renamed `sre-agents`)
+paid for on real incidents since our July import land here as capped grafts inside the skills
+that already own the ground — runbook step craft with a responder read-back and living-runbook
+history, a per-service readiness lens in `lab-audit`, the CI safety-contract additions, a
+"no-incident" bottom for `lab-incident`, the OWASP crosswalk in `prompt-craft`'s security
+reference, the postmortem causal-method and instrumentation clauses, the 2026 language-feature
+refresh, and — as its own slice — the observability refresh with an offline dashboard-hygiene
+check. No twin this fleet already leads on is touched, and provenance is recorded twice.
+
+**Source:** [`save-toolkit delta scoping`](archive/2026-08/save-toolkit-delta-scoping-2026-08-29.md)
+— donor read at `2a04d357` (2026-08-28); every candidate carries its donor path, target, the grep
+that proved the gap on our side, and its scrub list. Governed by the July adjudication's Killed
+list ([`sre-agents adaptation backlog`](archive/2026-07/sre-agents-adaptation-backlog.md)) and
+the PORT-001 porting method (`README.md`, "Importing from another fleet"). The flow is now
+bidirectional — the donor imported from this fleet on 2026-08-05 — so the record's per-pair diffs,
+not the donor's commit log, say what is genuinely new.
+
+**Prerequisites:** The operator's pick (Next action). Each slice then runs PORT-001's three blind
+passes on its donor files before any comparison, from refreshed `origin/main` on
+`feat/port-002-<skill>`. The observability slice is a separate branch: it carries a script and
+body edits adjacent to the description. No description edit is planned; any that becomes
+necessary owes the overlapping routing cluster (`homelab-ops` for the lab skills) before and
+after.
+
+**Acceptance:** Per slice: the graft lands inside the owning skill (no new skill, no new
+mechanism); the record's scrub list for that slice is gone from the landed text (no `cf`, PCF,
+`scribe`, `sre`-agent, or `operational-learning` residue); validator and tests green; the commit
+carries `adapted from latent-sre/save-toolkit@2a04d357 (MIT)` and `THIRD_PARTY_NOTICES.md`'s
+existing `sre-agents` entry is extended with the reviewed commit and the renamed repository; the
+record's verified-skip twins are byte-unchanged; contribute-back candidates stay listed, not
+acted on. The item closes when every picked slice has merged and the record is linked from
+`docs/README.md` as historical import adjudication.
+
+**Leads the record routes, none of them a slice:** their SKILL-001 audit measures (the
+rules-charged-twice count, the 7,500-byte entrypoint screen, probe-before-routing) fold into a
+PROP-003 successor to the closed PROP-002 sweep; `evals/build_probe.py`'s code-graded outcome
+probes (fake CLI, canary file, tests-actually-pass) become an EVAL investigation if wanted —
+stdlib redesign only, and our runner already passes `--allowedTools`; `workflow-graph-engineering`
+is a source pointer on GRAPH-004; `incident-drill` and the query catalog stay trigger-bound; the
+HOST-002 VS Code hook-merge observation names the experiment that could prove an agent-scoped
+boundary there and changes no rule until one does.
+
+**Next action:** Operator chooses one of: **(a)** the recommended five — candidates 1, 2, 4, 5,
+and 7 (`runbook`, `lab-audit`, `ci-actions`, `lab-incident`, `postmortem`; all lab-portable, no
+description edits) — as one round; **(b)** all eight content candidates; **(c)** (b) plus the
+PROP-003 and EVAL leads filed as their own items. Then open slice 1 (`runbook`).
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
@@ -1016,7 +1068,11 @@ retained node/edge design.
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md);
 governed by the accepted
 [`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md), including its
-absorbed generated-prompt provenance control.
+absorbed generated-prompt provenance control. When the pilot opens, read the sibling's
+`workflow-graph-engineering` skill (save-toolkit `2a04d357`; see the
+[`PORT-002 scoping record`](archive/2026-08/save-toolkit-delta-scoping-2026-08-29.md)) as a
+design source: its cancellation, reset, late-arrival, and explicit-`UNKNOWN` semantics are the
+ones schema v1 excludes.
 
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
