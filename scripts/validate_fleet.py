@@ -1071,21 +1071,41 @@ def load_guard(root: Path):
     return module
 
 
-def hook_command(root: Path) -> str | None:
-    """The PreToolUse/Bash command string from hooks/hooks.json, following the real key path."""
+def load_gate(root: Path):
+    """Import scripts/live-effect-gate.py by path — the hyphen makes it un-importable by name."""
+    source = root / "scripts" / "live-effect-gate.py"
+    module = load_module_by_content(source, "live_effect_gate")
+    if module is None:
+        raise ImportError(f"cannot load {source}")
+    return module
+
+
+def hook_commands(root: Path) -> list[str]:
+    """Every PreToolUse/Bash command string in hooks/hooks.json, in file order."""
     path = root / "hooks" / "hooks.json"
     if not path.is_file():
-        return None
+        return []
     try:
         config = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return None
+        return []
+    commands: list[str] = []
     for entry in config.get("hooks", {}).get("PreToolUse", []):
         if entry.get("matcher") == "Bash":
             for hook in entry.get("hooks", []):
                 if hook.get("type") == "command" and hook.get("command"):
-                    return hook["command"]
-    return None
+                    commands.append(hook["command"])
+    return commands
+
+
+def hook_command_for(root: Path, script: str) -> str | None:
+    """The PreToolUse/Bash command that runs `script`, found by name — two hooks share the matcher."""
+    return next((command for command in hook_commands(root) if script in command), None)
+
+
+def hook_command(root: Path) -> str | None:
+    """The read-only guard's PreToolUse/Bash command string (its callers keep this name)."""
+    return hook_command_for(root, "readonly-guard.py")
 
 
 def agent_tool_bases(path: Path) -> set[str]:
