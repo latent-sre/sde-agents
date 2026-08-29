@@ -1694,6 +1694,22 @@ an attempted invocation returned a denial, and quote the denial's reason.
       In `README.md` replace `the **five-tier risk/effect\nclassification** is owned by `agents/homelab-platform.md`'s change-authority section\n(code-reviewer carries the compact finding-classification paraphrase and defers on conflict);`
       with `the **finding-effect classification** (merge blocker / live-activation blocker / optional\nhardening) is owned by `agents/code-reviewer.md`, and the live-activation gate it names is\n`agents/homelab-platform.md`'s change-authority tiers;`
 
+- [ ] **Step 15b: Teach the generator the host rewrite.** The managed-gate bullet, the
+      standing-policy sentence, and the worked example's evidence line name a Claude-only hook;
+      `tests/test_platform_adapters.py::test_host_agent_adapters_have_no_claude_runtime_references`
+      forbids `hooks/hooks.json` in the Codex and Copilot projections. In
+      `scripts/generate_platform_adapters.py::adapt_agent_contract`, add an
+      `if name == "homelab-platform":` block before the `repository-investigator` block that
+      replaces those three passages per host with `re.subn(..., count=1)` and raises `ValueError`
+      on a zero-match (the must-land rule the investigator block records): Codex gets the
+      sandbox/command-approval prompt with `codex execpolicy check` as the evidence and
+      `Gate evidence: exec policy — matched rule <rule>`; Copilot gets operator handoff for every
+      Tier 2/3 effect (its payload cannot scope the gate), `> Transport: operator handoff` in the
+      example, and `**Gate owner**: operator handoff`. Add
+      `test_homelab_host_rewrite_fails_loudly_when_its_anchor_is_missing` beside the investigator's
+      anchor test: a body without the bullet raises for both hosts; the real canonical body
+      rewrites without `hooks/hooks.json` and with the host marker present.
+
 - [ ] **Step 16: Regenerate, validate, and check the invariants**
 
 Run: `python scripts/generate_platform_adapters.py --write` then `python scripts/validate_fleet.py`

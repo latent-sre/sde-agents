@@ -422,6 +422,28 @@ class PlatformAdapterTests(unittest.TestCase):
                         host=host,
                     )
 
+    def test_homelab_host_rewrite_fails_loudly_when_its_anchor_is_missing(self) -> None:
+        # Same rule for the live-effect gate (GATE-006): the canonical transport bullet names a
+        # Claude-only hook, and a silent zero-match rewrite would ship that claim to a host that
+        # cannot load it. The real canonical body must rewrite cleanly on both hosts.
+        for host in ("copilot", "codex"):
+            with self.subTest(host=host):
+                with self.assertRaisesRegex(ValueError, "homelab-platform"):
+                    generate_platform_adapters.adapt_agent_contract(
+                        "body text without the transport bullet",
+                        name="homelab-platform",
+                        host=host,
+                    )
+        canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        for host, marker in (("copilot", "operator handoff"), ("codex", "codex execpolicy check")):
+            with self.subTest(host=host):
+                rewritten = generate_platform_adapters.adapt_agent_contract(
+                    canonical, name="homelab-platform", host=host
+                )
+                self.assertNotIn("hooks/hooks.json", rewritten)
+                self.assertNotIn("live-effect gate — matched rule `docker compose up`", rewritten)
+                self.assertIn(marker, rewritten)
+
     def test_guarded_copilot_agents_have_no_shell_tool(self) -> None:
         guard = validate_fleet.load_guard(REPO)
         for name in sorted(guard.GUARDED_AGENT_NAMES):

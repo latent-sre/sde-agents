@@ -124,9 +124,9 @@ Several files deliberately paraphrase another — the `eng-ladder` altitude refe
 agent files, and its routing table is the source of truth for routing. Each such file states which
 side wins on conflict; when they drift, fix the paraphrase, never the source. The other owned
 conventions, for the same reason: the **three-strikes rule** is owned by `skills/root-cause`
-(sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
-classification** is owned by `agents/homelab-platform.md`'s change-authority section
-(code-reviewer carries the compact finding-classification paraphrase and defers on conflict);
+(sde-fullstack, sre-tool, and the builder reference cite it); the **finding-effect classification** (merge blocker / live-activation blocker / optional
+hardening) is owned by `agents/code-reviewer.md`, and the live-activation gate it names is
+`agents/homelab-platform.md`'s change-authority tiers;
 the **onboarding work order** trigger, fields, manager-owned digest transfer, and authority boundary
 are owned by `agents/homelab-platform.md` (`agents/sde-fullstack.md` carries the receipt/consumer
 paraphrase and defers on conflict);
