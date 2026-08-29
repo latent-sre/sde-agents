@@ -449,8 +449,8 @@ separate cap tripwire; and the
 [CTX-005 discipline audit](archive/2026-08/ctx-005-engineering-discipline-audit-2026-08-23.md),
 which records the corpus, consumer inventory, external lanes, edit rounds, and exact no-go evidence.
 
-**Prerequisites:** Land or otherwise freeze the proportional-operations candidate as the measured
-baseline. Do not mix another policy change into the diet.
+**Prerequisites:** GATE-006 lands first — its after-side lane is the diet's before side. Do not
+mix another policy change into the diet.
 
 **Acceptance:** Before/after character counts use the same instrument; every affected homelab
 behavioral contract passes in the required fresh lane; the probe and full offline suite stay green;
@@ -843,6 +843,31 @@ test, or state the limitation in `learning/README.md`.
 `retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
+
+#### GATE-006 — homelab live-effect gate and gate-vocabulary fold
+
+**Status:** `active` (2026-08-29) — operator ruling: Track A of the homelab-platform audit runs
+before the CTX-005 diet.
+
+**Outcome:** `homelab-platform`'s managed gate is a control the plugin ships — a second
+`PreToolUse`/`Bash` hook that asks on every live-effect argv the agent invokes on Claude Code and
+denies it when the session cannot prompt — and the agent's authority prose names that mechanism
+instead of asking the model to prove one: transport evidence is structural, standing policy is
+host-specific, an identical retry happens once, `Effect class:` is folded into `Tier:`, the web
+tools are gone, and `service-onboard` alone owns the onboarding predicates.
+
+**Source:** [`homelab live-effect gate decision`](decisions/2026-08-29-homelab-live-effect-gate.md)
+(accepted); scope and acceptance in
+[`the GATE-006 spec`](superpowers/specs/gate-006-homelab-harness.md); payload in
+[`the GATE-006 plan`](superpowers/plans/gate-006-plan.md).
+
+**Prerequisites:** None. CTX-005 waits on this item: its after-side lane is the diet's before side.
+
+**Acceptance:** The spec's six acceptance items, of which 5 (probe and paired lane) and 6 (the
+interactive `ask` witness) are operator purchases recorded before merge.
+
+**Next action:** Execute the plan's Tasks 1–9 on `feat/gate-006-homelab-harness`; hand the
+operator the probe and paired-lane commands from Task 9.
 
 ### Small items
 
