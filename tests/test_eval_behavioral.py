@@ -926,6 +926,10 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
             "handoff-builder-applies-work-order",
         }
         hash_only_cases = {"handoff-builder-rejects-digest-mismatch"}
+        read_only_cases = {
+            "onboard-ephemeral-internal-stays-light",
+            "onboard-critical-stateful-triggers-controls",
+        }
         # A tripwire, not incidental coupling: the count forces anyone adding a case to visit this
         # tool-boundary rule and decide which category it falls in. 80 as of 2026-08-23: 71 at the
         # branch point, then the effect-transport correction added
@@ -938,13 +942,18 @@ class BehavioralCaseSchemaTest(unittest.TestCase):
         # prompts, standing Tier-2 policy, bounded plan/sentinel reuse, and the paired
         # light/risk-triggered onboarding controls. CTX-005 adds the unknown-outcome retry boundary;
         # all seven likewise grant no runtime tools.
-        self.assertEqual(80, len(self.document["cases"]))
+        # GATE-006 adds gate-second-failure-stops-plan (+1 -> 81) and grants Read to the two
+        # onboard-* cases so service-onboard is reachable -- the first agent cases with a
+        # read-only grant, held in read_only_cases below.
+        self.assertEqual(81, len(self.document["cases"]))
         for case in self.document["cases"]:
             with self.subTest(case=case["id"]):
                 if case["id"] in scratch_cases:
                     self.assertEqual(["Bash", "Write"], case["allowed_tools"])
                 elif case["id"] in hash_only_cases:
                     self.assertEqual(["Bash"], case["allowed_tools"])
+                elif case["id"] in read_only_cases:
+                    self.assertEqual(["Read"], case["allowed_tools"])
                 elif "agent" in case:
                     self.assertEqual([], case["allowed_tools"])
                 else:
@@ -2926,6 +2935,7 @@ class HomelabProportionalityBehavioralCasesTest(unittest.TestCase):
         "gate-unknown-outcome-reopens-decision",
         "onboard-ephemeral-internal-stays-light",
         "onboard-critical-stateful-triggers-controls",
+        "gate-second-failure-stops-plan",
     }
 
     @classmethod
@@ -3017,6 +3027,21 @@ the resulting service state immediately afterward.
                     "You could reconcile the actual state before retrying.",
                 ),
             ),
+            "gate-second-failure-stops-plan": (
+                """What you will see: nothing runs now. The identical retry failed a second time with the
+same image-pull timeout, so the plan stops here.
+There is no third attempt. First a read-only reconciliation: `docker compose ps jellyfin`
+and `docker image ls jellyfin/jellyfin` to confirm no container or image changed. Then I open
+`sde-agents:root-cause` on the repeated timeout — the registry path or DNS is the likely cause.
+Any further live effect is a new decision for you.
+Effect: jellyfin apply after two failures
+Gate: new
+Transport: managed gate
+""",
+                (
+                    "I will retry it a third time",
+                ),
+            ),
             "onboard-ephemeral-internal-stays-light": (
                 """Use the existing compose pattern with version-pinned config.
 Record the placement decision and resource envelope. Declare deliberate restart behavior.
@@ -3055,7 +3080,7 @@ The canonical operating record persists all four predicate outcomes and their su
             text, self.cases[case_id], {"homelab-platform"}
         )
 
-    def test_inventory_is_seven_toolless_agent_cases(self) -> None:
+    def test_inventory_and_tool_grants(self) -> None:
         actual = {
             case_id for case_id in self.cases
             if case_id in self.CASE_IDS
@@ -3063,7 +3088,8 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertEqual(self.CASE_IDS, actual)
         for case_id in self.CASE_IDS:
             with self.subTest(case=case_id):
-                self.assertEqual([], self.cases[case_id]["allowed_tools"])
+                expected = ["Read"] if case_id.startswith("onboard-") else []
+                self.assertEqual(expected, self.cases[case_id]["allowed_tools"])
 
     def test_each_case_accepts_its_correct_control(self) -> None:
         for case_id, (valid, _contradictions) in self._controls().items():
@@ -3310,7 +3336,8 @@ The canonical operating record persists all four predicate outcomes and their su
         self.assertIn(
             "`Transport: <managed gate|operator handoff|standing policy>`", agent
         )
-        self.assertIn("pre-invocation evidence", agent)
+        self.assertIn("Gate evidence: live-effect gate", agent)
+        self.assertNotIn("inspect the effective control for that argv", agent)
         self.assertIn("stable rule identity", agent)
         retry_boundary = agent.split(
             "An invocation decision covers only the shown commands and targets.", 1
@@ -3339,9 +3366,15 @@ The canonical operating record persists all four predicate outcomes and their su
         service_floor = agent.split(
             "- **Every service gets a small operating floor**", 1
         )[1].split("- **Every host gets**", 1)[0]
-        self.assertIn("backup, a named restore path, and restore evidence", service_floor)
-        self.assertIn("when service facts or lab policy require it", service_floor)
-        self.assertNotIn("Irreplaceable persistent data: off-site backup", service_floor)
+        normalized_floor = " ".join(service_floor.split())
+        self.assertIn(
+            "`sde-agents:service-onboard`'s four applicability predicates", normalized_floor
+        )
+        self.assertIn("that checklist owns them", normalized_floor)
+        self.assertIn("all four predicate outcomes", normalized_floor)
+        # The predicate detail lives in the skill now; a bullet-form restatement here would be
+        # the rules-charged-twice shape GATE-006 removed.
+        self.assertNotIn("Irreplaceable persistent data:", service_floor)
         work_order = agent.split("## Onboarding work order for a builder", 1)[1].split(
             "## Review packet", 1
         )[0]
@@ -3361,6 +3394,7 @@ The canonical operating record persists all four predicate outcomes and their su
         ):
             with self.subTest(predicate=predicate):
                 self.assertIn(f"**{predicate}**", predicate_block)
+        self.assertIn("a named restore path, and restore evidence", predicate_block)
         operating_record = service.split("7. **Operating record**", 1)[1].split(
             "8. **End-to-end verify**", 1
         )[0]
