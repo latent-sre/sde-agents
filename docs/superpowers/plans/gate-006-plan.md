@@ -892,13 +892,13 @@ def _segments(command: str) -> list[list[str]] | None:
         if token in _CONTROL:
             segments.append([])
             continue
-        if any(op in token for op in _CONTROL):
-            return None
         if _REDIRECT_TARGET_RE.match(token):
             skip_next = True
             continue
         if _REDIRECT_SELF_RE.match(token):
-            continue
+            continue          # `2>&1` carries an `&` that is not a control operator
+        if any(op in token for op in _CONTROL):
+            return None
         segments[-1].append(token)
     return [seg for seg in segments if seg]
 
@@ -983,9 +983,13 @@ def _classify(tokens: list[str]) -> str | None:
         rest = prefix[1:]
         if words[:len(rest)] != list(rest):
             continue
-        following = words[len(rest):]
-        if following and following[0] in live:
-            rule = " ".join(prefix + (following[0],))
+        # An option's argument (`-f docker-compose.yml`) sits among the words ahead of the
+        # subcommand, and no table knows every tool's option arity, so the subcommand is the
+        # first LIVE word within the next three — a false positive here is one extra prompt.
+        following = words[len(rest):len(rest) + 3]
+        hit = next((word for word in following if word in live), None)
+        if hit is not None:
+            rule = " ".join(prefix + (hit,))
             if longest is None or len(rule) > len(longest):
                 longest = rule
     return longest

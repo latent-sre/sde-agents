@@ -1233,6 +1233,59 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             f"mismatch means it matches nobody and silently guards nothing."
         )
 
+    # The live-effect gate is the guard's mirror image for a Bash-and-Write agent: where the
+    # guard enumerates readers and denies the rest, the gate names live verbs and makes a human
+    # decide. It has the same single place to live and the same silent failure modes, so the
+    # same links are held: it must load, name the plugin, name real Bash-holding agents that
+    # are not also guarded, and be wired from ${CLAUDE_PLUGIN_ROOT}.
+    gate_path = root / "scripts" / "live-effect-gate.py"
+    try:
+        gate = load_gate(root)
+    except Exception as exc:  # a gate that cannot import gates nothing
+        issues.append(f"{gate_path}: cannot load live-effect gate: {exc}")
+        gate = None
+    if gate is not None:
+        if plugin_name and gate.PLUGIN_NAME != plugin_name:
+            issues.append(
+                f"{gate_path}: PLUGIN_NAME {gate.PLUGIN_NAME!r} does not match the manifest name "
+                f"{plugin_name!r}. The gate recognizes its subject by a NAMESPACED agent_type, so a "
+                f"mismatch means it matches nobody and silently gates nothing."
+            )
+        for name in sorted(gate.GATED_AGENT_NAMES):
+            agent_path = root / "agents" / f"{name}.md"
+            if name not in agent_names:
+                issues.append(
+                    f"{gate_path}: GATED_AGENT_NAMES names {name!r}, which is not an agent in "
+                    f"agents/ — a typo here gates nobody."
+                )
+                continue
+            if "Bash" not in agent_tool_bases(agent_path):
+                issues.append(
+                    f"{gate_path}: gated agent {name!r} holds no Bash, so the gate can never fire "
+                    f"for it"
+                )
+            if name in guard.GUARDED_AGENT_NAMES:
+                issues.append(
+                    f"{gate_path}: {name!r} is in both GATED_AGENT_NAMES and the guard's "
+                    f"GUARDED_AGENT_NAMES; a read-only agent gets the guard, a live-effect agent "
+                    f"gets the gate, never both (the guard would deny every live verb before the "
+                    f"gate asked)"
+                )
+        gate_command = hook_command_for(root, "live-effect-gate.py")
+        if gate_command is None:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: no PreToolUse/Bash hook runs "
+                f"scripts/live-effect-gate.py. A plugin-shipped agent cannot carry its own hooks, "
+                f"so this file is the ONLY place the live-effect gate can be attached — without "
+                f"it, homelab-platform's managed gate is prose."
+            )
+        elif "${CLAUDE_PLUGIN_ROOT}/scripts/live-effect-gate.py" not in gate_command:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: the live-effect-gate.py hook must run the gate "
+                f"from ${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy — never a "
+                f"relative path a repository under operation could supply."
+            )
+
     command = hook_command(root)
     if command is None:
         issues.append(

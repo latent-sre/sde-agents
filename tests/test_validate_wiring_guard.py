@@ -186,5 +186,73 @@ class PluginWiringGuardTests(PluginWiringMixin, unittest.TestCase):
         self.assertTrue(any("'ghost'" in i and "not an agent" in i for i in issues), issues)
 
 
+class PluginWiringGateTests(PluginWiringMixin, unittest.TestCase):
+    """The live-effect gate has exactly one place to live, like the guard; drift is silent."""
+
+    def _hooks(self, repo: Path) -> dict:
+        return json.loads((repo / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+
+    def test_missing_gate_entry_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            config = self._hooks(repo)
+            for entry in config["hooks"]["PreToolUse"]:
+                entry["hooks"] = [h for h in entry["hooks"] if "live-effect-gate.py" not in h.get("command", "")]
+            (repo / "hooks" / "hooks.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("live-effect-gate.py" in i for i in issues), issues)
+
+    def test_gate_not_resolved_through_plugin_root_is_reported(self) -> None:
+        def mutate(repo: Path) -> None:
+            config = self._hooks(repo)
+            for entry in config["hooks"]["PreToolUse"]:
+                for hook in entry["hooks"]:
+                    if "live-effect-gate.py" in hook.get("command", ""):
+                        hook["command"] = hook["command"].replace("${CLAUDE_PLUGIN_ROOT}/", "./")
+            (repo / "hooks" / "hooks.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("live-effect-gate.py" in i and "CLAUDE_PLUGIN_ROOT" in i for i in issues), issues)
+
+    def test_gated_agent_must_exist_and_hold_bash(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "live-effect-gate.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    'GATED_AGENT_NAMES = frozenset({"homelab-platform"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-platform", "ghost-agent"})',
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("ghost-agent" in i for i in issues), issues)
+
+    def test_gate_plugin_name_must_match_the_manifest(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "live-effect-gate.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace('PLUGIN_NAME = "sde-agents"', 'PLUGIN_NAME = "sde-agent"'),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("live-effect-gate.py" in i and "PLUGIN_NAME" in i for i in issues), issues)
+
+    def test_guarded_and_gated_rosters_must_be_disjoint(self) -> None:
+        def mutate(repo: Path) -> None:
+            path = repo / "scripts" / "live-effect-gate.py"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    'GATED_AGENT_NAMES = frozenset({"homelab-platform"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-platform", "code-reviewer"})',
+                ),
+                encoding="utf-8",
+            )
+
+        issues = self._issues_after(mutate)
+        self.assertTrue(any("code-reviewer" in i and "both" in i for i in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
