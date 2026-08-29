@@ -109,7 +109,8 @@ Standalone Codex agent sync — including the exact-match adoption contract — 
 Three checks are manual and on demand, deliberately not CI gates (all drive real model sessions):
 
 - `python3 scripts/probe_plugin.py` — proves the fleet *loads*, `${CLAUDE_PLUGIN_ROOT}` expands,
-  and the guard fires for the guarded agents and only them. Owed at every CLI pin bump (the pin
+  the guard fires for the guarded agents and only them, and the live-effect gate denies the gated
+  agent under suppressed prompts and only it. Owed at every CLI pin bump (the pin
   lives in CI's `claude-plugin-contract` job): the probe is the only runtime proof the pinned
   binary still honors the guard's payload contract (owner: the `scripts/readonly-guard.py`
   docstring).
@@ -205,18 +206,23 @@ bytes at the top-level `return`; that instrument is invalid here. Offline proof 
 export; validator-green is never reported as loadable. A change to workflow-shape bytes is
 exercised by at least one live workflow load before the release containing it closes.
 
-**Touching the Claude guard or hook** — read the docstrings in `scripts/readonly-guard.py` and the
-README guard section first; then run the tests *and* the probe. Non-negotiables: the allowlist grows by
-adding a *reader*, never an interpreter (no `python`, `pytest`, `npm`, `make`, no exemption for
-this repo's own scripts); the hook resolves the guard through `${CLAUDE_PLUGIN_ROOT}` so a
-repository under review can never supply it; it fails closed for guarded agents and no-ops for
-everyone else; and the 42/43 exit-code contract between guard and hook shell string stays intact —
-it is how the hook tells the guard's answer from a stand-in interpreter that merely exits 0.
-Do not port that hook to Codex or VS Code: their `PreToolUse` payload does not supply the
-active-agent identity used for scoping. Preserve the host-specific tool or sandbox controls instead.
-Keep a non-Claude host away from the guard **structurally** — no file at that host's own hook-config
-path, which is why `plugins/sde-agents/` has no `hooks/`. A manifest field naming an empty override
-does not do it (`docs/archive/2026-08/vscode-discovery-investigation-2026-08-18.md`).
+**Touching a Claude hook — the read-only guard or the live-effect gate** — read the docstrings in
+`scripts/readonly-guard.py` and `scripts/live-effect-gate.py` and the README hook section first;
+then run the tests *and* the probe. Non-negotiables: the guard's allowlist grows by adding a
+*reader*, never an interpreter (no `python`, `pytest`, `npm`, `make`, no exemption for this repo's
+own scripts); the gate's roster grows by adding a *live effect an incident or drill showed
+unlisted*, never by exempting one; both resolve their script through `${CLAUDE_PLUGIN_ROOT}` so a
+repository under review or operation can never supply it; the guard fails closed for guarded
+agents, the gate falls back to `ask` (and to `deny` when the payload says prompts are suppressed)
+for the gated agent, and both no-op for everyone else; and the 42/43/44/45 exit-code contract
+between the scripts and the hook shell strings stays intact — it is how the hook tells a script's
+answer from a stand-in interpreter that merely exits 0. An agent is on one roster or neither,
+never both. Do not port either hook to Codex or VS Code: their `PreToolUse` payload does not
+supply the active-agent identity used for scoping. Preserve the host-specific tool or sandbox
+controls instead. Keep a non-Claude host away from the hooks **structurally** — no file at that
+host's own hook-config path, which is why `plugins/sde-agents/` has no `hooks/`. A manifest field
+naming an empty override does not do it
+(`docs/archive/2026-08/vscode-discovery-investigation-2026-08-18.md`).
 
 **Changing validator behavior** — add a fixture under `tests/fixtures/` that violates exactly the
 rule you are adding — or, for an invariant about this repo's real wiring, a mutation test in
@@ -307,8 +313,8 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   arbitrate them.
 - **Authority is the host's own control, never prose.** Claude's guard, VS Code's
   omission of `execute`, and Codex's `sandbox_mode` are distinct controls — express an agent's
-  authority with the target host's control. Never port the Claude hook (its payload cannot be
-  scoped elsewhere; see the guard playbook) and never reference `workflows/` from another host
+  authority with the target host's control. Never port a Claude hook (the payload cannot be
+  scoped elsewhere; see the hook playbook) and never reference `workflows/` from another host
   (no runtime exists there, so the reference reads as available and fails silently).
 - **Never add `hooks:`, `mcpServers:`, or `permissionMode:` to a plugin agent.** Claude Code
   silently ignores them there — a guard declared in frontmatter looks like armor and is

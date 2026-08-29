@@ -293,6 +293,17 @@ Two properties fall out of that, both load-bearing and both tested:
   leaving every other caller untouched. A broken install degrades the reviewer; it cannot brick your
   session.
 
+The same file registers a second hook with the opposite job. `homelab-platform` holds `Bash` and
+`Write` and applies live changes, so its control is not "deny writers" but "make a human decide":
+`scripts/live-effect-gate.py` answers `ask` for every live-effect command that agent runs —
+`docker compose up`, `systemctl restart`, `zfs destroy`, a `reboot` — and `deny` when the session's
+permission mode suppresses prompts, because a hook `deny` wins even under bypass and a bypassed
+prompt is not a decision. It no-ops for every other caller, resolves through
+`${CLAUDE_PLUGIN_ROOT}`, and when its interpreter is missing it asks for everything from that agent
+rather than allowing anything. Its roster is deliberately denylist-shaped — the host's own prompt
+stays the floor for unlisted commands — and grows by recurrence, one entry per incident that shows
+an unlisted live effect.
+
 `agent_type` and its plugin-namespaced values are documented in the upstream hooks reference; the
 scoping contract's owner is the `scripts/readonly-guard.py` docstring, and this section follows
 it. If it is ever renamed upstream to another agent-named key
