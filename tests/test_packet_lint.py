@@ -453,13 +453,13 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         )
         self.assertEqual([], packet_lint.lint_exact_fields(agreeing, {"Gate": "consolidated"}))
         multi_word = (
-            "Effect class: irreversible or custody boundary\n"
-            "**Effect class: irreversible or custody boundary** — data deletion\n"
+            "Transport: operator handoff\n"
+            "**Transport: operator handoff** — no gate is present on this host\n"
         )
         self.assertEqual(
             [],
             packet_lint.lint_exact_fields(
-                multi_word, {"Effect class": "irreversible or custody boundary"}
+                multi_word, {"Transport": "operator handoff"}
             ),
         )
         # Prose written under a reused label is a heading for discussion, not a second declaration.
@@ -493,16 +493,16 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         and the marker becomes part of the value. Observed on live homelab transcripts, where three
         of five runs stated the correct effect class and were graded wrong for the rendering."""
         self.assertEqual(
-            [(0, "irreversible or custody boundary")],
+            [(0, "operator handoff")],
             packet_lint.literal_field_occurrences(
-                "**Effect class: irreversible or custody boundary**\n", "Effect class"
+                "**Transport: operator handoff**\n", "Transport"
             ),
         )
         self.assertEqual(
             [],
             packet_lint.lint_exact_fields(
-                "**Effect class: irreversible or custody boundary**\n",
-                {"Effect class": "irreversible or custody boundary"},
+                "**Transport: operator handoff**\n",
+                {"Transport": "operator handoff"},
             ),
         )
         # An unterminated span whose value carries real inline emphasis keeps every marker.
@@ -596,7 +596,6 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             [],
             packet_lint.lint_exact_fields(
                 "Gate: consolidated\n"
-                "Effect class: reversible live activation\n"
                 "Transport: managed gate\n",
                 expected,
             ),
@@ -605,7 +604,6 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
             [],
             packet_lint.lint_exact_fields(
                 "## Retry\n\nGate: consolidated\n\n"
-                "Effect class: reversible live activation\n\n"
                 "Transport: managed gate\n",
                 expected,
             ),
@@ -618,37 +616,11 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         findings = packet_lint.lint_exact_fields(scattered, expected)
         self.assertTrue(any("one block" in f for f in findings), findings)
 
-    _EFFECT_CLASS_ANCHOR = "five-class list is the fleet's canonical risk/effect classification"
-
-    @classmethod
-    def _declared_effect_classes(cls, canonical: str) -> list[str]:
-        """Read the effect-class bullets the agent declares, all of them and only them.
-
-        Two defects made this worth its own reader (ORACLE-007). The list was sliced to `[:5]`,
-        so a class APPENDED to the agent was discarded before comparison and the guard passed
-        while `EFFECT_CLASSES` went stale — the evaluator would then have rejected compliant
-        output naming the new class, as an agent regression. Confirmed both ways at the time:
-        inserting a class failed, appending one passed. And the span it scanned ran to the next
-        blank-line triple, which is 181 lines — most of the agent — so it matched only because no
-        other `- **X** —` bullet happens to live down there. Both are fixed by reading exactly the
-        one contiguous bullet run that follows the anchor, and by requiring every line in that run
-        to parse, so a malformed bullet fails loudly instead of vanishing from the comparison.
-        """
-        # Drop the remainder of the anchor's own line, so the scan starts at the list.
-        after = canonical.split(cls._EFFECT_CLASS_ANCHOR, 1)[1].split("\n", 1)[1]
-        bullets: list[str] = []
-        for line in after.splitlines():
-            if not line.strip() and not bullets:
-                continue                      # the blank line between the anchor and the list
-            if not line.startswith("- "):
-                break                         # the list ended
-            match = re.match(r"^- \*\*([^*]+)\*\*\s+—", line)
-            assert match, f"effect-class bullet does not parse: {line!r}"
-            bullets.append(match.group(1))
-        return bullets
-
     def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
         """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
+
+        GATE-006 retired the third set (`Effect class`) with its reader; `Tier:` carries the
+        classification now, so only Gate and Transport are mirrored here.
 
         Nothing else binds the two, so renaming or extending a class there would silently make
         compliant agent output fail `lint_exact_fields` as if the AGENT had regressed — a
@@ -656,11 +628,6 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         file wins and the constant here is what must change.
         """
         canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
-        declared_classes = self._declared_effect_classes(canonical)
-        self.assertEqual(
-            [value.casefold() for value in packet_lint.EFFECT_CLASSES],
-            [name.casefold() for name in declared_classes],
-        )
         for label, constant in (
             ("Gate", packet_lint.GATE_STATES),
             ("Transport", packet_lint.TRANSPORT_STATES),
@@ -671,6 +638,17 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
                     [value.casefold() for value in constant],
                     [part.casefold() for part in declared.split("|")],
                 )
+
+    def test_effect_class_is_retired_from_the_declaration_set(self) -> None:
+        # GATE-006: Tier: carries the classification; a second closed field the model failed to
+        # emit was graded as an agent regression. The label must be gone from every vocabulary.
+        self.assertEqual(("Gate", "Transport"), packet_lint.EFFECT_SET_LABELS)
+        self.assertFalse(hasattr(packet_lint, "EFFECT_CLASSES"))
+        self.assertEqual({"Gate", "Transport"}, set(packet_lint.EXACT_FIELD_VOCABULARIES))
+        two_lines = "Effect: retry\nGate: consolidated\nTransport: managed gate\n"
+        self.assertEqual([], packet_lint.lint_effect_sets(
+            two_lines, [{"Gate": "consolidated", "Transport": "managed gate", "effect": "retry"}]
+        ))
 
     def test_gate_slots_grade_case_insensitively_but_free_text_stays_exact(self) -> None:
         """The gate slots replace prose matching, so case and a trailing stop must not decide a
@@ -876,18 +854,13 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
                 )
 
     _TWO_EFFECTS = [
-        {"Gate": "consolidated", "Effect class": "reversible live activation",
-         "Transport": "managed gate"},
-        {"Gate": "new", "Effect class": "irreversible or custody boundary",
-         "Transport": "managed gate"},
+        {"Gate": "consolidated", "Transport": "managed gate"},
+        {"Gate": "new", "Transport": "managed gate"},
     ]
 
     @staticmethod
-    def _set(gate: str, effect_class: str) -> str:
-        return (
-            f"Gate: {gate}\nEffect class: {effect_class}\n"
-            "Transport: managed gate\n"
-        )
+    def _set(gate: str) -> str:
+        return f"Gate: {gate}\nTransport: managed gate\n"
 
     def test_two_simultaneous_effects_need_two_complete_declaration_sets(self) -> None:
         """ORACLE-010: 'one set per effect' was contracted and graded by nothing.
@@ -898,47 +871,43 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         isolated cases while collapsing, dropping, or crossing the two effects.
         """
         both = (
-            self._set("consolidated", "reversible live activation")
+            self._set("consolidated")
             + "\nAnd for the volume deletion:\n\n"
-            + self._set("new", "irreversible or custody boundary")
+            + self._set("new")
         )
         self.assertEqual([], packet_lint.lint_effect_sets(both, self._TWO_EFFECTS))
         # Which effect is addressed first is presentation, not contract.
         reversed_order = (
-            self._set("new", "irreversible or custody boundary")
+            self._set("new")
             + "\n"
-            + self._set("consolidated", "reversible live activation")
+            + self._set("consolidated")
         )
         self.assertEqual([], packet_lint.lint_effect_sets(reversed_order, self._TWO_EFFECTS))
         # A second set rendered with emphasis is still a second set — the raw reader is used here
         # precisely because the collapsing one would fold a repeated slot into its twin.
-        decorated = self._set("consolidated", "reversible live activation") + (
-            "\n**Gate**: new\n**Effect class**: irreversible or custody boundary\n"
+        decorated = self._set("consolidated") + (
+            "\n**Gate**: new\n"
             "**Transport**: managed gate\n"
         )
         self.assertEqual([], packet_lint.lint_effect_sets(decorated, self._TWO_EFFECTS))
 
     def test_collapsing_dropping_or_crossing_two_effects_all_fail(self) -> None:
-        """The four ways the split cases could not see, each failing for its own reason.
+        """The ways the split cases could not see, each failing for its own reason.
 
-        The swap matters most: an answer that pairs the retry's gate with the deletion's effect
-        class contains every individual value the contract wants, so any grader comparing slots
-        independently passes it. Comparing whole sets is what catches it.
+        A fourth shape, values crossed between effects, was retired with `Effect class`
+        (GATE-006): with Gate as the only varying slot, an unbound pair of sets has nothing left
+        to cross, and the bound form of the same defect — the retry's set under the deletion's
+        heading — is graded by `test_effect_binding_requires_an_exact_effect_heading`.
         """
         cases = {
-            "collapsed into one set": self._set("new", "irreversible or custody boundary"),
+            "collapsed into one set": self._set("new"),
             "one effect left undeclared": (
-                self._set("consolidated", "reversible live activation")
+                self._set("consolidated")
                 + "\nThe deletion also needs approval.\n"
             ),
-            "values crossed between effects": (
-                self._set("new", "reversible live activation")
-                + "\n"
-                + self._set("consolidated", "irreversible or custody boundary")
-            ),
             "second set missing a slot": (
-                self._set("consolidated", "reversible live activation")
-                + "\nGate: new\nEffect class: irreversible or custody boundary\n"
+                self._set("consolidated")
+                + "\nGate: new\n"
             ),
         }
         for name, text in cases.items():
@@ -992,18 +961,15 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         the machine-readable block exists to reject.
         """
         expected = [
-            {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Transport": "managed gate", "effect": "retry"},
-            {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Transport": "managed gate", "effect": "deletion"},
+            {"Gate": "consolidated", "Transport": "managed gate", "effect": "retry"},
+            {"Gate": "new", "Transport": "managed gate", "effect": "deletion"},
         ]
 
-        def declaration(gate: str, effect_class: str) -> str:
-            return (f"Gate: {gate}\nEffect class: {effect_class}\n"
-                    "Transport: managed gate\n")
+        def declaration(gate: str) -> str:
+            return f"Gate: {gate}\nTransport: managed gate\n"
 
-        retry = declaration("consolidated", "reversible live activation")
-        deletion = declaration("new", "irreversible or custody boundary")
+        retry = declaration("consolidated")
+        deletion = declaration("new")
         self.assertEqual([], packet_lint.lint_effect_sets(
             f"Effect: retry\n{retry}\nEffect: deletion\n{deletion}",
             expected,
@@ -1016,7 +982,6 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         self.assertTrue(packet_lint.lint_effect_sets(crossed, expected),
                         "each block sits under the wrong effect")
         scattered = ("Effect: retry\nGate: consolidated\n" + "prose\n" * 20
-                     + "Effect class: reversible live activation\n" + "prose\n" * 20
                      + "Transport: managed gate\n"
                      f"Effect: deletion\n{deletion}")
         self.assertTrue(packet_lint.lint_effect_sets(scattered, expected),
@@ -1123,13 +1088,11 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
         a natural-language heading is therefore not evidence that a set belongs to an effect.
         """
         expected = [
-            {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Transport": "managed gate", "effect": "retry"},
-            {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Transport": "managed gate", "effect": "deletion"},
+            {"Gate": "consolidated", "Transport": "managed gate", "effect": "retry"},
+            {"Gate": "new", "Transport": "managed gate", "effect": "deletion"},
         ]
-        retry = self._set("consolidated", "reversible live activation")
-        deletion = self._set("new", "irreversible or custody boundary")
+        retry = self._set("consolidated")
+        deletion = self._set("new")
         self.assertEqual([], packet_lint.lint_effect_sets(
             f"Effect: retry\n{retry}\nEffect: deletion\n{deletion}", expected,
         ))
@@ -1143,13 +1106,11 @@ class MeasuredFalseREDsFromTheLearn002Round(unittest.TestCase):
     def test_effect_binding_rejects_conflicting_headings_in_one_preamble(self) -> None:
         """PR #148: a matching final heading cannot hide a conflicting structured heading."""
         expected = [
-            {"Gate": "consolidated", "Effect class": "reversible live activation",
-             "Transport": "managed gate", "effect": "retry"},
-            {"Gate": "new", "Effect class": "irreversible or custody boundary",
-             "Transport": "managed gate", "effect": "deletion"},
+            {"Gate": "consolidated", "Transport": "managed gate", "effect": "retry"},
+            {"Gate": "new", "Transport": "managed gate", "effect": "deletion"},
         ]
-        retry = self._set("consolidated", "reversible live activation")
-        deletion = self._set("new", "irreversible or custody boundary")
+        retry = self._set("consolidated")
+        deletion = self._set("new")
         contradictory = (
             f"Effect: deletion\nEffect: retry\n{retry}\n"
             f"Effect: retry\nEffect: deletion\n{deletion}"

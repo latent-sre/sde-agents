@@ -285,9 +285,8 @@ EXACT_FIELD_LABELS = (
     "Runbook disposition",
     "Gate",
     "Transport",
-    "Effect class",
 )
-# Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These three
+# Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These two
 # labels exist because the gate decision used to be graded by matching prose paraphrases, and an
 # open-ended pattern set goes stale the way lint_runbook_proposal's docstring describes: every
 # honest rewording needs another branch, and the branch admitting it becomes the next round's false
@@ -296,23 +295,15 @@ EXACT_FIELD_LABELS = (
 # has no paraphrase surface to chase.
 GATE_STATES = ("consolidated", "new", "standing")
 TRANSPORT_STATES = ("managed gate", "operator handoff", "standing policy")
-EFFECT_CLASSES = (
-    "artifact preparation",
-    "repository publication",
-    "reversible live activation",
-    "irreversible or custody boundary",
-    "optional hardening",
-)
-# agents/homelab-platform.md owns these three vocabularies; this is a deliberate mirror, kept
+# agents/homelab-platform.md owns these two vocabularies; this is a deliberate mirror, kept
 # standalone so an eval-time linter does not import an agent parser. tests/test_packet_lint.py
 # reads the canonical declaration and fails on drift: on disagreement the agent file wins and
-# this copy is the defect. Renaming a class there without updating here would reject compliant
+# this copy is the defect. Renaming a value there without updating here would reject compliant
 # output as a behavioral failure.
 # Only labels listed here are graded against a closed set; everything else keeps exact comparison.
 EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
     "Gate": GATE_STATES,
     "Transport": TRANSPORT_STATES,
-    "Effect class": EFFECT_CLASSES,
 }
 LEARNING_NONE_VALUE = "none — no reusable signal"
 LEARNING_DISPOSITIONS = ("skip", "add", "merge", "supersede", "drop")
@@ -496,7 +487,7 @@ def _raw_field_occurrences(label: str, lines: list[str]) -> list[tuple[int, str,
                 value = " ".join((first, split[1])) if len(split) == 2 else first
                 value = value.strip()
             elif value.endswith(opener) and value.count(opener) == 1:
-                # Whole-line emphasis, ``**Effect class: irreversible or custody boundary**``:
+                # Whole-line emphasis, ``**Transport: operator handoff**``:
                 # the partner closer sits after the LAST token, not the first, so the branch above
                 # never sees it and the marker rides into the value. Requiring the marker to be
                 # unpaired keeps an unterminated span with genuine inline emphasis
@@ -784,7 +775,7 @@ def _vocabulary_head(value: str, vocabulary: tuple[str, ...]) -> tuple[str | Non
     no term at all is prose written under the label as a heading, not a competing declaration.
     """
     # Emphasis is display only and can sit between the term and its separator
-    # (``**Effect class: irreversible or custody boundary** — data deletion``), so it is removed
+    # (``**Transport: operator handoff** — no gate is present``), so it is removed
     # for term detection. The value itself is compared elsewhere and keeps its own rendering.
     undecorated = _DECORATION_RE.sub("", value)
     normalized = _strip_sentence_punctuation(undecorated).casefold().strip()
@@ -858,7 +849,7 @@ def _collapse_agreeing_vocabulary_restatements(
     return [min(naming, key=lambda item: len(_strip_sentence_punctuation(item[1])))]
 
 
-EFFECT_SET_LABELS = ("Gate", "Effect class", "Transport")
+EFFECT_SET_LABELS = ("Gate", "Transport")
 
 
 def effect_identity_key(value: str) -> str:
@@ -944,7 +935,7 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
     could not express the very shape the new clause described.
 
     Three things are checked, and the first version of this oracle only did the weakest of them
-    (PR #147 review). **Completeness**: every set states all three slots. **Contiguity**: each
+    (PR #147 review). **Completeness**: every set states both slots. **Contiguity**: each
     set's own lines sit together, or the machine-readable block is just three sentences scattered
     through prose. **Binding**: an expected set carrying an `effect` identity must immediately
     follow the exact ``Effect: <identity>`` heading required by the case prompt. Comparing sets as
@@ -963,7 +954,7 @@ def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
             )
         elif span > _DECLARATION_BLOCK_MAX_SPAN:
             findings.append(
-                f"effect set spans {span} lines (limit {_DECLARATION_BLOCK_MAX_SPAN}); the three "
+                f"effect set spans {span} lines (limit {_DECLARATION_BLOCK_MAX_SPAN}); the two "
                 "declarations must sit together as one block, not scattered through the prose"
             )
         else:
