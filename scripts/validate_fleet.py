@@ -1285,6 +1285,38 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
                 f"from ${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy — never a "
                 f"relative path a repository under operation could supply."
             )
+        if gate_command is not None:
+            # The gate hook carries the same two rosters the guard's does, and each disarms it
+            # alone: the `case` fast-path decides whether the gate runs at all, and the
+            # no-interpreter fallback is what decides when no Python answers. The gate's own
+            # documented growth path is "the roster grows by recurrence" — someone adds a name to
+            # GATED_AGENT_NAMES after an incident — and without this check that addition gates
+            # NOTHING while every check stays green, because the fast-path still exits for the
+            # unlisted name (review-reported, reproduced).
+            gate_blocks = [segment.split("esac", 1)[0]
+                           for segment in gate_command.split('case "$IN" in')[1:]]
+            if len(gate_blocks) < 2:
+                issues.append(
+                    f"{root / 'hooks' / 'hooks.json'}: expected the live-effect-gate hook to "
+                    f"contain two `case \"$IN\" in` blocks (the fast-path filter and the "
+                    f"no-interpreter fallback), found {len(gate_blocks)}. The roster cross-check "
+                    f"cannot verify a hook it does not recognize, so this fails rather than "
+                    f"passing a hook it did not actually check."
+                )
+            else:
+                for label, block in (("fast-path filter", gate_blocks[0]),
+                                     ("no-interpreter fallback", gate_blocks[-1])):
+                    for name in sorted(gate.GATED_AGENT_NAMES):
+                        if name not in block:
+                            issues.append(
+                                f"{root / 'hooks' / 'hooks.json'}: the live-effect-gate hook's "
+                                f"{label} never names {name!r}, but scripts/live-effect-gate.py "
+                                f"lists it in GATED_AGENT_NAMES. The fast-path decides whether the "
+                                f"gate runs at all and the fallback is what decides when no "
+                                f"interpreter answers, so a name missing from EITHER leaves that "
+                                f"agent's live effects ungated — silently, because the hook still "
+                                f"exits 0."
+                            )
 
     command = hook_command(root)
     if command is None:

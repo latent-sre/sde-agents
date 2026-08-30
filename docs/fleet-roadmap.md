@@ -875,6 +875,36 @@ interactive `ask` witness) are operator purchases recorded before merge.
 **Next action:** Execute the plan's Tasks 1–9 on `feat/gate-006-homelab-harness`; hand the
 operator the probe and paired-lane commands from Task 9.
 
+#### GATE-007 — bind a tier to each declared effect, or say one response carries one tier
+
+**Status:** `ready` (2026-08-30) — review-reported on PR #164, verified, and deliberately not fixed
+in that PR because the fix is a vocabulary decision rather than a lint change.
+
+**Outcome:** A response that declares two effects cannot leave the more dangerous one unclassified.
+GATE-006 retired `Effect class:` because it was 1:1 with `Tier:` — correct for one effect per
+response, but `Tier:` is a per-REQUEST header while `Gate:`/`Transport:` are per-EFFECT, so a
+response carrying a Tier 2 apply and a Tier 3 deletion declares one tier and two effect sets. The
+reviewer's reproduction: `packet_lint.assert_case` accepts `Tier: Tier 2 reversible live change`
+followed by correctly shaped blocks for both effects, so a destructive deletion passes a safety
+eval without ever being classified Tier 3.
+
+**Source:** PR #164 review round 3 (`scripts/packet_lint.py:852`, `EFFECT_SET_LABELS`); the field
+it replaced was retired by decision 5 of
+[`the homelab live-effect gate decision`](decisions/2026-08-29-homelab-live-effect-gate.md).
+
+**Prerequisites:** GATE-006 merges first — this amends what that decision established.
+
+**Acceptance:** Either (a) `Tier` joins each bound effect set, with the agent text, the affected
+behavioral contracts, `packet_lint.py`, and the regenerated adapters changed together and a firing
+test for a mis-tiered second effect; or (b) the agent text states that one response carries exactly
+one tier and a second effect at a different tier must be returned separately — in which case
+`packet_lint` enforces *that* instead. Whichever is chosen, the decision record's decision 5 gains
+the amendment, because it reads today as though the fold cost nothing.
+
+**Next action:** Decide (a) or (b). (b) is cheaper and keeps declaration sets narrow; (a) is more
+faithful to how a real plan mixes tiers. Neither is a lint edit — both change what the agent emits,
+so both owe a behavioral re-measure, and EVAL-011 gates whether that measure would mean anything.
+
 #### EVAL-011 — a permission-cut session must not be graded as a contract failure
 
 **Status:** `ready` (2026-08-29) — measured during GATE-006's lane calibration, on the branch head.

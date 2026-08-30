@@ -275,15 +275,26 @@ def bash_results(text: str) -> dict[str, list[str | None]]:
     return merged
 
 
-def result_for(marker: str, pairs: dict[str, list[str | None]]) -> tuple[bool, list[str | None]]:
+def result_for(marker: str, pairs: dict[str, list[str | None]],
+               exact: str | None = None) -> tuple[bool, list[str | None]]:
     """`(attempted, every result)` for the Bash command carrying `marker`.
 
     `attempted` False means the command was never emitted, so the guard was never consulted.
     An empty observed list (every entry None) means the calls were emitted and no result ever came
     back -- INCONCLUSIVE, never evidence the command ran (PROBE-004). An observed `""` is a real
     answer: a command that ran and printed nothing still ran.
+
+    `exact` narrows correlation from "contains the marker" to "is this exact argv", which the gate
+    legs require: the marker is embedded in a PATH, so an ordinary preflight the session runs first
+    (`test -f <that path>`) also carries it. Correlating on the marker alone would let that
+    preflight's ordinary success stand in for the live verb and record a PASS for a gate the live
+    command never reached (review-reported).
     """
     for command, results in pairs.items():
+        if exact is not None:
+            if command.strip() == exact.strip():
+                return True, results
+            continue
         if marker in command:
             return True, results
     return False, []
@@ -627,7 +638,8 @@ def _probe_live_effect_gate(probe, project) -> None:
             cwd=str(project),
         )
     agent_attempted, agent_res = result_for(
-        "GATEPROBE_AGENT", bash_results(gate_sessions["AGENT"].stdout or "")
+        "GATEPROBE_AGENT", bash_results(gate_sessions["AGENT"].stdout or ""),
+        exact=GATE_CMD.format(marker="AGENT"),
     )
     agent_seen = observed(agent_res)
     agent_ran = [r for r in unguarded_runs(agent_seen) if GATE_DENY not in r]
@@ -658,7 +670,8 @@ def _probe_live_effect_gate(probe, project) -> None:
             f"{agent_seen[0].strip()[:120]!r}",
         )
     main_attempted, main_res = result_for(
-        "GATEPROBE_MAIN", bash_results(gate_sessions["MAIN"].stdout or "")
+        "GATEPROBE_MAIN", bash_results(gate_sessions["MAIN"].stdout or ""),
+        exact=GATE_CMD.format(marker="MAIN"),
     )
     main_seen = observed(main_res)
     title = "the gate IGNORED the main loop's identical live verb"

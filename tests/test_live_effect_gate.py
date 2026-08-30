@@ -381,5 +381,82 @@ class GateBypassShapesFromReview(unittest.TestCase):
                 self.assertEqual("deny", decision(run_gate(bash_call(command, mode="dontAsk"))))
 
 
+class GateShapesFromReviewRoundsTwoAndThree(unittest.TestCase):
+    """The second and third review rounds, including two regressions round one introduced.
+
+    Risk hypothesis is unchanged from `GateBypassShapesFromReview`: an under-matching parser is
+    indistinguishable from a reader at the hook boundary. What is new here is the OTHER direction —
+    round one's newline split turned heredoc BODIES into commands, so a Tier 1 runbook write
+    acquired a live-effect decision. Both directions are held below, because a gate that cries wolf
+    on ordinary writes teaches the operator to click through the prompts that matter.
+    """
+
+    def test_parameter_expansion_in_executable_position_is_unbound(self) -> None:
+        # `cmd=systemctl` then `$cmd restart jellyfin`: bash expands and restarts, the gate saw a
+        # word it could not resolve to an executable and said nothing.
+        for command in ("cmd=systemctl\n$cmd restart jellyfin",
+                        "$CMD restart jellyfin",
+                        "${CMD} restart jellyfin"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_execution_prefixes_are_looked_through(self) -> None:
+        # `command` and `exec` are bash builtins that execute their argument; treating either as
+        # the executable hid the real verb behind it.
+        for command in ("command systemctl restart jellyfin",
+                        "exec systemctl restart jellyfin",
+                        "builtin command docker compose up -d"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_long_wrapper_options_consume_their_value(self) -> None:
+        # `ionice --class 2 systemctl restart` — the long alias was missing, so `2` was read as
+        # the wrapped executable.
+        for command in ("ionice --class 2 systemctl restart jellyfin",
+                        "ionice --classdata 4 systemctl restart jellyfin",
+                        "nice --adjustment 5 systemctl restart jellyfin"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_shell_grouping_is_unbound(self) -> None:
+        # A subshell or brace group runs the command while presenting the grouping token as the
+        # executable.
+        for command in ("(systemctl restart jellyfin)",
+                        "{ systemctl restart jellyfin ; }",
+                        "! systemctl restart jellyfin"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_heredoc_body_is_data_not_commands(self) -> None:
+        # REGRESSION from round one: the newline split turned every body line into a command, so
+        # writing a runbook that MENTIONS a live verb was gated as if it ran one.
+        for command in ("cat > /tmp/runbook <<'EOF'\nsystemctl restart jellyfin\nEOF",
+                        "cat > /tmp/r <<EOF\ndocker compose up -d\nEOF",
+                        "cat > /tmp/r <<-'EOF'\n\tzfs destroy tank/x\n\tEOF"):
+            with self.subTest(command=command):
+                self.assertEqual("none", decision(run_gate(bash_call(command))))
+
+    def test_a_real_command_after_a_heredoc_still_matches(self) -> None:
+        # The heredoc skip must not become a hiding place: what follows the terminator is code.
+        out = run_gate(bash_call("cat > /tmp/r <<'EOF'\nnotes\nEOF\nsystemctl restart jellyfin"))
+        self.assertEqual("ask", decision(out))
+        self.assertIn("matched rule `systemctl restart`", reason(out))
+
+    def test_renamed_identity_key_fails_closed(self) -> None:
+        # The guard already carries this canary: if the payload names a gated agent under some
+        # OTHER agent-ish key while `agent_type` is absent, the identity contract changed and the
+        # gate must not read it as an unrelated caller and step aside.
+        payload = json.loads(bash_call("systemctl restart jellyfin", agent_type=None))
+        payload["subagent_type"] = HOMELAB
+        self.assertEqual("deny", decision(run_gate(json.dumps(payload))))
+
+    def test_the_canary_ignores_agent_names_in_the_command_itself(self) -> None:
+        # The command is user-controlled text; a main-session command that merely mentions the
+        # agent must not be denied.
+        payload = json.loads(bash_call("git commit -m 'fix sde-agents:homelab-platform'",
+                                       agent_type=None))
+        self.assertEqual("none", decision(run_gate(json.dumps(payload))))
+
+
 if __name__ == "__main__":
     unittest.main()

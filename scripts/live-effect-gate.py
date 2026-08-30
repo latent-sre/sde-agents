@@ -209,16 +209,26 @@ _OPTION_VALUE_WINDOW = 3
 
 # Wrappers the gate looks through. Value: options that consume the next token.
 WRAPPERS: dict[str, frozenset[str]] = {
-    "sudo": frozenset({"-u", "-g", "-C", "-D", "-h", "-p", "-r", "-t", "-T", "-U"}),
+    # Long aliases matter as much as the short forms: `ionice --class 2 systemctl restart` read
+    # `2` as the wrapped executable and gated nothing, exactly as `-c 2` would have without `-c`
+    # listed. Where a tool documents a long option that takes a value, it belongs here.
+    "sudo": frozenset({"-u", "--user", "-g", "--group", "-C", "--close-from", "-D", "--chdir",
+                       "-h", "--host", "-p", "--prompt", "-r", "--role", "-t", "--type",
+                       "-T", "--command-timeout", "-U", "--other-user"}),
     "doas": frozenset({"-u", "-C"}),
     "env": frozenset({"-u", "--unset", "-C", "--chdir", "-S", "--split-string"}),
     "nohup": frozenset(),
     "nice": frozenset({"-n", "--adjustment"}),
-    "ionice": frozenset({"-c", "-n", "-p"}),
+    "ionice": frozenset({"-c", "--class", "-n", "--classdata", "-p", "--pid"}),
     "timeout": frozenset({"-k", "--kill-after", "-s", "--signal"}),
-    "time": frozenset({"-f", "-o"}),
-    "stdbuf": frozenset({"-i", "-o", "-e"}),
+    "time": frozenset({"-f", "--format", "-o", "--output"}),
+    "stdbuf": frozenset({"-i", "--input", "-o", "--output", "-e", "--error"}),
     "chroot": frozenset({"--userspec", "--groups"}),
+    # Bash execution prefixes: each runs the command that follows it, so looking through them is
+    # the only way the real verb reaches classification (`command systemctl restart jellyfin`).
+    "command": frozenset({"-p"}),
+    "exec": frozenset({"-a"}),
+    "builtin": frozenset(),
 }
 # Wrappers whose documented syntax puts MANDATORY positional operands before the wrapped command:
 # `timeout [OPTION] DURATION COMMAND`, `chroot [OPTION] NEWROOT [COMMAND]`. Without this the
@@ -247,6 +257,13 @@ DENY_SUPPRESSED = (
     "prompts, so no human can decide this invocation. Hand the exact command to the operator "
     "(Transport: operator handoff); bypass is not a decision."
 )
+DENY_IDENTITY = (
+    "sde-agents live-effect gate: the payload names a gated agent under a key other than "
+    "`agent_type`, which carried nothing. The hook payload contract has changed, so the gate "
+    "cannot tell a gated caller from the main loop and fails closed rather than silently stop "
+    "gating. Hand the exact command to the operator (Transport: operator handoff), re-run "
+    "scripts/probe_plugin.py, and update scripts/live-effect-gate.py."
+)
 DENY_NO_MODE = (
     "sde-agents live-effect gate: matched rule `{rule}` but the hook payload carries no "
     "permission_mode, so the gate cannot tell whether a human can be asked. Hand the exact "
@@ -257,6 +274,38 @@ DENY_NO_MODE = (
 
 def _base(token: str) -> str:
     return token.rsplit("/", 1)[-1]
+
+
+_HEREDOC_RE = re.compile(r"<<-?\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))")
+
+
+def _strip_heredoc_bodies(command: str) -> str:
+    """Drop heredoc BODIES before the newline split; they are data, never commands.
+
+    Regression this repairs: once unquoted newlines became command separators, every line of a
+    heredoc body became a command, so `cat > runbook <<'EOF' / systemctl restart jellyfin / EOF`
+    — an ordinary Tier 1 write that merely MENTIONS a live verb — was gated as if it ran one. A
+    gate that prompts on routine writes teaches the operator to click through the prompts that
+    matter, so this direction is as load-bearing as the under-match it came from. What follows the
+    terminator is code again and is kept.
+    """
+    if "<<" not in command:
+        return command
+    lines = command.splitlines()
+    out: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        out.append(line)
+        index += 1
+        # Only the delimiters introduced on THIS line open bodies, and bash consumes them in order.
+        delimiters = [quoted or double or bare
+                      for quoted, double, bare in _HEREDOC_RE.findall(line)]
+        for delimiter in delimiters:
+            while index < len(lines) and lines[index].strip() != delimiter:
+                index += 1
+            index += 1  # the terminator line itself is not a command either
+    return "\n".join(out)
 
 
 def _normalize_newlines(command: str) -> str:
@@ -303,7 +352,7 @@ def _segments(command: str) -> list[list[str]] | None:
     """Split a shell command into simple-command token lists; None when it cannot be bound."""
     if "$(" in command or "`" in command or "<(" in command or ">(" in command:
         return None
-    command = _normalize_newlines(command)
+    command = _normalize_newlines(_strip_heredoc_bodies(command))
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError:
@@ -343,7 +392,17 @@ def _unwrap(tokens: list[str]) -> tuple[list[str] | None, str | None]:
         tokens = [token for token in tokens if not _ASSIGN_RE.match(token)]
         if not tokens:
             return [], None
-        exe = _base(tokens[0])
+        head = tokens[0]
+        # Shell grouping puts a reserved token where the executable should be, so the real verb is
+        # never classified: `(systemctl restart jellyfin)` and `{ systemctl restart jellyfin ; }`
+        # both run the restart. The parser does not model group boundaries, so it says so.
+        if head[:1] in ("(", "{", "!") or head in (")", "}"):
+            return None, "shell grouping or reserved syntax hides the command boundary"
+        # The executable itself comes from an expansion, so its identity is not in this argv:
+        # `cmd=systemctl; $cmd restart jellyfin` restarts the service either way.
+        if "$" in head:
+            return None, "the executable comes from a parameter expansion"
+        exe = _base(head)
         if exe in _SHELLS:
             if "-c" in tokens[1:]:
                 return None, f"wrapper shell `{exe} -c`"
@@ -459,6 +518,20 @@ def _decision(kind: str, why: str) -> dict:
 
 def decide(payload: dict) -> tuple[int, dict | None]:
     if payload.get("tool_name") != "Bash" or payload.get("agent_type") not in _GATED:
+        # Contract canary, the guard's (readonly-guard.py, `main`) applied to this roster. If
+        # `agent_type` is renamed upstream while the payload still names a gated agent under some
+        # other agent-ish key, every call would look like an unrelated caller and the gate would
+        # quietly stop gating — the silent-disarm class this fleet hardens against. Keyed, not a
+        # substring search: `tool_input` is excluded because the command is user-controlled text
+        # (`git commit -m "fix sde-agents:homelab-platform"` must not be denied), and only keys
+        # whose NAME contains "agent" are consulted, so `cwd` and `transcript_path` cannot trip it.
+        # Residual: a rename to a key without "agent" in it is the probe's to catch.
+        if payload.get("tool_name") == "Bash" and payload.get("agent_type") is None and any(
+            "agent" in key.lower() and isinstance(value, str) and value in _GATED
+            for key, value in payload.items()
+            if key != "tool_input"
+        ):
+            return EXIT_DENY, _decision("deny", DENY_IDENTITY)
         return EXIT_ALLOW, None
     tool_input = payload.get("tool_input")
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
