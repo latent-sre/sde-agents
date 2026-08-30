@@ -26,11 +26,20 @@ satisfied — the roadmap owns its current status.
 
 2026-07-29, fresh-look session, operator answered directly: **accept both** decidable roles as
 proposed — ROLE-001 (visible rebrand to Home-Lab SRE / Platform Engineer with the
-`homelab-engineer` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
+`homelab-platform` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
 and ROLE-002 (`application-security-auditor`, static-first tools, no Bash, non-PR remit).
 ROLE-003 was deliberately not decided: it parks trigger-bound and reopens on the first real
 independent-verification task, which also keeps ROLE-004 blocked. LABSEC-001 remains sequenced
 behind ROUND1-001's lab-audit split, unchanged.
+
+> **Superseded in part, 2026-08-30.** ROLE-001 kept the `homelab-platform` key while rebranding
+> the visible role to "Home-Lab SRE / Platform Engineer", and this record's rejected
+> alternatives argued for keeping that key. The key was renamed to **`homelab-engineer`** on
+> 2026-08-30 (PR #165), on the ground that the body had carried the "SRE / Platform Engineer"
+> heading and the engineering remit all along while the key advertised only the medium. The
+> 2026-07-29 ruling above is preserved verbatim: it says what was decided then, and this note
+> is what changed it. Live files use the new key; this record and the other frozen artefacts
+> keep the old one.
 
 **ROLE-003 accepted, 2026-07-29 (later the same session).** The operator reopened the question
 directly rather than waiting for a trigger task and chose the **test-authoring verifier** model
@@ -59,7 +68,7 @@ ROLE-004; the roadmap and the 2026-07-29 verification-round documents own implem
 ## Decision question
 
 Does the fleet need dedicated QA, Linux, SRE, and security agents, and should
-`homelab-engineer` be renamed or rebranded as an SRE role?
+`homelab-platform` be renamed or rebranded as an SRE role?
 
 ## Proposed decision
 
@@ -70,7 +79,7 @@ Does the fleet need dedicated QA, Linux, SRE, and security agents, and should
 | General SRE | Do not add an agent; the existing home-lab operator already owns that outcome |
 | Application security | Add `application-security-auditor` with a static-first, non-PR remit |
 | Running-lab security | Decide separately on a `security-audit` skill and an optional guard-enforced `lab-inspector` |
-| Home-lab identity | Present the role as **Home-Lab SRE / Platform Engineer** while keeping the `homelab-engineer` key |
+| Home-lab identity | Present the role as **Home-Lab SRE / Platform Engineer** while keeping the `homelab-platform` key |
 
 The resulting shape is two narrowly bounded agents, one Linux-host skill, and one visible rebrand
 — not four generic agents. The optional lab inspector is a separate enforcement decision, not part
@@ -242,7 +251,7 @@ external effects.
 Keep the stable component key:
 
 ```yaml
-name: homelab-engineer
+name: homelab-platform
 ```
 
 Proposed visible heading:

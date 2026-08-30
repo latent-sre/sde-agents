@@ -131,13 +131,18 @@ surface is not granted rather than guard-denied.
   `dontAsk` differential (the gate denies the gated agent, the main loop runs).
 - The `ask` leg cannot be probed headlessly (an unanswered `ask` is a denial in `-p`); it is
   witnessed once interactively and recorded here. **Witnessed 2026-08-30, Claude Code 2.1.251**,
-  operator-run: `sde-agents:homelab-engineer` invoking `docker compose -f
+  operator-run: `sde-agents:homelab-platform` invoking `docker compose -f
   /tmp/sde-witness/docker-compose.yml up -d` produced a real permission prompt carrying the gate's
   own voice, quoted verbatim —
 
   > sde-agents live-effect gate: matched rule `docker compose up` — a Tier 2/3 live effect from
-  > homelab-engineer. This prompt is the managed gate for this exact argv; accepting it is the
+  > homelab-platform. This prompt is the managed gate for this exact argv; accepting it is the
   > decision, and the agent runs the command once.
+
+  The agent name inside that quotation is the one the runtime actually emitted: the witness ran on
+  2026-08-30 **before** the rename to `homelab-engineer` later that day (PR #165). It is preserved
+  as observed. A quotation that is silently updated to match a later identity is no longer evidence
+  — a later audit could not reconstruct it, and the record would be asserting bytes nobody saw.
 
   The target path deliberately did not exist, so the argv the hook matched on is the whole of what
   was exercised and accepting could start nothing. Scope of the witness, stated because a later
