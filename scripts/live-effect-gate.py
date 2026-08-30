@@ -187,9 +187,11 @@ READ_UNLESS: dict[str, frozenset[str]] = {
 
 # Executables that are live only when an option matches (they may also carry word rules above).
 FLAG_LIVE: dict[str, re.Pattern[str]] = {
-    "rm": re.compile(r"^-[A-Za-z]*[rRf]"),
-    "chown": re.compile(r"^-[A-Za-z]*R"),
-    "chmod": re.compile(r"^-[A-Za-z]*R"),
+    # Long forms carry the same authority as the short cluster: GNU documents `-r, -R, --recursive`
+    # and `-f, --force`, so matching only `-rf` left `rm --recursive --force` unmatched.
+    "rm": re.compile(r"^-[A-Za-z]*[rRf]|^--(?:recursive|force)$"),
+    "chown": re.compile(r"^-[A-Za-z]*R|^--recursive$"),
+    "chmod": re.compile(r"^-[A-Za-z]*R|^--recursive$"),
     "iptables": re.compile(r"^-(?:A|I|D|F|X|P|R|N|E|Z)$|^--(?:append|insert|delete|flush|"
                            r"delete-chain|policy|replace|new-chain|rename-chain|zero)$"),
     "ip6tables": re.compile(r"^-(?:A|I|D|F|X|P|R|N|E|Z)$|^--(?:append|insert|delete|flush|"
@@ -201,6 +203,9 @@ FLAG_LIVE: dict[str, re.Pattern[str]] = {
 }
 _ANSIBLE_READ_MODULES = frozenset({"ping", "setup", "gather_facts", "debug", "stat", "slurp",
                                    "fetch"})
+# How far ahead of a compound prefix a global option's value may push it (`docker --context X
+# compose up`). Bounded deliberately: widening it trades missed live effects for false prompts.
+_OPTION_VALUE_WINDOW = 3
 
 # Wrappers the gate looks through. Value: options that consume the next token.
 WRAPPERS: dict[str, frozenset[str]] = {
@@ -215,6 +220,11 @@ WRAPPERS: dict[str, frozenset[str]] = {
     "stdbuf": frozenset({"-i", "-o", "-e"}),
     "chroot": frozenset({"--userspec", "--groups"}),
 }
+# Wrappers whose documented syntax puts MANDATORY positional operands before the wrapped command:
+# `timeout [OPTION] DURATION COMMAND`, `chroot [OPTION] NEWROOT [COMMAND]`. Without this the
+# operand is read as the executable, so `timeout 10 systemctl restart jellyfin` classified `10`,
+# found nothing, and returned no decision while the restart ran.
+WRAPPER_OPERANDS: dict[str, int] = {"timeout": 1, "chroot": 1}
 _SSH_ARG_OPTIONS = frozenset({"-B", "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L",
                               "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w"})
 _SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh", "fish"})
@@ -249,10 +259,51 @@ def _base(token: str) -> str:
     return token.rsplit("/", 1)[-1]
 
 
+def _normalize_newlines(command: str) -> str:
+    """Rewrite unquoted newlines to `;` so they separate commands.
+
+    `shlex` treats a newline as ordinary whitespace, which silently JOINS two commands into one
+    token list: `git status\\ndocker compose up -d` parsed as a single `git` segment and the live
+    docker command vanished from the parse entirely — (None, None), i.e. no decision, i.e. it ran.
+    A backslash-newline is the shell's line CONTINUATION and joins instead, and a newline inside
+    quotes is data, so both are preserved rather than split.
+    """
+    out: list[str] = []
+    quote: str | None = None
+    index = 0
+    length = len(command)
+    while index < length:
+        char = command[index]
+        if quote != "'" and char == "\\" and index + 1 < length:
+            following = command[index + 1]
+            if following in "\r\n":
+                index += 2
+                if following == "\r" and index < length and command[index] == "\n":
+                    index += 1
+                out.append(" ")
+                continue
+            out.append(char)
+            out.append(following)
+            index += 2
+            continue
+        if quote is None and char in "\"'":
+            quote = char
+        elif quote is not None and char == quote:
+            quote = None
+        elif quote is None and char in "\r\n":
+            out.append(" ; ")
+            index += 1
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
 def _segments(command: str) -> list[list[str]] | None:
     """Split a shell command into simple-command token lists; None when it cannot be bound."""
     if "$(" in command or "`" in command or "<(" in command or ">(" in command:
         return None
+    command = _normalize_newlines(command)
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError:
@@ -304,6 +355,13 @@ def _unwrap(tokens: list[str]) -> tuple[list[str] | None, str | None]:
         if exe == "sudo" and any(token in ("-i", "-s", "-e") for token in tokens[1:]):
             return None, "`sudo -i`/`-s`/`-e` opens an unbound shell"
         if exe == "ssh":
+            # ProxyCommand/LocalCommand execute on the LOCAL host, before and independently of the
+            # remote command. `_strip_options` discarded them as ordinary options, so
+            # `ssh -oProxyCommand='systemctl restart jellyfin' host true` classified only `true`.
+            # The payload is an arbitrary shell string, so it is never bound — it is asked.
+            if any(name in " ".join(tokens[1:]).lower()
+                   for name in ("proxycommand", "localcommand")):
+                return None, "`ssh` option runs a local command (ProxyCommand/LocalCommand)"
             rest = _strip_options(tokens[1:], _SSH_ARG_OPTIONS)
             if len(rest) < 2:
                 return None, "interactive `ssh` with no remote command"
@@ -320,6 +378,9 @@ def _unwrap(tokens: list[str]) -> tuple[list[str] | None, str | None]:
             return segments[-1], None
         if exe in WRAPPERS:
             tokens = _strip_options(tokens[1:], WRAPPERS[exe])
+            for _ in range(WRAPPER_OPERANDS.get(exe, 0)):
+                if tokens:
+                    tokens.pop(0)
             continue
         return tokens, None
     return [], None
@@ -354,18 +415,25 @@ def _classify(tokens: list[str]) -> str | None:
     for prefix, live in LIVE_SUBCOMMANDS.items():
         if prefix[0] != exe:
             continue
-        rest = prefix[1:]
-        if words[:len(rest)] != list(rest):
-            continue
-        # An option's argument (`-f docker-compose.yml`) sits among the words ahead of the
-        # subcommand, and no table knows every tool's option arity, so the subcommand is the
-        # first LIVE word within the next three — a false positive here is one extra prompt.
-        following = words[len(rest):len(rest) + 3]
-        hit = next((word for word in following if word in live), None)
-        if hit is not None:
-            rule = " ".join(prefix + (hit,))
-            if longest is None or len(rule) > len(longest):
-                longest = rule
+        rest = list(prefix[1:])
+        # A GLOBAL option's value lands among the words ahead of the compound prefix
+        # (`docker --context production compose up`, `ip -n lab link set`), so requiring the
+        # prefix at position 0 missed those entirely. No table knows every tool's option arity,
+        # so the prefix is searched within a small leading window instead. A single-word prefix
+        # needs no window: the `following` scan below already covers the option-value case.
+        starts = range(_OPTION_VALUE_WINDOW) if rest else range(1)
+        for start in starts:
+            if words[start:start + len(rest)] != rest:
+                continue
+            # An option's argument (`-f docker-compose.yml`) sits among the words ahead of the
+            # subcommand, so the subcommand is the first LIVE word within the next three — a
+            # false positive here is one extra prompt.
+            following = words[start + len(rest):start + len(rest) + 3]
+            hit = next((word for word in following if word in live), None)
+            if hit is not None:
+                rule = " ".join(prefix + (hit,))
+                if longest is None or len(rule) > len(longest):
+                    longest = rule
     return longest
 
 

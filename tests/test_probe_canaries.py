@@ -15,7 +15,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from scripts import probe_plugin
@@ -587,6 +589,34 @@ class ProbeTranscriptParserTests(unittest.TestCase):
             ["agent ok"],
             probe_plugin.agent_spawn_results(transcript, "sde-agents:sde-fullstack"),
         )
+
+
+class GateProbeTargetInertness(unittest.TestCase):
+    """The gate probe's MAIN arm deliberately RUNS `docker compose ... up -d` under dontAsk.
+
+    Risk hypothesis: that is harmless ONLY while the referenced compose file cannot be loaded.
+    The path is fixed and predictable, and the probe's comment asserted it "cannot exist" while
+    nothing enforced it — so a file sitting at that path would turn the deny/run differential
+    into a real container start against the operator's Docker daemon, with the probe still
+    printing a green MAIN leg. An unenforceable safety comment is the failure this watches.
+    """
+
+    def test_an_existing_target_is_reported_so_the_probe_can_refuse(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            present = str(Path(tmp) / "docker-compose.yml")
+            Path(present).write_text("services: {}\n", encoding="utf-8")
+            absent = str(Path(tmp) / "no-such" / "docker-compose.yml")
+            self.assertIsNone(probe_plugin.existing_path([absent]))
+            self.assertEqual(present, probe_plugin.existing_path([absent, present]))
+
+    def test_the_checked_paths_are_the_paths_the_command_runs(self) -> None:
+        # A guard that inspects a different path than the command uses enforces nothing.
+        targets = probe_plugin.gate_targets()
+        self.assertEqual(2, len(targets))
+        for marker, target in zip(("AGENT", "MAIN"), targets):
+            with self.subTest(marker=marker):
+                self.assertIn(target, probe_plugin.GATE_CMD.format(marker=marker))
+                self.assertIn(marker, target)
 
 
 if __name__ == "__main__":

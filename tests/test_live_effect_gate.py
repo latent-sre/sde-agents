@@ -296,5 +296,90 @@ class Roster(unittest.TestCase):
         self.assertIn("cannot bind", reason(out))
 
 
+class GateBypassShapesFromReview(unittest.TestCase):
+    """Argv shapes that reached "no decision" while still executing a live effect (PR #164 review).
+
+    Risk hypothesis: `match()` under-matching is indistinguishable, at the hook boundary, from
+    `match()` correctly seeing a reader -- both are (None, None) -> EXIT_ALLOW. So a parser gap is
+    a SILENT hole: the gate reports success while the effect runs unprompted. Every case below was
+    reproduced against the shipped parser before the fix; each asserts the prompt, and the last
+    test asserts the half that actually matters -- deny under a mode that suppresses prompts.
+    """
+
+    def test_unquoted_newline_separates_commands(self) -> None:
+        # shlex treats "\n" as plain whitespace, so `git status\ndocker compose up -d` collapsed
+        # into a single `git` segment and the live docker command disappeared from the parse.
+        for command in ("git status\ndocker compose up -d",
+                        "echo hi\nsystemctl restart jellyfin",
+                        "git status\r\ndocker compose up -d"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_backslash_newline_stays_one_command(self) -> None:
+        # The inverse guard: a shell line continuation joins its lines, so the split must not
+        # break `docker compose \<newline> up -d` into two unmatched halves.
+        out = run_gate(bash_call("docker compose \\\n up -d web"))
+        self.assertEqual("ask", decision(out))
+        self.assertIn("matched rule `docker compose up`", reason(out))
+
+    def test_newline_inside_quotes_is_not_a_separator(self) -> None:
+        self.assertEqual("none", decision(run_gate(bash_call("echo 'a\nb'"))))
+
+    def test_long_form_recursive_and_force_flags(self) -> None:
+        # GNU documents `-r, -R, --recursive`; only the short cluster was recognized.
+        for command in ("rm --recursive --force /srv/media",
+                        "rm --force /etc/caddy/Caddyfile",
+                        "chown --recursive jellyfin /srv/media",
+                        "chmod --recursive 777 /srv/media"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_wrapper_mandatory_operands_are_skipped(self) -> None:
+        # `timeout DURATION COMMAND` and `chroot NEWROOT COMMAND`: the positional operand was
+        # mistaken for the wrapped executable, so the real command was never classified.
+        for command in ("timeout 10 systemctl restart jellyfin",
+                        "timeout -k 5 10 systemctl restart jellyfin",
+                        "chroot /mnt systemctl restart jellyfin"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_wrapped_reader_still_gets_no_decision(self) -> None:
+        # Skipping operands must not turn every wrapped reader into a prompt.
+        for command in ("timeout 10 git status", "chroot /mnt git status"):
+            with self.subTest(command=command):
+                self.assertEqual("none", decision(run_gate(bash_call(command))))
+
+    def test_ssh_options_that_execute_locally_are_unbound(self) -> None:
+        # ProxyCommand/LocalCommand run on the LOCAL host before the remote command; the option
+        # was silently stripped, leaving only a harmless-looking remote reader to classify.
+        for command in ("ssh -oProxyCommand='systemctl restart jellyfin' host true",
+                        "ssh -o ProxyCommand='systemctl restart jellyfin' host true",
+                        "ssh -oLocalCommand='reboot' host true"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
+    def test_global_options_before_a_compound_subcommand(self) -> None:
+        # A global option's VALUE became the first word, so the exact prefix comparison failed.
+        for command, rule in (("docker --context production compose up -d web", "docker compose up"),
+                              ("podman --connection production compose down", "podman compose down"),
+                              ("ip -n lab link set eth0 down", "ip link set")):
+            with self.subTest(command=command):
+                out = run_gate(bash_call(command))
+                self.assertEqual("ask", decision(out))
+                self.assertIn(f"matched rule `{rule}`", reason(out))
+
+    def test_every_bypass_shape_denies_under_a_suppressed_mode(self) -> None:
+        # This is the finding's real severity: before the fix each of these returned EXIT_ALLOW
+        # under dontAsk, so the effect ran with no human able to answer anything.
+        for command in ("git status\ndocker compose up -d",
+                        "rm --recursive --force /srv/media",
+                        "timeout 10 systemctl restart jellyfin",
+                        "chroot /mnt systemctl restart jellyfin",
+                        "ssh -oProxyCommand='systemctl restart jellyfin' host true",
+                        "docker --context production compose up -d web"):
+            with self.subTest(command=command):
+                self.assertEqual("deny", decision(run_gate(bash_call(command, mode="dontAsk"))))
+
+
 if __name__ == "__main__":
     unittest.main()
