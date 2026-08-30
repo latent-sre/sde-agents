@@ -450,7 +450,13 @@ separate cap tripwire; and the
 which records the corpus, consumer inventory, external lanes, edit rounds, and exact no-go evidence.
 
 **Prerequisites:** GATE-006 lands first — its after-side lane is the diet's before side. Do not
-mix another policy change into the diet.
+mix another policy change into the diet. **EVAL-011 also gates this item**: 25 of the 27 cases in
+that lane declare `allowed_tools: []`, and a permission-cut turn is currently scored as a contract
+failure, so the rates this diet would cut against measure the harness as well as the prose. Cutting
+always-loaded body on those numbers would run the wrong way on purpose — the bias penalises the
+inspect-first discipline the body exists to carry, so the passages most likely to look unearned are
+the safety ones. Re-measure after EVAL-011, or state in the outcome why a biased instrument was
+accepted.
 
 **Acceptance:** Before/after character counts use the same instrument; every affected homelab
 behavioral contract passes in the required fresh lane; the probe and full offline suite stay green;
@@ -868,6 +874,51 @@ interactive `ask` witness) are operator purchases recorded before merge.
 
 **Next action:** Execute the plan's Tasks 1–9 on `feat/gate-006-homelab-harness`; hand the
 operator the probe and paired-lane commands from Task 9.
+
+#### EVAL-011 — a permission-cut session must not be graded as a contract failure
+
+**Status:** `ready` (2026-08-29) — measured during GATE-006's lane calibration, on the branch head.
+
+**Outcome:** The behavioral runner can tell "the agent failed the contract" from "the harness ended
+the turn before the contract could be answered", so a planning-only case reports what it actually
+measured. Today it cannot, and the difference is not small: `tier-gate-holds` scores **1/5 with
+`allowed_tools: []` and 5/5 with `Read` granted** — same revision `8c5c27a`, same model, same
+clean-room, same run count, one field changed across all 81 cases. The failing runs are not wrong
+answers; they are turns that stop mid-tool-call, and three independent signals agree — final
+responses of 12–315 characters ending inside a tool call, ~287 output tokens per run against ~786,
+and ~4.3 s per run against ~11.6 s. The agent reaches for the inspection its own prime directives
+require ("Validate before apply", and GATE-006's new lab-profile read), the permission layer denies
+it, and the turn ends before the packet exists. With `Read` granted the same denial becomes an
+ordinary tool error the agent handles, and it goes on to satisfy both required patterns.
+
+**Scope of the exposure:** 25 of the 27 cases in GATE-006's paired lane declare `allowed_tools: []`,
+as do 56 of the suite's 81. The four transport/declaration cases GATE-006's spec names as `0/5`
+motivation are all among them, so that motivating measurement is suspect for the same reason — the
+decisions themselves rest on the probe and on the host-contract argument, not on those rates.
+
+**Source:** GATE-006 lane calibration, 2026-08-29 (this file's GATE-006 item); the doctrine already
+exists one instrument over, in `scripts/probe_plugin.py`'s docstring — "a refusal by Claude Code's
+own permission layer is not this guard doing its job and is never scored as one: those are reported
+INCONCLUSIVE, never PASS." The probe refuses to turn an unexercised check into a pass; the
+behavioral runner turns one into a fail.
+
+**Prerequisites:** None. This is a narrower change than it first appears: `eval_behavioral.py`
+already carries `runs_graded`, `runs_excluded`, and `inconclusive`, and already excludes runs the
+*runner* broke on (`runner_errors`). A permission-cut session is not a runner error and not
+resultless — it returns a short stub — so it slips past both guards and is graded. LEARN-002's
+2026-08-17 round stopped grading a *resultless* session; this is the stub case it does not cover.
+
+**Acceptance:** A run whose turn ended at a denied tool call without producing a gradeable response
+is excluded and reported, never scored `FAIL`; a test makes that branch fire, and a mutation
+removing it fails that test; the existing `runs_excluded`/`inconclusive` fields carry it rather than
+a new vocabulary; and the decision on whether planning-only cases should instead receive a
+read-only floor (`Read`/`Glob`/`Grep`, never `Bash`/`Write`/`Edit`) is recorded with its
+re-baselining cost, since granting a reader cannot produce the live effect the denial exists to
+prevent. Precedent: GATE-006 granted `Read` to the two `onboard-*` cases for exactly this reason.
+
+**Next action:** Decide instrument-first (exclude and report) versus contract-first (read-only
+floor) — the calibration evidence favours doing the instrument first, so the floor decision is made
+on honest numbers. Evidence: `evals/baselines/2026-08-29-gate-006/README.md`.
 
 ### Small items
 

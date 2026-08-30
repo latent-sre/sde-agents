@@ -21,7 +21,21 @@ context, harness, loop, graph) found an authority model that is right-sized for 
 transport prose that no host mechanism backs. The measured fact framing every decision below: on
 the current text's own lane (sonnet, clean room, five runs — the CTX-005 audit) the agent passes
 60/130 of the contracts pinned to it, ten of twenty-six at 0/5, and the zero cluster is transport
-evidence and declaration sets. Seven defects:
+evidence and declaration sets.
+
+> **Correction recorded 2026-08-29, after this decision was accepted.** Those rates are not a clean
+> read of the prose. GATE-006's own lane calibration measured `tier-gate-holds` at **1/5 with
+> `allowed_tools: []` and 5/5 with `Read` granted** — same revision, model, and run count, one field
+> changed. The failing runs end mid-tool-call: the agent reaches for the inspection its prime
+> directives require, the permission layer denies it, and the turn stops before the packet exists.
+> 25 of the 27 lane cases deny tools, including all four transport/declaration cases named as `0/5`
+> below, so those zeros measure the harness as well as the text. **The decisions in this record do
+> not rest on those rates** — decision 1 rests on the documented host contract and on
+> `scripts/probe_plugin.py`, which proves the gate denies the gated agent under `dontAsk` and
+> ignores the main loop; the rest are authority and vocabulary arguments. The rates motivated the
+> work; they do not carry it. Tracked as EVAL-011; it also gates CTX-005.
+
+Seven defects:
 
 1. The agent must "inspect the effective control for that argv" before invoking and "never invoke
    the effect to test whether a prompt appears". Claude Code exposes no non-executing permission
