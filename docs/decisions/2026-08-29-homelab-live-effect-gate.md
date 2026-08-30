@@ -130,7 +130,21 @@ surface is not granted rather than guard-denied.
 - The fleet ships two hooks; the guard playbook in `AGENTS.md` covers both; the probe gains a
   `dontAsk` differential (the gate denies the gated agent, the main loop runs).
 - The `ask` leg cannot be probed headlessly (an unanswered `ask` is a denial in `-p`); it is
-  witnessed once interactively and recorded here: _witness pending_.
+  witnessed once interactively and recorded here. **Witnessed 2026-08-30, Claude Code 2.1.251**,
+  operator-run: `sde-agents:homelab-platform` invoking `docker compose -f
+  /tmp/sde-witness/docker-compose.yml up -d` produced a real permission prompt carrying the gate's
+  own voice, quoted verbatim —
+
+  > sde-agents live-effect gate: matched rule `docker compose up` — a Tier 2/3 live effect from
+  > homelab-platform. This prompt is the managed gate for this exact argv; accepting it is the
+  > decision, and the agent runs the command once.
+
+  The target path deliberately did not exist, so the argv the hook matched on is the whole of what
+  was exercised and accepting could start nothing. Scope of the witness, stated because a later
+  reader will otherwise over-read it: it establishes that the gate renders a prompt naming the
+  matched rule for a live verb. The paired reader control (`docker compose … ps` must NOT prompt)
+  was not reported back, so the gate's *discrimination* between reader and live verb rests on
+  `tests/test_live_effect_gate.py` and the probe's main-loop leg, not on this session.
 - Twelve contract entries and five `packet_lint.py` references lose `Effect class`; the vocabulary
   drift test narrows to `Gate`/`Transport`; the offline oracle controls change with them.
 - Sizes are recorded, not targeted: the body diet is CTX-005's, and its before side is this
