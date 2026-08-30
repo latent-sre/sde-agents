@@ -280,7 +280,7 @@ class HookWiringTest(unittest.TestCase):
 
 GATE_LIVE = "/usr/bin/docker compose -f /srv/media/docker-compose.yml up -d jellyfin"
 GATE_READ = "docker compose -f /srv/media/docker-compose.yml ps"
-HOMELAB = "sde-agents:homelab-platform"
+HOMELAB = "sde-agents:homelab-engineer"
 
 
 def gate_hook_command() -> str:
@@ -339,9 +339,9 @@ class LiveEffectGateWiringTests(unittest.TestCase):
         self.assertIsNone(decision(self._run(gate_payload(GATE_LIVE, "sde-agents:sde-fullstack"))))
 
     def test_main_loop_command_that_merely_names_the_agent_is_ignored(self) -> None:
-        # The raw prefilter matches any payload mentioning homelab-platform; the interpreter then
-        # reads agent_type properly. A user editing agents/homelab-platform.md must never be gated.
-        pl = gate_payload("sed -n 1,5p agents/homelab-platform.md && docker compose up -d", agent_type=None)
+        # The raw prefilter matches any payload mentioning homelab-engineer; the interpreter then
+        # reads agent_type properly. A user editing agents/homelab-engineer.md must never be gated.
+        pl = gate_payload("sed -n 1,5p agents/homelab-engineer.md && docker compose up -d", agent_type=None)
         self.assertIsNone(decision(self._run(pl)))
 
     def test_suppressed_mode_denies_with_the_gate_voice(self) -> None:
@@ -388,7 +388,7 @@ class LiveEffectGateWiringTests(unittest.TestCase):
         self.assertEqual("ask", decision(self._run(gate_payload(GATE_LIVE)[:-1])))
 
     def test_homelab_platform_has_no_frontmatter_hooks_key(self) -> None:
-        text = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        text = (REPO / "agents" / "homelab-engineer.md").read_text(encoding="utf-8")
         self.assertNotIn("\nhooks:", text.split("\n---", 2)[1])
 
 

@@ -1,6 +1,6 @@
 ---
 name: lab-incident
-description: Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for "X is down", "the lab is unreachable", "everything broke after the update", "nothing loads" — an active outage affecting someone right now. Mitigations apply under sde-agents:homelab-platform's change tiers. Not for a resolved incident (sde-agents:postmortem), a bug with no live outage (sde-agents:root-cause), or a routine health sweep (sde-agents:lab-audit).
+description: Mitigate-first response while a home-lab service is down or degraded — restore service now, diagnose after. Use for "X is down", "the lab is unreachable", "everything broke after the update", "nothing loads" — an active outage affecting someone right now. Mitigations apply under sde-agents:homelab-engineer's change tiers. Not for a resolved incident (sde-agents:postmortem), a bug with no live outage (sde-agents:root-cause), or a routine health sweep (sde-agents:lab-audit).
 argument-hint: [what is down]
 ---
 
@@ -14,13 +14,13 @@ still down. Mitigate, confirm recovery, *then* run the loop on the cause with th
 Announce at start: "Using lab-incident: mitigate → confirm → diagnose after."
 
 **Authority: you hold none of your own.** Every action below is an apply under
-`sde-agents:homelab-platform`'s change tiers, with that agent's approval evidence. Speed is not a
+`sde-agents:homelab-engineer`'s change tiers, with that agent's approval evidence. Speed is not a
 tier exemption — an outage makes the blast-radius question *more* important, not less, because the
 system is already degraded and a second change lands on top of the first.
 
 One exact reversible mitigation may contain a bounded command sequence — for example, revert the
 known-bad config, validate it, reload, then probe. Disclose that sequence once and let
-`homelab-platform` take one Tier 2 decision for it; every live command still passes its host
+`homelab-engineer` take one Tier 2 decision for it; every live command still passes its host
 transport. A speculative alternative, changed target, unexpected result, or widened blast radius
 stops the sequence and opens a new decision. Do not pre-approve a decision tree while the system is
 changing underneath it.

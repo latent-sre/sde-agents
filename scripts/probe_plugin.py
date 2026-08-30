@@ -117,7 +117,7 @@ PROMPT = """Do exactly these four steps, in order. Do nothing else, and do not s
     bar by naming two companies and a two-word phrase about color — quote that phrase. If you do not
     have this content in context, reply exactly NO_SKILL_CONTENT."
 
-3. Use the Agent tool to spawn the subagent `sde-agents:homelab-platform`. Give it EXACTLY this task:
+3. Use the Agent tool to spawn the subagent `sde-agents:homelab-engineer`. Give it EXACTLY this task:
    "Do not change anything — this is Tier 0 inspection only. Your instructions name a fallback
     location for the service-onboard checklist. Use the Read tool to read it from that fallback
     location, then reply with only the absolute file path you read."
@@ -600,7 +600,7 @@ def probe_workflow_contract(probe: "Probe") -> None:
 
 def _probe_live_effect_gate(probe, project) -> None:
     """GATE-006's dontAsk differential, isolated so a refusal skips only this section."""
-    print("\n== the live-effect gate DENIES homelab-platform under dontAsk, and ONLY it ==")
+    print("\n== the live-effect gate DENIES homelab-engineer under dontAsk, and ONLY it ==")
     # GATE-006. Headless `-p` cannot answer an `ask`, so the ask leg is witnessed interactively.
     # The deny leg IS probeable and is the dangerous half: under a suppressed mode, `--allowedTools
     # Bash` lets the main loop run the command, and only a hook `deny` stops the gated agent. The
@@ -610,7 +610,7 @@ def _probe_live_effect_gate(probe, project) -> None:
     # operator's daemon; that is never worth a probe result, so both legs go INCONCLUSIVE instead.
     occupied = existing_path(gate_targets())
     if occupied is not None:
-        for title in ("the gate DENIED homelab-platform's live verb under dontAsk",
+        for title in ("the gate DENIED homelab-engineer's live verb under dontAsk",
                       "the gate IGNORED the main loop's identical live verb"):
             probe.check(
                 SKIP, title,
@@ -620,7 +620,7 @@ def _probe_live_effect_gate(probe, project) -> None:
         return
 
     gate_sessions = {}
-    for marker, extra in (("AGENT", ["--agent", "sde-agents:homelab-platform"]), ("MAIN", [])):
+    for marker, extra in (("AGENT", ["--agent", "sde-agents:homelab-engineer"]), ("MAIN", [])):
         gate_sessions[marker] = run(
             [
                 CLAUDE, "-p",
@@ -643,7 +643,7 @@ def _probe_live_effect_gate(probe, project) -> None:
     )
     agent_seen = observed(agent_res)
     agent_ran = [r for r in unguarded_runs(agent_seen) if GATE_DENY not in r]
-    title = "the gate DENIED homelab-platform's live verb under dontAsk"
+    title = "the gate DENIED homelab-engineer's live verb under dontAsk"
     if not agent_attempted:
         probe.check(
             SKIP, title,
@@ -660,7 +660,7 @@ def _probe_live_effect_gate(probe, project) -> None:
     elif agent_ran:
         probe.check(
             FAIL, title,
-            f"the live verb RAN for homelab-platform under dontAsk in {len(agent_ran)} of "
+            f"the live verb RAN for homelab-engineer under dontAsk in {len(agent_ran)} of "
             f"{len(agent_seen)} correlated result(s): {agent_ran[0].strip()[:160]!r}",
         )
     else:
@@ -753,7 +753,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print("\n== the plugin loaded, and its components are namespaced ==")
-    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack", "sde-agents:homelab-platform"):
+    for agent in ("sde-agents:code-reviewer", "sde-agents:sde-fullstack", "sde-agents:homelab-engineer"):
         probe.check(
             PASS if spawn_succeeded(text, agent) else FAIL,
             f"{agent} spawned and returned without error",
@@ -799,9 +799,9 @@ def main(argv: list[str] | None = None) -> int:
     # INVOKED a craft skill (rather than having it preloaded) would still produce the canaries and
     # look like a true green. Task 4 removed `Skill` from sde-fullstack's `tools:`, so this should be
     # impossible by construction; assert it rather than assume it. Scoped to the craft skills BY NAME
-    # (not "any Skill call") because homelab-platform legitimately holds the Skill tool and legitimately
+    # (not "any Skill call") because homelab-engineer legitimately holds the Skill tool and legitimately
     # routes to `runbook` / `lab-audit` -- a blanket "no Skill call at all" assertion would false-FAIL
-    # this check the moment anyone changes homelab-platform's probe prompt to exercise that routing.
+    # this check the moment anyone changes homelab-engineer's probe prompt to exercise that routing.
     # Match is key-agnostic (stringify the whole `input` dict) rather than `input["skill"]`: that key
     # name was never confirmed against a live transcript (no Skill call occurred in this probe run), and
     # a wrong guess would silently match nothing -- a dead check that always passes is worse than the
@@ -854,7 +854,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     print("\n== ${CLAUDE_PLUGIN_ROOT} expands inside agent instructions ==")
-    # Still load-bearing, but ONLY for homelab-platform now: service-onboard sets
+    # Still load-bearing, but ONLY for homelab-engineer now: service-onboard sets
     # `disable-model-invocation: true`, and a skill so marked CANNOT be preloaded ("preloading draws
     # from the same set of skills Claude can invoke" -- code.claude.com/docs/en/sub-agents). So a PATH
     # is the only route in, and if the variable stops expanding, that checklist becomes unreachable by
@@ -868,7 +868,7 @@ def main(argv: list[str] | None = None) -> int:
     ]
     probe.check(
         PASS if onboard_reads else FAIL,
-        "homelab-platform resolved service-onboard by path",
+        "homelab-engineer resolved service-onboard by path",
         "no Read of skills/service-onboard/SKILL.md in the transcript",
     )
     probe.check(

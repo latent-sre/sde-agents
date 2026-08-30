@@ -476,7 +476,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             flags=re.DOTALL,
         )
 
-    if name == "homelab-platform":
+    if name == "homelab-engineer":
         # The canonical transport bullet names the live-effect gate — a Claude-only PreToolUse
         # hook (GATE-006). On the other hosts the claim is replaced, not carried: Codex has its
         # own exec-policy prompt and a non-executing check for it; Copilot/VS Code payloads do not
@@ -541,7 +541,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             )
             if replaced != 1:
                 raise ValueError(
-                    f"homelab-platform codex rewrite: the no-web anchor was not found "
+                    f"homelab-engineer codex rewrite: the no-web anchor was not found "
                     f"({replaced} matches). The canonical sentence changed without updating "
                     f"adapt_agent_contract, so the Codex adapter would keep claiming an absent "
                     f"web tool that this host cannot actually withhold."
@@ -566,7 +566,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             text, replaced = re.subn(pattern, replacement, text, count=1, flags=re.DOTALL)
             if replaced != 1:
                 raise ValueError(
-                    f"homelab-platform {host} rewrite: the transport anchor {pattern[:40]!r} was "
+                    f"homelab-engineer {host} rewrite: the transport anchor {pattern[:40]!r} was "
                     f"not found ({replaced} matches). The canonical passage changed without "
                     f"updating adapt_agent_contract, so the generated adapter would silently keep "
                     f"a Claude-only live-effect-gate claim this host cannot honor."
@@ -583,7 +583,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             ):
                 if text.count(old) != 1:
                     raise ValueError(
-                        f"homelab-platform copilot rewrite: expected exactly one {old[:40]!r} "
+                        f"homelab-engineer copilot rewrite: expected exactly one {old[:40]!r} "
                         f"in the worked example, found {text.count(old)}."
                     )
                 text = text.replace(old, new)
@@ -1022,7 +1022,7 @@ def _portable_readonly_body(body: str) -> str:
         body,
     )
     body = re.sub(
-        r"Whether you were invoked directly from the main session or under `homelab-platform`, "
+        r"Whether you were invoked directly from the main session or under `homelab-engineer`, "
         r"the reviewer's Bash guard does not cover this skill \(that hook keys on guarded "
         r"\*agent\* identities, and the main loop carries none at all\) — the read-only-ness here "
         r"is cooperative, not enforced\. `NotebookEdit` is in `disallowed-tools` for the same "

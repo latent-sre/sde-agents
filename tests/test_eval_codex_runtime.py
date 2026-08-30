@@ -11,7 +11,7 @@ from scripts import eval_codex_runtime
 
 
 class CodexRuntimeContractTest(unittest.TestCase):
-    def _profile(self, root: Path, name: str = "homelab-platform") -> Path:
+    def _profile(self, root: Path, name: str = "homelab-engineer") -> Path:
         path = root / ".codex" / "agents" / f"{name}.toml"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -33,11 +33,11 @@ class CodexRuntimeContractTest(unittest.TestCase):
             root = Path(tmp)
             self._profile(root)
             profiles, _identity = eval_codex_runtime.capture_profiles(
-                root, ["sde-agents:homelab-platform"]
+                root, ["sde-agents:homelab-engineer"]
             )
-            profile = profiles["sde-agents:homelab-platform"]
+            profile = profiles["sde-agents:homelab-engineer"]
 
-        self.assertEqual("homelab-platform", profile["name"])
+        self.assertEqual("homelab-engineer", profile["name"])
         self.assertEqual("Exact role instructions.", profile["developer_instructions"])
         self.assertEqual("workspace-write", profile["sandbox_mode"])
 
@@ -48,30 +48,30 @@ class CodexRuntimeContractTest(unittest.TestCase):
             path.write_text(path.read_text(encoding="utf-8") + 'model = "gpt-5.6-sol"\n',
                             encoding="utf-8")
             with self.assertRaisesRegex(eval_codex_runtime.CodexRuntimeError, "unsupported field"):
-                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-platform"])
+                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-engineer"])
 
             path = self._profile(root)
             path.write_text(path.read_text(encoding="utf-8").replace(
-                'name = "homelab-platform"', 'name = "different"'
+                'name = "homelab-engineer"', 'name = "different"'
             ), encoding="utf-8")
             with self.assertRaisesRegex(eval_codex_runtime.CodexRuntimeError, "does not match"):
-                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-platform"])
+                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-engineer"])
 
             path = self._profile(root)
             path.write_text(path.read_text(encoding="utf-8").replace(
                 'sandbox_mode = "workspace-write"', 'sandbox_mode = ["read-only"]'
             ), encoding="utf-8")
             with self.assertRaisesRegex(eval_codex_runtime.CodexRuntimeError, "sandbox_mode"):
-                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-platform"])
+                eval_codex_runtime.capture_profiles(root, ["sde-agents:homelab-engineer"])
 
     def test_case_projection_accepts_only_direct_no_tool_agent_cases(self) -> None:
         supported = {
             "id": "supported",
-            "agent": "sde-agents:homelab-platform",
+            "agent": "sde-agents:homelab-engineer",
             "allowed_tools": [],
             "disallowed_tools": ["Bash", "Write"],
         }
-        self.assertEqual("homelab-platform", eval_codex_runtime.validate_case_projection(supported))
+        self.assertEqual("homelab-engineer", eval_codex_runtime.validate_case_projection(supported))
 
         variants = (
             ({**supported, "agent": None}, "direct agent"),
@@ -220,7 +220,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             with mock.patch.object(eval_codex_runtime.subprocess, "run", return_value=proc) as run:
                 text, fired, note, stats = eval_codex_runtime.run_session(
                     "task prompt", 20,
-                    agent="sde-agents:homelab-platform",
+                    agent="sde-agents:homelab-engineer",
                     developer_instructions="Exact role instructions.",
                     model="gpt-5.6-terra",
                     reasoning_effort="medium",
@@ -228,7 +228,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
                     scratch_root=scratch,
                 )
             self.assertEqual("usable answer that discusses a rate limit safely", text)
-            self.assertEqual({"homelab-platform"}, fired)
+            self.assertEqual({"homelab-engineer"}, fired)
             self.assertIsNone(note)
             self.assertTrue(stats["completed"])
             self.assertEqual(5, stats["input_tokens"])
@@ -241,7 +241,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             with mock.patch.object(eval_codex_runtime.subprocess, "run", return_value=proc):
                 text, _fired, note, stats = eval_codex_runtime.run_session(
                     "task prompt", 20,
-                    agent="sde-agents:homelab-platform",
+                    agent="sde-agents:homelab-engineer",
                     developer_instructions="Exact role instructions.",
                     model="gpt-5.6-terra",
                     reasoning_effort="medium",
@@ -256,7 +256,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             with mock.patch.object(eval_codex_runtime.subprocess, "run", return_value=proc):
                 text, _fired, note, stats = eval_codex_runtime.run_session(
                     "task prompt", 20,
-                    agent="sde-agents:homelab-platform",
+                    agent="sde-agents:homelab-engineer",
                     developer_instructions="Exact role instructions.",
                     model="gpt-5.6-terra",
                     reasoning_effort="medium",
@@ -275,7 +275,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             with mock.patch.object(eval_codex_runtime.subprocess, "run", return_value=proc):
                 text, _fired, note, stats = eval_codex_runtime.run_session(
                     "task prompt", 20,
-                    agent="sde-agents:homelab-platform",
+                    agent="sde-agents:homelab-engineer",
                     developer_instructions="Exact role instructions.",
                     model="gpt-5.6-terra",
                     reasoning_effort="medium",
@@ -348,7 +348,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
                     eval_codex_runtime.run_session(
                         "task prompt",
                         20,
-                        agent="sde-agents:homelab-platform",
+                        agent="sde-agents:homelab-engineer",
                         developer_instructions="Exact role instructions.",
                         model="gpt-5.6-terra",
                         reasoning_effort="medium",
@@ -379,7 +379,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
                     eval_codex_runtime.run_session(
                         "task prompt",
                         20,
-                        agent="sde-agents:homelab-platform",
+                        agent="sde-agents:homelab-engineer",
                         developer_instructions="Exact role instructions.",
                         model="gpt-5.6-terra",
                         reasoning_effort="medium",
@@ -398,7 +398,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             root = Path(tmp)
             selected = self._profile(root)
             unrelated = self._profile(root, "code-reviewer")
-            agents = ["sde-agents:homelab-platform"]
+            agents = ["sde-agents:homelab-engineer"]
             profiles, original = eval_codex_runtime.capture_profiles(root, agents)
 
             unrelated.write_text(
@@ -416,7 +416,7 @@ class CodexRuntimeContractTest(unittest.TestCase):
             )
             self.assertEqual(
                 "Exact role instructions.",
-                profiles["sde-agents:homelab-platform"]["developer_instructions"],
+                profiles["sde-agents:homelab-engineer"]["developer_instructions"],
             )
 
             self.assertNotEqual(

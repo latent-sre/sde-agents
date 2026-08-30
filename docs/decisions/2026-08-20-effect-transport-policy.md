@@ -2,14 +2,14 @@
 
 - **Date**: 2026-08-20
 - **Status**: accepted
-- **Owner**: `agents/homelab-platform.md` ("Executing an approved effect")
+- **Owner**: `agents/homelab-engineer.md` ("Executing an approved effect")
 - **Supersedes**: the Tier 2/3 broker mandate introduced by SAFE-P1-005 (`f4741c7`, 2026-07-31)
   and elaborated by GATE-001 (`d02bd33`, `1c8845e0`, 2026-08-09)
 - **Closes**: roadmap item GATE-005
 
 ## Context
 
-`homelab-platform` refused an explicitly approved, reversible Tier 2 build. The session held a
+`homelab-engineer` refused an explicitly approved, reversible Tier 2 build. The session held a
 complete effect packet, a successful backup, the user's approval of that exact target and command,
 a clean preflight, a stated rollback, and access to a host-native managed command-approval path.
 It refused anyway, because the agent named exactly one sanctioned transport for agent-mediated
@@ -45,7 +45,7 @@ through the broker."
 
 ## Decision
 
-Retire the broker from `homelab-platform` entirely. An approved Tier 2 or Tier 3 effect executes
+Retire the broker from `homelab-engineer` entirely. An approved Tier 2 or Tier 3 effect executes
 through **a trusted host-native managed gate** — a control that interposes a per-invocation human
 decision on the exact argv, such as Claude Code's permission prompt or Codex's command-approval
 path. With no such gate, the agent stops and gives the operator the exact command.

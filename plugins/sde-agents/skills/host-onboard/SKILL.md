@@ -1,6 +1,6 @@
 ---
 name: "host-onboard"
-description: "The standardization checklist homelab-platform works when bringing a new or rebuilt machine into the lab — OS and patch baseline, users and SSH with access recovery, package and update policy, firewall and management exposure, systemd health, storage, time and DNS, telemetry enrollment, backup enrollment, and config tracking with rollback. To onboard a host, ask homelab-platform (it owns change authority and works this checklist under its tiers); a user can also run it directly as $host-onboard."
+description: "The standardization checklist homelab-engineer works when bringing a new or rebuilt machine into the lab — OS and patch baseline, users and SSH with access recovery, package and update policy, firewall and management exposure, systemd health, storage, time and DNS, telemetry enrollment, backup enrollment, and config tracking with rollback. To onboard a host, ask homelab-engineer (it owns change authority and works this checklist under its tiers); a user can also run it directly as $host-onboard."
 argument-hint: "[host to onboard]"
 ---
 
@@ -14,16 +14,16 @@ argument-hint: "[host to onboard]"
 The checklist that turns a fresh install into a lab host someone can operate at 3 a.m. Work every
 step in order; when one is skipped, say so explicitly and why — silence reads as "done."
 
-`homelab-platform` owns change authority for everything below, and this checklist runs
+`homelab-engineer` owns change authority for everything below, and this checklist runs
 **under** that agent — it is not self-sufficient standalone. Nearly every step changes a live
 host, and several touch the paths you or the operator are connected through: classify each apply
-under homelab-platform's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change,
+under homelab-engineer's change tiers (Tier 0 observe · 1 prepare · 2 reversible live change,
 needs an authorized decision · 3 destructive/access-path, needs a fresh decision + proven
 recovery) — SSH, firewall, and user changes are Tier 3 by definition, because getting them wrong
 locks the operator out.
-This checklist grants no permission of its own. Whichever way you arrived here (homelab-platform
+This checklist grants no permission of its own. Whichever way you arrived here (homelab-engineer
 reads it by path; it may also be model-invocable as a plugin skill), the authority stays with
-homelab-platform: if you reached it without that agent's tier discipline, stop and route through
+homelab-engineer: if you reached it without that agent's tier discipline, stop and route through
 it.
 
 **Read the lab's own profile before step 1.** The lab repo's project context states the stack,

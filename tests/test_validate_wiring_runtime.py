@@ -271,7 +271,7 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
         wiring = (
             ("agents/verification-engineer.md", "scripts/verification_sandbox.py"),
             ("skills/sre-tool/SKILL.md", "scripts/run_state.py"),
-            # effect_broker.py dropped out of this table when homelab-platform retired the
+            # effect_broker.py dropped out of this table when homelab-engineer retired the
             # broker mandate: the agent names no control script at all now, so there is no
             # reference left to lose silently. Its typed-evidence wiring is still pinned by
             # test_runtime_control_cannot_silently_drop_typed_evidence below.

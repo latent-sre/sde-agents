@@ -10,7 +10,7 @@ elsewhere.
 
 The agents and skills have deliberately overlapping remits — `prompt-engineer` (agent) and
 `prompt-craft` (skill) both cover "creating or fixing anything an LLM consumes"; `sde-fullstack`
-overlaps `backend-craft`/`frontend-craft`; `homelab-platform` overlaps `service-onboard`,
+overlaps `backend-craft`/`frontend-craft`; `homelab-engineer` overlaps `service-onboard`,
 `lab-audit`, and `runbook`. Overlap is fine — until a description drifts and a request starts landing
 on the wrong member. Nothing measured that, so nothing would catch the regression. These evals do.
 
@@ -672,7 +672,7 @@ simple-stays-simple, and read-only-investigation seams:
 | Cluster file | Members | Guards |
 |---|---|---|
 | `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
-| `homelab-ops.json` | homelab-platform and eleven lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `homelab-ops.json` | homelab-engineer and eleven lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
 | `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
 | `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
@@ -710,7 +710,7 @@ not only of the description. Read the clusters accordingly:
 
 - **Skill-heavy clusters** (`prompt-tooling`, the skill positives of `homelab-ops`) measure routing
   cleanly.
-- **Agent positives** (`homelab-platform`, the `ladder` and `craft-vs-fullstack` agent members) are
+- **Agent positives** (`homelab-engineer`, the `ladder` and `craft-vs-fullstack` agent members) are
   a weaker signal one run at a time; trust the **negatives** (over-trigger is a real defect at any
   rate) and **regressions across runs** over an absolute agent-positive rate.
 - **This is now the suite's design, not just a caveat.** Routing carries **no agent-only

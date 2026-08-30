@@ -1,6 +1,6 @@
 ---
 name: "observability"
-description: "Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Lab applies route through homelab-platform's change tiers; a live outage is lab-incident."
+description: "Designs the monitoring that makes a system answerable — metrics, logs, traces, alerts that page on symptoms, dashboards, collection pipelines. Use when instrumenting a service, writing or fixing a PromQL/LogQL query, designing an alert or SLO burn-rate rule, building a Grafana dashboard, or deciding what to collect. Lab applies route through homelab-engineer's change tiers; a live outage is lab-incident."
 argument-hint: "[what to instrument, query, or alert on]"
 ---
 
@@ -16,7 +16,7 @@ Monitoring exists to answer one question at 3 a.m.: **is this broken, and where?
 serves that. A dashboard nobody reads during an incident and an alert nobody can act on are both
 cost without coverage.
 
-Three fleet components route observability questions here — `homelab-platform`,
+Three fleet components route observability questions here — `homelab-engineer`,
 `service-onboard`, and `lab-audit`. Their risk predicates decide whether the
 answer is one health signal, an alert, metrics, or a dashboard; this skill supplies the smallest
 design that answers the named question. The worked examples use Prometheus, Grafana, Loki, and
@@ -24,7 +24,7 @@ Alloy, but the rules are stack-neutral.
 
 **Applies are not yours.** Writing a rule file, dashboard JSON, or scrape config is authoring;
 reloading Prometheus, importing to Grafana, or restarting Alloy is an apply under
-`homelab-platform`'s tiers. Hand it over with the exact command and the rollback.
+`homelab-engineer`'s tiers. Hand it over with the exact command and the rollback.
 
 ## Instrument for the questions you'll ask
 

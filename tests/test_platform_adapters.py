@@ -428,17 +428,17 @@ class PlatformAdapterTests(unittest.TestCase):
         # cannot load it. The real canonical body must rewrite cleanly on both hosts.
         for host in ("copilot", "codex"):
             with self.subTest(host=host):
-                with self.assertRaisesRegex(ValueError, "homelab-platform"):
+                with self.assertRaisesRegex(ValueError, "homelab-engineer"):
                     generate_platform_adapters.adapt_agent_contract(
                         "body text without the transport bullet",
-                        name="homelab-platform",
+                        name="homelab-engineer",
                         host=host,
                     )
-        canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        canonical = (REPO / "agents" / "homelab-engineer.md").read_text(encoding="utf-8")
         for host, marker in (("copilot", "operator handoff"), ("codex", "codex execpolicy check")):
             with self.subTest(host=host):
                 rewritten = generate_platform_adapters.adapt_agent_contract(
-                    canonical, name="homelab-platform", host=host
+                    canonical, name="homelab-engineer", host=host
                 )
                 self.assertNotIn("hooks/hooks.json", rewritten)
                 self.assertNotIn("live-effect gate — matched rule `docker compose up`", rewritten)
@@ -560,8 +560,8 @@ class PlatformAdapterTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path.relative_to(REPO)):
                 text = path.read_text(encoding="utf-8")
-                self.assertNotIn("agents/homelab-platform.md", text)
-                self.assertIn("the installed `homelab-platform` agent definition", text)
+                self.assertNotIn("agents/homelab-engineer.md", text)
+                self.assertIn("the installed `homelab-engineer` agent definition", text)
 
     def test_host_agent_adapters_have_no_claude_runtime_references(self) -> None:
         paths = [
@@ -709,7 +709,7 @@ class PlatformAdapterTests(unittest.TestCase):
         ):
             with self.subTest(skill=str(skill_file.relative_to(REPO))):
                 text = skill_file.read_text(encoding="utf-8")
-                for workflow in ("service-onboard", "host-onboard", "homelab-platform"):
+                for workflow in ("service-onboard", "host-onboard", "homelab-engineer"):
                     self.assertIn(f"`{namespace}{workflow}`", text)
                 # The map's whole added value on a host that hides these workflows is naming how
                 # to invoke them THERE. A regression in the generator's per-host sigil would leave

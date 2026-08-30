@@ -3,7 +3,7 @@
 # Lab-audit checks — command-level detail
 
 Read from `SKILL.md`. Every command here is read-only; anything that would fix what it finds
-routes to `homelab-platform`. Substitute the lab's real hosts, paths, and domains, and
+routes to `homelab-engineer`. Substitute the lab's real hosts, paths, and domains, and
 read the lab repo's own config first — every drift-style check is a comparison against intended
 state, and the repo is where intended state lives.
 
@@ -65,7 +65,7 @@ row 1; a finding here that needs an attack path belongs there.
   that's gone. Missing per-service metrics or a dashboard is not itself a finding without a named
   question they were supposed to answer.
 - Fix class: add the smallest signal or fix the route — `observability` designs it,
-  `homelab-platform` applies it.
+  `homelab-engineer` applies it.
 
 ## 6. Drift
 
@@ -92,7 +92,7 @@ row 1; a finding here that needs an attack path belongs there.
   supplies it).
 - Finding: an exposed service far behind upstream, or a pinned image with a known-exploited CVE
   when version intel is available. Bare `:latest` belongs to check 2, not here.
-- Fix class: a planned bump — one service via `homelab-platform`; a batch via
+- Fix class: a planned bump — one service via `homelab-engineer`; a batch via
   `upgrade-campaign`.
 
 ## Findings ledger (output convention)

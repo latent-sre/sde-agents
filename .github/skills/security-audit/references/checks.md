@@ -3,7 +3,7 @@
 # Security-audit checks — command-level detail
 
 Read from `SKILL.md`. Every command here is read-only; anything that would fix what it finds
-routes to `homelab-platform`, and vulnerability findings feed
+routes to `homelab-engineer`, and vulnerability findings feed
 `upgrade-campaign`'s ordering. Substitute the lab's real hosts, zones, and domains, and
 read the lab repo's own config first — the adversary questions below are all "what does the
 running system let someone do", and the repo is where the *intended* answer lives.
@@ -88,7 +88,7 @@ inventory.
   and reachable from a user zone; `[P2]` unreachable or requires local access already held.
 - Attack path: attacker position → the vulnerable version → what the exploit yields.
 - Fix class: an ordered upgrade batch via `upgrade-campaign` (single urgent bump via
-  `homelab-platform`).
+  `homelab-engineer`).
 
 ## 7. Personal-data paths
 

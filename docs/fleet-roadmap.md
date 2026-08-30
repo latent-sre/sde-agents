@@ -359,7 +359,15 @@ own ~4.9k-token body, and `self-improve-loop` (largest body: 18.1k bytes, 272 li
 tokens) is preloaded by three agents that already carry the Learning closeout stanza inline —
 with behavioral contracts proving the slimmed bodies still deliver what the fat ones did.
 References stay the on-demand layer (probe-verified 2026-08-16: conditional reference reads
-work; preloading takes the SKILL.md body only).
+work; preloading takes the SKILL.md body only). **That verification no longer holds unconditionally
+— falsified 2026-08-30.** A probe run on merged `main` reported `[FAIL] sde-fullstack read
+references/consuming-apis.md when the task called an upstream API`: the builder wrote an API client
+without loading the integration discipline, which is this design's Risk 1 realised. Earlier runs in
+the same round passed the same check, so the read is **intermittent**, not simply broken — and an
+intermittent conditional read is the worse finding for this item, because the whole plan rests on
+references arriving when their predicate trips. Re-verify before shrinking anything into the
+on-demand layer; a slimmed body plus a reference that loads two times in three is a net loss of
+guidance the fat body delivered every time.
 
 **Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md),
 "Preload and body footprint" — byte counts, the redundancy of the preloaded Learning protocol
@@ -393,7 +401,7 @@ live listing probe because the bundled share differs). (2) The doctor's
 `repository.skill-listing-budget` warning is promoted to a `validate_fleet.py` hard rule with a
 fixture that fails without it, so listing regrowth fails T0 instead of failing silently at
 runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
-warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-platform.agent.md` is at
+warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-engineer.agent.md` is at
 24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
 host rejecting the profile. (Re-measured 2026-08-17: 24,019 chars, 80%. GATE-003, GATE-004 and ORACLE-005 first took this body to 86% — 1,701 chars of added prose for three small items, while CTX-001 and CTX-003 are open to shrink exactly these files. Three review passes ended at **-39**: every fix is a replacement, none is an addition, and GATE-003 closed by deleting `Instrument: n/a` rather than defining it. Nobody measured until the number was asked for, which is the point of the tripwire.)
 
@@ -410,7 +418,7 @@ the rule's message with the consequence named; regenerated adapters and green ti
 **Next action:** The Copilot-cap tripwire — it is prerequisite-free, small, and the 82%
 measurement is already committed evidence.
 
-#### CTX-005 — shrink `homelab-platform`'s always-loaded body
+#### CTX-005 — shrink `homelab-engineer`'s always-loaded body
 
 **Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
 safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
@@ -449,14 +457,16 @@ separate cap tripwire; and the
 [CTX-005 discipline audit](archive/2026-08/ctx-005-engineering-discipline-audit-2026-08-23.md),
 which records the corpus, consumer inventory, external lanes, edit rounds, and exact no-go evidence.
 
-**Prerequisites:** GATE-006 lands first — its after-side lane is the diet's before side. Do not
-mix another policy change into the diet. **EVAL-011 also gates this item**: 25 of the 27 cases in
-that lane declare `allowed_tools: []`, and a permission-cut turn is currently scored as a contract
-failure, so the rates this diet would cut against measure the harness as well as the prose. Cutting
-always-loaded body on those numbers would run the wrong way on purpose — the bias penalises the
-inspect-first discipline the body exists to carry, so the passages most likely to look unearned are
-the safety ones. Re-measure after EVAL-011, or state in the outcome why a biased instrument was
-accepted.
+**Prerequisites:** GATE-006 landed 2026-08-30 (PR #164, merge `5dda85d`;
+[outcome](archive/2026-08/gate-006-outcome-2026-08-30.md)). **Its after-side lane is NOT available
+as this diet's before side** — the lane was deliberately stopped at 20 of 265 sessions, so the
+planned baseline does not exist and must be captured fresh. Do not mix another policy change into
+the diet. **EVAL-011 gates this item**: 25 of the 27 cases in that lane declare `allowed_tools: []`,
+and a permission-cut turn is currently scored as a contract failure, so the rates this diet would
+cut against measure the harness as well as the prose. Cutting always-loaded body on those numbers
+would run the wrong way on purpose — the bias penalises the inspect-first discipline the body exists
+to carry, so the passages most likely to look unearned are the safety ones. Re-measure after
+EVAL-011, or state in the outcome why a biased instrument was accepted.
 
 **Acceptance:** Before/after character counts use the same instrument; every affected homelab
 behavioral contract passes in the required fresh lane; the probe and full offline suite stay green;
@@ -491,7 +501,7 @@ addition, and retain hook/guard roster synchronization.
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
-`homelab-platform`.
+`homelab-engineer`.
 
 **Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
 read-only command surface and a threat review of every new verb/flag before changing the guard.
@@ -844,36 +854,11 @@ read as "this class is closed". Finding 4 — extend drift coverage to terminal 
 test, or state the limitation in `learning/README.md`.
 
 **Known un-correctable by CLI:** `lc_0fe6c3d1`'s destination pins
-`agents/homelab-platform.md:27`, where the rule now sits near line 55. The ledger enforces
+`agents/homelab-engineer.md:27`, where the rule now sits near line 55. The ledger enforces
 `destination` equal to the latest transition's, and `promoted` may only move to `rejected` or
 `retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
 Leave it until that record next transitions legitimately; the correct stable reference is the
 Tier 0 "read-only is not capture-safe" bullet.
-
-#### GATE-006 — homelab live-effect gate and gate-vocabulary fold
-
-**Status:** `active` (2026-08-29) — operator ruling: Track A of the homelab-platform audit runs
-before the CTX-005 diet.
-
-**Outcome:** `homelab-platform`'s managed gate is a control the plugin ships — a second
-`PreToolUse`/`Bash` hook that asks on every live-effect argv the agent invokes on Claude Code and
-denies it when the session cannot prompt — and the agent's authority prose names that mechanism
-instead of asking the model to prove one: transport evidence is structural, standing policy is
-host-specific, an identical retry happens once, `Effect class:` is folded into `Tier:`, the web
-tools are gone, and `service-onboard` alone owns the onboarding predicates.
-
-**Source:** [`homelab live-effect gate decision`](decisions/2026-08-29-homelab-live-effect-gate.md)
-(accepted); scope and acceptance in
-[`the GATE-006 spec`](superpowers/specs/gate-006-homelab-harness.md); payload in
-[`the GATE-006 plan`](superpowers/plans/gate-006-plan.md).
-
-**Prerequisites:** None. CTX-005 waits on this item: its after-side lane is the diet's before side.
-
-**Acceptance:** The spec's six acceptance items, of which 5 (probe and paired lane) and 6 (the
-interactive `ask` witness) are operator purchases recorded before merge.
-
-**Next action:** Execute the plan's Tasks 1–9 on `feat/gate-006-homelab-harness`; hand the
-operator the probe and paired-lane commands from Task 9.
 
 #### GATE-007 — bind a tier to each declared effect, or say one response carries one tier
 
@@ -950,6 +935,58 @@ prevent. Precedent: GATE-006 granted `Read` to the two `onboard-*` cases for exa
 floor) — the calibration evidence favours doing the instrument first, so the floor decision is made
 on honest numbers. Evidence: `evals/baselines/2026-08-29-gate-006/README.md`.
 
+#### PORT-002 — second mining round from save-toolkit, the sibling's delta since 2026-07-24
+
+**Status:** `decision-needed` (2026-08-29) — the scoping read is done and recorded; the operator
+picks the set before any graft is authored.
+
+**Outcome:** The lab-portable improvements `latent-sre/save-toolkit` (the renamed `sre-agents`)
+paid for on real incidents since our July import land here as capped grafts inside the skills
+that already own the ground — runbook step craft with a responder read-back and living-runbook
+history, a per-service readiness lens in `lab-audit`, the CI safety-contract additions, a
+"no-incident" bottom for `lab-incident`, the OWASP crosswalk in `prompt-craft`'s security
+reference, the postmortem causal-method and instrumentation clauses, the 2026 language-feature
+refresh, and — as its own slice — the observability refresh with an offline dashboard-hygiene
+check. No twin this fleet already leads on is touched, and provenance is recorded twice.
+
+**Source:** [`save-toolkit delta scoping`](archive/2026-08/save-toolkit-delta-scoping-2026-08-29.md)
+— donor read at `2a04d357` (2026-08-28); every candidate carries its donor path, target, the grep
+that proved the gap on our side, and its scrub list. Governed by the July adjudication's Killed
+list ([`sre-agents adaptation backlog`](archive/2026-07/sre-agents-adaptation-backlog.md)) and
+the PORT-001 porting method (`README.md`, "Importing from another fleet"). The flow is now
+bidirectional — the donor imported from this fleet on 2026-08-05 — so the record's per-pair diffs,
+not the donor's commit log, say what is genuinely new.
+
+**Prerequisites:** The operator's pick (Next action). Each slice then runs PORT-001's three blind
+passes on its donor files before any comparison, from refreshed `origin/main` on
+`feat/port-002-<skill>`. The observability slice is a separate branch: it carries a script and
+body edits adjacent to the description. No description edit is planned; any that becomes
+necessary owes the overlapping routing cluster (`homelab-ops` for the lab skills) before and
+after.
+
+**Acceptance:** Per slice: the graft lands inside the owning skill (no new skill, no new
+mechanism); the record's scrub list for that slice is gone from the landed text (no `cf`, PCF,
+`scribe`, `sre`-agent, or `operational-learning` residue); validator and tests green; the commit
+carries `adapted from latent-sre/save-toolkit@2a04d357 (MIT)` and `THIRD_PARTY_NOTICES.md`'s
+existing `sre-agents` entry is extended with the reviewed commit and the renamed repository; the
+record's verified-skip twins are byte-unchanged; contribute-back candidates stay listed, not
+acted on. The item closes when every picked slice has merged and the record is linked from
+`docs/README.md` as historical import adjudication.
+
+**Leads the record routes, none of them a slice:** their SKILL-001 audit measures (the
+rules-charged-twice count, the 7,500-byte entrypoint screen, probe-before-routing) fold into a
+PROP-003 successor to the closed PROP-002 sweep; `evals/build_probe.py`'s code-graded outcome
+probes (fake CLI, canary file, tests-actually-pass) become an EVAL investigation if wanted —
+stdlib redesign only, and our runner already passes `--allowedTools`; `workflow-graph-engineering`
+is a source pointer on GRAPH-004; `incident-drill` and the query catalog stay trigger-bound; the
+HOST-002 VS Code hook-merge observation names the experiment that could prove an agent-scoped
+boundary there and changes no rule until one does.
+
+**Next action:** Operator chooses one of: **(a)** the recommended five — candidates 1, 2, 4, 5,
+and 7 (`runbook`, `lab-audit`, `ci-actions`, `lab-incident`, `postmortem`; all lab-portable, no
+description edits) — as one round; **(b)** all eight content candidates; **(c)** (b) plus the
+PROP-003 and EVAL leads filed as their own items. Then open slice 1 (`runbook`).
+
 ### Small items
 
 The deliberate lightweight tier: defects and gaps too small for the full item contract, so they
@@ -975,6 +1012,24 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   reports INCONCLUSIVE naming the correlation gap, while a result the oracle DID observe with no
   canary in it is a real preload failure. Run `python3 scripts/probe_plugin.py` and read those two
   lines; do not buy a third run to disambiguate a second ambiguous one. Source: PR #143 probe run.
+  **Settled 2026-08-30, and it is the real-failure branch.** Three GATE-006 probe runs printed the
+  disambiguating wording this line asked for — "never appeared in `sde-fullstack`'s own spawn
+  result, *which the oracle DID observe*" — so it is a preload failure, not a correlation gap. What
+  is new: it is **intermittent — 2 passes and 2 failures across four runs** on effectively
+  identical bytes (the fourth, on merged `main`, passed both canaries), which is why single runs
+  have disagreed since July. Not caused by GATE-006 —
+  `agents/sde-fullstack.md` and both craft skills are untouched by `ed20cde..ab97f96`. An
+  intermittent preload is a worse finding than a deterministic one: every check that depends on
+  `skills:` preloading is a coin flip, and this line no longer needs a probe run to progress —
+  it needs a cause.
+
+- **PROBE-006** — a leg timeout crashes the probe instead of being recorded. On 2026-08-30 the
+  conditional-reference session hit its 900s limit and `subprocess.TimeoutExpired` propagated out
+  of `main()`, so the run ended with a traceback and the five workflow-contract legs after it never
+  executed at all. The probe's own doctrine is that a check which could not be computed is
+  INCONCLUSIVE, never a pass and never a silent absence; a timeout is exactly that case and should
+  be scored, not raised. Same class as the refusal the gate section already handles by skipping
+  only its own section. Source: GATE-006 probe re-run, PR #164.
 
 - **ORACLE-019** — three oracle constructions remain open after PR #152's four review rounds, and
   they are recorded rather than repaired because the round pattern is the finding: every round
@@ -1013,7 +1068,11 @@ retained node/edge design.
 **Source:** [`GRAPH-003 adjudication`](archive/2026-08/graph-003-adjudication-2026-08-01.md);
 governed by the accepted
 [`AI graph engineering decision`](decisions/2026-07-31-ai-graph-engineering.md), including its
-absorbed generated-prompt provenance control.
+absorbed generated-prompt provenance control. When the pilot opens, read the sibling's
+`workflow-graph-engineering` skill (save-toolkit `2a04d357`; see the
+[`PORT-002 scoping record`](archive/2026-08/save-toolkit-delta-scoping-2026-08-29.md)) as a
+design source: its cancellation, reset, late-arrival, and explicit-`UNKNOWN` semantics are the
+ones schema v1 excludes.
 
 **Prerequisites:** A demonstrated consumer, per the accepted record's discipline. Reopen
 triggers: a second workflow conversion is decided (the pilot economics in the
@@ -1091,7 +1150,7 @@ or deployment authority.
 
 **Prerequisites:** A real plugin or repository release task demonstrates the consumer. Keep
 pipeline implementation with `ci-actions`, merge readiness with `code-reviewer`, and running
-service changes with `homelab-platform`.
+service changes with `homelab-engineer`.
 
 **Acceptance:** Routing cases distinguish release, CI, deploy, and merge-verdict requests; the
 component states rollback boundaries; its first use performs the repository's actual version,
@@ -1159,7 +1218,7 @@ The initial and deep reviews are consolidated in
 | `frontend-craft` presents the default React stack as universal | `skills/frontend-craft/SKILL.md` now says an existing repository always wins and labels every core library binding as the default stack | Landed; exclude |
 | Claude Code frontmatter facts are duplicated | `skills/prompt-craft/references/claude-code-frontmatter.md` declares itself the single source, and `prompt-engineer` points to it | Landed; exclude |
 | Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
-| `homelab-platform` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
+| `homelab-engineer` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
 | `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
 | Eval coverage stops at one routing cluster with no behavioral checks | Ten routing clusters, the behavioral runner, packet linter, and 67 deterministic contracts exist (counts as of 2026-08-17; `evals/` owns the current figures) | Machinery landed; additional contract coverage survives below |
 | Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
@@ -1172,7 +1231,7 @@ The initial and deep reviews are consolidated in
 | Evergreen guidance carries version/comparative claims | The cited “newer”, fixed Recharts major, and fixed model-tier wording is gone | Landed; exclude |
 | `prompt-engineer` contradicts itself about spawning | It now branches on the Agent tool actually being unavailable | Landed; exclude |
 | Design-agent read-only Bash and handoff boundaries are prose-only | Principal and distinguished agents are guard-enforced for Bash, acknowledge the cooperative Write boundary, and report work back to the caller | Landed; exclude |
-| `homelab-platform` does not explain how it reaches operating skills | Its body names the checklists and path-loading convention it uses | Landed; exclude |
+| `homelab-engineer` does not explain how it reaches operating skills | Its body names the checklists and path-loading convention it uses | Landed; exclude |
 | `eng-ladder` references do not resolve in an installed plugin | Each rung reference names both the repo path and `${CLAUDE_PLUGIN_ROOT}` path | Landed; exclude |
 | Unused frontmatter fields have no deliberate decision | The canonical frontmatter reference records decisions for `when_to_use`, `maxTurns`, `memory`, and related fields | Landed; exclude |
 | Deep-review C1: wrapper-stack failures are missing from routing | `multi-agent-architect` now names wrapper, memory-layer, tool-skip, and delivery-corruption triggers | Landed; exclude |
@@ -1189,7 +1248,7 @@ must not seed new work.
 | `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
 | `restore-drill` and `upgrade-campaign` | Both appear in the generated skill inventory (20 skills as of 2026-08-17; `README.md` owns the current count) | Landed; exclude despite the backlog's stale “remain open” sentence |
 | `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
-| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-platform` | Landed; exclude |
+| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-engineer` | Landed; exclude |
 | `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
 | `lab-audit` allowed-tool preapprovals | The backlog explicitly rejected the authority expansion because approval friction is useful | Deliberately closed |
 | `service-onboard` compose template | No template exists; the original plan limits it to labs with no existing pattern | Survives as deferred, trigger-bound work |

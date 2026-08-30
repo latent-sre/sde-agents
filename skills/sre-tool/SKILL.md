@@ -105,4 +105,4 @@ For everything else, run the tool and execute the **mission transaction from the
 
 ## Phase 5 — Deploy and onboard
 
-If the tool lands on the lab, hand off to `sde-agents:homelab-platform` with the `sde-agents:service-onboard` checklist and the tool's runbook as acceptance criteria — built-but-never-onboarded is not done. Name this gate in the Phase 0 cadence contract.
+If the tool lands on the lab, hand off to `sde-agents:homelab-engineer` with the `sde-agents:service-onboard` checklist and the tool's runbook as acceptance criteria — built-but-never-onboarded is not done. Name this gate in the Phase 0 cadence contract.

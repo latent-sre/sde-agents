@@ -1,6 +1,6 @@
 ---
 name: "service-onboard"
-description: "The standardization checklist homelab-platform works when adding a self-hosted service — placement, config-as-code, storage, network, security, monitoring, an operating doc, end-to-end verify. To add or standardize a service, ask homelab-platform (it owns change authority and works this checklist under its tiers); a user can also run it directly as /service-onboard."
+description: "The standardization checklist homelab-engineer works when adding a self-hosted service — placement, config-as-code, storage, network, security, monitoring, an operating doc, end-to-end verify. To add or standardize a service, ask homelab-engineer (it owns change authority and works this checklist under its tiers); a user can also run it directly as /service-onboard."
 argument-hint: "[service to add]"
 disable-model-invocation: true
 ---
@@ -15,16 +15,16 @@ disable-model-invocation: true
 The checklist that keeps the lab from rotting. Work through every applicable step in order; mark a
 non-applicable step with the predicate that made it unnecessary — silence reads as "done."
 
-`homelab-platform` owns change authority for everything below, and this checklist runs
+`homelab-engineer` owns change authority for everything below, and this checklist runs
 **under** that agent — it is not self-sufficient standalone. Applicable steps may change config,
-storage, networking, and security on a live lab: classify each apply under homelab-platform's tiers
+storage, networking, and security on a live lab: classify each apply under homelab-engineer's tiers
 (Tier 0 observe · 1 prepare · 2 reversible live change, needs an authorized decision · 3
 destructive/access-path, needs a fresh decision + proven recovery) and use the decision and
 transport that owner requires. A disclosed finite Tier 2 plan may share one decision; Tier 3 may
 not.
 This checklist grants no permission of its own — a step being on the list is not approval to run
-it. Whichever way you arrived here (homelab-platform reads it by path, or a user invokes the slash
-command), the authority stays with homelab-platform: if you reached it without that agent's tier
+it. Whichever way you arrived here (homelab-engineer reads it by path, or a user invokes the slash
+command), the authority stays with homelab-engineer: if you reached it without that agent's tier
 discipline, stop and route through it.
 
 **Discovery output is part of the blast radius.** The placement and conflict checks below read

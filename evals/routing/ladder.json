@@ -33,7 +33,7 @@
       "prompt": "Deploy Immich to my home lab and put it behind the proxy.",
       "polarity": "negative",
       "expect_not_fires": ["sde-fullstack", "principal-engineer", "distinguished-architect", "eng-ladder"],
-      "expected_output": "Infrastructure/service operation — homelab-platform, which eng-ladder explicitly places OUTSIDE the ladder.",
+      "expected_output": "Infrastructure/service operation — homelab-engineer, which eng-ladder explicitly places OUTSIDE the ladder.",
       "tags": ["near-miss", "lab"]
     },
     {

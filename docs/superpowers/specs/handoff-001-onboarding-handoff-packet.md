@@ -18,7 +18,7 @@ supply the complete field-derived section list below.
 
 ## Scope
 
-One work-order template in canonical source, owned by `sde-agents:homelab-platform` (it owns scope
+One work-order template in canonical source, owned by `sde-agents:homelab-engineer` (it owns scope
 and authority), emitted before implementation crosses contexts. The main Claude coordinator
 preserves the exact block, computes its digest, and supplies both to the builder. The builder
 recomputes that digest before returning the ID/digest receipt or a field-named input-required
@@ -47,7 +47,7 @@ field-derived:
 11. Blocking prerequisites; non-blocking lanes with owners (explicit gates, never silently
     dropped); explicit out-of-scope.
 12. Secret-safe capture: the packet carries field-scoped projections only; resolved secret
-    material never enters it (rule now stated in `homelab-platform` Tier 0 and
+    material never enters it (rule now stated in `homelab-engineer` Tier 0 and
     `service-onboard`).
 
 ## Acceptance

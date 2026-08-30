@@ -68,6 +68,6 @@ reads it, and what it opens — never the value itself, in the report or the led
 
 Fix class: rotate first (a leaked secret is leaked regardless of what you fix afterward), then
 move it behind indirection (env_file, a secret store, or the lab's vault), then narrow who can
-read it. Every one of those is a `homelab-platform` change under its tiers; where the
+read it. Every one of those is a `homelab-engineer` change under its tiers; where the
 consumer is application code or CI, the pattern lives in `backend-craft` and
 `ci-actions` respectively.

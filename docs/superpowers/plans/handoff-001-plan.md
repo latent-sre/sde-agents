@@ -15,7 +15,7 @@ and Codex runtime; they are not mixed with this amended Claude case set.
 
 This round succeeds when:
 
-- `homelab-platform` returns one complete `Work Order v1` block to the main coordinator;
+- `homelab-engineer` returns one complete `Work Order v1` block to the main coordinator;
 - the coordinator preserves exact LF-normalized UTF-8 bytes, computes SHA-256, and supplies the
   unchanged block and digest to `sde-fullstack`;
 - the builder recomputes SHA-256 over those same normalized bytes before accepting the order;
@@ -32,7 +32,7 @@ This round succeeds when:
 
 ## Work-order ownership
 
-`agents/homelab-platform.md` owns the trigger, identity header, six field labels, field semantics,
+`agents/homelab-engineer.md` owns the trigger, identity header, six field labels, field semantics,
 capture safety, authority boundary, and short-form exception. It has no `Agent` tool and returns
 the work order to its caller rather than attempting nested delegation.
 

@@ -205,15 +205,15 @@ class PluginWiringGateTests(PluginWiringMixin, unittest.TestCase):
     def test_gated_name_missing_from_the_hook_rosters_is_reported(self) -> None:
         # REGRESSION (review-reported, reproduced): the gate's documented growth path is "the
         # roster grows by recurrence" -- an incident adds one name to GATED_AGENT_NAMES. Doing
-        # exactly that left the validator GREEN while the hook's `*homelab-platform*` prefilter
+        # exactly that left the validator GREEN while the hook's `*homelab-engineer*` prefilter
         # exited before the gate ran for the new name, so the addition gated nothing, silently.
         # The guard already cross-checks both of its roster blocks; the gate did not check either.
         def add_unwired_name(repo: Path) -> None:
             path = repo / "scripts" / "live-effect-gate.py"
             text = path.read_text(encoding="utf-8")
             path.write_text(
-                text.replace('GATED_AGENT_NAMES = frozenset({"homelab-platform"})',
-                             'GATED_AGENT_NAMES = frozenset({"homelab-platform", "sde-fullstack"})'),
+                text.replace('GATED_AGENT_NAMES = frozenset({"homelab-engineer"})',
+                             'GATED_AGENT_NAMES = frozenset({"homelab-engineer", "sde-fullstack"})'),
                 encoding="utf-8", newline="\n")
 
         issues = self._issues_after(add_unwired_name)
@@ -241,8 +241,8 @@ class PluginWiringGateTests(PluginWiringMixin, unittest.TestCase):
             path = repo / "scripts" / "live-effect-gate.py"
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
-                    'GATED_AGENT_NAMES = frozenset({"homelab-platform"})',
-                    'GATED_AGENT_NAMES = frozenset({"homelab-platform", "ghost-agent"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-engineer"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-engineer", "ghost-agent"})',
                 ),
                 encoding="utf-8",
             )
@@ -266,8 +266,8 @@ class PluginWiringGateTests(PluginWiringMixin, unittest.TestCase):
             path = repo / "scripts" / "live-effect-gate.py"
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
-                    'GATED_AGENT_NAMES = frozenset({"homelab-platform"})',
-                    'GATED_AGENT_NAMES = frozenset({"homelab-platform", "code-reviewer"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-engineer"})',
+                    'GATED_AGENT_NAMES = frozenset({"homelab-engineer", "code-reviewer"})',
                 ),
                 encoding="utf-8",
             )

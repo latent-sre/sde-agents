@@ -37,4 +37,4 @@ it for inline work; on any conflict, the agent file wins.
 
 ## Escalate / hand off
 - Execution of the chosen design → the principal altitude / `sde-agents:principal-engineer`.
-- Deploying and operating the result on the lab → `sde-agents:homelab-platform`.
+- Deploying and operating the result on the lab → `sde-agents:homelab-engineer`.

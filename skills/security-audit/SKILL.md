@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: An adversary-eyes security sweep of the running home lab — exposure, trust zones, authn on exposed services, management planes reachable from the wrong zone, default credentials, secrets posture, vulnerabilities triaged into sde-agents:upgrade-campaign priorities. Use for "security-audit my lab", "what could an attacker reach", "check my exposure", or after standing up anything internet-facing. Reports only; fixes go to sde-agents:homelab-platform. For a diff, sde-agents:code-reviewer; a codebase threat model, sde-agents:application-security-auditor; hygiene, sde-agents:lab-audit.
+description: An adversary-eyes security sweep of the running home lab — exposure, trust zones, authn on exposed services, management planes reachable from the wrong zone, default credentials, secrets posture, vulnerabilities triaged into sde-agents:upgrade-campaign priorities. Use for "security-audit my lab", "what could an attacker reach", "check my exposure", or after standing up anything internet-facing. Reports only; fixes go to sde-agents:homelab-engineer. For a diff, sde-agents:code-reviewer; a codebase threat model, sde-agents:application-security-auditor; hygiene, sde-agents:lab-audit.
 argument-hint: [scope - a zone, a service, or the whole lab]
 disallowed-tools: Write, Edit, NotebookEdit
 ---
@@ -11,7 +11,7 @@ or take." Every finding is evidence-cited and carries the path an attacker would
 
 All checks are read-only. `disallowed-tools` removes Write and Edit while this skill is active,
 but Bash can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection
-commands only — every fix routes to `sde-agents:homelab-platform`, and vulnerability findings
+commands only — every fix routes to `sde-agents:homelab-engineer`, and vulnerability findings
 feed `sde-agents:upgrade-campaign`'s priority order rather than becoming ad-hoc patches. The
 read-only-ness here is cooperative, not enforced (the reviewer's Bash guard keys on guarded
 *agent* identities, not skills). Fan the checks out in parallel (per zone or per check area)
@@ -26,7 +26,7 @@ Two rules with no exceptions:
   authorized key, a process or container you can't account for, exfil artifacts, tampered logs —
   ends the audit immediately: preserve the evidence untouched, never clean up, restart, or
   rebuild, and hand to the operator with what you saw and where. Recovery is an incident
-  (`sde-agents:lab-incident` under `sde-agents:homelab-platform`), not an audit step.
+  (`sde-agents:lab-incident` under `sde-agents:homelab-engineer`), not an audit step.
 
 ## Checks (run what applies; name what you skipped in the denominator)
 

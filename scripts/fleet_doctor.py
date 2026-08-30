@@ -700,7 +700,7 @@ def main(argv: list[str] | None = None) -> int:
         print(render_human(report))
     # A warning used to exit 0, which made the doctor agree with any caller that asked "is this
     # healthy?" while printing that it was not. Field-proven cost (issue #126): a stale standalone
-    # Codex `homelab-platform` profile shadowed the shipped one for a whole session -- the doctor
+    # Codex `homelab-engineer` profile shadowed the shipped one for a whole session -- the doctor
     # had already detected it and reported WARN, and the operator found the drift the hard way,
     # through `install_codex_agents.py --check`, because nothing an exit status reaches ever said
     # so. Warnings are distinct from failures rather than promoted into them: 1 still means a check

@@ -1,9 +1,9 @@
 # Homelab live-effect gate: ship the interposition, fold the gate vocabulary
 
 - **Date**: 2026-08-29
-- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-platform audit:
+- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-engineer audit:
   harness and policy amendments first, the body diet second)
-- **Owner**: `agents/homelab-platform.md` (change authority, transport, standards, boundaries),
+- **Owner**: `agents/homelab-engineer.md` (change authority, transport, standards, boundaries),
   `hooks/hooks.json` and `scripts/live-effect-gate.py` (the control)
 - **Amends**: [`2026-08-23-homelab-proportional-operations.md`](2026-08-23-homelab-proportional-operations.md)
   decisions 1 (managed prompt as the decision) and 2 (standing policy), and its retry
@@ -16,7 +16,7 @@
 
 ## Context
 
-The 2026-08-29 audit of `agents/homelab-platform.md` against the fleet's strands (prompt,
+The 2026-08-29 audit of `agents/homelab-engineer.md` against the fleet's strands (prompt,
 context, harness, loop, graph) found an authority model that is right-sized for one operator and
 transport prose that no host mechanism backs. The measured fact framing every decision below: on
 the current text's own lane (sonnet, clean room, five runs — the CTX-005 audit) the agent passes
@@ -75,7 +75,7 @@ restrictive decision wins (`deny` → `defer` → `ask` → `allow`); in non-int
 
 1. **The plugin ships the interposition.** `scripts/live-effect-gate.py`, registered in
    `hooks/hooks.json` as a second `PreToolUse`/`Bash` hook, scopes itself to `agent_type`
-   `homelab-platform` (bare or `sde-agents:`-namespaced) and no-ops for every other caller. For a
+   `homelab-engineer` (bare or `sde-agents:`-namespaced) and no-ops for every other caller. For a
    live-effect argv it answers `ask` when the session can prompt and `deny` when the payload's
    `permission_mode` is `bypassPermissions`, `dontAsk`, or `auto`, or is absent (a renamed field
    fails closed and loud). An argv it cannot bind — a wrapper shell, command substitution, an
@@ -130,7 +130,26 @@ surface is not granted rather than guard-denied.
 - The fleet ships two hooks; the guard playbook in `AGENTS.md` covers both; the probe gains a
   `dontAsk` differential (the gate denies the gated agent, the main loop runs).
 - The `ask` leg cannot be probed headlessly (an unanswered `ask` is a denial in `-p`); it is
-  witnessed once interactively and recorded here: _witness pending_.
+  witnessed once interactively and recorded here. **Witnessed 2026-08-30, Claude Code 2.1.251**,
+  operator-run: `sde-agents:homelab-platform` invoking `docker compose -f
+  /tmp/sde-witness/docker-compose.yml up -d` produced a real permission prompt carrying the gate's
+  own voice, quoted verbatim —
+
+  > sde-agents live-effect gate: matched rule `docker compose up` — a Tier 2/3 live effect from
+  > homelab-platform. This prompt is the managed gate for this exact argv; accepting it is the
+  > decision, and the agent runs the command once.
+
+  The agent name inside that quotation is the one the runtime actually emitted: the witness ran on
+  2026-08-30 **before** the rename to `homelab-engineer` later that day (PR #165). It is preserved
+  as observed. A quotation that is silently updated to match a later identity is no longer evidence
+  — a later audit could not reconstruct it, and the record would be asserting bytes nobody saw.
+
+  The target path deliberately did not exist, so the argv the hook matched on is the whole of what
+  was exercised and accepting could start nothing. Scope of the witness, stated because a later
+  reader will otherwise over-read it: it establishes that the gate renders a prompt naming the
+  matched rule for a live verb. The paired reader control (`docker compose … ps` must NOT prompt)
+  was not reported back, so the gate's *discrimination* between reader and live verb rests on
+  `tests/test_live_effect_gate.py` and the probe's main-loop leg, not on this session.
 - Twelve contract entries and five `packet_lint.py` references lose `Effect class`; the vocabulary
   drift test narrows to `Gate`/`Transport`; the offline oracle controls change with them.
 - Sizes are recorded, not targeted: the body diet is CTX-005's, and its before side is this

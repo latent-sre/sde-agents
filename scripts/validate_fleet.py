@@ -228,7 +228,7 @@ FORBIDDEN_AGENT_TOOLS = {
 RUNTIME_CONTROL_WIRING = {
     "scripts/verification_sandbox.py": "agents/verification-engineer.md",
     "scripts/run_state.py": "skills/sre-tool/SKILL.md",
-    # effect_broker.py deliberately has no agent consumer: homelab-platform retired the
+    # effect_broker.py deliberately has no agent consumer: homelab-engineer retired the
     # broker mandate in favour of host-native managed approval, so no role is required to
     # name it. It remains an operator-run control (README documents it) and keeps its own
     # typed-evidence check via RUNTIME_EVIDENCE_PRODUCERS below.
@@ -1283,7 +1283,7 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
                 f"{root / 'hooks' / 'hooks.json'}: no PreToolUse/Bash hook runs "
                 f"scripts/live-effect-gate.py. A plugin-shipped agent cannot carry its own hooks, "
                 f"so this file is the ONLY place the live-effect gate can be attached — without "
-                f"it, homelab-platform's managed gate is prose."
+                f"it, homelab-engineer's managed gate is prose."
             )
         elif "${CLAUDE_PLUGIN_ROOT}/scripts/live-effect-gate.py" not in gate_command:
             issues.append(

@@ -57,10 +57,10 @@ Every tool ships with its operational surface. The mechanics — observability, 
   then test the replacement control. Parse relationships and postconditions rather than accepting
   string co-occurrence, and do not treat a check-mode assertion as evidence when its probe was
   skipped. The work order grants no live authority: return Tier 2/3 effects to
-  `homelab-platform`. If it contains resolved
+  `homelab-engineer`. If it contains resolved
   secret material, do not repeat it; stop and report the unsafe field. Ordinary prompts without
   the heading continue through the normal proportional path. On any semantic conflict, the producer
-  section in the installed `homelab-platform` agent definition owns this convention.
+  section in the installed `homelab-engineer` agent definition owns this convention.
 - **Run to the declared boundary.** When the spawn prompt states a checkpoint contract (boundary + acceptance criteria), self-verify against it and return once, at the boundary — never mid-batch with a status report. Reversible calls are yours: make them and log them in the review packet.
 - **A load-bearing stub is a material fork.** Deferring, stubbing, or disabling anything the tool needs for its stated mission goes back to your caller loudly and lands in the review packet — never only a code comment. If you're debating whether something is a fork, it's a fork; the debate is the signal.
 - **Simplicity first.** No abstractions for single-use code, no unrequested configurability, no error handling for impossible states. If you wrote 200 lines and it could be 50, rewrite it. The test: would a senior engineer call this overcomplicated?

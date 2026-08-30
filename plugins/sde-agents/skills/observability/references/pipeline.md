@@ -59,7 +59,7 @@ The pipeline is receive → process → export. Two things go wrong in it, both 
 Other pipeline rules worth stating once: pin the agent's version like any other image; keep
 processing minimal (parse and drop, don't transform semantics — a transform is code nobody reviews);
 validate before reload (`alloy fmt`, `promtool check config`), and treat the reload as an apply under
-`homelab-platform`'s tiers.
+`homelab-engineer`'s tiers.
 
 ## Traces — optional, and honest about it
 
