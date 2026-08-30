@@ -476,6 +476,118 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             flags=re.DOTALL,
         )
 
+    if name == "homelab-platform":
+        # The canonical transport bullet names the live-effect gate — a Claude-only PreToolUse
+        # hook (GATE-006). On the other hosts the claim is replaced, not carried: Codex has its
+        # own exec-policy prompt and a non-executing check for it; Copilot/VS Code payloads do not
+        # identify the active agent, so no host control interposes there and every live effect is
+        # an operator handoff. Each substitution must land exactly once, for the reason the
+        # repository-investigator block below records.
+        if host == "codex":
+            gate_bullet = (
+                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "per-invocation human\n  decision on the exact argv. On this host that control is "
+                "the sandbox and command-approval prompt;\n  the source profile's live-effect gate "
+                "is a Claude-only hook that Codex custom-agent TOML cannot\n  install, so the "
+                "evidence is `codex execpolicy check` on the exact argv reporting `prompt` and "
+                "the\n  matched rule. State `Gate evidence: exec policy — matched rule <rule>` "
+                "before invoking; when the\n  check reports `allow`, cannot be run, or names no "
+                "rule, treat the transport as unproven. Never run a\n  live command to discover "
+                "whether it prompts: when the gate cannot be established, use operator\n  handoff."
+            )
+            standing = (
+                "on this host only an exec-policy rule under a root-owned path can\n  qualify — a "
+                "rule in any file you can edit proves nothing."
+            )
+            evidence_line = (
+                "> **Gate evidence**: exec policy — `codex execpolicy check` reports `prompt` for "
+                "this exact argv\n> and the matched rule."
+            )
+        else:
+            gate_bullet = (
+                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "per-invocation human\n  decision on the exact argv. This profile holds an "
+                "`execute` tool, but Copilot and VS Code\n  PreToolUse payloads do not identify "
+                "the active agent, so the source profile's live-effect gate\n  cannot be scoped "
+                "here and no host control interposes a decision on the exact argv. Every Tier "
+                "2/3\n  effect on this host therefore uses operator handoff: present the exact "
+                "command and let the\n  operator run it. Never run a live command to discover "
+                "whether it prompts."
+            )
+            standing = (
+                "no rule on this host is both operator-owned and outside your edit\n  reach, so "
+                "standing policy never qualifies here."
+            )
+            evidence_line = (
+                "> **Gate evidence**: none on this host — the operator runs the exact command "
+                "(Transport:\n> operator handoff)."
+            )
+        if host == "codex":
+            # "You hold no web tool by design" is enforced on Claude by `tools:` and on Copilot by
+            # the absence of `web` from its allowlist. Codex custom-agent TOML has NO per-agent
+            # tool allowlist -- this file's own host contract says so -- so a web or MCP tool the
+            # parent session exposes stays reachable for an agent that reads secret-bearing files.
+            # Carrying the sentence unchanged would state absent authority where only a cooperative
+            # instruction exists, which is the "authority is the host's control, never prose" rule
+            # inverted. The instruction stays; the claim about where it comes from is made honest.
+            web_claim = (
+                "No web tool is granted to you here, but Codex custom-agent TOML carries no "
+                "per-agent tool allowlist, so a web or MCP tool the parent session exposes stays "
+                "reachable and only an outer host control (sandbox or exec policy) can remove it "
+                "— treat any such tool as authority you must not use:"
+            )
+            text, replaced = re.subn(
+                r"You hold no web tool by design:", web_claim, text, count=1
+            )
+            if replaced != 1:
+                raise ValueError(
+                    f"homelab-platform codex rewrite: the no-web anchor was not found "
+                    f"({replaced} matches). The canonical sentence changed without updating "
+                    f"adapt_agent_contract, so the Codex adapter would keep claiming an absent "
+                    f"web tool that this host cannot actually withhold."
+                )
+        for pattern, replacement in (
+            (
+                r"- \*\*Managed gate \(normal `new` path\):\*\*.*?"
+                r"a\n  suppressed-prompt session — use operator handoff\.",
+                gate_bullet,
+            ),
+            (
+                r"on Claude Code only a rule in managed \(administrator-owned\) settings can\n"
+                r"  qualify — .*?root-owned path qualifies\.",
+                standing,
+            ),
+            (
+                r"> \*\*Gate evidence\*\*: live-effect gate — matched rule `docker compose up`; "
+                r"the host prompt will\n> show this exact argv\.",
+                evidence_line,
+            ),
+        ):
+            text, replaced = re.subn(pattern, replacement, text, count=1, flags=re.DOTALL)
+            if replaced != 1:
+                raise ValueError(
+                    f"homelab-platform {host} rewrite: the transport anchor {pattern[:40]!r} was "
+                    f"not found ({replaced} matches). The canonical passage changed without "
+                    f"updating adapt_agent_contract, so the generated adapter would silently keep "
+                    f"a Claude-only live-effect-gate claim this host cannot honor."
+                )
+        if host == "copilot":
+            for old, new in (
+                ("> Transport: managed gate\n", "> Transport: operator handoff\n"),
+                (
+                    "**Gate owner**: host managed approval. Accepting the prompt after\n"
+                    "> this summary runs the command once, then I verify; no chat re-approval.",
+                    "**Gate owner**: operator handoff. The operator runs the exact command\n"
+                    "> once after this summary, then I verify.",
+                ),
+            ):
+                if text.count(old) != 1:
+                    raise ValueError(
+                        f"homelab-platform copilot rewrite: expected exactly one {old[:40]!r} "
+                        f"in the worked example, found {text.count(old)}."
+                    )
+                text = text.replace(old, new)
+
     if name == "repository-investigator":
         # The canonical paragraph claims a PreToolUse reader allowlist behind Bash. That hook is
         # Claude-only, so on both other hosts the claim must be replaced, not carried: prose that

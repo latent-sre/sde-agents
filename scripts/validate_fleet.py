@@ -1071,21 +1071,47 @@ def load_guard(root: Path):
     return module
 
 
-def hook_command(root: Path) -> str | None:
-    """The PreToolUse/Bash command string from hooks/hooks.json, following the real key path."""
+# The hook reads its fast-path from "$IN" and its identity fallback from "$SQ", a
+# whitespace-stripped copy, so JSON spacing cannot decide whether the fallback fires. Either
+# variable opens a roster block, and the cross-check below must recognise both.
+_CASE_BLOCK_RE = re.compile(r'case "\$(?:IN|SQ)" in')
+
+
+def load_gate(root: Path):
+    """Import scripts/live-effect-gate.py by path — the hyphen makes it un-importable by name."""
+    source = root / "scripts" / "live-effect-gate.py"
+    module = load_module_by_content(source, "live_effect_gate")
+    if module is None:
+        raise ImportError(f"cannot load {source}")
+    return module
+
+
+def hook_commands(root: Path) -> list[str]:
+    """Every PreToolUse/Bash command string in hooks/hooks.json, in file order."""
     path = root / "hooks" / "hooks.json"
     if not path.is_file():
-        return None
+        return []
     try:
         config = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return None
+        return []
+    commands: list[str] = []
     for entry in config.get("hooks", {}).get("PreToolUse", []):
         if entry.get("matcher") == "Bash":
             for hook in entry.get("hooks", []):
                 if hook.get("type") == "command" and hook.get("command"):
-                    return hook["command"]
-    return None
+                    commands.append(hook["command"])
+    return commands
+
+
+def hook_command_for(root: Path, script: str) -> str | None:
+    """The PreToolUse/Bash command that runs `script`, found by name — two hooks share the matcher."""
+    return next((command for command in hook_commands(root) if script in command), None)
+
+
+def hook_command(root: Path) -> str | None:
+    """The read-only guard's PreToolUse/Bash command string (its callers keep this name)."""
+    return hook_command_for(root, "readonly-guard.py")
 
 
 def agent_tool_bases(path: Path) -> set[str]:
@@ -1213,6 +1239,91 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             f"mismatch means it matches nobody and silently guards nothing."
         )
 
+    # The live-effect gate is the guard's mirror image for a Bash-and-Write agent: where the
+    # guard enumerates readers and denies the rest, the gate names live verbs and makes a human
+    # decide. It has the same single place to live and the same silent failure modes, so the
+    # same links are held: it must load, name the plugin, name real Bash-holding agents that
+    # are not also guarded, and be wired from ${CLAUDE_PLUGIN_ROOT}.
+    gate_path = root / "scripts" / "live-effect-gate.py"
+    try:
+        gate = load_gate(root)
+    except Exception as exc:  # a gate that cannot import gates nothing
+        issues.append(f"{gate_path}: cannot load live-effect gate: {exc}")
+        gate = None
+    if gate is not None:
+        if plugin_name and gate.PLUGIN_NAME != plugin_name:
+            issues.append(
+                f"{gate_path}: PLUGIN_NAME {gate.PLUGIN_NAME!r} does not match the manifest name "
+                f"{plugin_name!r}. The gate recognizes its subject by a NAMESPACED agent_type, so a "
+                f"mismatch means it matches nobody and silently gates nothing."
+            )
+        for name in sorted(gate.GATED_AGENT_NAMES):
+            agent_path = root / "agents" / f"{name}.md"
+            if name not in agent_names:
+                issues.append(
+                    f"{gate_path}: GATED_AGENT_NAMES names {name!r}, which is not an agent in "
+                    f"agents/ — a typo here gates nobody."
+                )
+                continue
+            if "Bash" not in agent_tool_bases(agent_path):
+                issues.append(
+                    f"{gate_path}: gated agent {name!r} holds no Bash, so the gate can never fire "
+                    f"for it"
+                )
+            if name in guard.GUARDED_AGENT_NAMES:
+                issues.append(
+                    f"{gate_path}: {name!r} is in both GATED_AGENT_NAMES and the guard's "
+                    f"GUARDED_AGENT_NAMES; a read-only agent gets the guard, a live-effect agent "
+                    f"gets the gate, never both (the guard would deny every live verb before the "
+                    f"gate asked)"
+                )
+        gate_command = hook_command_for(root, "live-effect-gate.py")
+        if gate_command is None:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: no PreToolUse/Bash hook runs "
+                f"scripts/live-effect-gate.py. A plugin-shipped agent cannot carry its own hooks, "
+                f"so this file is the ONLY place the live-effect gate can be attached — without "
+                f"it, homelab-platform's managed gate is prose."
+            )
+        elif "${CLAUDE_PLUGIN_ROOT}/scripts/live-effect-gate.py" not in gate_command:
+            issues.append(
+                f"{root / 'hooks' / 'hooks.json'}: the live-effect-gate.py hook must run the gate "
+                f"from ${{CLAUDE_PLUGIN_ROOT}} — the plugin's own installed copy — never a "
+                f"relative path a repository under operation could supply."
+            )
+        if gate_command is not None:
+            # The gate hook carries the same two rosters the guard's does, and each disarms it
+            # alone: the `case` fast-path decides whether the gate runs at all, and the
+            # no-interpreter fallback is what decides when no Python answers. The gate's own
+            # documented growth path is "the roster grows by recurrence" — someone adds a name to
+            # GATED_AGENT_NAMES after an incident — and without this check that addition gates
+            # NOTHING while every check stays green, because the fast-path still exits for the
+            # unlisted name (review-reported, reproduced).
+            gate_blocks = [segment.split("esac", 1)[0]
+                           for segment in _CASE_BLOCK_RE.split(gate_command)[1:]]
+            if len(gate_blocks) < 2:
+                issues.append(
+                    f"{root / 'hooks' / 'hooks.json'}: expected the live-effect-gate hook to "
+                    f"contain two `case \"$IN\" in` blocks (the fast-path filter and the "
+                    f"no-interpreter fallback), found {len(gate_blocks)}. The roster cross-check "
+                    f"cannot verify a hook it does not recognize, so this fails rather than "
+                    f"passing a hook it did not actually check."
+                )
+            else:
+                for label, block in (("fast-path filter", gate_blocks[0]),
+                                     ("no-interpreter fallback", gate_blocks[-1])):
+                    for name in sorted(gate.GATED_AGENT_NAMES):
+                        if name not in block:
+                            issues.append(
+                                f"{root / 'hooks' / 'hooks.json'}: the live-effect-gate hook's "
+                                f"{label} never names {name!r}, but scripts/live-effect-gate.py "
+                                f"lists it in GATED_AGENT_NAMES. The fast-path decides whether the "
+                                f"gate runs at all and the fallback is what decides when no "
+                                f"interpreter answers, so a name missing from EITHER leaves that "
+                                f"agent's live effects ungated — silently, because the hook still "
+                                f"exits 0."
+                            )
+
     command = hook_command(root)
     if command is None:
         issues.append(
@@ -1242,7 +1353,7 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
         # Searching the whole command string cannot tell them apart: a name present in only one
         # block satisfies a substring check while the other block silently lets the agent through
         # (caught in review of this very rule). So each block is located and asserted separately.
-        blocks = [segment.split("esac", 1)[0] for segment in command.split('case "$IN" in')[1:]]
+        blocks = [segment.split("esac", 1)[0] for segment in _CASE_BLOCK_RE.split(command)[1:]]
         if len(blocks) < 2:
             issues.append(
                 f"{root / 'hooks' / 'hooks.json'}: expected the PreToolUse/Bash hook to contain two "

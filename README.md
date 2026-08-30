@@ -124,9 +124,9 @@ Several files deliberately paraphrase another — the `eng-ladder` altitude refe
 agent files, and its routing table is the source of truth for routing. Each such file states which
 side wins on conflict; when they drift, fix the paraphrase, never the source. The other owned
 conventions, for the same reason: the **three-strikes rule** is owned by `skills/root-cause`
-(sde-fullstack, sre-tool, and the builder reference cite it); the **five-tier risk/effect
-classification** is owned by `agents/homelab-platform.md`'s change-authority section
-(code-reviewer carries the compact finding-classification paraphrase and defers on conflict);
+(sde-fullstack, sre-tool, and the builder reference cite it); the **finding-effect classification** (merge blocker / live-activation blocker / optional
+hardening) is owned by `agents/code-reviewer.md`, and the live-activation gate it names is
+`agents/homelab-platform.md`'s change-authority tiers;
 the **onboarding work order** trigger, fields, manager-owned digest transfer, and authority boundary
 are owned by `agents/homelab-platform.md` (`agents/sde-fullstack.md` carries the receipt/consumer
 paraphrase and defers on conflict);
@@ -292,6 +292,17 @@ Two properties fall out of that, both load-bearing and both tested:
 - It fails **closed** for the reviewer (no working Python, missing or broken guard → deny) while
   leaving every other caller untouched. A broken install degrades the reviewer; it cannot brick your
   session.
+
+The same file registers a second hook with the opposite job. `homelab-platform` holds `Bash` and
+`Write` and applies live changes, so its control is not "deny writers" but "make a human decide":
+`scripts/live-effect-gate.py` answers `ask` for every live-effect command that agent runs —
+`docker compose up`, `systemctl restart`, `zfs destroy`, a `reboot` — and `deny` when the session's
+permission mode suppresses prompts, because a hook `deny` wins even under bypass and a bypassed
+prompt is not a decision. It no-ops for every other caller, resolves through
+`${CLAUDE_PLUGIN_ROOT}`, and when its interpreter is missing it asks for everything from that agent
+rather than allowing anything. Its roster is deliberately denylist-shaped — the host's own prompt
+stays the floor for unlisted commands — and grows by recurrence, one entry per incident that shows
+an unlisted live effect.
 
 `agent_type` and its plugin-namespaced values are documented in the upstream hooks reference; the
 scoping contract's owner is the `scripts/readonly-guard.py` docstring, and this section follows

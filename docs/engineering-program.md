@@ -65,6 +65,12 @@ enforced per host, never inferred from prose.
   `scripts/readonly-guard.py`'s roster; unguarded, "read-only" is a promise, not a control. The
   emitter/consumer splits this creates — an auditor that cannot flip its own findings — are
   deliberate edges, not indirection.
+- **Enforced interposition.** A live-effect agent gets a fleet-owned prompt, not a promise:
+  `scripts/live-effect-gate.py` answers `ask` for the live-effect argv `homelab-platform` invokes
+  and `deny` when the session cannot prompt, so "managed gate" names a hook the plugin ships
+  rather than evidence the model must produce. The same scoping rule as the guard — the payload's
+  `agent_type`, never prose — and the same structural exclusion from hosts whose payload cannot be
+  scoped.
 - **Separated layers.** `scripts/capability_graph.py` reports authored edges, per-host authority
   projections, and the routing overlay as three layers kept deliberately apart, because
   co-membership is not behavioral coverage. `scripts/workflow_contract.py` proves a workflow

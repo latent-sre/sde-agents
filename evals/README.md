@@ -597,7 +597,7 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **23,557 lines across 25 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, and the 2026-08-19 settling and EVAL-009 batches, after the
+Baselines now total **24,282 lines across 26 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, the 2026-08-19 settling and EVAL-009 batches, and the 2026-08-29 GATE-006 calibration slice, after the
 original retirement cut 31,656 across 28 —
 a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and
@@ -643,7 +643,7 @@ keeping so it is not re-litigated each time the suite looks expensive:
   fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
   shape no case declares is a control nothing runs.
 
-**Where the cost actually is.** 57 of the 80 cases are no-tool planning-only sessions — and since
+**Where the cost actually is.** 56 of the 81 cases are no-tool planning-only sessions — and since
 2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist
 over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and the
 original audit found a granted tool still reachable in 42 of 47 such cases. The expense
@@ -691,7 +691,7 @@ cluster. Re-baseline whenever membership changes.
 **Suite size, as of 2026-08-23:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 80
+(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 81
 deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
 standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
 paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
