@@ -1,7 +1,7 @@
 # Homelab live-effect gate: ship the interposition, fold the gate vocabulary
 
 - **Date**: 2026-08-29
-- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-engineer audit:
+- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-platform audit:
   harness and policy amendments first, the body diet second)
 - **Owner**: `agents/homelab-engineer.md` (change authority, transport, standards, boundaries),
   `hooks/hooks.json` and `scripts/live-effect-gate.py` (the control)
@@ -16,7 +16,12 @@
 
 ## Context
 
-The 2026-08-29 audit of `agents/homelab-engineer.md` against the fleet's strands (prompt,
+> **Naming.** The 2026-08-29 audit narrated below examined `agents/homelab-platform.md`; that
+> path is what `git show` at this date resolves. The agent was renamed to `homelab-engineer`
+> on 2026-08-30 (PR #165), so the decisions and the Owner line use the current key while dated
+> narration and the quoted witness keep the one that was live at the time.
+
+The 2026-08-29 audit of `agents/homelab-platform.md` against the fleet's strands (prompt,
 context, harness, loop, graph) found an authority model that is right-sized for one operator and
 transport prose that no host mechanism backs. The measured fact framing every decision below: on
 the current text's own lane (sonnet, clean room, five runs — the CTX-005 audit) the agent passes

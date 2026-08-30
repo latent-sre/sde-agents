@@ -9,7 +9,12 @@
 
 ## Context
 
-`homelab-engineer` refused an explicitly approved, reversible Tier 2 build. The session held a
+> **Naming.** The 2026-08-20 incident below happened under the key `homelab-platform`; the
+> agent was renamed to `homelab-engineer` on 2026-08-30 (PR #165). Dated narration keeps the
+> key that was live when the events occurred, so the record stays reconstructable; the Owner
+> line and the decisions below use the current key, because they govern now.
+
+`homelab-platform` refused an explicitly approved, reversible Tier 2 build. The session held a
 complete effect packet, a successful backup, the user's approval of that exact target and command,
 a clean preflight, a stated rollback, and access to a host-native managed command-approval path.
 It refused anyway, because the agent named exactly one sanctioned transport for agent-mediated
