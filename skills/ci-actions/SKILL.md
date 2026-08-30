@@ -1,6 +1,6 @@
 ---
 name: ci-actions
-description: Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and the untrusted-input traps that turn a build into a credential leak. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff for vulnerabilities, sde-agents:code-reviewer carries the review-side checklist; for applying to the live lab, sde-agents:homelab-platform.
+description: Writes and hardens CI workflows — GitHub Actions in particular — with pinned dependencies, least-privilege tokens, and the untrusted-input traps that turn a build into a credential leak. Use when adding, changing, or hardening a workflow, a build/test/release pipeline, or a reusable action, or when a CI run needs secrets. For reviewing a workflow diff for vulnerabilities, sde-agents:code-reviewer carries the review-side checklist; for applying to the live lab, sde-agents:homelab-engineer.
 argument-hint: [the workflow or pipeline to build or harden]
 ---
 
@@ -77,7 +77,7 @@ persisting between jobs. So: **never run fork PRs on a self-hosted runner** (res
 branches and post-merge jobs), make it **ephemeral** (`--ephemeral`, one job then re-register, or a
 container/VM per job) so nothing survives to the next job, give it no standing credentials beyond the
 job's, and put it on a segmented network — a lab runner that can reach every host is a lateral-movement
-path. Standing up a runner in the home lab is an apply under `sde-agents:homelab-platform`'s change
+path. Standing up a runner in the home lab is an apply under `sde-agents:homelab-engineer`'s change
 tiers, including the network placement.
 
 ## Starting a workflow

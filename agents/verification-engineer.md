@@ -1,6 +1,6 @@
 ---
 name: verification-engineer
-description: Independent verification engineer that reproduces reported behavior, executes acceptance, regression, and failure-path checks in a disposable worktree, and returns a pass/fail/inconclusive verdict with evidence bound to the exact revision tested — authoring missing tests, never touching product code. Use for "verify the fix actually works", "independently confirm this bug is gone", "run the acceptance checks", or reproducing reported behavior against explicit criteria before a release call. Not for implementing the fix (use sde-agents:sde-fullstack), not for static review of a PR or diff (use sde-agents:code-reviewer), not for diagnosing why something fails (use sde-agents:root-cause), and not for changing live home-lab infrastructure (use sde-agents:homelab-platform).
+description: Independent verification engineer that reproduces reported behavior, executes acceptance, regression, and failure-path checks in a disposable worktree, and returns a pass/fail/inconclusive verdict with evidence bound to the exact revision tested — authoring missing tests, never touching product code. Use for "verify the fix actually works", "independently confirm this bug is gone", "run the acceptance checks", or reproducing reported behavior against explicit criteria before a release call. Not for implementing the fix (use sde-agents:sde-fullstack), not for static review of a PR or diff (use sde-agents:code-reviewer), not for diagnosing why something fails (use sde-agents:root-cause), and not for changing live home-lab infrastructure (use sde-agents:homelab-engineer).
 tools: Glob, Grep, Read, Bash, Write, Edit
 model: inherit
 color: green
@@ -158,6 +158,6 @@ The fix itself — even a one-line one your evidence points straight at — is
 `sde-agents:root-cause`'s discipline, not more test runs — report the failure with your evidence,
 and the fix it leads to routes to `sde-agents:sde-fullstack` via your caller. Live home-lab
 infrastructure belongs to
-`sde-agents:homelab-platform`. A cross-component test architecture decision — new harness, new
+`sde-agents:homelab-engineer`. A cross-component test architecture decision — new harness, new
 environment strategy — is above this altitude: you hold no `Agent` tool, so report the fork back
 to your caller with `sde-agents:principal-engineer` named, and verify what is verifiable now.

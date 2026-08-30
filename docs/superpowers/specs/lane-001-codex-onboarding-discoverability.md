@@ -22,7 +22,7 @@ model-reachable path to discover `service-onboard` or `host-onboard` (issue #61,
    instructs "Omit unless explicitly asked" — implicit description-driven delegation, the routing
    model this fleet is built on, is host-suppressed.
 
-So the Claude routing surface (the `homelab-platform` description, shipped since 2026-07-16 and
+So the Claude routing surface (the `homelab-engineer` description, shipped since 2026-07-16 and
 present in the generated Codex TOML) is inert on Codex, and the explicit-only skills are
 invisible. Field evidence is recorded as learning-ledger candidate `lc_c361b3d3`; the measurement
 boundary that let this ship unnoticed is codified in
@@ -38,7 +38,7 @@ fixes, lane limits codified, no Codex eval harness.
    before service), how to invoke them on the current host, and that recommending is not
    executing. It carries **no** `disable-model-invocation`, so Codex generation yields implicit
    visibility — safe by construction because the skill only informs; execution stays behind the
-   existing explicit invocations and `homelab-platform`'s change tiers.
+   existing explicit invocations and `homelab-engineer`'s change tiers.
 2. **Lane documentation** in `README.md`'s Codex section: the invocation contract (`$skill-name`
    for explicit skills; agents reached by explicit request under the v2 spawn schema), the
    two-halves versioning fact (agent TOMLs are unversioned; a plugin version stamps only the
@@ -67,7 +67,7 @@ no implicit execution path; no new authority; no coupling to OpenBao; the #60 ha
   surface added to the healthy Claude lane — accepted because that lane has the harness to
   measure it. Fallback: if the before/after diff shows displacement (D2), revisit Codex-only
   emission as its own decision.
-- **D2 — the description must lose to `homelab-platform` on Claude and win alone on Codex.**
+- **D2 — the description must lose to `homelab-engineer` on Claude and win alone on Codex.**
   On Claude both surfaces are visible and the skill's negative routing points at the agent; on
   Codex the agent is suppressed, so the skill is the only visible surface and must carry the
   recommendation. This is the crux risk. Gate: existing `pos-add-service` and `pos-host-onboard`
@@ -85,7 +85,7 @@ no implicit execution path; no new authority; no coupling to OpenBao; the #60 ha
       under identical conditions shows no regression on existing positives and no negative
       firing at all (standing law: a negative firing is a defect regardless of variance).
 - [ ] New positive cases fire: discovery-question prompts (e.g. "is there a checklist for adding
-      a service to my lab?") route to `onboarding-map` and/or `homelab-platform`.
+      a service to my lab?") route to `onboarding-map` and/or `homelab-engineer`.
 - [ ] `skills/onboarding-map/SKILL.md` exists; description ≤ 1024 chars with capability, triggers,
       and negative routing; adapters regenerated; parity (`--check`), validator, and tests green;
       README inventory refreshed; the generated Codex `openai.yaml` for the new skill does **not**
@@ -100,7 +100,7 @@ no implicit execution path; no new authority; no coupling to OpenBao; the #60 ha
 Record `codex --version` first, then in a fresh session with the fleet installed:
 
 1. "Add OpenBao as a new service in my home lab." → transcript shows the model recommending
-   `$service-onboard` (naming `homelab-platform` is also acceptable); no execution.
+   `$service-onboard` (naming `homelab-engineer` is also acceptable); no execution.
 2. `$service-onboard <service> on <host>` → invokes exactly once.
 3. "Add a CSV export feature to my web app's reports page." → no onboarding recommendation.
 4. "Build a new VM and put a service on it." → host-onboard named first, service-onboard second.
@@ -112,7 +112,7 @@ Record `codex --version` first, then in a fresh session with the fleet installed
   description quality and this spec returns to review before implementation.
 - `[ ! -d "${CODEX_HOME:-$HOME/.codex}/agents" ] || grep -RL --include='*.toml' "Managed by
   sde-agents" "${CODEX_HOME:-$HOME/.codex}/agents"` — any unmarked file is import-vintage; a stale
-  `homelab-platform` there would confound the smoke run. **Empty output is the pass.**
+  `homelab-engineer` there would confound the smoke run. **Empty output is the pass.**
 
   *Amended 2026-08-11 (mechanical only, semantics unchanged): the original one-liner was
   `grep -L "Managed by sde-agents" $CODEX_HOME/agents/*.toml` (default `~/.codex/agents`). With
@@ -147,6 +147,6 @@ On completion, this spec and its plan retire to a dated outcome record under `do
 > on Codex, where agent delegation is host-suppressed. Use when someone asks whether an
 > onboarding checklist or workflow exists, how to start onboarding a service or host, or states
 > new-service or new-host intent where no routing agent is reachable. Recommending is not
-> executing: the checklists run under `sde-agents:homelab-platform`'s change tiers, and this
+> executing: the checklists run under `sde-agents:homelab-engineer`'s change tiers, and this
 > skill grants no authority. Not for performing lab changes or the onboarding itself — use
-> `sde-agents:homelab-platform`.
+> `sde-agents:homelab-engineer`.

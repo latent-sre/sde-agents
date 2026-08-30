@@ -66,4 +66,4 @@ providers:
 Import the file into the running Grafana and look at it with real data. A dashboard whose panels
 show "No data" is not finished — either the query is wrong or the metric doesn't exist, and both are
 findings. Applying it (import, provisioning reload, container restart) is an apply under
-`sde-agents:homelab-platform`'s tiers.
+`sde-agents:homelab-engineer`'s tiers.

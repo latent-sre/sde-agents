@@ -401,7 +401,7 @@ live listing probe because the bundled share differs). (2) The doctor's
 `repository.skill-listing-budget` warning is promoted to a `validate_fleet.py` hard rule with a
 fixture that fails without it, so listing regrowth fails T0 instead of failing silently at
 runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
-warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-platform.agent.md` is at
+warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-engineer.agent.md` is at
 24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
 host rejecting the profile. (Re-measured 2026-08-17: 24,019 chars, 80%. GATE-003, GATE-004 and ORACLE-005 first took this body to 86% — 1,701 chars of added prose for three small items, while CTX-001 and CTX-003 are open to shrink exactly these files. Three review passes ended at **-39**: every fix is a replacement, none is an addition, and GATE-003 closed by deleting `Instrument: n/a` rather than defining it. Nobody measured until the number was asked for, which is the point of the tripwire.)
 
@@ -418,7 +418,7 @@ the rule's message with the consequence named; regenerated adapters and green ti
 **Next action:** The Copilot-cap tripwire — it is prerequisite-free, small, and the 82%
 measurement is already committed evidence.
 
-#### CTX-005 — shrink `homelab-platform`'s always-loaded body
+#### CTX-005 — shrink `homelab-engineer`'s always-loaded body
 
 **Status:** `decision-needed` — after the five-round experiment, the operator authorized exactly one
 safety repair and one fresh behavioral round. The repair restored the retry-state boundary and its
@@ -501,7 +501,7 @@ addition, and retain hook/guard roster synchronization.
 **Acceptance:** The agent has no write or web tools; every additional allowlisted command is
 read-only by tested verb/flag policy; the POSIX plugin probe proves the guard fires for the exact
 roster and ignores the main session; routing preserves outage/change authority in
-`homelab-platform`.
+`homelab-engineer`.
 
 **Next action:** Open a bounded spec/plan for the inspector, beginning with the smallest required
 read-only command surface and a threat review of every new verb/flag before changing the guard.
@@ -854,7 +854,7 @@ read as "this class is closed". Finding 4 — extend drift coverage to terminal 
 test, or state the limitation in `learning/README.md`.
 
 **Known un-correctable by CLI:** `lc_0fe6c3d1`'s destination pins
-`agents/homelab-platform.md:27`, where the rule now sits near line 55. The ledger enforces
+`agents/homelab-engineer.md:27`, where the rule now sits near line 55. The ledger enforces
 `destination` equal to the latest transition's, and `promoted` may only move to `rejected` or
 `retired`, so the pin cannot be corrected without a state change that would misreport the lesson.
 Leave it until that record next transitions legitimately; the correct stable reference is the
@@ -1150,7 +1150,7 @@ or deployment authority.
 
 **Prerequisites:** A real plugin or repository release task demonstrates the consumer. Keep
 pipeline implementation with `ci-actions`, merge readiness with `code-reviewer`, and running
-service changes with `homelab-platform`.
+service changes with `homelab-engineer`.
 
 **Acceptance:** Routing cases distinguish release, CI, deploy, and merge-verdict requests; the
 component states rollback boundaries; its first use performs the repository's actual version,
@@ -1218,7 +1218,7 @@ The initial and deep reviews are consolidated in
 | `frontend-craft` presents the default React stack as universal | `skills/frontend-craft/SKILL.md` now says an existing repository always wins and labels every core library binding as the default stack | Landed; exclude |
 | Claude Code frontmatter facts are duplicated | `skills/prompt-craft/references/claude-code-frontmatter.md` declares itself the single source, and `prompt-engineer` points to it | Landed; exclude |
 | Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
-| `homelab-platform` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
+| `homelab-engineer` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
 | `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
 | Eval coverage stops at one routing cluster with no behavioral checks | Ten routing clusters, the behavioral runner, packet linter, and 67 deterministic contracts exist (counts as of 2026-08-17; `evals/` owns the current figures) | Machinery landed; additional contract coverage survives below |
 | Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
@@ -1231,7 +1231,7 @@ The initial and deep reviews are consolidated in
 | Evergreen guidance carries version/comparative claims | The cited “newer”, fixed Recharts major, and fixed model-tier wording is gone | Landed; exclude |
 | `prompt-engineer` contradicts itself about spawning | It now branches on the Agent tool actually being unavailable | Landed; exclude |
 | Design-agent read-only Bash and handoff boundaries are prose-only | Principal and distinguished agents are guard-enforced for Bash, acknowledge the cooperative Write boundary, and report work back to the caller | Landed; exclude |
-| `homelab-platform` does not explain how it reaches operating skills | Its body names the checklists and path-loading convention it uses | Landed; exclude |
+| `homelab-engineer` does not explain how it reaches operating skills | Its body names the checklists and path-loading convention it uses | Landed; exclude |
 | `eng-ladder` references do not resolve in an installed plugin | Each rung reference names both the repo path and `${CLAUDE_PLUGIN_ROOT}` path | Landed; exclude |
 | Unused frontmatter fields have no deliberate decision | The canonical frontmatter reference records decisions for `when_to_use`, `maxTurns`, `memory`, and related fields | Landed; exclude |
 | Deep-review C1: wrapper-stack failures are missing from routing | `multi-agent-architect` now names wrapper, memory-layer, tool-skip, and delivery-corruption triggers | Landed; exclude |
@@ -1248,7 +1248,7 @@ must not seed new work.
 | `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
 | `restore-drill` and `upgrade-campaign` | Both appear in the generated skill inventory (20 skills as of 2026-08-17; `README.md` owns the current count) | Landed; exclude despite the backlog's stale “remain open” sentence |
 | `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
-| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-platform` | Landed; exclude |
+| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-engineer` | Landed; exclude |
 | `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
 | `lab-audit` allowed-tool preapprovals | The backlog explicitly rejected the authority expansion because approval friction is useful | Deliberately closed |
 | `service-onboard` compose template | No template exists; the original plan limits it to labs with no existing pattern | Survives as deferred, trigger-bound work |

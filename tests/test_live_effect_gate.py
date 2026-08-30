@@ -24,7 +24,7 @@ GATE = REPO / "scripts" / "live-effect-gate.py"
 gate = validate_fleet.load_gate(REPO)
 guard = validate_fleet.load_guard(REPO)
 
-HOMELAB = "sde-agents:homelab-platform"
+HOMELAB = "sde-agents:homelab-engineer"
 
 
 def run_gate(stdin_text: str) -> subprocess.CompletedProcess:
@@ -102,7 +102,7 @@ class Scoping(unittest.TestCase):
                 self.assertEqual("none", decision(run_gate(bash_call(self.LIVE, agent_type=other))))
 
     def test_bare_and_namespaced_names_are_both_gated(self) -> None:
-        for name in ("homelab-platform", HOMELAB):
+        for name in ("homelab-engineer", HOMELAB):
             with self.subTest(agent=name):
                 self.assertEqual("ask", decision(run_gate(bash_call(self.LIVE, agent_type=name))))
 
@@ -463,7 +463,7 @@ class GateShapesFromReviewRoundsTwoAndThree(unittest.TestCase):
     def test_the_canary_ignores_agent_names_in_the_command_itself(self) -> None:
         # The command is user-controlled text; a main-session command that merely mentions the
         # agent must not be denied.
-        payload = json.loads(bash_call("git commit -m 'fix sde-agents:homelab-platform'",
+        payload = json.loads(bash_call("git commit -m 'fix sde-agents:homelab-engineer'",
                                        agent_type=None))
         self.assertEqual("none", decision(run_gate(json.dumps(payload))))
 

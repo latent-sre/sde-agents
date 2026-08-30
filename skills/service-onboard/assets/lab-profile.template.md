@@ -57,7 +57,7 @@ the stack above, or hand the decision up and say why.
 
 ## Change tiers in this lab
 
-`sde-agents:homelab-platform` owns change authority. Local specifics it needs:
+`sde-agents:homelab-engineer` owns change authority. Local specifics it needs:
 
 - **Console/out-of-band access**: <how you reach a host if the network change locks you out>
 - **The management path that must survive every change**: <gateway, switch, AP addresses>

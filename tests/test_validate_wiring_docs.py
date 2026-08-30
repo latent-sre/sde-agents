@@ -42,7 +42,7 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
         # and `service-onboard` (model-invocation-disabled) is reachable ONLY by path -- so a stale
         # path here silently removes a capability rather than erroring.
         def mutate(repo: Path) -> None:
-            path = repo / "agents" / "homelab-platform.md"
+            path = repo / "agents" / "homelab-engineer.md"
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
                     "${CLAUDE_PLUGIN_ROOT}/skills/service-onboard/SKILL.md",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse live-effect gate — the managed gate homelab-platform's prose promises, shipped.
+"""PreToolUse live-effect gate — the managed gate homelab-engineer's prose promises, shipped.
 
 Shipped by the sde-agents PLUGIN and registered through `hooks/hooks.json` as a second
 `PreToolUse`/`Bash` hook, beside `readonly-guard.py`. Like the guard it is SESSION-WIDE and scopes
@@ -7,7 +7,7 @@ ITSELF: it no-ops unless the pending call's `agent_type` names a gated agent, an
 loop — which carries no `agent_type` key — is never inspected. (The reasons a plugin agent cannot
 carry its own `hooks:` are the guard docstring's; they are not restated here.)
 
-WHY THIS EXISTS. `agents/homelab-platform.md` executes an approved Tier 2/3 effect only through a
+WHY THIS EXISTS. `agents/homelab-engineer.md` executes an approved Tier 2/3 effect only through a
 "managed gate": a host control that interposes a per-invocation human decision on the exact argv.
 Before 2026-08-29 the agent was told to prove that control existed by "inspecting the effective
 control for that argv" without invoking it. Claude Code exposes no such evaluation to the model
@@ -58,7 +58,7 @@ import shlex
 import sys
 
 PLUGIN_NAME = "sde-agents"
-GATED_AGENT_NAMES = frozenset({"homelab-platform"})
+GATED_AGENT_NAMES = frozenset({"homelab-engineer"})
 _GATED = frozenset(GATED_AGENT_NAMES) | frozenset(
     f"{PLUGIN_NAME}:{name}" for name in GATED_AGENT_NAMES
 )
@@ -245,12 +245,12 @@ _ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 ASK_REASON = (
     "sde-agents live-effect gate: matched rule `{rule}` — a Tier 2/3 live effect from "
-    "homelab-platform. This prompt is the managed gate for this exact argv; accepting it is "
+    "homelab-engineer. This prompt is the managed gate for this exact argv; accepting it is "
     "the decision, and the agent runs the command once."
 )
 ASK_UNBOUND = (
     "sde-agents live-effect gate: cannot bind this argv to one approved effect ({why}) — asking. "
-    "homelab-platform must present the exact command, never a wrapper or substitution."
+    "homelab-engineer must present the exact command, never a wrapper or substitution."
 )
 DENY_SUPPRESSED = (
     "sde-agents live-effect gate: matched rule `{rule}` but permission_mode={mode} suppresses "
@@ -565,7 +565,7 @@ def decide(payload: dict) -> tuple[int, dict | None]:
         # other agent-ish key, every call would look like an unrelated caller and the gate would
         # quietly stop gating — the silent-disarm class this fleet hardens against. Keyed, not a
         # substring search: `tool_input` is excluded because the command is user-controlled text
-        # (`git commit -m "fix sde-agents:homelab-platform"` must not be denied), and only keys
+        # (`git commit -m "fix sde-agents:homelab-engineer"` must not be denied), and only keys
         # whose NAME contains "agent" are consulted, so `cwd` and `transcript_path` cannot trip it.
         # Residual: a rename to a key without "agent" in it is the probe's to catch.
         if payload.get("tool_name") == "Bash" and payload.get("agent_type") is None and any(

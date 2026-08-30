@@ -60,7 +60,7 @@ SHAPES: dict[str, tuple[str, ...]] = {
     # finding). The third slot ensures every blocked criterion is named, so a packet that records
     # "Checks executed: none" without naming what could not run cannot pass as green.
     "verification-packet": ("target", "checks executed", "skipped or blocked checks", "execution isolation"),
-    # homelab-platform's Tier 2/3 approval request, presented BEFORE a live apply — the only shape
+    # homelab-engineer's Tier 2/3 approval request, presented BEFORE a live apply — the only shape
     # here that is not an end-of-task packet, so it requires no Learning closeout. The floor holds
     # what no honest approval request can omit; the agent now requires "exact command, any applicable
     # diff" (not "exact command or diff"), so exact command is a required heading; tier: pins the
@@ -286,7 +286,7 @@ EXACT_FIELD_LABELS = (
     "Gate",
     "Transport",
 )
-# Gate-decision vocabulary, owned by agents/homelab-platform.md's approval section. These two
+# Gate-decision vocabulary, owned by agents/homelab-engineer.md's approval section. These two
 # labels exist because the gate decision used to be graded by matching prose paraphrases, and an
 # open-ended pattern set goes stale the way lint_runbook_proposal's docstring describes: every
 # honest rewording needs another branch, and the branch admitting it becomes the next round's false
@@ -295,7 +295,7 @@ EXACT_FIELD_LABELS = (
 # has no paraphrase surface to chase.
 GATE_STATES = ("consolidated", "new", "standing")
 TRANSPORT_STATES = ("managed gate", "operator handoff", "standing policy")
-# agents/homelab-platform.md owns these two vocabularies; this is a deliberate mirror, kept
+# agents/homelab-engineer.md owns these two vocabularies; this is a deliberate mirror, kept
 # standalone so an eval-time linter does not import an agent parser. tests/test_packet_lint.py
 # reads the canonical declaration and fails on drift: on disagreement the agent file wins and
 # this copy is the defect. Renaming a value there without updating here would reject compliant
@@ -928,7 +928,7 @@ def _preamble_assigns(preamble: str, effect: str) -> bool:
 def lint_effect_sets(text: str, expected: list[dict[str, str]]) -> list[str]:
     """Require one complete, contiguous declaration set per declared effect, bound to that effect.
 
-    `agents/homelab-platform.md` contracts "one set per effect" and nothing graded it
+    `agents/homelab-engineer.md` contracts "one set per effect" and nothing graded it
     (ORACLE-010). The clause shipped alongside a change that split the one combined
     retry-plus-deletion case into two single-effect cases, because `lint_exact_fields` requires
     each label exactly once GLOBALLY and a two-effect answer has each of them twice. So the suite
@@ -1042,7 +1042,7 @@ def lint_exact_fields(text: str, expected: dict[str, str]) -> list[str]:
 
 
 # The gate slots are contracted to sit together as ONE BLOCK, not to appear somewhere in the
-# statement (agents/homelab-platform.md). Presence-only grading passed output that explained the
+# statement (agents/homelab-engineer.md). Presence-only grading passed output that explained the
 # decision at length and left the machine-readable lines scattered below, which defeats the point
 # of having them. The window is deliberately loose rather than strict adjacency: a heading or
 # blank line between declarations is rendering, while a block split across paragraphs of prose is

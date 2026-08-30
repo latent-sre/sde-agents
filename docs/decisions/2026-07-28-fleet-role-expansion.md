@@ -17,7 +17,7 @@ still tracked lives in [`fleet-roadmap.md`](../fleet-roadmap.md).
 **LABSEC-001 accepted as proposed, 2026-07-29** (the reconciled running-lab security decision this
 record carried alongside the two roles): the adversary sweep exists as its own read-only
 `security-audit` skill rather than being folded into `lab-audit`, with the boundary this record
-named — hygiene stays with `lab-audit`, fixes stay with `homelab-platform`, vulnerability output
+named — hygiene stays with `lab-audit`, fixes stay with `homelab-engineer`, vulnerability output
 feeds `upgrade-campaign`, and evidence of active compromise stops the sweep. Implemented the same
 day; `LABSEC-002` (the guard-enforced inspector that could run either checklist under
 enforcement) was blocked on `DEPLOY-001` at the time of this record, since a guard-enforced agent
@@ -26,7 +26,7 @@ satisfied — the roadmap owns its current status.
 
 2026-07-29, fresh-look session, operator answered directly: **accept both** decidable roles as
 proposed — ROLE-001 (visible rebrand to Home-Lab SRE / Platform Engineer with the
-`homelab-platform` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
+`homelab-engineer` key unchanged, Linux-host trigger vocabulary, explicit-only `host-onboard`)
 and ROLE-002 (`application-security-auditor`, static-first tools, no Bash, non-PR remit).
 ROLE-003 was deliberately not decided: it parks trigger-bound and reopens on the first real
 independent-verification task, which also keeps ROLE-004 blocked. LABSEC-001 remains sequenced
@@ -59,7 +59,7 @@ ROLE-004; the roadmap and the 2026-07-29 verification-round documents own implem
 ## Decision question
 
 Does the fleet need dedicated QA, Linux, SRE, and security agents, and should
-`homelab-platform` be renamed or rebranded as an SRE role?
+`homelab-engineer` be renamed or rebranded as an SRE role?
 
 ## Proposed decision
 
@@ -70,7 +70,7 @@ Does the fleet need dedicated QA, Linux, SRE, and security agents, and should
 | General SRE | Do not add an agent; the existing home-lab operator already owns that outcome |
 | Application security | Add `application-security-auditor` with a static-first, non-PR remit |
 | Running-lab security | Decide separately on a `security-audit` skill and an optional guard-enforced `lab-inspector` |
-| Home-lab identity | Present the role as **Home-Lab SRE / Platform Engineer** while keeping the `homelab-platform` key |
+| Home-lab identity | Present the role as **Home-Lab SRE / Platform Engineer** while keeping the `homelab-engineer` key |
 
 The resulting shape is two narrowly bounded agents, one Linux-host skill, and one visible rebrand
 — not four generic agents. The optional lab inspector is a separate enforcement decision, not part
@@ -124,7 +124,7 @@ subsystem threat model, source-to-sink audit, attack-path validation, or severit
 ### Adversary-focused running-lab security is a separate surface
 
 `lab-audit` owns operational hygiene. The proposed application-security auditor owns source and
-threat analysis. `homelab-platform` owns every live fix. None of those contracts, by itself, owns
+threat analysis. `homelab-engineer` owns every live fix. None of those contracts, by itself, owns
 an intent-driven sweep of trust zones, exposed services, management planes, credentials, secrets,
 and personal-data paths in the running lab.
 
@@ -135,7 +135,7 @@ rather than being conflated with application security.
 
 ### The home-lab operator already performs SRE work
 
-[`homelab-platform`](../../agents/homelab-platform.md) owns VMs, containers, networking, storage,
+[`homelab-engineer`](../../agents/homelab-engineer.md) owns VMs, containers, networking, storage,
 monitoring, backups, change classification, rollback, access preservation, and operating
 documentation. The operating skills form a service lifecycle: onboarding, observability, audits,
 incidents, runbooks, postmortems, restore drills, and upgrade campaigns.
@@ -158,7 +158,7 @@ while routing on a technology name rather than a user outcome.
 - PR, commit, or branch review — `code-reviewer`;
 - external CVE/vendor research alone — `researcher`;
 - remediation implementation — `sde-fullstack`;
-- home-lab exposure and operational hardening — `homelab-platform` / `lab-audit`; or
+- home-lab exposure and operational hardening — `homelab-engineer` / `lab-audit`; or
 - multi-system security architecture — `principal-engineer`.
 
 ### Initial authority
@@ -202,7 +202,7 @@ collide with the fleet's most routing-sensitive existing role.
 - implementing the feature or fix — `sde-fullstack`;
 - static PR/diff review — `code-reviewer`;
 - diagnosing an unknown failure — `root-cause`;
-- changing live home-lab infrastructure — `homelab-platform`; or
+- changing live home-lab infrastructure — `homelab-engineer`; or
 - inventing a cross-component test architecture — `principal-engineer` when that design is
   material or hard to reverse.
 
@@ -242,7 +242,7 @@ external effects.
 Keep the stable component key:
 
 ```yaml
-name: homelab-platform
+name: homelab-engineer
 ```
 
 Proposed visible heading:
@@ -273,7 +273,7 @@ The first Linux addition should be explicit-only `host-onboard`, covering:
 - configuration tracking, validation, and rollback.
 
 Because onboarding changes a live host, `host-onboard` should set
-`disable-model-invocation: true`; `homelab-platform` retains the change authority.
+`disable-model-invocation: true`; `homelab-engineer` retains the change authority.
 
 ## Governance prerequisites discovered during the review — both since fixed
 
@@ -319,7 +319,7 @@ Round 1 measurement path is healthy.
 
 ### Add a generic Linux agent
 
-Rejected because it duplicates `homelab-platform`'s authority and routes on a substrate. Reopen
+Rejected because it duplicates `homelab-engineer`'s authority and routes on a substrate. Reopen
 only if repeated Linux work has a distinct output and authority boundary that does not belong to
 the home-lab operator.
 
@@ -347,7 +347,7 @@ and an auditor name; remediation remains with the builder.
 
 ### Rename the canonical home-lab key
 
-Rejected because `homelab-platform` is a useful routing discriminator and is referenced throughout
+Rejected because `homelab-engineer` is a useful routing discriminator and is referenced throughout
 the skills, evals, inventory, and user-facing conventions. Rebrand the presentation without
 breaking the component identity.
 

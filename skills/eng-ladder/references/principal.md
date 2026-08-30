@@ -48,4 +48,4 @@ instead reports the decision needed to its caller (per its agent file) — it ne
 - Org-wide pattern, build-vs-buy, or a decision everything else must live with → the
   distinguished altitude.
 - Execution of the settled design → the builder altitude (or spawn `sde-agents:sde-fullstack`).
-- New operational steps → the `sde-agents:runbook` skill; deploying onto the lab → `sde-agents:homelab-platform`.
+- New operational steps → the `sde-agents:runbook` skill; deploying onto the lab → `sde-agents:homelab-engineer`.

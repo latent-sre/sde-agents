@@ -1,6 +1,6 @@
 ---
 name: "lab-audit"
-description: "A read-only home-lab health and hygiene sweep that reports severity-ranked, evidence-cited findings. Use for a periodic audit, when asked \"what's wrong with my lab\" or \"audit my setup\", or after a long gap in maintenance. Surveys and reports; for the fixes themselves, use homelab-platform."
+description: "A read-only home-lab health and hygiene sweep that reports severity-ranked, evidence-cited findings. Use for a periodic audit, when asked \"what's wrong with my lab\" or \"audit my setup\", or after a long gap in maintenance. Surveys and reports; for the fixes themselves, use homelab-engineer."
 argument-hint: "[scope - a host, a stack, or the whole lab]"
 ---
 
@@ -17,7 +17,7 @@ Audit the lab against its own standards and report like a code review of the inf
 
 ## Checks (run what's applicable; list what you couldn't run and why)
 
-All checks are read-only. This portable adapter has no cross-host write-tool deny, and shell access can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `homelab-platform`. The parent host's sandbox or permission profile is the only hard boundary here; the skill's read-only posture is cooperative, and no write-capable tool is within its mandate. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
+All checks are read-only. This portable adapter has no cross-host write-tool deny, and shell access can still mutate (redirects, `docker rm`), so the mandate is still yours: inspection commands only — fixes route to `homelab-engineer`. The parent host's sandbox or permission profile is the only hard boundary here; the skill's read-only posture is cooperative, and no write-capable tool is within its mandate. Fan the checks out in parallel (per host or per area) rather than sweeping serially.
 
 The eight checks — exposure, container hygiene, certificates, backups, monitoring gaps, drift,
 capacity, updates — live with their command-level detail in

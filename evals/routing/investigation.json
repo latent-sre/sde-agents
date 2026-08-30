@@ -30,7 +30,7 @@
       "expect_fires": [
         "root-cause"
       ],
-      "expected_output": "A live-system failure with no current user impact is diagnosis work: root-cause under homelab-platform's tiers, not lab-incident's mitigate-first outage path.",
+      "expected_output": "A live-system failure with no current user impact is diagnosis work: root-cause under homelab-engineer's tiers, not lab-incident's mitigate-first outage path.",
       "tags": [
         "root-cause",
         "lab",
@@ -61,7 +61,7 @@
       "id": "neg-lab-outage",
       "prompt": "My Jellyfin container is down right now and nobody can watch anything. Check what's wrong and get it back.",
       "polarity": "negative",
-      "expected_output": "A live lab outage — lab-incident under homelab-platform, mitigate-first. root-cause is explicitly the WRONG loop mid-outage, which is why it appears as a negative here; 'check what's wrong' is the shared vocabulary.",
+      "expected_output": "A live lab outage — lab-incident under homelab-engineer, mitigate-first. root-cause is explicitly the WRONG loop mid-outage, which is why it appears as a negative here; 'check what's wrong' is the shared vocabulary.",
       "tags": [
         "near-miss",
         "outage"

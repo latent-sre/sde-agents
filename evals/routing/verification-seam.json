@@ -26,7 +26,7 @@
       "id": "neg-lab-verify",
       "prompt": "After last night's power blip, verify all the services in my lab came back up and are healthy.",
       "polarity": "negative",
-      "expected_output": "Live-lab health, not repository verification — homelab-platform (with lab-audit for hygiene) owns this, and neither is a member. 'Verify' is the decoy vocabulary.",
+      "expected_output": "Live-lab health, not repository verification — homelab-engineer (with lab-audit for hygiene) owns this, and neither is a member. 'Verify' is the decoy vocabulary.",
       "tags": [
         "near-miss",
         "lab"

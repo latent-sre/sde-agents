@@ -16,7 +16,7 @@ argument-hint: "[the service whose restore to rehearse]"
 this service, restored in this long, verified this way, on this date. That number is the only honest
 input to an RTO, and finding out it's wrong today costs an afternoon instead of the data.
 
-Every apply here is under `homelab-platform`'s change tiers. A drill that touches the live
+Every apply here is under `homelab-engineer`'s change tiers. A drill that touches the live
 service is Tier 3 — but the whole point is that it usually doesn't need to.
 
 ## Rule one: drill into a scratch target, never over the live service

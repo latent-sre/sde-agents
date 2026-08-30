@@ -2,7 +2,7 @@
 
 - **Date**: 2026-08-23
 - **Status**: accepted
-- **Owner**: `agents/homelab-platform.md` (change authority and deployment standards)
+- **Owner**: `agents/homelab-engineer.md` (change authority and deployment standards)
 - **Amends**: [`2026-08-20-effect-transport-policy.md`](2026-08-20-effect-transport-policy.md)
   for Tier 2 decision sources, preflight reuse, and the treatment of standing host policy
 - **Operator ruling**: implement the policy and onboarding proportionality changes now; defer the
@@ -172,7 +172,7 @@ leaves those additive facts readable and inert, so no reverse migration is requi
 
 ## Out of scope
 
-Reducing the always-loaded `homelab-platform` body — including moving or compressing the worked
+Reducing the always-loaded `homelab-engineer` body — including moving or compressing the worked
 example and Work Order contract — is explicitly deferred to the next round. This change edits those
 sections only where their current words would contradict the new behavior.
 

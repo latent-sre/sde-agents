@@ -1,5 +1,5 @@
 interface:
   display_name: "Service Onboard"
-  short_description: "The standardization checklist homelab-platform works when adding a self-hosted service —..."
+  short_description: "The standardization checklist homelab-engineer works when adding a self-hosted service —..."
 policy:
   allow_implicit_invocation: false

@@ -617,7 +617,7 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         self.assertTrue(any("one block" in f for f in findings), findings)
 
     def test_gate_vocabularies_match_their_canonical_agent_declaration(self) -> None:
-        """The closed sets are a mirror of `agents/homelab-platform.md`, which owns them.
+        """The closed sets are a mirror of `agents/homelab-engineer.md`, which owns them.
 
         GATE-006 retired the third set (`Effect class`) with its reader; `Tier:` carries the
         classification now, so only Gate and Transport are mirrored here.
@@ -627,7 +627,7 @@ class LearningCloseoutPublicAPI(unittest.TestCase):
         source-drift defect wearing a behavioral failure's clothes. On disagreement the agent
         file wins and the constant here is what must change.
         """
-        canonical = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        canonical = (REPO / "agents" / "homelab-engineer.md").read_text(encoding="utf-8")
         for label, constant in (
             ("Gate", packet_lint.GATE_STATES),
             ("Transport", packet_lint.TRANSPORT_STATES),
@@ -1313,8 +1313,8 @@ class Tier2ApprovalRequestLeadSlot(unittest.TestCase):
 
     @staticmethod
     def _worked_example() -> str:
-        """The Tier-2 request shape as agents/homelab-platform.md actually ships it."""
-        body = (REPO / "agents" / "homelab-platform.md").read_text(encoding="utf-8")
+        """The Tier-2 request shape as agents/homelab-engineer.md actually ships it."""
+        body = (REPO / "agents" / "homelab-engineer.md").read_text(encoding="utf-8")
         return body.split("### Worked example")[1].split("## Standards")[0]
 
     def test_the_shipped_worked_example_satisfies_the_shape(self) -> None:

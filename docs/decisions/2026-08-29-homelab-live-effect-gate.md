@@ -1,9 +1,9 @@
 # Homelab live-effect gate: ship the interposition, fold the gate vocabulary
 
 - **Date**: 2026-08-29
-- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-platform audit:
+- **Status**: accepted — operator ruling 2026-08-29 (fork 1 of the homelab-engineer audit:
   harness and policy amendments first, the body diet second)
-- **Owner**: `agents/homelab-platform.md` (change authority, transport, standards, boundaries),
+- **Owner**: `agents/homelab-engineer.md` (change authority, transport, standards, boundaries),
   `hooks/hooks.json` and `scripts/live-effect-gate.py` (the control)
 - **Amends**: [`2026-08-23-homelab-proportional-operations.md`](2026-08-23-homelab-proportional-operations.md)
   decisions 1 (managed prompt as the decision) and 2 (standing policy), and its retry
@@ -16,7 +16,7 @@
 
 ## Context
 
-The 2026-08-29 audit of `agents/homelab-platform.md` against the fleet's strands (prompt,
+The 2026-08-29 audit of `agents/homelab-engineer.md` against the fleet's strands (prompt,
 context, harness, loop, graph) found an authority model that is right-sized for one operator and
 transport prose that no host mechanism backs. The measured fact framing every decision below: on
 the current text's own lane (sonnet, clean room, five runs — the CTX-005 audit) the agent passes
@@ -75,7 +75,7 @@ restrictive decision wins (`deny` → `defer` → `ask` → `allow`); in non-int
 
 1. **The plugin ships the interposition.** `scripts/live-effect-gate.py`, registered in
    `hooks/hooks.json` as a second `PreToolUse`/`Bash` hook, scopes itself to `agent_type`
-   `homelab-platform` (bare or `sde-agents:`-namespaced) and no-ops for every other caller. For a
+   `homelab-engineer` (bare or `sde-agents:`-namespaced) and no-ops for every other caller. For a
    live-effect argv it answers `ask` when the session can prompt and `deny` when the payload's
    `permission_mode` is `bypassPermissions`, `dontAsk`, or `auto`, or is absent (a renamed field
    fails closed and loud). An argv it cannot bind — a wrapper shell, command substitution, an
@@ -131,12 +131,12 @@ surface is not granted rather than guard-denied.
   `dontAsk` differential (the gate denies the gated agent, the main loop runs).
 - The `ask` leg cannot be probed headlessly (an unanswered `ask` is a denial in `-p`); it is
   witnessed once interactively and recorded here. **Witnessed 2026-08-30, Claude Code 2.1.251**,
-  operator-run: `sde-agents:homelab-platform` invoking `docker compose -f
+  operator-run: `sde-agents:homelab-engineer` invoking `docker compose -f
   /tmp/sde-witness/docker-compose.yml up -d` produced a real permission prompt carrying the gate's
   own voice, quoted verbatim —
 
   > sde-agents live-effect gate: matched rule `docker compose up` — a Tier 2/3 live effect from
-  > homelab-platform. This prompt is the managed gate for this exact argv; accepting it is the
+  > homelab-engineer. This prompt is the managed gate for this exact argv; accepting it is the
   > decision, and the agent runs the command once.
 
   The target path deliberately did not exist, so the argv the hook matched on is the whole of what

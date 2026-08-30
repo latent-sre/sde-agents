@@ -125,7 +125,7 @@
         "code-craft",
         "ci-actions"
       ],
-      "expected_output": "Deploying self-hosted services \u2014 homelab-platform. 'Add' is shared vocabulary with a build task, but this is lab ops.",
+      "expected_output": "Deploying self-hosted services \u2014 homelab-engineer. 'Add' is shared vocabulary with a build task, but this is lab ops.",
       "tags": [
         "near-miss",
         "lab"

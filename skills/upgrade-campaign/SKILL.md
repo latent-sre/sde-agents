@@ -1,6 +1,6 @@
 ---
 name: upgrade-campaign
-description: Plans and sequences a batch of version upgrades across a home lab — what to update, in what order, a rollback per step, a verification per service. Use for "update everything", "monthly patching", "patch day", "upgrade my stack", or a major-version move with breaking changes. Applies run under sde-agents:homelab-platform's change tiers. Not for a single routine image bump (sde-agents:homelab-platform) or a currently broken service (sde-agents:lab-incident).
+description: Plans and sequences a batch of version upgrades across a home lab — what to update, in what order, a rollback per step, a verification per service. Use for "update everything", "monthly patching", "patch day", "upgrade my stack", or a major-version move with breaking changes. Applies run under sde-agents:homelab-engineer's change tiers. Not for a single routine image bump (sde-agents:homelab-engineer) or a currently broken service (sde-agents:lab-incident).
 argument-hint: [what to upgrade, or "everything"]
 ---
 
@@ -10,7 +10,7 @@ argument-hint: [what to upgrade, or "everything"]
 verification each is the deliverable. The failure mode this skill exists to prevent is the
 twelve-service upgrade that half-works, where nobody can tell which change broke what.
 
-Every apply is under `sde-agents:homelab-platform`'s change tiers. Routine, unrelated, reversible
+Every apply is under `sde-agents:homelab-engineer`'s change tiers. Routine, unrelated, reversible
 leaf-service bumps may form one **finite ordered Tier 2 plan** when the operator sees every exact
 command and target, visible effect, rollback, and verification before deciding. That one decision
 removes repeated conversational approval; each command still passes through its own host transport
@@ -54,7 +54,7 @@ even then, verify each before starting the next.
 ## Per service, the loop
 
 - **State the rollback first**, concretely: the previous tag or digest, the config revert, and the
-  restore path if the upgrade is one-way. `sde-agents:homelab-platform` Prime directive 1 governs
+  restore path if the upgrade is one-way. `sde-agents:homelab-engineer` Prime directive 1 governs
   this, including what a rollback does *not* reverse.
 - **Pin the new version explicitly** — a specific tag or digest, never `latest`. An upgrade to
   `latest` is not a version you can roll back to or reason about later.
@@ -68,7 +68,7 @@ even then, verify each before starting the next.
 **Stop the campaign on the first failure, unexpected result, or material drift.** Roll that service
 back when an apply occurred, verify recovery, and stop — do not continue down the list or silently
 alter a command covered by the plan. A changed target, digest, command, or blast radius re-enters
-`sde-agents:homelab-platform`'s gate. The remaining services keep their current versions, which is
+`sde-agents:homelab-engineer`'s gate. The remaining services keep their current versions, which is
 a perfectly good state.
 
 ## After
