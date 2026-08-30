@@ -362,8 +362,9 @@ References stay the on-demand layer (probe-verified 2026-08-16: conditional refe
 work; preloading takes the SKILL.md body only). **That verification no longer holds unconditionally
 — falsified 2026-08-30.** A probe run on merged `main` reported `[FAIL] sde-fullstack read
 references/consuming-apis.md when the task called an upstream API`: the builder wrote an API client
-without loading the integration discipline, which is this design's Risk 1 realised. Earlier runs in
-the same round passed the same check, so the read is **intermittent**, not simply broken — and an
+without loading the integration discipline, which is this design's Risk 1 realised. It has now
+failed twice and passed twice across the four runs that reached it, so the read is **intermittent**,
+not simply broken — and an
 intermittent conditional read is the worse finding for this item, because the whole plan rests on
 references arriving when their predicate trips. Re-verify before shrinking anything into the
 on-demand layer; a slimmed body plus a reference that loads two times in three is a net loss of
@@ -1015,9 +1016,10 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   **Settled 2026-08-30, and it is the real-failure branch.** Three GATE-006 probe runs printed the
   disambiguating wording this line asked for — "never appeared in `sde-fullstack`'s own spawn
   result, *which the oracle DID observe*" — so it is a preload failure, not a correlation gap. What
-  is new: it is **intermittent — 2 passes and 2 failures across four runs** on effectively
-  identical bytes (the fourth, on merged `main`, passed both canaries), which is why single runs
-  have disagreed since July. Not caused by GATE-006 —
+  is new: it is **intermittent — 2 passes and 3 failures across five runs** on effectively
+  identical bytes, which is why single runs have disagreed since July. The run-to-run split is
+  the finding: no single probe result settles this, and any check that depends on `skills:`
+  preloading is a coin flip until a cause is found. Not caused by GATE-006 —
   `agents/sde-fullstack.md` and both craft skills are untouched by `ed20cde..ab97f96`. An
   intermittent preload is a worse finding than a deterministic one: every check that depends on
   `skills:` preloading is a coin flip, and this line no longer needs a probe run to progress —
