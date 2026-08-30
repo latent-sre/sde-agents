@@ -522,6 +522,30 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "> **Gate evidence**: none on this host — the operator runs the exact command "
                 "(Transport:\n> operator handoff)."
             )
+        if host == "codex":
+            # "You hold no web tool by design" is enforced on Claude by `tools:` and on Copilot by
+            # the absence of `web` from its allowlist. Codex custom-agent TOML has NO per-agent
+            # tool allowlist -- this file's own host contract says so -- so a web or MCP tool the
+            # parent session exposes stays reachable for an agent that reads secret-bearing files.
+            # Carrying the sentence unchanged would state absent authority where only a cooperative
+            # instruction exists, which is the "authority is the host's control, never prose" rule
+            # inverted. The instruction stays; the claim about where it comes from is made honest.
+            web_claim = (
+                "No web tool is granted to you here, but Codex custom-agent TOML carries no "
+                "per-agent tool allowlist, so a web or MCP tool the parent session exposes stays "
+                "reachable and only an outer host control (sandbox or exec policy) can remove it "
+                "— treat any such tool as authority you must not use:"
+            )
+            text, replaced = re.subn(
+                r"You hold no web tool by design:", web_claim, text, count=1
+            )
+            if replaced != 1:
+                raise ValueError(
+                    f"homelab-platform codex rewrite: the no-web anchor was not found "
+                    f"({replaced} matches). The canonical sentence changed without updating "
+                    f"adapt_agent_contract, so the Codex adapter would keep claiming an absent "
+                    f"web tool that this host cannot actually withhold."
+                )
         for pattern, replacement in (
             (
                 r"- \*\*Managed gate \(normal `new` path\):\*\*.*?"

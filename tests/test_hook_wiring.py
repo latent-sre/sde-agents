@@ -361,6 +361,21 @@ class LiveEffectGateWiringTests(unittest.TestCase):
             out = self._run(gate_payload(GATE_LIVE, mode="dontAsk"), plugin_root=empty)
             self.assertEqual("deny", decision(out))
 
+    def test_gate_fallback_identity_survives_json_whitespace(self) -> None:
+        # The fallback recognised only the compact and one-space serialisations, so a payload
+        # Claude formatted with two spaces or a newline after the colon looked like an unrelated
+        # caller and exited 0 — allowing the live command under dontAsk, which is precisely what
+        # the fail-closed fallback exists to prevent. Insignificant JSON whitespace must not
+        # decide whether the gate fires.
+        with tempfile.TemporaryDirectory() as empty:
+            compact = gate_payload(GATE_LIVE, mode="dontAsk")
+            for spacing in ('"agent_type":  "', '"agent_type":\n    "', '"agent_type" : "'):
+                spaced = compact.replace('"agent_type": "', spacing)
+                self.assertNotEqual(compact, spaced, "the payload shape changed; fix the test")
+                with self.subTest(spacing=spacing):
+                    out = self._run(spaced, plugin_root=empty)
+                    self.assertEqual("deny", decision(out), out)
+
     def test_broken_gate_falls_back_the_same_way(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             (Path(root) / "scripts").mkdir()

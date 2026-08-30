@@ -1071,6 +1071,12 @@ def load_guard(root: Path):
     return module
 
 
+# The hook reads its fast-path from "$IN" and its identity fallback from "$SQ", a
+# whitespace-stripped copy, so JSON spacing cannot decide whether the fallback fires. Either
+# variable opens a roster block, and the cross-check below must recognise both.
+_CASE_BLOCK_RE = re.compile(r'case "\$(?:IN|SQ)" in')
+
+
 def load_gate(root: Path):
     """Import scripts/live-effect-gate.py by path — the hyphen makes it un-importable by name."""
     source = root / "scripts" / "live-effect-gate.py"
@@ -1294,7 +1300,7 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
             # NOTHING while every check stays green, because the fast-path still exits for the
             # unlisted name (review-reported, reproduced).
             gate_blocks = [segment.split("esac", 1)[0]
-                           for segment in gate_command.split('case "$IN" in')[1:]]
+                           for segment in _CASE_BLOCK_RE.split(gate_command)[1:]]
             if len(gate_blocks) < 2:
                 issues.append(
                     f"{root / 'hooks' / 'hooks.json'}: expected the live-effect-gate hook to "
@@ -1347,7 +1353,7 @@ def validate_plugin(root: Path, agent_names: list[str], skill_names: list[str]) 
         # Searching the whole command string cannot tell them apart: a name present in only one
         # block satisfies a substring check while the other block silently lets the agent through
         # (caught in review of this very rule). So each block is located and asserted separately.
-        blocks = [segment.split("esac", 1)[0] for segment in command.split('case "$IN" in')[1:]]
+        blocks = [segment.split("esac", 1)[0] for segment in _CASE_BLOCK_RE.split(command)[1:]]
         if len(blocks) < 2:
             issues.append(
                 f"{root / 'hooks' / 'hooks.json'}: expected the PreToolUse/Bash hook to contain two "

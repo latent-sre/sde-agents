@@ -450,6 +450,16 @@ class GateShapesFromReviewRoundsTwoAndThree(unittest.TestCase):
         payload["subagent_type"] = HOMELAB
         self.assertEqual("deny", decision(run_gate(json.dumps(payload))))
 
+    def test_quoted_heredoc_opener_does_not_swallow_the_next_command(self) -> None:
+        # REGRESSION from the heredoc fix: `<<EOF` appearing as quoted DATA was read as a real
+        # opener, so the stripper consumed every following line looking for a terminator that
+        # never came — hiding a genuine live command behind `echo '<<EOF'`.
+        for command in ("echo '<<EOF'\nsystemctl restart jellyfin",
+                        'echo "<<EOF"\ndocker compose up -d',
+                        "grep -n '<<-EOF' file.sh\nsystemctl restart jellyfin"):
+            with self.subTest(command=command):
+                self.assertEqual("ask", decision(run_gate(bash_call(command))))
+
     def test_the_canary_ignores_agent_names_in_the_command_itself(self) -> None:
         # The command is user-controlled text; a main-session command that merely mentions the
         # agent must not be denied.

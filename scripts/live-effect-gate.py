@@ -276,7 +276,48 @@ def _base(token: str) -> str:
     return token.rsplit("/", 1)[-1]
 
 
-_HEREDOC_RE = re.compile(r"<<-?\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))")
+_HEREDOC_OPENER_RE = re.compile(r"<<-?\s*(?:'([^']*)'|\"([^\"]*)\"|([A-Za-z_][A-Za-z0-9_]*))")
+
+
+def _heredoc_delimiters(line: str, quote: str | None) -> tuple[list[str], str | None]:
+    """Delimiters opened by this line, and the quote state carried to the next.
+
+    Scanned rather than matched, because an opener only counts in shell OPERATOR position: a
+    `<<EOF` sitting inside quotes is data (`echo '<<EOF'`), and treating it as a declaration made
+    the body stripper eat every following line hunting a terminator that never arrives — which
+    hides a real live command behind a quoted string. The delimiter itself may still be quoted
+    (`<<'EOF'`), so it is read here in place rather than by masking quotes away first.
+    """
+    delimiters: list[str] = []
+    index = 0
+    length = len(line)
+    while index < length:
+        char = line[index]
+        if quote is None and char == "\\":
+            index += 2
+            continue
+        if quote is None and char in "\"'":
+            quote = char
+            index += 1
+            continue
+        if quote is not None:
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "<" and line.startswith("<<", index):
+            if line.startswith("<<<", index):      # here-STRING, no body to skip
+                index += 3
+                continue
+            found = _HEREDOC_OPENER_RE.match(line, index)
+            if found:
+                delimiters.append(found.group(1) or found.group(2) or found.group(3))
+                index = found.end()
+                continue
+            index += 2
+            continue
+        index += 1
+    return delimiters, quote
 
 
 def _strip_heredoc_bodies(command: str) -> str:
@@ -294,13 +335,14 @@ def _strip_heredoc_bodies(command: str) -> str:
     lines = command.splitlines()
     out: list[str] = []
     index = 0
+    quote: str | None = None
     while index < len(lines):
         line = lines[index]
         out.append(line)
         index += 1
-        # Only the delimiters introduced on THIS line open bodies, and bash consumes them in order.
-        delimiters = [quoted or double or bare
-                      for quoted, double, bare in _HEREDOC_RE.findall(line)]
+        # Only the delimiters introduced on THIS line open bodies, and bash consumes them in
+        # order. Quote state carries across lines because a string may legitimately span them.
+        delimiters, quote = _heredoc_delimiters(line, quote)
         for delimiter in delimiters:
             while index < len(lines) and lines[index].strip() != delimiter:
                 index += 1
