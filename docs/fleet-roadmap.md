@@ -968,11 +968,11 @@ after.
 **Acceptance:** Per slice: the graft lands inside the owning skill (no new skill, no new
 mechanism); the record's scrub list for that slice is gone from the landed text (no `cf`, PCF,
 `scribe`, `sre`-agent, or `operational-learning` residue); validator and tests green; the commit
-carries `adapted from latent-sre/save-toolkit@2a04d357 (MIT)` and `THIRD_PARTY_NOTICES.md`'s
-existing `sre-agents` entry is extended with the reviewed commit and the renamed repository; the
-record's verified-skip twins are byte-unchanged; contribute-back candidates stay listed, not
-acted on. The item closes when every picked slice has merged and the record is linked from
-`docs/README.md` as historical import adjudication.
+carries `adapted from latent-sre/save-toolkit@2a04d357 (MIT)`, every adapted code file names its
+source and license, and the dated adjudication record is extended with the reviewed commit and
+renamed repository; the record's verified-skip twins are byte-unchanged; contribute-back
+candidates stay listed, not acted on. The item closes when every picked slice has merged and the
+record is linked from `docs/README.md` as historical import adjudication.
 
 **Leads the record routes, none of them a slice:** their SKILL-001 audit measures (the
 rules-charged-twice count, the 7,500-byte entrypoint screen, probe-before-routing) fold into a
