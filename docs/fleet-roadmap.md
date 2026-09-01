@@ -112,26 +112,16 @@ Two cases have no repair to confirm and are expected to stay red until their own
 against the 2026-08-15 artifacts: evaluator bytes moved, so that round is history, not the before
 side. The historical account below is retained because it is what the repairs were written from.
 
-The 2026-08-10 calibration round
-(`evals/baselines/history/2026-08-10-learn-002.md`, 76 sessions, decisions.md per case) settled the
-pattern-setter question for the original seven: **the closed contracts are right and the skill
-text carries the defect** — the packet-grammar literal lives only in `references/`, unreachable
-by a Skill-only session, so no grader was loosened. Batch 3 moved 2/10 → 7/10 with three
-contracts settled 3/3. Two follow-ups now own the residue on that half: (1) **landed
-2026-08-13** — failing-run transcript retention in `scripts/eval_behavioral.py` (`lc_2e549c0b`,
-promoted; 22 of 76 sessions were re-buys of text the runner had already read and dropped). A
-failing run under `--output-dir` now writes its final text to `failing-run-evidence.json` beside
-the benchmark, so the four contracts parked at 1–2/3 can be settled from the next batch's own
-artifacts instead of a re-buy; the settling runs themselves are still owed and are T3.
-(2) **landed 2026-08-15** — the canonical `self-improve-loop` SKILL.md edits and their paired
-measurement ([`2026-08-15-learn-002`](../evals/baselines/history/2026-08-15-learn-002.md), 114 sessions,
-`decisions.md` per case). Three text repairs shipped: the `Learning:` value grammar, the
-`Provenance:` triad-first grammar (a second defect this round's own before capture surfaced — the
-capture template taught `local` as a Provenance value while the canonical block requires the triad
-word), and add-vs-merge. The two measured assertions moved 0/9 → 9/9 and 1/9 → 9/9 across graded
-runs. **The six LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both
-sides**, superseding their first-contact single runs — but that satisfies only the *baseline* half
-of their Acceptance clause. The clause also requires each of the six to hold its acceptance rate or
+The 2026-08-10 and 2026-08-15 calibration rounds landed and settled the pattern-setter question
+for the original seven — closed contracts right, skill text carried the defect — then shipped
+three text repairs (`Learning:` value grammar, `Provenance:` triad-first grammar, add-vs-merge)
+that moved the two measured assertions 0/9 → 9/9 and 1/9 → 9/9. Full numbers and per-case
+decisions:
+[`2026-08-10-learn-002`](../evals/baselines/history/2026-08-10-learn-002.md) and
+[`2026-08-15-learn-002`](../evals/baselines/history/2026-08-15-learn-002.md). **The six
+LOOP-001/REV-001 contracts now have their three-run clean-room baselines on both sides**,
+superseding their first-contact single runs — but that satisfies only the *baseline* half of
+their Acceptance clause. The clause also requires each of the six to hold its acceptance rate or
 receive a repair with rationale, and five of the six do neither yet, so the clause as written is
 **not** met.
 
@@ -139,45 +129,27 @@ What this item still owes. The 2026-08-17 offline round closed the repair half o
 6, 8 and 9; each entry below now states what was done and what is still owed, because a repair
 with no measurement behind it is a hypothesis, not a result.
 
-**What the offline round changed, and what that costs.** Full record:
-[`learn-002-offline-repairs-2026-08-17`](archive/2026-08/learn-002-offline-repairs-2026-08-17.md),
-which also carries the reasoning for the three ORACLE small items this round closed (005, 006,
-007) — their roadmap lines are deleted, as a closed small item's are. Ten graded patterns and four
-`packet_lint` behaviors moved, each pinned in both directions in `tests/test_packet_lint.py`
-(`MeasuredFalseREDsFromTheLearn002Round`) and `tests/test_eval_behavioral.py`
-(`Learn002GraderRepairsTest`) against the sentence recorded in the round's own decisions note, and
-each proven non-vacuous by mutation. Two consequences a later session must not miss. **The
-2026-08-15 rates are no longer the before side for anything here** — evaluator bytes moved, so the
-next batch is a fresh baseline under the repaired graders rather than the 'after' of that round;
-its rates remain the historical record of what the *old* graders measured. And **several cases now
-measure something different**, because item 6 made `allowed_tools: []` actually deny: sessions that
-previously had `Glob`/`Grep`/`Read` available now have nothing, which is what those cases always
-claimed. A rate change there is a true finding about a no-tool session, not a regression.
+**What the offline round changed, and what that costs.** Full record, including the reasoning for
+the three ORACLE small items this round closed (005, 006, 007 — their roadmap lines are deleted,
+as a closed small item's are), the ten graded-pattern and four `packet_lint` repairs, and their
+paired mutation-proof tests:
+[`learn-002-offline-repairs-2026-08-17`](archive/2026-08/learn-002-offline-repairs-2026-08-17.md).
+Two consequences a later session must not miss: **the 2026-08-15 rates are no longer the before
+side for anything here** (evaluator bytes moved; the next batch is a fresh baseline), and
+**several cases now measure something different** because item 6 made `allowed_tools: []` actually
+deny — a rate change there is a true finding about a no-tool session, not a regression.
 
-1. **The five filed grader defects are repaired; the confirmation is owed.** Both patterns on
-   `reviewer-approval-does-not-transfer` are now bound to the subject making the claim (the
-   approval) instead of a trailing `new commit` object the precise answer replaces with the SHA,
-   and `fresh review` tolerates an interposed modifier. On `self-improve-promotion-gate` the loose
-   forbidden alternative — the one that cannot tell an assertion from a report — is split into its
-   own rule and exempted on a `Trigger:` label line, while the three subject-bound alternatives
-   still apply there, so the exemption is not a place to hide a verdict; and the refusal positive
-   now accepts a refusal stated as an outcome (`No gate holds, so no promotion`) and one carried in
-   the disposition's rationale. **The decorated-echo repair's confirmation scope is four contracts,
-   not one** — `self-improve-lifecycle-merge` and `self-improve-canonical-triaged-candidate` were
-   held at 2/3 by it and `learning-slot-operational-agent`'s duplicate `Learning:` field is the
-   same family. Validated against only the contract it was filed under, it would read as settled
-   while three others still fail on it.
-2. **The two learning-slot causes are split: one was a grader defect, one is text.**
-   `learning-slot-readonly-agent` (0/3) appended rationale after an exact-value field, which is the
-   reading the gate slots have always had (`term — rationale` asserts the term) and is now allowed,
-   with a rationale naming a *second* disposition still failing. `learning-slot-operational-agent`
-   (1/3) emits a second literal `Learning:` field pointing back at the block; that is left graded
-   as a violation and is a **TEXT** repair, because a back-reference carries different words from
-   the canonical line and collapsing it would need vocabulary for "this is only a pointer" — the
-   paraphrase surface these labels exist to remove. Run 2's unresolved metavariable in
-   `Provenance:` is likewise a real defect and stays red. The `(proposed recommendation)`
-   abbreviation this item once carried does **not** occur in any of the six after-side runs; do not
-   revive it.
+1. **Five grader defects repaired offline; confirmation owed across all four contracts the
+   decorated-echo repair touches** (`self-improve-lifecycle-merge`,
+   `self-improve-canonical-triaged-candidate`, `learning-slot-operational-agent`'s duplicate
+   `Learning:` field, and the one it was filed under) — validating only the filed-under contract
+   would read as settled while three others still fail on it. Repair mechanics: the offline-repairs
+   record above.
+2. **`learning-slot-readonly-agent`'s grader defect is repaired** (rationale after an exact-value
+   field is now allowed). **`learning-slot-operational-agent`'s duplicate-`Learning:`-field cause
+   is TEXT, not grader — repair not yet written** (still 1/3; a real back-reference-vocabulary
+   problem, not a paraphrase gap). The `(proposed recommendation)` abbreviation this item once
+   carried does **not** occur in any of the six after-side runs; do not revive it.
 3. **An operator ruling on `reviewer-formal-approval-emits-envelope`** — whether stipulated
    evidence substitutes for seen bytes. Not a grammar problem, and unchanged at 0/3. Put to the
    operator on 2026-08-17 and **deferred**, so the contract stays red and the ruling stays owed.
@@ -188,89 +160,57 @@ claimed. A rate change there is a true finding about a no-tool session, not a re
 4. **The two-consecutive-batches clause** for the seven, which no single round can satisfy.
    `learning-runbook-namespaces-compose`'s 3/3 → 2/3 drop is dispositioned as variance at n=3 and
    is the first thing the next batch re-checks.
-5. **The five unsettled LOOP-001/REV-001 contracts have their repairs; each still owes a hold.**
-   Named here because this file is the only live tracker and a remainder list that omits them lets
-   a later session close LEARN-002 with them red. `loop-capture-is-not-closure` (0/3) — its four
-   positive patterns missed gaps rendered as numbered bold headings with the negation on the
-   explaining word, and now accept the negation on either side of the gap noun within one line,
-   repaired as one idiom rather than one pattern at a time. `loop-duplicate-merges-provenance`
-   (0/3) — the closed noun set missed "not a new *signal*", and preservation expressed as merging
-   into the existing record now counts. `loop-source-pass-is-not-released-pass` (1/3) — accepts
-   "necessary but not sufficient"; its **second** pattern is deliberately untouched, because
-   whether the ledger's literal `record-retest` may be replaced by a description of the mechanism
-   is a real design question the 2026-08-15 round flagged as undecided, and the literal is what
-   makes the ledger step actionable. `reviewer-approval-does-not-transfer` (0/3, item 1) and
-   `reviewer-formal-approval-emits-envelope` (0/3, item 3, unrepaired pending the ruling). The
-   sixth, `verifier-envelope-mismatch-fails-closed`, held at 3/3 — with the caveat in item 6, which
-   now bites: that pass was measured with `Glob`/`Grep` reachable and the case is now genuinely
-   tool-denied, so its next run measures a different thing and the 3/3 does not carry forward.
-6. **`allowed_tools: []` now denies.** The discovery stands: the runner turned an empty allowlist
-   into `--tools ""`, which bounds nothing, and denial comes only from `disallowed_tools` — proved
-   by `Grep` executing and reporting the session's real cwd in a re-run. Measured 2026-08-17: 47
-   cases declare an empty allowlist, **42** left at least one granted tool reachable and **26** left
-   `WebFetch`/`WebSearch` reachable, so no case's "planning-only" was ever evidence that no tool was
-   available. Repaired at the one place that covers all 47 rather than by 42 hand-edits:
-   `eval_behavioral.session_denylist` synthesizes a denylist over the whole built-in vocabulary
-   whenever the allowlist is empty, and
-   `test_an_empty_allowlist_is_enforced_for_every_planning_only_case` asserts the property against
-   that function for every shipped case — replacing a 25-entry list of known-leaky ids that could
-   only ever be as current as its last edit. The list-based floor is
-   narrowed to the one residue that is still possible. **Still owed here:** the MCP half.
-   `RUNTIME_TOOLS` is built-ins only, so `researcher-unestablished-claim-stays-unverified` keeps its
-   MCP retrieval reachable and states that in its own `expected`; closing it needs a probed
-   `mcp__…` denial vocabulary or a grader assertion on observed tool calls, and shipping an unprobed
-   denylist entry would be a control in name only. `AGENTS.md`'s use of an empty Claude allowlist as
-   the Codex-lane eligibility test now rests on a property the harness enforces.
-7. **Two SKILL.md sentences ship unmeasured, and a third artifact joins them.** Every after-side
-   artifact binds `plugin.git_head` to `c8312b3`, and two review-driven amendments landed after it:
-   the no-signal literal (`Learning: none — no reusable signal`, replacing a `<reason>` slot the
-   linter rejects) and the `Destination:` clarification. What survives that gap is exact — the
-   sentences governing both *measured* assertions are byte-identical between `c8312b3` and the
-   shipped commit, so `0/9 → 9/9` and `1/9 → 9/9` remain evidence for the shipped bytes. The two
-   amendments have **no** behavioral evidence; the no-signal one is the live risk, since it changes
-   what a session emits for every no-signal scan, and the next batch measures it. Item 9's
-   reference repair is the third, and it is unmeasurable by this suite **by construction** now that
-   item 6 lands: these cases run fully tool-denied, so no session can open a `references/` file.
-   Its consumer is a `Read`-capable session in ordinary use, not a contract here — which is a
-   reason to state the limit, not to leave two canonical files contradicting each other.
-8. **The `Claude exited 1` resultless-session flake no longer corrupts a rate.** It hit five
-   before-side and four after-side case batches, never at concurrency 1, and the runner graded the
-   empty response against every `must_match` — which converted three working contracts into
-   apparent 0/3s in that round alone. A session that returned no result is now a **measurement**
-   failure, excluded from the rate exactly as a run that broke inside the runner is, so the case
-   reports INCONCLUSIVE and exit 3 rather than FAIL and exit 1. Deliberately not the
-   systematic-defect path that stops the batch: this failure is per-session and intermittent, so
-   stopping would discard a paid batch over one flaked run. **Still owed:** the root cause. The
-   workaround stands meanwhile — re-run the affected case at `--concurrency 1`.
-9. **`references/retro-protocol.md` no longer teaches a grammar the linter rejects.** Its line 100
-   rendered `Provenance: <verified/sourced/unverified, source, and freshness>` — the comma form —
-   while `packet_lint` requires the triad word followed by an em dash, `->`, or a colon, which is
-   what `SKILL.md` states. The template now carries the triad-first form and the paragraph
-   explaining why `local`/`official`/`upstream` is source detail rather than a Provenance value.
-   Deliberately taken here rather than deferred again: leaving two canonical files contradicting
-   each other to avoid growing item 7's list traded a live defect for a bookkeeping preference.
+5. **Five of the six LOOP-001/REV-001 contracts have repairs; each still owes a hold.**
+   `loop-capture-is-not-closure` 0/3, `loop-duplicate-merges-provenance` 0/3,
+   `loop-source-pass-is-not-released-pass` 1/3 (its second pattern — whether the ledger's literal
+   `record-retest` may be replaced by a mechanism description — is deliberately untouched; that
+   design question stays undecided, and the literal is what makes the ledger step actionable; do
+   not widen it without settling that), `reviewer-approval-does-not-transfer` 0/3 (item 1), and
+   `reviewer-formal-approval-emits-envelope` 0/3 (item 3, unrepaired pending the ruling). The
+   sixth, `verifier-envelope-mismatch-fails-closed`, held 3/3 — but that pass was measured with
+   `Glob`/`Grep` reachable and the case is now genuinely tool-denied (item 6), so its next run
+   measures a different thing and the 3/3 does not carry forward. Repair mechanics: the
+   offline-repairs record above.
+6. **`allowed_tools: []` now denies** — the runner used to turn an empty allowlist into
+   `--tools ""`, which bounds nothing; 47 of the suite's cases declared one, and 42 had a tool
+   still reachable. Fixed once, for all 47, in `eval_behavioral.session_denylist` (mechanics:
+   offline-repairs record above). **Still owed:** the MCP half — `RUNTIME_TOOLS` is built-ins
+   only, so `researcher-unestablished-claim-stays-unverified` keeps MCP retrieval reachable and
+   says so in its own `expected`; closing it needs a probed `mcp__…` denial vocabulary or a grader
+   assertion on observed tool calls, since an unprobed denylist entry would be a control in name
+   only.
+7. **Two SKILL.md sentences plus item 9's reference repair ship unmeasured.** Both measured
+   assertions (`0/9 → 9/9`, `1/9 → 9/9`) remain evidence only for the byte-identical `c8312b3`
+   text — full pin detail in
+   [`2026-08-15-learn-002`](../evals/baselines/history/2026-08-15-learn-002.md). Two
+   review-driven amendments landed after that pin with **no** behavioral evidence: the no-signal
+   literal (the live risk — it changes what every no-signal scan emits, and the next batch
+   measures it) and the `Destination:` clarification. Item 9's reference repair is unmeasurable by
+   this suite **by construction** now that item 6 lands — these cases run fully tool-denied, so no
+   session can open a `references/` file; its consumer is a `Read`-capable session in ordinary
+   use, not a contract here.
+8. **A resultless (`Claude exited 1`) session is now a measurement failure, not a graded FAIL** —
+   it had converted three working contracts into apparent 0/3s before this landed. Mechanics:
+   offline-repairs record above. **Still owed:** the root cause; the workaround meanwhile is
+   `--concurrency 1` for the affected case.
+9. **Landed** — `references/retro-protocol.md`'s Provenance template now matches the
+   triad-first grammar `packet_lint` and `SKILL.md` require, closing the two-canonical-files
+   contradiction. Detail: offline-repairs record above.
 
 Two results are recorded against interest and must not be re-reported as wins: the add-vs-merge
 repair has **no measured effect** (its target case was already 3/3 before the edit, on model
 drift), and two contracts improved between 2026-08-10 and this round on drift alone.
 
 **Rides this item (PROP-002 deferrals, 2026-08-13).** Three proportionality trims sit in files
-this item is already paying to re-measure, so they ride its runs rather than buying their own:
-`runbook`'s owner and escalation/stop slots and `references/example.md`'s two-role framing, and
-`self-improve-loop`'s canonical candidate block (in SKILL.md and
-`references/discovery-routing.md`) and the five retro types in `references/retro-protocol.md`.
-Line numbers are deliberately omitted here: the scan record's citations bind commit `c38592c` and
-say so, while this file is the live tracker, where a line number rots silently as the file moves —
-`self-improve-loop/SKILL.md` has already shifted 37 lines since that scan.
-They are optional to this item's acceptance — closing LEARN-002 does not require making them — but
-they must not be made *without* its measurement, and **closing this item owes each ride-along a
-disposition**: worked, re-homed to a named live item, or dropped with reason, recorded in the
-outcome record. A silent close would strand them in archive evidence outside this tracker — the
-roadmap is the only live owner a deferral can have (PR #133 review finding). The disposition and reasoning are in
+this item already pays to re-measure, so they ride its runs instead of buying their own — full
+list, file paths, and rationale in
 [`prop-002-scan-findings-2026-08-13.md`](archive/2026-08/prop-002-scan-findings-2026-08-13.md).
-Note the constraint that record's Correction 8 establishes before touching `runbook`: its propose
-grammar cannot move to `references/`, because the contract that grades it runs skill-only and has
-no `Read`.
+Optional to this item's acceptance, but must not be made *without* its measurement, and
+**closing this item owes each ride-along a disposition** (worked, re-homed to a named live item,
+or dropped with reason) — a silent close would strand them in archive evidence outside this
+tracker, the only live owner a deferral can have (PR #133 review finding). Note the constraint
+that record's Correction 8 establishes before touching `runbook`: its propose grammar cannot move
+to `references/`, because the contract that grades it runs skill-only and has no `Read`.
 
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
@@ -402,9 +342,12 @@ live listing probe because the bundled share differs). (2) The doctor's
 `repository.skill-listing-budget` warning is promoted to a `validate_fleet.py` hard rule with a
 fixture that fails without it, so listing regrowth fails T0 instead of failing silently at
 runtime — honest only once CTX-002 makes the tree fit. (3) A generated-adapter size tripwire
-warns before GitHub's 30,000-character `.agent.md` hard cap: `homelab-engineer.agent.md` is at
-24,631 (82%) and that body is the fleet's fastest-growing; today the first signal would be a
-host rejecting the profile. (Re-measured 2026-08-17: 24,019 chars, 80%. GATE-003, GATE-004 and ORACLE-005 first took this body to 86% — 1,701 chars of added prose for three small items, while CTX-001 and CTX-003 are open to shrink exactly these files. Three review passes ended at **-39**: every fix is a replacement, none is an addition, and GATE-003 closed by deleting `Instrument: n/a` rather than defining it. Nobody measured until the number was asked for, which is the point of the tripwire.)
+warns before GitHub's 30,000-character `.agent.md` hard cap — `homelab-engineer.agent.md` is at
+24,019 chars (80%, re-measured 2026-08-17) and the fleet's fastest-growing body, so today the
+first signal would be a host rejecting the profile. Three small-item review passes there netted
+**-39 chars** overall (detail:
+[`learn-002-offline-repairs-2026-08-17`](archive/2026-08/learn-002-offline-repairs-2026-08-17.md))
+— nobody measured until the number was asked for, which is the point of the tripwire.
 
 **Source:** [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md)
 (mitigation calibration table; the Copilot cap under "Preload and body footprint").
@@ -427,29 +370,17 @@ new negative case passed 5/5, but three baseline-perfect contracts regressed to 
 no-go evidence only, not a merge-ready result.
 
 **Outcome:** The corrected baseline is 27,987 canonical characters, 27,938 in the Copilot
-projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The initial
-24,082 / 24,045 / 24,809-character candidate missed the Copilot target by 45 characters but had
-silently broadened identical Tier 2 retries beyond confirmed transient failures. The authorized
-repair restored the no-material-state-change boundary, kept qualifiers outside closed declaration
-values, narrowed the example, and added the unknown-outcome case. Its tree-based sizes are
-24,884 / 24,847 / 25,611 characters, reductions of 3,103 / 3,091 / 3,091; Copilot has 17.18%
-headroom and remains 847 characters above the 24,000 target. Across the original 25 cases, fresh
-behavior improved from 45/125 at baseline to 55/125, and the new safety case passed 5/5. Acceptance
-still fails: `homelab-right-size-native-tier2` omitted a literal packet slot once,
-`gate-same-effect-consolidation-retry` duplicated its declaration block once, and
-`gate-owner-attribution-stacked` used a semantically correct hyphenated form outside the grader's
-current lexicon. All three baseline-perfect cases were 4/5. The one live probe proved loading,
-preloads, path expansion, and guard scoping before its conditional-reference canary timed out after
-900 seconds; no retry ran. The first review-response round fixed five deterministic contract
-defects: the worked example's exact pins, diff, rollback, and literal `Tier:` slot;
-retry-before-reconcile ordering; conditional prior-approval wording; and predicate-driven off-site
-backup. A second and final review-response round required the Tier 2 command plus any applicable
-diff, restored both false-result directions in Work Orders, required affirmative reconciliation,
-rejected negated or optional reconciliation, and accepted safe hypothetical or reconcile-first
-retry wording. Its tree-based sizes are 25,347 / 25,310 / 26,074 characters, reductions of 2,640 /
-2,628 / 2,628 from baseline; Copilot has 15.63% headroom and remains 1,310 characters above the
-target. No fresh model lane ran against either review-response tree, so neither supersedes the
-exact-hash 60/130 no-go result or establishes an accepted compact floor.
+projection (93.1% of its 30,000-character cap), and 28,702 in the Codex projection. The
+operator-authorized safety repair (tree-based sizes 24,884 / 24,847 / 25,611; Copilot 17.18%
+headroom) improved fresh behavior across the original 25 cases from 45/125 at baseline to 55/125
+with the new safety case at 5/5 — but three baseline-perfect contracts regressed to 4/5 (60/130
+overall), so acceptance still fails and this is no-go evidence, not a merge-ready result. Two
+further review-response rounds fixed deterministic contract defects only (final tree-based sizes
+25,347 / 25,310 / 26,074; Copilot 15.63% headroom); **no fresh behavioral lane ran against either
+review-response tree**, so neither supersedes the exact-hash 60/130 no-go result or establishes an
+accepted compact floor. Full round-by-round sizes, the rejected initial candidate, and every
+fixed defect:
+[CTX-005 discipline audit](archive/2026-08/ctx-005-engineering-discipline-audit-2026-08-23.md).
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md),
@@ -530,70 +461,51 @@ release stamp is REL-173's evidence, not a gate on this item.
 
 **Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
 
-**Current evidence:** The first Terra/medium round remains preserved under
-[`evals/baselines/history/2026-08-11-handoff-001.md`](../evals/baselines/history/2026-08-11-handoff-001.md): it proved the
-producer at 3/3 but left five strict cases unresolved, which triggered this amendment. Those
-artifacts are historical for their exact no-tool cases and are not regraded as Claude functional
-evidence. Commit `dc02bed` replaces the builder echo with manager-owned work-order identity and
-small receipts. The paired evaluator change keeps six cases by replacing the reviewer duplicate
-with a digest-mismatch receipt and a declarative builder fixture. Its trusted verifier is
-byte-checked, grades captured regular-file bytes, and records artifact hashes/results. The
-digest-negative oracle now requires one exact hash command and correlated result plus an unchanged
-seeded workspace, closing the prior receipt-only false green. Red-before-green controls, T0, the
-behavioral-evaluator module, the full suite, and `claude plugin validate . --strict` all passed at
-`dc02bed` (107 evaluator tests, 666 across 30 modules **at that commit** — GRAPH-002 and this
-round's additions have since grown the suite, so re-run T1 rather than compare against that
-figure; a restated count here would only mint the next stale one).
+**Current evidence.** The 2026-08-11 Terra/medium round (full record:
+[`2026-08-11-handoff-001`](../evals/baselines/history/2026-08-11-handoff-001.md)) proved the
+producer 3/3 but left five strict cases unresolved, triggering this amendment; commit `dc02bed`
+replaced the builder echo with manager-owned work-order identity, added a digest-mismatch receipt
+and declarative builder fixture, and passed red-before-green, T0, the module, T1, and
+`claude plugin validate . --strict` (its evaluator-test counts are stale — re-run T1 rather than
+compare against that commit's figure).
 
-The plan's three-session Claude diagnostic **has now run** — operator-approved model
-`claude-sonnet-5`, candidate `7074d8d`, CLI 2.1.233, one run each, artifacts and full reading in
-[`evals/baselines/history/2026-08-15-handoff-001-sonnet5.md`](../evals/baselines/history/2026-08-15-handoff-001-sonnet5.md).
-One of the three returned a usable result: the producer passed 1/1. Both builder cases are
-recorded **VOID, not FAIL** — `scripts/eval_behavioral.py:502` grants case tools with `--tools`,
-which bounds the tool *surface* while granting no *permission*, so on CLI 2.1.233 the session's
-Bash calls fall to the sandbox, which admits `sha256sum`/`grep`/`ls` and refuses interpreters. The
-functional case's mandated `python -I acceptance.py` and the digest case's one prescribed hash
-command therefore never executed (`hash_command_observed: false`). Two same-prompt sessions
-differing only in that flag reproduce it exactly. What the void sessions still show: the
-functional case's end state was independently graded `acceptance: PASS` by the trusted verifier,
-and the digest case left `workspace_unchanged: true` with no edit and no `accepted` receipt issued
-on trust. HANDOFF-001 remains unaccepted — the plan gates a paired capture on "exact hash-command
-evidence", which does not exist.
+The plan's three-session Claude diagnostic then ran (operator-approved `claude-sonnet-5`,
+candidate `7074d8d`, CLI 2.1.233; full record:
+[`2026-08-15-handoff-001-sonnet5`](../evals/baselines/history/2026-08-15-handoff-001-sonnet5.md)).
+Only the producer returned a usable result (1/1); both builder cases came back **VOID, not
+FAIL** — `scripts/eval_behavioral.py:502` granted the tool *surface* via `--tools` but no
+*permission*, so the mandated `python -I` and hash commands never executed
+(`hash_command_observed: false`). That VOID is the defect the 2026-08-15 `--allowedTools` fix
+(see Next action) targets; the void sessions still showed the functional case's end state graded
+`acceptance: PASS` and the digest case's workspace left unchanged with no accept issued on trust.
 
 **2026-08-19 settling batch (first paid round on the repaired graders):** full record in
-`evals/baselines/2026-08-19-settling/decisions.md`. For this item: the runner-grant fix is
-proven live - `handoff-builder-applies-work-order` 2/3 with the mandated command executed and
-the trusted verifier at `acceptance: PASS` in all runs, lifting the VOID; and
-`handoff-builder-rejects-digest-mismatch` held its substance in every run (mismatch computed, no
-trusting accept, workspace unchanged) while failing only `$`-anchored receipt lines the prompt
-never states - the case owes either the grammar in its prompt or labeled-line anchors. The
-parsed-membership grader miss (the salvage note's open diagnostic) is settled: `member` vs
-`membership`, widened with a control in the same change.
+`evals/baselines/2026-08-19-settling/decisions.md`. The runner-grant fix is proven live —
+`handoff-builder-applies-work-order` 2/3 with the mandated command executed and
+`acceptance: PASS` in all runs, lifting the VOID — and `handoff-builder-rejects-digest-mismatch`
+held its substance in every run (mismatch computed, no trusting accept, workspace unchanged) but
+fails only `$`-anchored receipt lines the prompt never states, so it owes either prompt grammar or
+labeled-line anchors. The parsed-membership grader miss is settled: `member` vs `membership`,
+widened with a control in the same change.
 
 **Salvaged parallel evidence (2026-08-12 arc, landed from branch
 `claude/sonnet-testing-cf6bfc`):** three producer batches plus digest diagnostics under
-`evals/baselines/2026-08-12-handoff-001-*/` (rationale decisions.md beside the two
-producer batches that carry one; the digest diagnostics and the r2 rerun are raw
-captures only). Their product: the three
-producer grader repairs now in `handoff-producer-preserves-discovered-constraints` (firing tests
-in `HandoffProducerGraderRepairsTest`; the retained runs tuned the amendments, so rate acceptance
-folds into this item's paid re-runs). Still open from that arc: the producer's parsed-membership
-`must_match` missed at 2/3 in the retained 2026-08-18 rerun
-(`2026-08-18-handoff-001-producer-r2-x3`) — the last unexplained miss on that
-contract — and the `disable_mlock` forbidden sibling carries the same fixed-width-lookbehind
-blind spot the live-apply repair fixed, deliberately left until evidence indicts it
-(producer-amended-x3 decisions.md watch item). Residual limits of the ported patterns, recorded against interest: the co-occurrence
-guard's clause exemption includes `assum\w*`/`fail\w*`, so an endorsement phrased inside
-an assumption-labelled clause is exempt, and the parity requirement skips any sentence
-carrying a negator even when the assertion itself is affirmative. The arc's runner half is deliberately **not**
-ported: main's 2026-08-15 `--allowedTools` fix supersedes its grant mechanism, its digest-case
-redesign would move evaluator bytes this item's pending re-run counts on, and its per-command
-outcome evidence is EVAL-010. Retirement trigger for the salvaged raw: the producer batches
-retire once the producer contract settles green in LEARN-002's second batch. The digest
-diagnostics retire only after `handoff-builder-rejects-digest-mismatch` resolves in HANDOFF-001
-with a written receipt grammar and distilled outcome summary (producer confirmation alone does not
-consume them). The 2026-08-18 rerun capture retires with the producer batches — the
-parsed-membership miss it retained evidence for is repaired with a pinned control.
+`evals/baselines/2026-08-12-handoff-001-*/` produced the three producer grader repairs now in
+`handoff-producer-preserves-discovered-constraints` (pinned in `HandoffProducerGraderRepairsTest`;
+rate acceptance folds into this item's paid re-runs). Still open from that arc: the producer's
+parsed-membership `must_match` missed at 2/3 in the retained 2026-08-18 rerun
+(`2026-08-18-handoff-001-producer-r2-x3`) — the last unexplained miss on that contract — and the
+`disable_mlock` forbidden sibling carries the same fixed-width-lookbehind blind spot the
+live-apply repair fixed, deliberately left until evidence indicts it. Recorded against interest:
+the co-occurrence guard's clause exemption admits `assum\w*`/`fail\w*` clauses, and the parity
+requirement skips any sentence carrying a negator even when the assertion itself is affirmative.
+The arc's runner half is deliberately **not** ported: main's 2026-08-15 `--allowedTools` fix
+supersedes its grant mechanism, its digest-case redesign would move evaluator bytes this item's
+pending re-run counts on, and its per-command outcome evidence is EVAL-010. **Retirement
+triggers** for the salvaged raw: the producer batches retire once the producer contract settles
+green in LEARN-002's second batch; the digest diagnostics retire only after
+`handoff-builder-rejects-digest-mismatch` resolves with a written receipt grammar and distilled
+outcome summary; the 2026-08-18 rerun capture retires with the producer batches.
 
 **Next action:** The runner grant is **fixed** (2026-08-15): `run_session` now passes `--tools`
 for the surface bound its comment argues for **and** `--allowedTools` for permission, with a test
@@ -683,19 +595,13 @@ operator's ruling.
 **Outcome:** Each of the LADDER-001 capture's two under-firing modes has its measured repair, or
 a recorded decision not to buy one — with the instrument fixed to measure what it claims.
 
-**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md)
-(3/3 / 0/3 / 0/3 mode split), diagnosed by the
+**Source:** [`LADDER-001 outcome record`](archive/2026-08/ladder-001-outcome-2026-08-14.md) —
+eng-ladder's three modes fired 3/3 (altitude), 0/3 (assess), 0/3 (consult-fork) — diagnosed by the
 [2026-08-14 investigation](archive/2026-08/ladder-002-investigation-2026-08-14.md): schema
-cleared by probe (full description visible at CLI 2.1.231 despite the fleet's 11,260-char
-listing volume exceeding the reported ~8k budget), the assess 0/3 shown to be an **eval-case
-artifact** (dangling "this change" referent in the runner's empty cwd — the mode fires when a
-referent exists and correctly asks-and-names-the-skill when not), and the consult-fork 0/3
-consistent with **do-the-work bias** as the leading hypothesis (one directional probe performed
-the consult's substance inline — deliberate fork treatment, deferred execution, operator gate —
-with zero invocations). The hypothesis stays provisional either way: the behavioral port in
-half (b) validates the *verdict's content* once the component runs — reachability is the routing
-suite's question, so no behavioral result confirms why the routing positive failed. The Group 4
-rescan's upheld Mode 3 finding rides here unchanged.
+cleared by probe, the assess 0/3 is an **eval-case artifact** (dangling referent in the runner's
+empty cwd), and the consult-fork 0/3 is provisionally attributed to **do-the-work bias** —
+provisional either way, since half (b)'s behavioral port validates the *verdict's content*, not
+why the routing positive failed. The Group 4 rescan's upheld Mode 3 finding rides here unchanged.
 
 **Prerequisites:** A fresh 'before' capture is owed — the stored capture no longer resolves.
 `eval_baseline.py evals/routing/ladder.json --model sonnet --clean-room` reports
@@ -1206,109 +1112,18 @@ specific defaults, and the validator's orphan/reference checks pass.
 
 ## Reconciliation record
 
-Reconciled against commit `ab896b2` on 2026-07-28. The review compared every item that a historical
-document still called open, optional, deferred, or not yet landed with the current definitions,
-scripts, eval cases, inventory, and active Round 1 branch.
+Reconciled against commit `ab896b2` on 2026-07-28: every item a historical document still called
+open was checked against current definitions, scripts, eval cases, and inventory. Detail lives in
+each source below, not here; every "Survives" finding is already tracked live above (LAB-001,
+EVAL-003, EVAL-004, LABSEC-002, RELEASE-001) or, for LABSEC-001, recorded landed in LABSEC-002.
 
-### Quality and deep-review findings
-
-The initial and deep reviews are consolidated in
-[`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md).
-
-| Historical claim | Current evidence | Disposition |
-|---|---|---|
-| `frontend-craft` presents the default React stack as universal | `skills/frontend-craft/SKILL.md` now says an existing repository always wins and labels every core library binding as the default stack | Landed; exclude |
-| Claude Code frontmatter facts are duplicated | `skills/prompt-craft/references/claude-code-frontmatter.md` declares itself the single source, and `prompt-engineer` points to it | Landed; exclude |
-| Fetched repository/web content is not consistently treated as data | Every applicable agent carries the canonical rule or its declared role adaptation | Landed; exclude |
-| `homelab-engineer` routes service additions to an unreachable skill | The agent now owns the apply and reads the explicit-only checklist by path | Landed; exclude |
-| `lab-audit` has no tool-layer write restriction | It denies Write, Edit, and NotebookEdit and states Bash remains cooperative | Landed; exclude |
-| Eval coverage stops at one routing cluster with no behavioral checks | Ten routing clusters, the behavioral runner, packet linter, and 67 deterministic contracts exist (counts as of 2026-08-17; `evals/` owns the current figures) | Machinery landed; additional contract coverage survives below |
-| Craft references duplicate headings and Mantine doctrine | References now use one H1; `frontend-craft/SKILL.md` owns the conditional Mantine rule and references point to it | Landed; exclude |
-| Body cross-reference namespacing is inconsistent | Descriptions are validator-enforced; body text follows the namespaced-when-invocable convention, with bare names reserved for content already in context | No current broken route found; close |
-| `sre-tool` keeps multi-component detail in its always-loaded core | `skills/sre-tool/references/multi-component.md` now owns that conditional material | Landed; exclude |
-| Descriptions lack capability-led openers | Current agent and skill descriptions lead with capability and then triggers/negative routing | Landed; exclude |
-| `multi-agent-architect` and `prompt-engineer` lack worked examples | Both now carry compressed worked examples | Landed; exclude |
-| The material-fork rule is repeated across builder and craft skills | The compact copies remain deliberately because each craft skill is directly invocable without the builder in context | Deliberately retained; close |
-| Standalone craft invocations have no defined review packet | Both craft skills provide a four-slot fallback | Landed; exclude |
-| Evergreen guidance carries version/comparative claims | The cited “newer”, fixed Recharts major, and fixed model-tier wording is gone | Landed; exclude |
-| `prompt-engineer` contradicts itself about spawning | It now branches on the Agent tool actually being unavailable | Landed; exclude |
-| Design-agent read-only Bash and handoff boundaries are prose-only | Principal and distinguished agents are guard-enforced for Bash, acknowledge the cooperative Write boundary, and report work back to the caller | Landed; exclude |
-| `homelab-engineer` does not explain how it reaches operating skills | Its body names the checklists and path-loading convention it uses | Landed; exclude |
-| `eng-ladder` references do not resolve in an installed plugin | Each rung reference names both the repo path and `${CLAUDE_PLUGIN_ROOT}` path | Landed; exclude |
-| Unused frontmatter fields have no deliberate decision | The canonical frontmatter reference records decisions for `when_to_use`, `maxTurns`, `memory`, and related fields | Landed; exclude |
-| Deep-review C1: wrapper-stack failures are missing from routing | `multi-agent-architect` now names wrapper, memory-layer, tool-skip, and delivery-corruption triggers | Landed; exclude |
-| Deep-review C7: upper-rung Bash is not guarded | Principal and distinguished agents are in the guard roster and describe the enforced boundary | Landed; exclude |
-
-The deep review's final “still open” list named wrapper routing, upper-rung guarding, and
-`frontend-craft` stack neutrality. All three are present in the current tree, so that dated list
-must not seed new work.
-
-### Modernization and adaptation items
-
-| Historical item | Current evidence | Disposition |
-|---|---|---|
-| `incident` plus postmortem | Split into `lab-incident` and `postmortem`; both ship | Landed; exclude |
-| `restore-drill` and `upgrade-campaign` | Both appear in the generated skill inventory (20 skills as of 2026-08-17; `README.md` owns the current count) | Landed; exclude despite the backlog's stale “remain open” sentence |
-| `security-seed.md` for `sre-tool` | The diff reviewer gained a security lens; the role review now proposes a distinct whole-repository security auditor | Superseded by the application-security decision |
-| `host-onboard` | `skills/host-onboard/SKILL.md` ships the host-lifecycle checklist and is wired from `homelab-engineer` | Landed; exclude |
-| `lab-audit` command reference and findings ledger | `skills/lab-audit/references/checks.md` owns the command detail and ledger format; `SKILL.md` links it and emits ledger rows | Landed; exclude |
-| `lab-audit` allowed-tool preapprovals | The backlog explicitly rejected the authority expansion because approval friction is useful | Deliberately closed |
-| `service-onboard` compose template | No template exists; the original plan limits it to labs with no existing pattern | Survives as deferred, trigger-bound work |
-| Prompt-craft eval wiring | The retest step now requires the repository harness before/after | Landed; exclude |
-| Runbook worked example | `skills/runbook/references/example.md` exists | Landed; exclude |
-| Root-cause intermittence reference | No file exists, but the proposal was explicitly optional and no repeated failure demonstrates a consumer | Close; reopen after an observed probabilistic-debugging miss |
-| PowerShell craft reference | `skills/code-craft/references/powershell.md` ships it; Round 1 closed 2026-07-29 | Landed; exclude |
-| Full routing re-baseline | No comparable current anchor exists; prior attempts are invalid or incomplete | Survives as deferred measurement work |
-
-### ECC residue
-
-The two source reviews are consolidated in
-[`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md).
-
-| Historical item | Current evidence | Disposition |
-|---|---|---|
-| Packet-lint helper | `scripts/packet_lint.py`, fixtures, and behavioral-runner integration exist | Landed; exclude |
-| Behavioral verification of accessibility imports | No behavioral contract covers form wiring, overlays, keyboard flow, or async announcements | Survives, triggered by the next applicable UI task |
-| Deterministic behavioral assertions and pinned fixtures | The current suite is deterministic and stores cases as versioned JSON | Landed; exclude |
-| Track token cost beside behavioral pass rate | `eval_behavioral.py` records per-run input/output usage plus requested/observed model and other measurement conditions | Landed; exclude |
-| Principal-engineer AI-maintainer clause | Still absent; explicitly optional and adds nuance without an observed failure | Deliberately closed |
-| Multi-agent wrapper-stack trigger | Present in the current description | Landed; exclude |
-| `article-writing` import | Remains outside the SDE/SRE fleet remit with no routing home | Deliberately closed |
-
-### Role and governance review
-
-The accepted
-[`fleet role-expansion decision`](decisions/2026-07-28-fleet-role-expansion.md) preserves the
-2026-07-28 review's method, role boundaries, evidence, and reopen triggers. Static inspection and
-direct reproduction raised six candidates for the live roadmap, and **all six have since landed**
-— they are recorded here as the review's outcome, not as work:
-
-- malformed guarded JSON returns the authoritative allow sentinel → GOV-001, PR #40 (the guard now
-  answers `EXIT_INDETERMINATE`);
-- one routing positive accepts a component outside its declared cluster → EVAL-001, PR #40;
-- rebrand the visible homelab role and add Linux-host triggers without renaming its key → ROLE-001;
-- add the action-shaped `host-onboard` skill → `skills/host-onboard/`;
-- add an application-security auditor with a non-PR remit → `agents/application-security-auditor.md`;
-- design test-execution authority, then add an independent verification engineer → ROLE-003/ROLE-004,
-  `agents/verification-engineer.md`, PR #43.
-
-What still survives from this review sits in the current-work sections above: the deferred routing
-measurement, ECC behavioral residue, and the trigger-bound compose asset.
-
-### Roster-expansion design branch
-
-The detailed source design is preserved at
-[`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md).
-
-| Historical proposal | Current disposition |
-|---|---|
-| `test-engineer` | Folded into ROLE-003/ROLE-004 as an authority choice; shipped as `agents/verification-engineer.md` (PR #43) |
-| Running-lab `security-audit` | Survives as LABSEC-001, distinct from repository application security |
-| Guard-enforced `lab-inspector` | Survives as LABSEC-002, now `ready` — GOV-001 and DEPLOY-001 landed, so its prerequisites are satisfied |
-| `release` | Survives as trigger-bound RELEASE-001 |
-| `porting-method` | Landed as PORT-001 (PR #45) and left this tracker; the convention is documented in `README.md` |
-| Home-lab SRE description line | Folded into ROLE-001's rebrand without changing the component key |
-| Standalone secrets component | Remains rejected; lab posture belongs inside LABSEC-001 if accepted |
-| Generic Linux references | Superseded by ROLE-001's action-shaped `host-onboard` boundary |
-| LLM-cost, profiling, continuity, and hardware-health references | Not imported as work without an observed consumer; reopen from fresh task evidence |
-| Generic Linux agent, generic SRE agent, and merged prompt/multi-agent role | Rejected in both reviews |
+- **Quality and deep-review findings** — nearly all landed:
+  [`archive/2026-07/fleet-quality-review.md`](archive/2026-07/fleet-quality-review.md).
+- **Modernization and adaptation items** — landed except LAB-001, EVAL-003 above:
+  [`archive/2026-07/skills-modernization-plan.md`](archive/2026-07/skills-modernization-plan.md).
+- **ECC residue** — landed except EVAL-004 above:
+  [`archive/2026-07/ecc-import-review.md`](archive/2026-07/ecc-import-review.md).
+- **Role and governance review** — all six candidates landed:
+  [`decisions/2026-07-28-fleet-role-expansion.md`](decisions/2026-07-28-fleet-role-expansion.md).
+- **Roster-expansion design branch** — landed/rejected except LABSEC-002, RELEASE-001 above:
+  [`archive/2026-07/roster-expansion-design.md`](archive/2026-07/roster-expansion-design.md).

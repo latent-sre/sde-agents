@@ -43,43 +43,30 @@ one writer per artifact, structure only at the boundaries that remain.
 
 ## Validate before you push
 
-Validation is tiered: depth matches risk, and each tier reuses the previous tier's evidence
-instead of recomputing it. A check already red when you arrive is never passed silently: fix it
-if trivial, otherwise record it in `docs/fleet-roadmap.md` and continue.
+Validation is tiered: depth matches risk, and each tier reuses the last tier's evidence. A
+red check is fixed if trivial, else recorded in `docs/fleet-roadmap.md`.
 
-- **T0 — edit loop** (seconds): run `python3 scripts/validate_fleet.py` and the test module
-  that owns what you touched (`python3 -m unittest discover -s tests -p test_<area>.py`). The
-  validator byte-compares every generated adapter itself, so no separate `--check` run is
-  needed; `generate_platform_adapters.py --write` (below) is the regeneration command after
-  canonical edits.
-- **T1 — before push or PR**: run `python3 scripts/run_tests.py` (full offline suite),
-  `claude plugin validate . --strict` (platform contract; a host without the `claude` CLI says
-  so and defers this check to CI's pinned job), and `python3 scripts/fleet_doctor.py`.
-  CI repeats the first two on every PR but can never substitute for fleet_doctor — the drift it
-  finds lives in your host installation, not in the checkout. Exit 1 means a check failed; **2
-  means a check could not be computed**, so a clean-looking report is not evidence of one; 3 means
-  warnings. Read the
-  report, repair host drift (the common case) with
-  `python3 scripts/install_codex_agents.py --user`, and clear every warning before measuring
-  anything — a stale installed profile means you are measuring something other than the fleet
-  you edited (issue #126).
-- **T2 — merge and weekly** (CI-owned, nothing for you to run): pushes to main, the weekly
-  sweep, and manual dispatch run the full three-OS matrix, so platform-specific guard and hook
-  paths are exercised without billing every PR for them (see the matrix comment in
-  `.github/workflows/validate.yml`).
-- **T3 — release or CLI pin bump** (manual, real API): run `scripts/probe_plugin.py`, every
-  routing cluster, and the behavioral evals, per the next section — a global trigger owes
-  global coverage, so there is no affected-only subset. Before a paired routing run, check
-  `scripts/eval_baseline.py` — a stored benchmark it reports reusable covers the 'before' side;
-  the 'after' side is always a fresh run.
+- **T0 — edit loop** (seconds): `python3 scripts/validate_fleet.py` (byte-compares every
+  generated adapter, so no separate `--check` run) + the owning test module
+  (`python3 -m unittest discover -s tests -p test_<area>.py`); regenerate via
+  `generate_platform_adapters.py --write` after canonical edits.
+- **T1 — before push/PR**: `python3 scripts/run_tests.py` + `claude plugin validate . --strict`
+  (missing CLI defers to CI) + `python3 scripts/fleet_doctor.py`. CI reruns the first two,
+  never fleet_doctor (host drift stays invisible). Exit 1 failed, 2 not computed (a clean
+  report isn't evidence), 3 warnings. Repair via
+  `python3 scripts/install_codex_agents.py --user`; clear warnings before measuring (issue
+  #126).
+- **T2 — merge/weekly** (CI-owned, nothing to run locally): three-OS matrix on push to
+  main, weekly, or dispatch — see the matrix comment in
+  `.github/workflows/validate.yml`.
+- **T3 — release/CLI pin bump** (manual, real API): `scripts/probe_plugin.py` + every routing
+  cluster + behavioral evals — no affected-only subset. Before a paired routing run, check
+  `scripts/eval_baseline.py` for a reusable before-side; after-side stays fresh.
 
-Static review has a convergence bound: at most **two** deep-review rounds per prose-behavior
-change (agent or skill text), **three** for any other fleet prose — docs and this guide
-included. The divergence signal: a round's criticals land in sentences the previous round's
-fix introduced — each rewrite mints the next round's findings. Close with an instrument that
-measures behavior instead (a behavioral-contract run, or an executed verification pass); a
-round past the cap happens only on an explicit operator ruling (provenance: six rounds and
-~1.5M review tokens on one branch).
+Static review converges or stops: at most two deep-review rounds for prose-behavior changes
+(agent/skill text), three for other fleet prose. Divergence signal: criticals land in
+sentences the prior fix introduced. Close with a behavioral instrument (a contract run
+or executed verification); a round past the cap needs an explicit operator ruling.
 
 After **any** canonical agent or skill edit, regenerate the host adapters:
 
