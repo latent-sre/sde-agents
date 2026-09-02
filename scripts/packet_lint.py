@@ -242,7 +242,7 @@ def _unevidenced_claim(line: str) -> re.Match | None:
 # reporting the runner's own status and stays legal.
 STATUS_RUNNER_PATTERN = (
     r"(?:pytest\b|go\s+test\b|cargo\s+test\b|npm\s+test\b"
-    r"|python3?\s+(?:-m\s+(?:unittest|pytest)\b|\S*run_tests\.py\b))"
+    r"|python3?\s+-m\s+(?:unittest|pytest)\b)"
 )
 _SHELL_PROMPT_PREFIX = r"^[^\S\n]*(?:>\s*)?\$\s[^\n]*?"
 STATUS_LAUNDERING_PATTERNS = (
@@ -308,11 +308,10 @@ EXACT_FIELD_VOCABULARIES: dict[str, tuple[str, ...]] = {
 LEARNING_NONE_VALUE = "none — no reusable signal"
 LEARNING_DISPOSITIONS = ("skip", "add", "merge", "supersede", "drop")
 LEARNING_PROVENANCE = ("verified", "sourced", "unverified")
-# scripts/learning_ledger.py:STATE_DISPOSITIONS owns this executable lifecycle contract. This
-# eval-time linter stays standalone instead of importing the ledger and its filesystem machinery,
-# so it deliberately mirrors the map. tests/test_packet_lint.py imports the owner and exhausts the
-# full cross-product; any ledger change must update this mirror and the lifecycle-owner prompts in
-# the same change. On disagreement, the ledger wins and this copy is drift.
+# This module owns the packet's lifecycle contract (the ledger that previously owned it,
+# scripts/learning_ledger.py, was retired 2026-09-01). tests/test_packet_lint.py exhausts the
+# full cross-product against this map directly; a lifecycle change updates this map and the
+# lifecycle-owner prompts in the same change.
 LEARNING_STATE_DISPOSITIONS = {
     "proposed": frozenset({"add", "merge", "supersede"}),
     "approved": frozenset({"add", "merge", "supersede"}),

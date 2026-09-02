@@ -49,9 +49,10 @@ CASES_DIR = REPO / "evals" / "behavioral"
 CLAUDE = shutil.which("claude")
 
 # Written beside benchmark.json, never inside it. benchmark.json is the comparison-grade artifact
-# eval_baseline.py reads across every stored baseline; growing it by default with diagnostic model
-# text would put prose nobody compares inside the file whose whole job is comparison. Separate also
-# means an operator can delete or ignore this file without touching the measurement.
+# checked by hand across every stored baseline (the script that once automated this reuse check,
+# eval_baseline.py, was retired 2026-09-01); growing it by default with diagnostic model text would
+# put prose nobody compares inside the file whose whole job is comparison. Separate also means an
+# operator can delete or ignore this file without touching the measurement.
 FAILING_EVIDENCE_FILENAME = "failing-run-evidence.json"
 
 # The preflight guard below refuses a blocker sitting at either fixed artifact path, so both

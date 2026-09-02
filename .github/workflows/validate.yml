@@ -61,11 +61,9 @@ jobs:
         run: ${{ matrix.py }} scripts/validate_fleet.py
 
       - name: Run repository unit tests
-        # One process per test module, in parallel (scripts/run_tests.py) — wall-clock is
-        # roughly the longest module instead of the sum. --durations 10 is forwarded to every
-        # module run so the slowest tests still surface in the log: the suite's slow-creep gets
+        # --durations 10 surfaces the slowest tests in the log so the suite's slow-creep gets
         # rediscovered by reading CI instead of a profiling session.
-        run: ${{ matrix.py }} scripts/run_tests.py -v --durations 10
+        run: ${{ matrix.py }} -m unittest discover -s tests -v --durations 10
 
       # `tomllib` makes 3.11 the shipped floor. Re-run the complete offline gate at that exact
       # boundary on Ubuntu (the PR leg) so a newer syntax or standard-library import cannot lower
@@ -82,24 +80,7 @@ jobs:
 
       - name: Run repository unit tests on Python 3.11
         if: matrix.os == 'ubuntu-latest'
-        run: python3 scripts/run_tests.py -v
-
-  ledger-drift:
-    # Findings are advisory; inability to inspect the repository is blocking. A pending learning
-    # candidate whose destination keeps receiving commits is a signal that its lifecycle decision
-    # may need another look. It cannot infer a repair that predates or shares the candidate commit.
-    # An unrelated commit to a shared file is common, so drift itself remains a judgement prompt
-    # rather than a gate. A checker crash or unreadable Git history is different: exit 2 keeps that
-    # unknown state from being certified as clean.
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0 # git log over destination paths needs real history
-
-      - name: Report learning candidates whose destination has changed
-        run: python3 scripts/ledger_drift.py --annotate
+        run: python3 -m unittest discover -s tests -v
 
   claude-plugin-contract:
     # validate_fleet.py enforces THIS FLEET's rules. It cannot see the PLATFORM

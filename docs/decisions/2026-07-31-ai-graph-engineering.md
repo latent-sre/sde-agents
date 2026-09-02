@@ -212,13 +212,13 @@ topology artifact, reason about trust paths, or validate executable workflow tra
 
 The runtime control plane is close to a graph substrate:
 
-- [`run_state.py`](../../scripts/run_state.py) durably records runs, tasks, attempts, leases,
+- `run_state.py` (retired 2026-09-01) durably recorded runs, tasks, attempts, leases,
   immutable events, cancellation, supersession, target revisions, and evidence links.
-- [`evidence_envelope.py`](../../scripts/evidence_envelope.py) defines typed producer, context,
+- `evidence_envelope.py` (retired 2026-09-01) defined typed producer, context,
   target, criterion, command, environment, isolation, artifact, and limitation fields.
 - `effect_broker.py` (retired 2026-09-01) bound one signed approval to one exact action,
   target, executable digest, argument vector, expiry, and nonce.
-- [`verification_sandbox.py`](../../scripts/verification_sandbox.py) separates verification from the
+- `verification_sandbox.py` (retired 2026-09-01) separated verification from the
   builder's mutable workspace.
 - [`hosts.json`](../../evals/conformance/hosts.json) keeps host lanes separate and pins the one
   required OpenAI baseline to `gpt-5.6-sol`, high effort, and a read-only sandbox.
@@ -550,3 +550,9 @@ so rather than link a path that no longer exists. `scripts/workflow_contract.py`
 workflow design validator, was retired the same day: GRAPH-004, its only consumer, is deferred and
 trigger-bound, and no role or check names the validator while that trigger stays unfired. GRAPH-004
 reinstates or rewrites it if that trigger fires.
+
+The rest of the runtime control plane named above did not survive the same day: `run_state.py`,
+`evidence_envelope.py`, and `verification_sandbox.py` were all retired 2026-09-01 (the operator
+ruling that the audience is a single home-lab operator, not a multi-worker control plane). The
+list above is corrected the same way as the `effect_broker.py` entry — plain backticks with the
+retirement noted, rather than links to paths that no longer exist.

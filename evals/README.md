@@ -321,7 +321,7 @@ evidence for separating a grader defect from a prompt defect, not a different sc
 **outcome**, deliberately outside the conditions block, so two paired runs under identical inputs
 do not read as condition-divergent merely because one failed and one passed (conditions are
 inputs; artifacts written before 2026-08-14 carry the field inside `conditions`, and
-`eval_baseline.py`'s exact-key comparison ignores it in either place). Either way, a run with no
+the manual reuse comparison ignores it in either place). Either way, a run with no
 evidence file is readable as "every run passed" rather than "the text was dropped". The sidecar is
 created owner-read/write only and is written **before** `benchmark.json`, so a failed evidence
 write withholds the benchmark rather than publishing one that claims text that was never produced;
@@ -452,10 +452,11 @@ without measuring what it claimed. Every full case declares exactly one of the f
 A capture under `baselines/` has exactly two possible jobs, and they retire on different schedules.
 Keeping this straight is the difference between an archive and a graveyard.
 
-1. **Reuse** — serving as the 'before' side of a paired run, which is what `eval_baseline.py`
-   resolves. This job is **fragile by design** and usually already over: the resolver compares the
-   provenance schema, the selection identity, the evaluator identity, and the plugin hash exactly,
-   so any of a schema bump, a case edit, an evaluator change, or a fleet edit ends it permanently.
+1. **Reuse** — serving as the 'before' side of a paired run. This job is **fragile by design** and
+   usually already over: a stored capture is reusable only if its cluster, cases, evaluator, and
+   plugin bytes are all unchanged since capture — checked by hand (the script that once automated
+   this comparison, `eval_baseline.py`, was retired 2026-09-01) — so any of a schema bump, a case
+   edit, an evaluator change, or a fleet edit ends it permanently.
    **As of 2026-08-17 no stored capture holds this job** — all ten clusters resolve `STALE`, and
    the v3→v4 schema move plus the case retirement made that final rather than incidental. Every
    paired round from here starts with a fresh capture on both sides.
@@ -623,8 +624,8 @@ The 93 sessions came off in three retirements: 26 agent-only positives (78), thr
 deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
 standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
 paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
-'before' and 'after' sides each cost a full sweep unless `eval_baseline.py` reports a stored
-capture reusable.
+'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand and
+found reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 

@@ -221,18 +221,6 @@ FORBIDDEN_AGENT_TOOLS = {
         "Agent", "Bash", "Edit", "Glob", "Grep", "NotebookEdit", "Read", "Write",
     },
 }
-# These references connect cooperative role instructions to executable controls. A script can
-# remain present while the only agent or skill that should use it silently stops naming it; the
-# inverse is just as dangerous, because a stale prompt path reads like enforcement but resolves to
-# nothing at runtime. Pin both ends here and let generated-adapter byte checks cover translation.
-RUNTIME_CONTROL_WIRING = {
-    "scripts/verification_sandbox.py": "agents/verification-engineer.md",
-    "scripts/run_state.py": "skills/sre-tool/SKILL.md",
-}
-RUNTIME_EVIDENCE_PRODUCERS = {
-    "scripts/verification_sandbox.py",
-    "scripts/run_state.py",
-}
 # Real tools that a SUBAGENT never receives, however they are listed, because they depend on the main
 # conversation's UI or session state (code.claude.com/docs/en/sub-agents). Everything in agents/ is a
 # subagent definition, so granting one of these is a no-op that reads like a capability.
@@ -1762,94 +1750,6 @@ def validate_host_conformance_manifest(root: Path) -> list[str]:
     return issues
 
 
-def validate_runtime_control_wiring(root: Path) -> list[str]:
-    """Require every runtime control to exist, stay reachable, and retain typed evidence wiring."""
-
-    # Generic validator fixtures and downstream fleets need not implement this repository-specific
-    # control plane. Once any control, canonical consumer, or the README section declares it, the
-    # complete contract becomes mandatory so partial deletion cannot silently self-disable checks.
-    readme = root / "README.md"
-    try:
-        readme_declares_controls = (
-            readme.is_file()
-            and "## Runtime control plane" in readme.read_text(encoding="utf-8")
-        )
-    except (OSError, UnicodeError):
-        readme_declares_controls = False
-    control_paths = {
-        root / "scripts" / "evidence_envelope.py",
-        *(root / path for path in RUNTIME_CONTROL_WIRING),
-        *(root / path for path in RUNTIME_CONTROL_WIRING.values()),
-    }
-    if not readme_declares_controls and not any(path.exists() for path in control_paths):
-        return []
-
-    issues: list[str] = []
-    evidence_path = root / "scripts" / "evidence_envelope.py"
-    if not evidence_path.is_file():
-        issues.append(
-            "scripts/evidence_envelope.py: typed runtime evidence control is missing; state, "
-            "sandbox, and approval results would fall back to unauthenticated prose silently"
-        )
-
-    for script_relative, consumer_relative in RUNTIME_CONTROL_WIRING.items():
-        script = root / script_relative
-        consumer = root / consumer_relative
-        if not script.is_file():
-            issues.append(
-                f"{script_relative}: runtime control named by {consumer_relative} is missing; "
-                "the prompt would claim an enforcement path that resolves to nothing"
-            )
-            continue
-        if not consumer.is_file():
-            issues.append(
-                f"{consumer_relative}: runtime-control consumer is missing; {script_relative} "
-                "would remain shipped but unreachable from the fleet workflow"
-            )
-            continue
-        reference = f"${{CLAUDE_PLUGIN_ROOT}}/{script_relative}"
-        try:
-            consumer_text = consumer.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
-            issues.append(f"{consumer_relative}: cannot inspect runtime-control wiring: {exc}")
-            continue
-        if reference not in consumer_text:
-            issues.append(
-                f"{consumer_relative}: does not name `{reference}`; {script_relative} would "
-                "silently stop enforcing the role's runtime boundary"
-            )
-
-    for script_relative in sorted(RUNTIME_EVIDENCE_PRODUCERS):
-        script = root / script_relative
-        if not script.is_file():
-            continue
-        try:
-            source = script.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
-            issues.append(f"{script_relative}: cannot inspect typed-evidence wiring: {exc}")
-            continue
-        if "import evidence_envelope" not in source:
-            issues.append(
-                f"{script_relative}: no longer imports evidence_envelope; its result would "
-                "silently lose the fleet's typed evidence contract"
-            )
-
-    if readme.is_file():
-        try:
-            readme_text = readme.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
-            issues.append(f"README.md: cannot inspect runtime-control inventory: {exc}")
-        else:
-            documented = {"scripts/evidence_envelope.py", *RUNTIME_CONTROL_WIRING}
-            missing = sorted(path for path in documented if f"`{path}`" not in readme_text)
-            if missing:
-                issues.append(
-                    "README.md: runtime-control inventory omits "
-                    f"{missing}; shipped enforcement would be undiscoverable to operators"
-                )
-    return issues
-
-
 def validate_workflow_evidence_enums(root: Path) -> list[str]:
     """Every workflow script that declares an EVIDENCE enum must match the canonical triad."""
     issues: list[str] = []
@@ -2196,60 +2096,6 @@ def validate_workflow_host_boundary(root: Path) -> list[str]:
     return issues
 
 
-def validate_learning_ledger(root: Path) -> list[str]:
-    """Validate the repository-local candidate store whenever this repo ships one.
-
-    Unit tests prove the writer in isolation, but CI previously never opened the tracked records.
-    A malformed candidate could therefore merge while the ordinary fleet gate remained green.
-    The lock and temporary-file ignore rules are pinned here because they are transactional state;
-    committing either can make future writers fail closed while looking like durable evidence.
-    """
-    script = root / "scripts" / "learning_ledger.py"
-    learning = root / "learning"
-    if not script.exists() and not learning.exists():
-        return []
-    issues: list[str] = []
-    if not script.is_file():
-        return [
-            "learning/: candidate store exists without scripts/learning_ledger.py; CI cannot "
-            "validate records that may later be treated as durable learning evidence."
-        ]
-    if not learning.is_dir():
-        return [
-            "scripts/learning_ledger.py: ledger writer exists without learning/; the documented "
-            "repository-local intake has no canonical store to validate."
-        ]
-
-    ignore_path = root / ".gitignore"
-    ignore_lines = {
-        line.strip()
-        for line in read_text(ignore_path).splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    } if ignore_path.is_file() else set()
-    for required in (
-        "learning/candidates/.learning-ledger.lock",
-        "learning/candidates/.lc_*.tmp",
-    ):
-        if required not in ignore_lines:
-            issues.append(
-                f".gitignore: missing {required!r}; transactional ledger writer state can be "
-                "committed by `git add -A` and later block safe mutation."
-            )
-
-    try:
-        module = load_module_by_content(script, "learning_ledger_validator")
-        if module is None:
-            issues.append(f"{script}: cannot load learning-ledger validator")
-            return issues
-        module.LearningLedger(root).check()
-    except Exception as exc:
-        issues.append(
-            f"learning/candidates/: ledger validation failed ({exc}). Tracked learning evidence "
-            "must fail the ordinary fleet gate rather than drift outside CI."
-        )
-    return issues
-
-
 def validate_repo(
     root: Path, *, check_inventory: bool = True, check_adapters: bool = True
 ) -> tuple[list[str], list[str], list[str]]:
@@ -2268,14 +2114,12 @@ def validate_repo(
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
     issues.extend(validate_behavioral_contracts(root, agent_names, skill_names))
     issues.extend(validate_host_conformance_manifest(root))
-    issues.extend(validate_runtime_control_wiring(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))
     issues.extend(validate_workflow_evidence_enums(root))
     issues.extend(validate_workflow_line_endings(root))
     issues.extend(validate_workflow_meta_contract(root))
     issues.extend(validate_workflow_host_boundary(root))
-    issues.extend(validate_learning_ledger(root))
     if check_inventory:
         issues.extend(validate_inventory(root, render_inventory(agent_names, skill_names)))
     return issues, agent_names, skill_names

@@ -65,8 +65,8 @@ FLEET = FLEET_AGENTS | FLEET_SKILLS
 NAMESPACED_FLEET_AGENTS = frozenset(f"sde-agents:{name}" for name in FLEET_AGENTS)
 
 # v4 (2026-08-17): the identity narrowed to what the scorer reads. `selection.definitions` now
-# hashes only the graded case fields (GRADED_CASE_FIELDS) instead of whole case dicts, and
-# `eval_baseline.py` no longer compares `eval_sources`, which hashed each cluster file whole and so
+# hashes only the graded case fields (GRADED_CASE_FIELDS) instead of whole case dicts, and the
+# reusability check no longer compares `eval_sources`, which hashed each cluster file whole and so
 # invalidated captures on comment-only edits. Both changes remove invalidations that protected
 # nothing. The version moves because a v3 selection hash was computed over different bytes and
 # cannot be compared with a v4 one — reporting that as "selection diverged" would misattribute a
@@ -365,8 +365,8 @@ def validated_members(raw: object) -> list[str]:
 
     A cluster's members reach `sorted(set(...))` in `selection_identity`, so a malformed list
     (`["prompt-craft", 1]`) raises an uncaught TypeError wherever it is hashed. The rule was stated
-    inline in `main()`, restated in `eval_baseline._validated_cluster`, and absent from the
-    post-session reread — so the reread crashed on a cluster edited mid-run while the other two
+    inline in `main()`, restated in a second validator this repo has since retired, and absent from
+    the post-session reread — so the reread crashed on a cluster edited mid-run while the other two
     refused it cleanly. Three copies of a rule is how a path ends up without it (PR #145 review).
     """
     if (

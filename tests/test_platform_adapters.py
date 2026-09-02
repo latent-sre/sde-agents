@@ -214,8 +214,8 @@ class PlatformAdapterTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("git"), "git is required to build the parent work tree")
     def test_nested_non_repo_copy_does_not_inherit_parent_tracking_state(self) -> None:
         # The parent must be a git work tree, but not THIS one: writing transient entries into
-        # the live repository races the pooled repo copy once modules run in parallel
-        # (scripts/run_tests.py), and a synthetic parent proves the same non-inheritance.
+        # the live repository races the pooled repo copy once tests run under a parallel runner,
+        # and a synthetic parent proves the same non-inheritance.
         with tempfile.TemporaryDirectory() as temporary:
             parent = Path(temporary) / "parent-repo"
             parent.mkdir()
