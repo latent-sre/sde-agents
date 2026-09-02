@@ -191,3 +191,14 @@ root in
 [`promptFileLocations.ts`](https://github.com/microsoft/vscode/blob/40f27cc166304afa356ab59fea79468e23113fce/src/vs/workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.ts#L169),
 and its end-to-end discovery suite exercises a skill at that path in
 [`customizationDiscoverySuite.ts`](https://github.com/microsoft/vscode/blob/40f27cc166304afa356ab59fea79468e23113fce/src/vs/platform/agentHost/test/node/e2e/suites/customizationDiscoverySuite.ts#L95).
+
+## Amendment 2026-09-02
+
+LANE-001 closed, met by construction (`docs/decisions/2026-09-02-single-operator-audience.md`).
+`onboarding-map`, this record's worked example of "a cheap host-neutral change the Claude harness
+can still measure," retired: `service-onboard` and `host-onboard` dropped
+`disable-model-invocation: true` and are ordinary model-visible skills on every generated lane now,
+so the discoverability gap the pointer repaired (issue #61, the reopen trigger logged above) is
+closed at the source instead of routed around. The Codex-specific consequence — an explicit-only
+skill is invisible to that host's model — still holds as a host contract; it currently has no live
+example in this fleet.

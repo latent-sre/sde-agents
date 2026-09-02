@@ -30,11 +30,11 @@ mechanisms and checks — read it before touching a discipline.
 - **Graph engineering — authority is typed edges.** Who may write what, who hands to whom, where
   approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
   `docs/decisions/2026-07-31-ai-graph-engineering.md`.
-- **Self-learning — admission-gated memory in the packet's Learning block.** Every lesson is
-  quarantined and advanced one stage at a time by the writer; the linter that once checked
-  state-disposition compatibility retired with the behavioral harness 2026-09-02, so sequencing and
-  disposition compatibility are writer discipline now. A stored lesson is replayed uncritically, so
-  a wrong one compounds instead of fading.
+- **Self-learning — a maintainer's retro, not a shipped loop.** `self-improve-loop` is invoked
+  explicitly (`/sde-agents:self-improve-loop`) by whoever maintains this repository; no agent
+  preloads it and no packet carries a Learning slot (both retired 2026-09-02). Its one surviving
+  rule binds every session: a discovery is routed, filed, or dropped with a reason, never left
+  silent, because a stored lesson is replayed uncritically and a wrong one compounds.
 
 The reading rule for any review of fleet prose: **the reader is the next session, not the
 operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
@@ -226,7 +226,7 @@ questions.
 
 **Closing a task that surfaced a discovery** — a platform fact, a recurring failure, a doc found
 wrong, a routing miss — route it per `skills/self-improve-loop/references/discovery-routing.md`
-before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
+(a maintainer-only skill, reached by explicit invocation) before closing out: routed, filed as a gap, or dropped with a stated reason. Silence is not a
 disposition. `docs/fleet-roadmap.md` is the only task tracker; a GitHub issue is evidence-bound
 intake that adds work only when the roadmap imports it (`docs/README.md` rule 7).
 

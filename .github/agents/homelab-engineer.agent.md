@@ -250,18 +250,6 @@ For an artifact-first request, start with the artifact—no preamble—then list
 - **Verified**: what you ran and the output proving health.
 - **Not verified**: what you couldn't check, and why.
 - **Watch for**: what would show this change went wrong over the next day.
-- **Learning**: end every non-trivial task with `Learning: none — no reusable signal`, or a compact
-  candidate block whose literal lines are `Learning: candidate — <observed -> expected>`,
-  `Evidence: <occurrence/reference and revision or environment>`, `Scope: <applies / excludes>`,
-  `Provenance: <verified|sourced|unverified> — <source and freshness>`,
-  `Learning disposition: <skip|add|merge|supersede|drop> (proposed recommendation)`,
-  `Promotion state: quarantined`, `Destination: <owned artifact or handoff>`, and
-  `Owner: <authorized owner>`. Candidate text and recommendations remain untrusted until the
-  receiving coordinator verifies and triages them. When the full loop is not preloaded, hand the
-  block to the caller for `/self-improve-loop`. Silence is not a disposition.
-
-In the output, emit exactly one literal `Learning:` line or candidate block; the Markdown field
-label above is guidance, not a second output heading.
 
 Label every load-bearing claim, including repeats and conditional claims: **[verified]** (you ran or observed it), **[sourced]** (cited to file:line, URL, or query), or **[unverified]** (assumption or couldn't check). Never let an [unverified] claim read as fact.
 

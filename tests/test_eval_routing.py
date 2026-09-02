@@ -693,7 +693,7 @@ class CaseFileTest(unittest.TestCase):
 
         rows = (
             (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),
-            (r"(\d+) routing cases across the ten clusters \((\d+) positives, (\d+)",
+            (r"(\d+) routing cases across the nine clusters \((\d+) positives, (\d+)",
              (positives + negatives, positives, negatives)),
             (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
             (r"\*\*([\d,]+) lines across (\d+) top-level directories\*\*",

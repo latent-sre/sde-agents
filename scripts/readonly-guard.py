@@ -124,22 +124,13 @@ PLUGIN_NAME = "sde-agents"
 # cooperative, and both files say so. Note validate_fleet.py only COMPELS guarding for a Bash-holder
 # with no write tool; these two are here by choice, and the hook's own agent list is kept in sync by
 # a validator rule (adding a name here without the hook would silently guard nothing).
-#
-# `repository-investigator` holds Bash solely for git history and revision identity (log, blame,
-# show, rev-parse) and no write tool, so the validator compels its membership. Its local-only trust
-# boundary survives the grant only because its SLICE of the allowlist carries no network command:
-# the `gh` readers below are network fetches (PR bodies, issue text, `gh search code` results from
-# arbitrary GitHub repositories), which is exactly the external content this role's trust split
-# exists to keep out of the same context as private source. So the gh family is scoped to the
-# roles whose remit includes PR context, via NETWORK_AGENT_NAMES below, rather than granted with the
-# roster (PR #141 review finding: a uniform roster grant handed the investigator `gh search code`).
 GUARDED_AGENT_NAMES = frozenset({
-    "code-reviewer", "principal-engineer", "distinguished-architect", "repository-investigator",
+    "code-reviewer", "principal-engineer", "distinguished-architect",
 })
 # Roles entitled to the allowlist's NETWORK reads — the `gh` subcommands, and the bare
 # `git remote show` (which queries the remote unless `-n` is given). Membership here means
-# "fetched external content may share this role's context"; the investigator is deliberately
-# absent, and any future roster member starts absent until its trust boundary is argued.
+# "fetched external content may share this role's context"; any future roster member starts
+# absent until its trust boundary is argued.
 NETWORK_AGENT_NAMES = frozenset({
     "code-reviewer", "principal-engineer", "distinguished-architect",
 })

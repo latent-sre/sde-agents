@@ -75,6 +75,8 @@ round plus a probe re-run per affected agent.
 tokens), with a routing round and the probe showing slimmed bodies still deliver what fat ones
 did — the behavioral contracts that once proved this retired 2026-09-02; references stay the
 on-demand layer.
+`self-improve-loop` left every `skills:` preload on 2026-09-02, so the byte counts above predate
+that cut and must be re-measured before any further diet.
 
 **Source:**
 [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md) ·
@@ -169,79 +171,6 @@ authority.
 
 **Next action:** Open a bounded spec/plan, starting with the smallest read-only command surface
 and a threat review of every new verb/flag.
-
-#### LANE-001 — Codex-lane onboarding discoverability
-
-**Status:** `ready` — spec approved 2026-08-09; host-neutral packaging landed in PR #107, but no
-round is running and no Codex host evidence exists yet.
-
-**Outcome:** On a Codex session with the fleet installed, plain-language onboarding intent
-yields a model recommendation of the explicit workflow, never implicit execution, with the
-Claude lane's measured routing rates unaffected.
-
-**Source:**
-[LANE-001 spec](superpowers/specs/lane-001-codex-onboarding-discoverability.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#lane-001-codex-lane-onboarding-discoverability)
-
-**Prerequisites:** The spec's Phase 0 (two SEC-01 one-liners), still blocking; waiving it takes
-an operator-approved spec amendment.
-
-**Acceptance:** The spec's list: Phase 0's one-liners (or amendment); the paired `homelab-ops`
-before/after capture at merge base `4fef0ce`; a recorded Codex smoke run against a released
-artifact, filed through the ledger's release/retest rule.
-
-**Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then
-captures the paired routing run; the smoke run follows the next release.
-
-#### ACK-001 — make a dropped Learning handoff visible
-
-**Status:** `decision-needed` — gap twice-observed; candidate mechanisms differ in size and
-authority, so the operator chooses before any spec.
-
-**Outcome:** A Learning packet the caller does not persist becomes visibly unpersisted, instead
-of looking identical to a persisted one.
-
-**Source:**
-Issue #73 ·
-[LOOP-001 outcome](archive/2026-08/loop-001-outcome-2026-08-10.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ack-001-make-a-dropped-learning-handoff-visible)
-
-**Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10.
-
-**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
-this item is moot unless the ledger returns.
-
-**Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the
-emitting side's contract is unchanged for callers that do route it; no new write authority
-granted to a read-only role; adapter parity and deterministic gates green.
-
-**Next action:** Operator rules among three mechanisms (emitter-side pointer plus manifest —
-recommended; caller-side lint scan — deferred, trigger-bound; scratch-file write — declined),
-then a bounded spec.
-
-#### LEDGER-001 — the promoted set has no absorption or drift coverage
-
-**Status:** `ready` — diagnosis complete from a full 53-record audit; each repair below is
-independently landable.
-
-**Outcome:** A lesson recorded as `promoted` is one a reader can trust landed, verified by
-something other than manual audit; three specific records are reconciled with the tree, and the
-coverage gap that hid them is closed or stated.
-
-**Source:**
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ledger-001-the-promoted-set-has-no-absorption-or-drift-coverage)
-
-**Prerequisites:** None. Findings 1 and 2 landed 2026-08-20; findings 3–4 remain.
-
-**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
-this item is moot unless the ledger returns.
-
-**Acceptance:** Findings 1–2 land their prose with the required reader check, or drop with a
-stated reason. Finding 3 records its narrowing. Finding 4 extends drift coverage to terminal
-states with a firing test, or states the limitation in `learning/README.md`.
-
-**Next action:** Finding 3 — scope-narrow `lc_36adb3d0` or renew its `review`. Finding 4 —
-extend drift coverage to terminal states or document the limitation.
 
 #### GATE-007 — bind a tier to each declared effect, or say one response carries one tier
 

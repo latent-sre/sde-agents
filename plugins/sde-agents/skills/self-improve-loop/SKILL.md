@@ -9,6 +9,7 @@ argument-hint: "[completed work, evidence, and improvement criteria]"
 > **Codex adapter:** Fleet component names are bare in this generated copy.
 > Resolve them from the installed plugin using the host's agent or skill picker; do not add
 > Claude's plugin namespace.
+> This skill is explicit-only through the generated `agents/openai.yaml` policy.
 
 # Continuous improvement and learning loops
 
