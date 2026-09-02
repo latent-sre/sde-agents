@@ -3,8 +3,10 @@
 The LEARN-001 round that built the learning lifecycle (`self-improve-loop`, the runbook
 dispositions, and the Learning packet slot) measured itself seven times as it went. Six of those
 generations retired to Git history on 2026-08-17 under the retention rule in `../../README.md`;
-this file is their record. **`final-live/` is retained in full** — `docs/fleet-roadmap.md` cites it
-as LEARN-002's live rates, so it is evidence a live item still rests on.
+this file is their record. **`final-live/` retired to Git history on 2026-09-02** — it was kept
+while `docs/fleet-roadmap.md` cited it as LEARN-002's live rates; LEARN-002 closed 2026-09-02
+(won't-do, `docs/decisions/2026-09-02-single-operator-audience.md`), and every rate it held is
+stated below.
 
 ## The generations, and why they are not one series
 
@@ -14,7 +16,7 @@ as LEARN-002's live rates, so it is evidence a live item still rests on.
 | `iteration-2-smoke/` | sonnet | 600s | v1 | one-run smoke check, not a rate |
 | `comparable-v2/{before,after}` | sonnet | 600s | v1 | the cleanest same-tier behavioral pair |
 | `final-before/`, `final-after/` | sonnet | 600s | v1 | the round's closing pair |
-| `final-live/` | sonnet | 420s | **v3** | current state; the cited one |
+| `final-live/` | sonnet | 420s | **v3** | current state at capture; retired 2026-09-02 |
 
 **Read across generations with care — three conditions moved mid-round.** The model tier changed
 (`before`/`after` ran opus, everything after it sonnet), the behavioral timeout dropped 600s → 420s
@@ -60,14 +62,15 @@ iteration 2 continued.
 
 ## Where the round actually landed
 
-`final-live/` (retained) is the current-state record. Seven contracts sat at **0/3** there:
+`final-live/` (retired 2026-09-02; git history) was the current-state record. Seven contracts sat
+at **0/3** there:
 `learning-slot-readonly-agent`, `learning-slot-operational-agent`,
 `learning-runbook-namespaces-compose`, `runbook-disposition-propose`,
 `self-improve-lifecycle-merge`, `self-improve-promotion-gate`, and
 `self-improve-canonical-triaged-candidate` — with `learning-owner-prompt-engineer-full-retro` at
 1/3 and several others at 2/3. Routing had `pos-learning-runbook-gap` at 0.333 (still failing) and
-every negative clean. That failing set, not this file's history, is what LEARN-002 owes; the
-roadmap item states its closure conditions.
+every negative clean. That failing set was what LEARN-002 owed; LEARN-002 closed 2026-09-02
+without addressing it (won't-do).
 
 Note the shape worth keeping: `lifecycle-merge` reached 3/3 in `comparable-v2/after`, fell to 0/3
 by `final-after`, and is still 0/3 at `final-live`. A contract that passed once and then stopped is
@@ -75,9 +78,10 @@ a different problem from one that never passed, and only the cross-generation vi
 
 ## What retired, and what did not
 
-Retired to Git history (4,986 lines, last present at the commit that removed them): `before/`,
-`after/`, `comparable-v2/`, `final-before/`, `final-after/`, `iteration-2-smoke/`. Nothing in the
-tree cited any of them, none can ever be reused (all pre-v3, and the case bytes have since
-changed), and every rate they held is stated above.
+Retired to Git history 2026-08-17 (4,986 lines, last present at the commit that removed them):
+`before/`, `after/`, `comparable-v2/`, `final-before/`, `final-after/`, `iteration-2-smoke/`.
+Nothing in the tree cited any of them, none can ever be reused (all pre-v3, and the case bytes
+have since changed), and every rate they held is stated above.
 
-Retained: `final-live/`, cited by `docs/fleet-roadmap.md` as LEARN-002's live rates.
+`final-live/` retired to Git history 2026-09-02, once LEARN-002 (its only citing live document)
+closed won't-do; every rate it held is stated above. Nothing raw remains under this directory.
