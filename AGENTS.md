@@ -170,7 +170,8 @@ export; validator-green is never reported as loadable. A change to workflow-shap
 exercised by at least one live workflow load before the release containing it closes.
 
 **Touching a Claude hook — the read-only guard or the live-effect gate** — read the docstrings in
-`scripts/readonly-guard.py` and `scripts/live-effect-gate.py` and the README hook section first;
+`scripts/readonly-guard.py` and `scripts/live-effect-gate.py` and the hook section of
+`docs/fleet-development.md` first;
 then run the tests *and* the probe. Non-negotiables: the guard's allowlist grows by adding a
 *reader*, never an interpreter (no `python`, `pytest`, `npm`, `make`, no exemption for this repo's
 own scripts); the gate's roster grows by adding a *live effect an incident or drill showed
@@ -300,7 +301,7 @@ waits. Provenance: `docs/decisions/2026-08-16-pr-review-gate.md`.
   read records that it was tree-based so a later reader knows which guarantee it carries.
 - **The source wins on drift.** When a deliberate paraphrase disagrees with its owner, fix the
   paraphrase; a defect in the source is fixed at the source and re-propagated to its copies.
-  The ownership list lives in `README.md` under "Working on the fleet itself".
+  The ownership list lives in `docs/fleet-development.md` under "Working on the fleet itself".
 
 ## Style
 
