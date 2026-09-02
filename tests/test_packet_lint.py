@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 import unittest
 
-from scripts import learning_ledger
 from scripts import packet_lint
 from tests.support import REPO
 
@@ -1621,21 +1620,10 @@ class RequiredSlots(unittest.TestCase):
         )
         self.assertTrue(any("intake" in finding for finding in findings), findings)
 
-    def test_lifecycle_matrix_mirrors_ledger_owner(self) -> None:
-        # scripts/learning_ledger.py owns the executable persistence contract. The packet linter is
-        # a standalone eval tool, so it mirrors the map; equality here turns drift into a loud test
-        # failure instead of letting a transcript pass a pair the ledger later refuses to store.
-        expected = {
-            state: frozenset(dispositions)
-            for state, dispositions in learning_ledger.STATE_DISPOSITIONS.items()
-        }
-        self.assertEqual(expected, packet_lint.LEARNING_STATE_DISPOSITIONS)
-        self.assertEqual(
-            set(learning_ledger.DISPOSITIONS), set(packet_lint.LEARNING_DISPOSITIONS)
-        )
-
-    def test_every_ledger_compatible_lifecycle_pair_passes(self) -> None:
-        for state, allowed in sorted(learning_ledger.STATE_DISPOSITIONS.items()):
+    def test_every_compatible_lifecycle_pair_passes(self) -> None:
+        # packet_lint owns the lifecycle map since the ledger retired; exhausting the map here is
+        # what keeps a grader edit from silently narrowing which pairs a compliant packet may carry.
+        for state, allowed in sorted(packet_lint.LEARNING_STATE_DISPOSITIONS.items()):
             for disposition in sorted(allowed):
                 with self.subTest(state=state, disposition=disposition):
                     packet = lifecycle_owner_packet(disposition, state)
@@ -1648,9 +1636,10 @@ class RequiredSlots(unittest.TestCase):
                         ),
                     )
 
-    def test_every_ledger_incompatible_lifecycle_pair_fails(self) -> None:
-        for state, allowed in sorted(learning_ledger.STATE_DISPOSITIONS.items()):
-            for disposition in sorted(learning_ledger.DISPOSITIONS - allowed):
+    def test_every_incompatible_lifecycle_pair_fails(self) -> None:
+        dispositions = set(packet_lint.LEARNING_DISPOSITIONS)
+        for state, allowed in sorted(packet_lint.LEARNING_STATE_DISPOSITIONS.items()):
+            for disposition in sorted(dispositions - allowed):
                 with self.subTest(state=state, disposition=disposition):
                     packet = lifecycle_owner_packet(disposition, state)
                     findings = packet_lint.lint_packet(
@@ -1818,7 +1807,7 @@ class TheInversion(unittest.TestCase):
         for suffix in ("; echo $?", '; "exit: $LASTEXITCODE"'):
             with self.subTest(suffix=suffix):
                 text = COMPLIANT_REVIEW_PACKET.replace(
-                    "$ pytest -q", f"$ python3 scripts/run_tests.py -v{suffix}"
+                    "$ pytest -q", f"$ python3 -m unittest discover -s tests{suffix}"
                 )
                 self.assertEqual([], packet_lint.lint_packet(text, "review-packet"))
 
@@ -1900,7 +1889,7 @@ class OtherShapes(unittest.TestCase):
             "**Checks executed**: `pytest -q` → `41 passed` [verified].\n"
             "```\n$ pytest -q\n41 passed in 2.10s\n```\n"
             "**Skipped or blocked checks**: none — all criteria ran.\n"
-            "**Execution isolation**: verification_sandbox.py, digest-pinned image, "
+            "**Execution isolation**: pinned networkless container, digest-pinned image, "
             "network none, residue none.\n"
         )
         self.assertEqual([], packet_lint.lint_packet(compliant, "verification-packet"))
@@ -1944,9 +1933,9 @@ class CanonicalLearningPrompts(unittest.TestCase):
         content = (REPO / "skills" / "self-improve-loop" / "SKILL.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("scripts/learning_ledger.py:STATE_DISPOSITIONS", content)
+        self.assertIn("scripts/packet_lint.py:LEARNING_STATE_DISPOSITIONS", content)
         self.assertIn("owns that executable matrix", content)
-        self.assertIn("treat the mirrors as drift", content)
+        self.assertIn("treat this prose as drift", content)
 
     def test_retro_template_separates_retro_scope_from_candidate_scope(self) -> None:
         content = (

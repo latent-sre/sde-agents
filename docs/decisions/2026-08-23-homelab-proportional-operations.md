@@ -197,3 +197,9 @@ sections only where their current words would contradict the new behavior.
   that work.
 - The paid behavioral lane remains an explicit operator purchase; offline oracle controls prove
   the new graders fire but do not claim live model behavior.
+
+## Amendment 2026-09-01
+
+The `python3 scripts/run_tests.py` line above stands as a dated record of what ran on 2026-08-23;
+`scripts/run_tests.py` was retired 2026-09-01, and the equivalent check today is
+`python3 -m unittest discover -s tests`.

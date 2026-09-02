@@ -178,3 +178,8 @@ Offline: `tests/test_live_effect_gate.py`, `tests/test_hook_wiring.py`, `tests/t
 regenerated adapters; `run_tests.py`; `claude plugin validate . --strict`; `fleet_doctor.py`.
 Paid, operator purchase: `probe_plugin.py`; the paired behavioral lane recorded under
 `evals/baselines/2026-08-29-gate-006/`.
+
+## Amendment 2026-09-01
+
+The `run_tests.py` line above stands as a dated record of what ran on 2026-08-29; `run_tests.py`
+was retired 2026-09-01, and the equivalent check today is `python3 -m unittest discover -s tests`.

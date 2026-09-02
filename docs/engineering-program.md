@@ -41,17 +41,21 @@ must converge even though every iteration starts amnesiac.
   format). A written, discoverable exception is what stops a memoryless successor from re-flagging
   the same deliberate choice forever.
 - **Recurrence merge.** A re-observed finding updates its existing row; the learning ledger's
-  `observe` records another source on the existing candidate. Twin records are divergence, not
+  `observe` merge step retired with the ledger itself (2026-09-01) — the packet's Learning block is
+  now the only candidate record, so a re-observed signal reaches the receiving coordinator as a
+  fresh candidate rather than an update to a stored row. Twin records are divergence, not
   thoroughness.
-- **Lifecycle over event.** Merged is not released, and released is not retested —
-  `scripts/learning_ledger.py` makes the tail states explicit (`record-release`, `record-retest`)
+- **Lifecycle over event.** Merged is not released, and released is not retested — the packet's
+  `Promotion state` field keeps the tail states explicit (quarantined, proposed, approved,
+  promoted, plus the terminal rejected/inconclusive/retired), graded by `scripts/packet_lint.py`,
   because a loop that ends at "merged" silently never verifies what shipped.
 - **Status transitions gate authority.** Incident handling holds mitigate-first authority only
   while the situation is an outage; the explicit downgrade to follow-up
   (`skills/lab-incident/SKILL.md`) is the edge that ends the emergency regime.
 - **Paired measurement.** A loop that edits graded text owes before/after runs under identical
-  recorded conditions; `scripts/eval_baseline.py` answers whether the before side already exists
-  before any session is paid for.
+  recorded conditions; the automated reuse check that once answered whether the before side already
+  existed, scripts/eval_baseline.py, was retired 2026-09-01 — a stored capture is now reusable only
+  when a session manually confirms cluster, cases, evaluator, and plugin bytes are unchanged.
 
 ## Graph engineering — authority is typed edges
 
@@ -71,9 +75,11 @@ enforced per host, never inferred from prose.
   rather than evidence the model must produce. The same scoping rule as the guard — the payload's
   `agent_type`, never prose — and the same structural exclusion from hosts whose payload cannot be
   scoped.
-- **Separated layers.** `scripts/capability_graph.py` reports authored edges, per-host authority
-  projections, and the routing overlay as three layers kept deliberately apart, because
-  co-membership is not behavioral coverage.
+- **Separated layers.** Authored edges, per-host authority projections, and the routing overlay
+  stay three layers kept deliberately apart, because co-membership is not behavioral coverage; the
+  offline report that once rendered them together, scripts/capability_graph.py, was retired
+  2026-09-01 with no replacement — the separation is now a reviewer discipline, not a generated
+  diagram.
 - **The boundary decision.** `docs/decisions/2026-07-31-ai-graph-engineering.md` (accepted) owns
   what the graph layer is allowed to become and what evidence reopens it.
 
@@ -83,16 +89,21 @@ The fleet improves itself, and the danger is exactly that: a stored lesson is re
 uncritically by every future session that retrieves it, so a wrong lesson compounds instead of
 fading.
 
-- **Fail-closed intake.** `scripts/learning_ledger.py` quarantines every candidate at capture with
-  evidence, scope, and a sensitivity attestation; promotion is a staged state machine
-  (quarantined → proposed → approved → promoted) with a recorded reason per transition, and
-  nothing skips a stage.
+- **Fail-closed intake.** Every candidate is quarantined at capture, inside the packet's Learning
+  block itself, with evidence, scope, and a sensitivity attestation, and the writer advances it one
+  stage at a time (quarantined → proposed → approved → promoted) with a reason per step. That
+  sequencing is writer discipline, not an enforced invariant: `scripts/packet_lint.py` grades only
+  whether the packet's `Promotion state` is compatible with its disposition, and sees no prior
+  state, so a skipped stage is invisible to it. The repo-local ledger that rejected out-of-order
+  transitions, scripts/learning_ledger.py, was retired 2026-09-01 with no store surviving between
+  sessions; the 34 promoted candidates whose released-version retest it still tracked are listed in
+  `docs/archive/2026-09/learning-ledger-retirement-2026-09-01.md`.
 - **Disposition is mandatory.** A discovery is routed, filed as a gap, or dropped with a stated
   reason (`skills/self-improve-loop/references/discovery-routing.md`); silence is not a
   disposition, and an emitted-but-unpersisted packet is a known failure mode, not a non-event.
-- **Drift watch.** `scripts/ledger_drift.py` reports pending candidates whose named destinations
-  changed after intake, so a lesson cannot quietly point at a file that no longer says what it
-  pointed at.
+- **Drift watch.** scripts/ledger_drift.py, which reported pending candidates whose named
+  destinations changed after intake, was retired with the ledger (2026-09-01); a packet-only
+  candidate has no persisted destination pointer left to drift, so there is no replacement check.
 - **The loop grades itself.** Behavioral contracts cover the learning loop's own output grammar,
   and a red contract is repaired in the skill text or the grader only with recorded rationale —
   never by quietly loosening the grader until it agrees with itself.

@@ -110,3 +110,11 @@ decision was made 2026-09-01: `scripts/effect_broker.py` and `tests/test_effect_
 retired, since no agent had named the broker since this record shipped. The typed-evidence check
 in `RUNTIME_EVIDENCE_PRODUCERS` now covers only `scripts/run_state.py` and
 `scripts/verification_sandbox.py`.
+
+A further correction the same day: `scripts/run_state.py` and `scripts/verification_sandbox.py`
+were themselves retired 2026-09-01 (operator ruling: the audience is a single home-lab operator),
+and `RUNTIME_EVIDENCE_PRODUCERS`/`RUNTIME_CONTROL_WIRING` were removed from `validate_fleet.py` in
+the same change — the sentence above named a coverage set that survived less than a day. The
+Verification section's `python3 scripts/run_tests.py` line stands as a dated record of what ran on
+2026-08-20; the equivalent check today is `python3 -m unittest discover -s tests`
+(`scripts/run_tests.py` was retired 2026-09-01).

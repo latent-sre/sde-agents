@@ -30,9 +30,10 @@ mechanisms and checks — read it before touching a discipline.
 - **Graph engineering — authority is typed edges.** Who may write what, who hands to whom, where
   approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
   `docs/decisions/2026-07-31-ai-graph-engineering.md`.
-- **Self-learning — admission-gated memory.** `scripts/learning_ledger.py` quarantines every
-  lesson behind evidence-bound staged promotion: a stored lesson is replayed uncritically, so a
-  wrong one compounds instead of fading.
+- **Self-learning — admission-gated memory in the packet's Learning block, graded by
+  `scripts/packet_lint.py`.** Every lesson is quarantined and advanced one stage at a time by the
+  writer; the linter checks state-disposition compatibility, not the sequence. A stored lesson is
+  replayed uncritically, so a wrong one compounds instead of fading.
 
 The reading rule for any review of fleet prose: **the reader is the next session, not the
 operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
@@ -50,7 +51,7 @@ red check is fixed if trivial, else recorded in `docs/fleet-roadmap.md`.
   generated adapter, so no separate `--check` run) + the owning test module
   (`python3 -m unittest discover -s tests -p test_<area>.py`); regenerate via
   `generate_platform_adapters.py --write` after canonical edits.
-- **T1 — before push/PR**: `python3 scripts/run_tests.py` + `claude plugin validate . --strict`
+- **T1 — before push/PR**: `python3 -m unittest discover -s tests` + `claude plugin validate . --strict`
   (missing CLI defers to CI) + `python3 scripts/fleet_doctor.py`. CI reruns the first two,
   never fleet_doctor (host drift stays invisible). Exit 1 failed, 2 not computed (a clean
   report isn't evidence), 3 warnings. Repair via
@@ -60,8 +61,10 @@ red check is fixed if trivial, else recorded in `docs/fleet-roadmap.md`.
   main, weekly, or dispatch — see the matrix comment in
   `.github/workflows/validate.yml`.
 - **T3 — release/CLI pin bump** (manual, real API): `scripts/probe_plugin.py` + every routing
-  cluster + behavioral evals — no affected-only subset. Before a paired routing run, check
-  `scripts/eval_baseline.py` for a reusable before-side; after-side stays fresh.
+  cluster + behavioral evals — no affected-only subset. Before a paired routing run, check by hand
+  that a stored capture's cluster, cases, evaluator, and plugin bytes are unchanged **and** its
+  recorded conditions — requested model, clean-room setting, threshold, timeout — equal the run
+  you are about to make; only then is the before-side reusable. The after-side stays fresh.
 
 Static review converges or stops: at most two deep-review rounds for prose-behavior changes
 (agent/skill text), three for other fleet prose. Divergence signal: criticals land in
@@ -108,21 +111,6 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
 - `python3 scripts/eval_behavioral.py` — deterministic contract evals; read `evals/README.md`
   for the case surface and runtime details.
 
-One report is manual, on demand, and **offline** — no model session, no API cost:
-
-```bash
-python3 scripts/capability_graph.py --root . --emit graph.json --mermaid graph.mmd
-```
-
-Run it when reviewing fleet topology, or against two checkouts to compare a baseline with a
-candidate — output is deterministic, and generated output is never committed (this report's
-output, not the host adapters). Read it with its three layers kept
-apart: authored edges are what the files declare, each host projection states only that host's
-control and its limitations, and the routing overlay is co-membership plus separately identified
-case assertions — co-membership is not behavioral coverage. Every section is advisory.
-Deliberately **not** a T0, CI, or PR gate: an advisory that became a gate would make each
-topology observation a merge blocker.
-
 ## Change playbooks
 
 **Any edit** — run T0. If you touched text that paraphrases another file,
@@ -135,8 +123,9 @@ missing, stale, extra, or hand-edited output.
 
 **Editing a description** (agent or skill) — descriptions drive routing. Run the overlapping
 cluster in `evals/routing/` before and after, and diff the rates. The 'before' side may be
-satisfied by a stored benchmark `scripts/eval_baseline.py` reports `REUSABLE` under the intended
-conditions; the 'after' side is always a fresh run. Cross-references to other fleet
+satisfied by a stored benchmark whose cluster, cases, evaluator, and plugin bytes are unchanged
+since capture and whose recorded model, clean-room setting, threshold, and timeout equal the
+planned run, checked by hand; the 'after' side is always a fresh run. Cross-references to other fleet
 members must use the plugin namespace (`sde-agents:code-reviewer`, `/sde-agents:backend-craft`);
 a bare backticked name is only for content already in context, such as a preloaded skill.
 

@@ -280,3 +280,9 @@ evidence before change — is also the honest answer to it.)*
 (`docs/decisions/2026-08-20-effect-transport-policy.md`). The `[verified]` bullet above citing
 `scripts/effect_broker.py:420-468` stands as a dated observation of the pre-retirement design and
 is not corrected.
+
+`scripts/run_state.py`, `scripts/evidence_envelope.py`, and `scripts/verification_sandbox.py` were
+also retired 2026-09-01 (operator ruling: the audience is a single home-lab operator, not a
+multi-worker control plane). Every citation above naming those three files — the run/task/attempt
+schema, the trigger-enforced constraints, the typed evidence envelope — stands as a dated
+observation of the pre-retirement design and is not corrected.

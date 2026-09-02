@@ -190,41 +190,6 @@ Claude `skills:` preloads are translated into explicit required-skill instructio
 also rewrites Claude-only claims about hooks, tool names, context inheritance, and frontmatter;
 keeping those sentences unchanged would make the adapter contradict its real host controls.
 
-## Runtime control plane
-
-Prompt instructions describe intent; these standard-library controls bind the parts that need
-machine enforcement. They are deliberately separate programs so an operator can place state and
-authority outside an agent's writable checkout:
-
-| Control | What it enforces | Required trust boundary |
-|---|---|---|
-| `scripts/evidence_envelope.py` | Versioned JSON evidence bound to producer, run/task/attempt, immutable target, direct argv, timestamps, artifacts, status, and limitations | Producers expose only explicit non-secret environment facts; artifact bytes are retained wherever their digests must be checked |
-| `scripts/run_state.py` | Transactional run/task/attempt transitions, optimistic versions, leases, heartbeat, cancellation, supersession, and evidence-linked completion | SQLite database outside every worker workspace; workers receive IDs and stdin lease tokens, not direct database write access |
-| `scripts/verification_sandbox.py` | Digest-pinned, no-pull, networkless Docker/Podman execution with read-only source, isolated scratch, non-root identity, dropped capabilities, limits, timeout, cleanup, and residue evidence | Trusted fleet script and local engine; no worker access to a remote engine socket or host credentials; network-required checks remain inconclusive |
-
-The placement condition is load-bearing. Keeping a database or key merely outside the Git root does
-not help if the same agent identity can still read or alter it. `run_state.py` rejects paths inside
-the declared workspace, but OS identity and ACL separation remain the operator's responsibility. A
-target repository's same-named script is untrusted input; invoke the fleet-owned copy. Claude can
-resolve that copy through `${CLAUDE_PLUGIN_ROOT}`. Generated Copilot, VS Code, and Codex artifacts
-do not package these scripts, so their instructions require an operator-provided trusted copy
-instead of retaining a path that would not exist.
-
-`scripts/effect_broker.py` was retired on 2026-09-01: no agent named it after `homelab-engineer`
-retired the Tier 2/3 broker mandate in favor of host-native managed approval
-(`docs/decisions/2026-08-20-effect-transport-policy.md`). What no configuration waives is
-the boundary itself: a prose “yes” never becomes execution authority on its own, so `homelab-engineer`
-executes an approved Tier 2/3 effect only through a control that interposes on the exact command —
-a trusted host-native managed gate is the normal one — and hands the command to the operator when
-no such control is present. Verification is similar: an unavailable pinned container boundary makes the
-affected criterion inconclusive rather than authorizing target-controlled code on the host.
-
-`scripts/fleet_doctor.py` and `scripts/probe_hosts.py` observe this system but do not enforce it.
-The doctor is read-only and reports repository, generated, install, CLI, junction, guard, and Codex
-sync posture. Host probes keep static packaging, discovery, live Claude behavior, and model-specific
-Codex baselines in separate lanes so an absent host or unexposed observed-model field cannot become
-a pass.
-
 ## Project context convention
 
 Use the target repository's existing project-instruction file and do not create a competing one.
@@ -301,6 +266,13 @@ rather than allowing anything. Its roster is deliberately denylist-shaped — th
 stays the floor for unlisted commands — and grows by recurrence, one entry per incident that shows
 an unlisted live effect.
 
+What no configuration waives is the boundary itself: a prose "yes" never becomes execution
+authority on its own, so `homelab-engineer` executes an approved Tier 2/3 effect only through a
+control that interposes on the exact command — a trusted host-native managed gate is the normal
+one — and hands the command to the operator when no such control is present. Verification is
+similar: an unavailable pinned container boundary makes the affected criterion inconclusive rather
+than authorizing target-controlled code on the host.
+
 `agent_type` and its plugin-namespaced values are documented in the upstream hooks reference; the
 scoping contract's owner is the `scripts/readonly-guard.py` docstring, and this section follows
 it. If it is ever renamed upstream to another agent-named key
@@ -321,6 +293,12 @@ outside a short, reviewed set of readers ever runs — is far narrower and more 
 "we blocked the writes we thought of," but the load-bearing control remains OS-level least
 privilege.
 
+`scripts/fleet_doctor.py` and `scripts/probe_hosts.py` observe the guard and gate posture above but
+do not enforce it. The doctor is read-only and reports repository, generated, install, CLI,
+junction, guard, and Codex sync posture. Host probes keep static packaging, discovery, live Claude
+behavior, and model-specific Codex baselines in separate lanes so an absent host or unexposed
+observed-model field cannot become a pass.
+
 ## Workflows (Claude-only)
 
 `workflows/` ships deterministic multi-agent pipelines that only Claude Code executes
@@ -340,14 +318,15 @@ instead of recomputing it. The edit loop runs the validator plus the test module
 touched artifact; a push owes the full offline suite, the platform contract check, and a local
 `scripts/fleet_doctor.py` run — its host-installation view is the one thing CI can never
 substitute for; CI runs the full three-OS matrix on pushes to main, weekly, and on dispatch;
-releases and CLI pin bumps owe the probe and the eval suites, with `scripts/eval_baseline.py`
-reporting when a stored routing benchmark already covers the 'before' side of a paired run.
+releases and CLI pin bumps owe the probe and the eval suites, checked by hand for whether a stored
+routing benchmark — same bytes and the same recorded model, clean-room setting, threshold, and
+timeout — already covers the 'before' side of a paired run.
 The full tier recipe (T0–T3) lives in `AGENTS.md` under "Validate before you push"; this
 paragraph is its summary and loses to it on conflict.
 
 ```bash
 python3 scripts/validate_fleet.py                       # every edit — subsumes the adapter byte-drift check
-python3 scripts/run_tests.py                            # before push — full offline suite, one process per module
+python3 -m unittest discover -s tests                   # before push — full offline suite
 claude plugin validate . --strict                       # before push — Claude platform contract
 ```
 

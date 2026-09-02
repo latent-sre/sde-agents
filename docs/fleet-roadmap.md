@@ -115,8 +115,9 @@ discipline.
 while this item or LANE-001 is open.
 
 **Acceptance:** Paired before/after routing runs for every edited description's overlapping
-clusters (`eval_baseline.py` may satisfy 'before'); doctor reports `pass` with headroom;
-regenerated adapters; a live listing probe on a 200k-window model recording survivors.
+clusters (a stored capture may satisfy 'before' if checked by hand and still unchanged); doctor
+reports `pass` with headroom; regenerated adapters; a live listing probe on a 200k-window model
+recording survivors.
 
 **Next action:** Trim the three largest entries first — `self-improve-loop`, `deep-review`,
 `onboarding-map` — roughly 3.9k chars to cut.
@@ -311,6 +312,9 @@ Issue #73 ·
 
 **Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10.
 
+**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
+this item is moot unless the ledger returns.
+
 **Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the
 emitting side's contract is unchanged for callers that do route it; no new write authority
 granted to a read-only role; adapter parity and deterministic gates green.
@@ -332,6 +336,9 @@ coverage gap that hid them is closed or stated.
 [history](archive/2026-09/roadmap-history-2026-09-01.md#ledger-001-the-promoted-set-has-no-absorption-or-drift-coverage)
 
 **Prerequisites:** None. Findings 1 and 2 landed 2026-08-20; findings 3–4 remain.
+
+**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
+this item is moot unless the ledger returns.
 
 **Acceptance:** Findings 1–2 land their prose with the required reader check, or drop with a
 stated reason. Finding 3 records its narrowing. Finding 4 extends drift coverage to terminal

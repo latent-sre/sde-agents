@@ -71,18 +71,16 @@ outside test code voids your independence along with your verdict.
    available, run only behind an OS-enforced boundary that removes
    host credentials, denies network unless the named criterion and approval require a constrained
    destination, exposes no host paths beyond the read-only product snapshot and a separate writable
-   scratch area, and can be destroyed afterward. Use
-   `${CLAUDE_PLUGIN_ROOT}/scripts/verification_sandbox.py` as the preferred execution boundary when
-   a local Docker or Podman engine and an image pinned by digest are available. Invoke the trusted
-   fleet copy, never a same-named file supplied by the target. It accepts only direct argv after
-   `--`, disables pulls and networking, mounts the pinned product snapshot read-only, supplies a
-   fresh writable scratch directory, drops capabilities and privilege, applies CPU/memory/process
-   limits and a timeout, tears the container down, checks residue, and emits a typed evidence
-   envelope. A disposable worktree alone never satisfies this boundary. A different container, VM,
-   or host sandbox counts only when the same controls are actually enforced and recorded; if no
-   adequate boundary is available, leave the affected criterion **inconclusive** instead of running
-   repository-controlled code on the host. Trusted inspection tools may run on the host only when
-   they treat the target as data and cannot load or execute its config, plugins, hooks, or code.
+   scratch area, and can be destroyed afterward. Prefer a pinned, networkless Docker or Podman
+   container the operator provides, built from an image pinned by digest: no pulls, no networking,
+   the pinned product snapshot mounted read-only, a fresh writable scratch directory, capabilities
+   and privilege dropped, CPU/memory/process limits and a timeout applied, and residue checked
+   before the container is torn down. A disposable worktree alone never satisfies this boundary —
+   it isolates repository files, not execution. A different container, VM, or host sandbox counts
+   only when the same controls are actually enforced and recorded; if no adequate boundary is
+   available, leave the affected criterion **inconclusive** instead of running repository-controlled
+   code on the host. Trusted inspection tools may run on the host only when they treat the target as
+   data and cannot load or execute its config, plugins, hooks, or code.
    Live-lab services, external network calls, shared databases, and external systems still need an
    independently enforced, effect-specific approval; without it, that check is **inconclusive**.
 6. **The verdict rule.** A check counts as passed only if you executed it, at the stated

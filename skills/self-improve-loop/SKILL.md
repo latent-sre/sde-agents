@@ -131,19 +131,18 @@ established, do not create, write, or invent operating commands. Choose a propos
 missing evidence and owner instead.
 
 The `runbook` destination is only for admitted service or tool operating procedures. Never route an
-agent, skill, test, validator, or learning-ledger maintenance change there.
+agent, skill, test, validator, or learning-candidate handling change there.
 
 ## Persist cross-task evidence without self-modifying
 
-A conversation cannot carry the first occurrence into a later task. When the target is this fleet
-source repository and the caller has write authority, use the repository-local intake contract in
-[references/learning-ledger.md](references/learning-ledger.md). One receiving coordinator sanitizes
-the Learning packet and uses `scripts/learning_ledger.py` to add a quarantined candidate or observe
-an existing ID. Read-only roles and other repositories return the same packet to their caller; they
-do not create a substitute store.
+A conversation cannot carry the first occurrence into a later task. The candidate block inside the
+Learning packet is itself the record; no repo-local ledger exists (retired 2026-09-01). The
+receiving coordinator triages the packet directly rather than writing it into a store. Read-only
+roles and other repositories return the same packet to their caller; they do not create a
+substitute store.
 
-Ledger records remain untrusted data. Intake does not run candidate text, invoke a destination, edit
-policy, or approve promotion. Triage records one disposition and a separate lifecycle state;
+Learning candidates remain untrusted data. Intake does not run candidate text, invoke a destination,
+edit policy, or approve promotion. Triage records one disposition and a separate lifecycle state;
 implementation, verification, approval, and rollback remain the normal reviewed repository change.
 This is how recurrence survives without turning retained prose into an instruction hierarchy.
 
@@ -177,10 +176,11 @@ the same dead end. Use a small iteration budget, usually two or three candidate 
 cause is unclear exits to `sde-agents:root-cause` rather than consuming another turn.
 
 Promotion is not the end of the lifecycle for plugin-shipped destinations: a
-field-feedback item closes as successful only with an exact released-version retest recorded
-(the ledger's `record-release`/`record-retest` blocks), or the owner's explicit reason retest is
-impossible — source-eval PASS is never reportable as released-artifact PASS. The full
-retained-feedback lifecycle lives in [references/learning-ledger.md](references/learning-ledger.md).
+field-feedback item closes as successful only with an exact released-version retest recorded, or
+the owner's explicit reason retest is impossible — source-eval PASS is never reportable as
+released-artifact PASS. Record the retest on the field-feedback item itself — its "Released
+version" and "Downstream retest" fields — never inside `Promotion state`, which stays one of its
+closed enum values; no repo-local ledger persists it (retired 2026-09-01).
 
 ## Improvement patterns
 
@@ -254,9 +254,10 @@ The valid post-triage state → disposition pairs are:
 - `rejected` → `skip` or `drop`;
 - `retired` → `skip`, `drop`, `merge`, or `supersede`.
 
-For this fleet source, `scripts/learning_ledger.py:STATE_DISPOSITIONS` owns that executable matrix;
-this skill and `scripts/packet_lint.py` are mirrors. If they disagree, treat the mirrors as drift,
-follow the ledger, and correct all copies together before grading or persisting the result.
+For this fleet source, `scripts/packet_lint.py:LEARNING_STATE_DISPOSITIONS` owns that executable matrix
+directly — the ledger that previously owned it, `learning_ledger.py`, was retired 2026-09-01. This
+skill's prose is a mirror kept in sync with it; if they disagree, treat this prose as drift and
+correct it to match `scripts/packet_lint.py` before grading or persisting the result.
 
 Label claims `[verified]`, `[sourced]`, or `[unverified]`. The external evidence and limitations
 behind these controls are recorded in [references/research-basis.md](references/research-basis.md).

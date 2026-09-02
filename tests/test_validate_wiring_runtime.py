@@ -267,54 +267,6 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
         self.assertTrue(any("missing hosts ['vscode']" in issue for issue in issues), issues)
         self.assertTrue(any("baseline is not required" in issue for issue in issues), issues)
 
-    def test_runtime_control_consumers_cannot_silently_lose_their_wiring(self) -> None:
-        wiring = (
-            ("agents/verification-engineer.md", "scripts/verification_sandbox.py"),
-            ("skills/sre-tool/SKILL.md", "scripts/run_state.py"),
-            # effect_broker.py was retired 2026-09-01 (no consumer named it); the
-            # typed-evidence tripwire below now exercises run_state.py instead.
-        )
-        for consumer_relative, script_relative in wiring:
-            with self.subTest(consumer=consumer_relative):
-
-                def mutate(repo: Path) -> None:
-                    path = repo / consumer_relative
-                    reference = f"${{CLAUDE_PLUGIN_ROOT}}/{script_relative}"
-                    path.write_text(
-                        path.read_text(encoding="utf-8").replace(reference, script_relative),
-                        encoding="utf-8",
-                    )
-
-                issues = self._issues_after(mutate)
-                self.assertTrue(
-                    any(
-                        consumer_relative in issue
-                        and "silently stop enforcing" in issue
-                        for issue in issues
-                    ),
-                    issues,
-                )
-
-    def test_runtime_control_cannot_silently_drop_typed_evidence(self) -> None:
-        def mutate(repo: Path) -> None:
-            path = repo / "scripts" / "run_state.py"
-            path.write_text(
-                path.read_text(encoding="utf-8").replace(
-                    "evidence_envelope", "untyped_result"
-                ),
-                encoding="utf-8",
-            )
-
-        issues = self._issues_after(mutate)
-        self.assertTrue(
-            any(
-                "scripts/run_state.py" in issue
-                and "typed evidence contract" in issue
-                for issue in issues
-            ),
-            issues,
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

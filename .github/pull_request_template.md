@@ -42,7 +42,7 @@ genuinely does not apply and say so in one line; do not leave a heading with not
      above instead. -->
 
 - [ ] `python3 scripts/validate_fleet.py` — clean
-- [ ] `python3 scripts/run_tests.py` — all passing (count: )
+- [ ] `python3 -m unittest discover -s tests` — all passing (count: )
 - [ ] `claude plugin validate . --strict` — passing
 
 **Conditional gates — fill only the rows this PR trips, and delete the rest:**
