@@ -4,9 +4,9 @@ First measured routing baseline for the three clusters seeded this cycle (`homel
 `craft-vs-fullstack`, `ladder`), the check the fleet's own doctrine demanded and never had: every
 description was rewritten this cycle, none had been measured. Run with `scripts/eval_routing.py`
 `--runs 3`, headless `claude -p … --plugin-dir .` per case, deterministic transcript grading. The
-machine anchors are the per-cluster `benchmark.json` files beside this note; re-run and diff against
-them after a description edit or after the planned `lab-incident` (backlog 1.5), `restore-drill`,
-or `upgrade-campaign` skills land.
+machine anchors were the per-cluster `benchmark.json` files beside this note; they retired to git
+history on 2026-09-01 (last present at commit `e34871d`), so this note is now the record of the
+cycle, not a diff target.
 
 **Two corrections to this note, added 2026-07-24** (it was written before both):
 
@@ -90,12 +90,10 @@ prompt cases).
 
 ## How to re-use
 
-```bash
-# re-baseline a cluster and diff against the committed benchmark.json
-python3 scripts/eval_routing.py evals/routing/homelab-ops.json --runs 3 \
-  --output-dir /tmp/after && diff <(jq .cases evals/baselines/2026-07/homelab-ops/benchmark.json) \
-  <(jq .cases /tmp/after/benchmark.json)
+The captures this section once diffed against are gone; a re-baseline is a fresh paired run
+(`--output-dir` on both sides), not a diff against this directory.
 
+```bash
 # the load-bearing checks, cheap: any negative that fires at all is a real over-trigger
 python3 scripts/eval_routing.py evals/routing/homelab-ops.json --case 'neg-*' --runs 3
 ```

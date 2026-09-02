@@ -454,9 +454,11 @@ Keeping this straight is the difference between an archive and a graveyard.
 
 1. **Reuse** — serving as the 'before' side of a paired run. This job is **fragile by design** and
    usually already over: a stored capture is reusable only if its cluster, cases, evaluator, and
-   plugin bytes are all unchanged since capture — checked by hand (the script that once automated
-   this comparison, `eval_baseline.py`, was retired 2026-09-01) — so any of a schema bump, a case
-   edit, an evaluator change, or a fleet edit ends it permanently.
+   plugin bytes are all unchanged since capture **and** its recorded conditions — requested
+   model, clean-room setting, threshold, timeout — equal the planned run; checked by hand (the
+   script that once automated this comparison, `eval_baseline.py`, was retired 2026-09-01) — so
+   any of a schema bump, a case edit, an evaluator change, a fleet edit, or a different model or
+   setting ends it permanently.
    **As of 2026-08-17 no stored capture holds this job** — all ten clusters resolve `STALE`, and
    the v3→v4 schema move plus the case retirement made that final rather than incidental. Every
    paired round from here starts with a fresh capture on both sides.
@@ -526,7 +528,7 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **18,120 lines across 22 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, the 2026-08-19 settling and EVAL-009 batches, and the 2026-08-29 GATE-006 calibration slice, after the
+Baselines now total **18,118 lines across 22 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, the 2026-08-19 settling and EVAL-009 batches, and the 2026-08-29 GATE-006 calibration slice, after the
 original retirement cut 31,656 across 28 —
 a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and
@@ -627,8 +629,8 @@ The 93 sessions came off in three retirements: 26 agent-only positives (78), thr
 deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
 standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
 paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
-'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand and
-found reusable.
+'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand —
+same bytes, same recorded model, clean-room setting, threshold, and timeout — and found reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 

@@ -90,11 +90,14 @@ uncritically by every future session that retrieves it, so a wrong lesson compou
 fading.
 
 - **Fail-closed intake.** Every candidate is quarantined at capture, inside the packet's Learning
-  block itself, with evidence, scope, and a sensitivity attestation; promotion is a staged
-  disposition (quarantined → proposed → approved → promoted) with a recorded reason per transition,
-  and nothing skips a stage. The repo-local ledger that once persisted this state,
-  scripts/learning_ledger.py, was retired 2026-09-01 — `scripts/packet_lint.py` now grades the
-  packet block directly, and no store survives it between sessions.
+  block itself, with evidence, scope, and a sensitivity attestation, and the writer advances it one
+  stage at a time (quarantined → proposed → approved → promoted) with a reason per step. That
+  sequencing is writer discipline, not an enforced invariant: `scripts/packet_lint.py` grades only
+  whether the packet's `Promotion state` is compatible with its disposition, and sees no prior
+  state, so a skipped stage is invisible to it. The repo-local ledger that rejected out-of-order
+  transitions, scripts/learning_ledger.py, was retired 2026-09-01 with no store surviving between
+  sessions; the 34 promoted candidates whose released-version retest it still tracked are listed in
+  `docs/archive/2026-09/learning-ledger-retirement-2026-09-01.md`.
 - **Disposition is mandatory.** A discovery is routed, filed as a gap, or dropped with a stated
   reason (`skills/self-improve-loop/references/discovery-routing.md`); silence is not a
   disposition, and an emitted-but-unpersisted packet is a known failure mode, not a non-event.
