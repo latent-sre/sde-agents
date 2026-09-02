@@ -23,8 +23,6 @@ inputs move during a batch.
     python3 scripts/eval_behavioral.py                       # all cases, 5 runs each
     python3 scripts/eval_behavioral.py --runs 1              # smoke test, not a measurement
     python3 scripts/eval_behavioral.py --case packet-slots-* --output-dir /tmp/after
-    python3 scripts/eval_behavioral.py --runtime codex --case handoff-simple-build-stays-short \
-        --model gpt-5.6-terra --reasoning-effort medium
 
 Pure standard library, and every assertion is offline once the transcript is captured.
 """
@@ -480,26 +478,15 @@ def load_current_evaluator():
     )
 
 
-def load_codex_runtime():
-    """Load Codex-only code only after that runtime is explicitly selected."""
-    return eval_routing.load_evaluator_module(
-        "eval_codex_runtime", REPO / "scripts" / "eval_codex_runtime.py"
-    )
-
-
-def behavioral_evaluator_paths(runtime: str = "claude") -> list[Path]:
-    """Exact runner and graders for one runtime, without cross-host identity coupling."""
+def behavioral_evaluator_paths() -> list[Path]:
+    """Exact runner and graders this suite executes, without cross-host identity coupling."""
     routing_path = Path(eval_routing.__file__)
-    common = [
+    return [
         Path(__file__),
         routing_path,
         Path(packet_lint.__file__),
+        routing_path.with_name("eval_clean_room.py"),
     ]
-    if runtime == "claude":
-        return [*common, routing_path.with_name("eval_clean_room.py")]
-    if runtime == "codex":
-        return [*common, routing_path.with_name("eval_codex_runtime.py")]
-    raise ValueError(f"unknown behavioral runtime: {runtime}")
 
 
 # Marks an exclusion caused by a session that returned no result, as distinct from one caused by
@@ -1604,10 +1591,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case", default="*", help="glob over case ids (default all)")
     parser.add_argument("--timeout", type=int, default=600, help="per-session timeout in seconds")
     parser.add_argument("--concurrency", type=int, default=3)
-    parser.add_argument(
-        "--runtime", choices=("claude", "codex"), default="claude",
-        help="session runtime (default claude); artifacts from different runtimes are separate",
-    )
     parser.add_argument("--plugin-dir", type=Path, default=REPO)
     parser.add_argument("--output-dir", type=Path, help="also write benchmark.json here")
     parser.add_argument(
@@ -1620,11 +1603,6 @@ def main(argv: list[str] | None = None) -> int:
                         help="pin the session model (recorded in conditions). Without it every "
                              "session takes the CLI default — an unchosen condition no artifact "
                              "records, observed to be the most expensive tier.")
-    parser.add_argument(
-        "--reasoning-effort",
-        choices=("low", "medium", "high", "xhigh", "max", "ultra"),
-        help="Codex reasoning effort; required with --runtime codex",
-    )
     parser.add_argument("--clean-room", action="store_true",
                         help="relocate CLAUDE_CONFIG_DIR to a temp dir holding only credentials for "
                              "every session (see scripts/eval_routing.py --clean-room; same switch, "
@@ -1659,74 +1637,14 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    selected_agents: list[str] = []
-    captured_profiles: dict[str, dict[str, str]] = {}
-    captured_profile_identity: dict | None = None
-    codex_runtime = None
     runtime_cli_version = None
-    if args.runtime == "claude":
-        if args.reasoning_effort is not None:
-            print("error: --reasoning-effort applies only to --runtime codex", file=sys.stderr)
-            return 2
-        if CLAUDE is None:
-            print("error: the `claude` CLI is not on PATH", file=sys.stderr)
-            return 2
-    else:
-        try:
-            codex_runtime = load_codex_runtime()
-        except eval_routing.ProvenanceError as exc:
-            print(f"Codex runtime error: {exc}", file=sys.stderr)
-            return 2
-        if args.clean_room:
-            print(
-                "error: --clean-room relocates Claude credentials and is not a Codex "
-                "isolation mode; Codex requires an explicit absolute dedicated CODEX_HOME "
-                "without AGENTS.md, AGENTS.override.md, or managed_config.toml",
-                file=sys.stderr,
-            )
-            return 2
-        if (
-            args.model is None
-            or not args.model.strip()
-            or args.model != args.model.strip()
-            or args.reasoning_effort is None
-        ):
-            print(
-                "error: --runtime codex requires an exact non-blank --model and explicit "
-                "--reasoning-effort",
-                file=sys.stderr,
-            )
-            return 2
-        if codex_runtime.CODEX is None:
-            print("error: the `codex` CLI is not on PATH", file=sys.stderr)
-            return 2
-        try:
-            selected_agents = sorted({
-                case["agent"]
-                for case in cases
-                if codex_runtime.validate_case_projection(case)
-            })
-            captured_profiles, captured_profile_identity = codex_runtime.capture_profiles(
-                args.plugin_dir,
-                selected_agents,
-                read_file=eval_routing._read_regular_file,
-                git_identity=eval_routing._git_identity,
-            )
-            codex_runtime.assert_clean_subscription_context()
-            runtime_cli_version = codex_runtime.require_supported_cli(codex_runtime.CODEX)
-        except (eval_routing.ProvenanceError, codex_runtime.CodexRuntimeError) as exc:
-            print(f"Codex preflight refused to run: {exc}", file=sys.stderr)
-            return 2
+    if CLAUDE is None:
+        print("error: the `claude` CLI is not on PATH", file=sys.stderr)
+        return 2
 
-    evaluator_paths = behavioral_evaluator_paths(args.runtime)
+    evaluator_paths = behavioral_evaluator_paths()
     runtime_errors = (eval_routing.ProvenanceError,)
     availability_errors = (eval_routing.EvalAuthUnavailable,)
-    if codex_runtime is not None:
-        runtime_errors += (codex_runtime.CodexRuntimeError,)
-        availability_errors += (
-            codex_runtime.SessionUnavailable,
-            codex_runtime.CodexRuntimeError,
-        )
 
     provenance = None
     if args.output_dir:
@@ -1734,7 +1652,6 @@ def main(argv: list[str] | None = None) -> int:
             provenance = eval_routing.benchmark_provenance(
                 source_paths, cases, args.case, args.plugin_dir,
                 evaluator_paths=evaluator_paths,
-                plugin_identity_value=captured_profile_identity,
             )
         except runtime_errors as exc:
             print(f"provenance error: {exc}", file=sys.stderr)
@@ -1766,25 +1683,11 @@ def main(argv: list[str] | None = None) -> int:
     ) -> tuple[int, str, list[str], str | None, dict, str, str | None]:
         case, run_index = job
         measurement_error: str | None = None
-        if args.runtime == "claude":
-            text, fired, note, stats = run_session(
-                case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
-                case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
-                args.model, session_env, case.get("semantic_oracle"),
-            )
-        else:
-            codex_runtime.assert_clean_subscription_context()
-            text, fired, note, stats = codex_runtime.run_session(
-                case["prompt"],
-                args.timeout,
-                agent=case["agent"],
-                developer_instructions=(
-                    captured_profiles[case["agent"]]["developer_instructions"]
-                ),
-                model=args.model,
-                reasoning_effort=args.reasoning_effort,
-                executable=codex_runtime.CODEX,
-            )
+        text, fired, note, stats = run_session(
+            case["prompt"], execution_plugin_dir, args.timeout, case["allowed_tools"],
+            case.get("disallowed_tools"), case.get("agent"), case.get("permission_mode"),
+            args.model, session_env, case.get("semantic_oracle"),
+        )
         # Everything from here on is GRADING, and the session is already paid for. An exception in
         # it is still a measurement failure — the outer handler classifies it as one — but the
         # response has to survive the trip, because the sidecar written for that run is the only
@@ -1832,17 +1735,13 @@ def main(argv: list[str] | None = None) -> int:
     done = 0
     auth_mode = None
     with contextlib.ExitStack() as stack:
-        if args.runtime == "claude":
-            try:
-                execution_plugin_dir, execution_plugin_identity = stack.enter_context(
-                    eval_routing.frozen_plugin(args.plugin_dir)
-                )
-            except eval_routing.ProvenanceError as exc:
-                print(f"provenance error: {exc}", file=sys.stderr)
-                return 2
-        else:
-            execution_plugin_dir = args.plugin_dir
-            execution_plugin_identity = captured_profile_identity
+        try:
+            execution_plugin_dir, execution_plugin_identity = stack.enter_context(
+                eval_routing.frozen_plugin(args.plugin_dir)
+            )
+        except eval_routing.ProvenanceError as exc:
+            print(f"provenance error: {exc}", file=sys.stderr)
+            return 2
         if execution_plugin_identity is None:
             print("provenance error: runtime identity was not captured", file=sys.stderr)
             return 2
@@ -1855,31 +1754,19 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        # Claude's one relocated room must outlive the pool. Codex instead uses an
-        # instruction-clean CODEX_HOME checked above and one empty cwd per session.
+        # This relocated room must outlive the pool.
         session_env = None
-        if args.runtime == "claude" and args.clean_room:
+        if args.clean_room:
             clean_room = eval_routing._load_clean_room()
             try:
                 session_env = stack.enter_context(clean_room.clean_env())
             except clean_room.AuthUnavailable as exc:
                 print(f"clean room refused to run: {exc}", file=sys.stderr)
                 return 2
-        if args.runtime == "claude":
-            auth_mode = eval_routing.auth_provider_mode(
-                session_env, clean_room_enabled=bool(args.clean_room)
-            )
-            runtime_cli_version = eval_routing.cli_version()
-        else:
-            try:
-                auth_mode = codex_runtime.auth_provider_mode(codex_runtime.CODEX)
-                codex_runtime.assert_no_configured_mcp(codex_runtime.CODEX)
-            except codex_runtime.SessionUnavailable as exc:
-                print(f"Codex subscription unavailable: {exc}", file=sys.stderr)
-                return 2
-            except codex_runtime.CodexRuntimeError as exc:
-                print(f"Codex runtime preflight failed: {exc}", file=sys.stderr)
-                return 2
+        auth_mode = eval_routing.auth_provider_mode(
+            session_env, clean_room_enabled=bool(args.clean_room)
+        )
+        runtime_cli_version = eval_routing.cli_version()
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency)
         job_iter = iter(jobs)
         futures: dict[concurrent.futures.Future, tuple[dict, int]] = {}
@@ -1977,40 +1864,19 @@ def main(argv: list[str] | None = None) -> int:
             pool.shutdown(
                 wait=True, cancel_futures=auth_failure is not None or runner_failure is not None
             )
-        if args.runtime == "claude":
-            try:
-                eval_routing.verify_frozen_plugin(
-                    execution_plugin_dir, execution_plugin_identity
-                )
-            except eval_routing.ProvenanceError as exc:
-                print(f"case error after sessions: {exc}", file=sys.stderr)
-                return 2
+        try:
+            eval_routing.verify_frozen_plugin(
+                execution_plugin_dir, execution_plugin_identity
+            )
+        except eval_routing.ProvenanceError as exc:
+            print(f"case error after sessions: {exc}", file=sys.stderr)
+            return 2
         if auth_failure is not None:
             print(
                 f"\neval aborted: {auth_failure}; benchmark.json was not written",
                 file=sys.stderr,
             )
             return 2
-        if args.runtime == "codex":
-            try:
-                codex_runtime.assert_clean_subscription_context()
-                latest_cli_version = codex_runtime.require_supported_cli(codex_runtime.CODEX)
-                latest_auth_mode = codex_runtime.auth_provider_mode(codex_runtime.CODEX)
-                codex_runtime.assert_no_configured_mcp(codex_runtime.CODEX)
-            except runtime_errors + (codex_runtime.SessionUnavailable,) as exc:
-                print(
-                    f"Codex runtime changed during the batch: {exc}; benchmark.json was not "
-                    "written",
-                    file=sys.stderr,
-                )
-                return 2
-            if latest_cli_version != runtime_cli_version or latest_auth_mode != auth_mode:
-                print(
-                    "Codex runtime identity changed during the batch; benchmark.json was not "
-                    "written",
-                    file=sys.stderr,
-                )
-                return 2
 
         # Futures finish nondeterministically; restore submission order before serializing arrays.
         for case in cases:
@@ -2180,7 +2046,7 @@ def main(argv: list[str] | None = None) -> int:
         # The same contract the routing artifacts carry: a benchmark without its conditions cannot
         # state what it measured, so two of them cannot be validly compared (EVAL-002).
         conditions = {
-            "runtime": args.runtime,
+            "runtime": "claude",
             "cli_version": runtime_cli_version,
             "model_requested": args.model,
             "models_observed": sorted(observed_models),
@@ -2193,62 +2059,11 @@ def main(argv: list[str] | None = None) -> int:
             # artifacts differing on it are not comparable.
             "clean_room": bool(args.clean_room),
         }
-        if args.runtime == "codex":
-            conditions.update({
-                "reasoning_effort_requested": args.reasoning_effort,
-                "sandbox": "read-only",
-                "profile_projection": "generated-role-projection",
-                "measurement_kind": "subscription-backed same-runtime approximation",
-                "duration_source": "runner-wall-clock",
-                "disabled_features": list(codex_runtime.DISABLED_FEATURES),
-                "tool_boundary": (
-                    "session flags reduce built-in tool execution; configured MCP inventory "
-                    "must be empty before and after; observable tool items reject the run"
-                ),
-                "unobservable_tool_limit": (
-                    "Codex 0.147.0 JSONL omits code-mode exec/wait custom-tool attempts; "
-                    "the disabled host makes calls fail closed but cannot prove no attempt"
-                ),
-                "effective_config_limit": (
-                    "Codex 0.147.0 exposes no execution-equivalent effective-config "
-                    "preflight or atomic runtime MCP registry; independently controlled "
-                    "system and cloud-managed no-MCP state is an activation prerequisite"
-                ),
-                "auth_routing_requested": {
-                    "model_provider": "openai",
-                    "base_url": codex_runtime.SUBSCRIPTION_BASE_URL,
-                    "login_method": "chatgpt",
-                    "credentials_store": "file",
-                },
-                "isolation": {
-                    "cwd": "empty disposable directory",
-                    "user_config": "ignored",
-                    "codex_home": (
-                        "explicit dedicated home retained for file-backed ChatGPT auth; "
-                        "AGENTS.md, AGENTS.override.md, config.toml, and managed_config.toml absent"
-                    ),
-                    "api_credential_environment": (
-                        "OPENAI_API_KEY, CODEX_API_KEY, and CODEX_ACCESS_TOKEN absent"
-                    ),
-                    "rules": "ignored",
-                    "project_doc_max_bytes": 0,
-                    "host_skill_instructions": "disabled by session override",
-                },
-            })
         try:
             latest_cases, latest_sources = load_cases_with_sources(args.case)
-            latest_profile_identity = None
-            if args.runtime == "codex":
-                latest_profile_identity = codex_runtime.profile_identity(
-                    args.plugin_dir,
-                    selected_agents,
-                    read_file=eval_routing._read_regular_file,
-                    git_identity=eval_routing._git_identity,
-                )
             latest_provenance = eval_routing.benchmark_provenance(
                 latest_sources, latest_cases, args.case, args.plugin_dir,
                 evaluator_paths=evaluator_paths,
-                plugin_identity_value=latest_profile_identity,
             )
         except runtime_errors as exc:
             print(f"provenance error after sessions: {exc}", file=sys.stderr)

@@ -271,10 +271,8 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
         wiring = (
             ("agents/verification-engineer.md", "scripts/verification_sandbox.py"),
             ("skills/sre-tool/SKILL.md", "scripts/run_state.py"),
-            # effect_broker.py dropped out of this table when homelab-engineer retired the
-            # broker mandate: the agent names no control script at all now, so there is no
-            # reference left to lose silently. Its typed-evidence wiring is still pinned by
-            # test_runtime_control_cannot_silently_drop_typed_evidence below.
+            # effect_broker.py was retired 2026-09-01 (no consumer named it); the
+            # typed-evidence tripwire below now exercises run_state.py instead.
         )
         for consumer_relative, script_relative in wiring:
             with self.subTest(consumer=consumer_relative):
@@ -299,7 +297,7 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
 
     def test_runtime_control_cannot_silently_drop_typed_evidence(self) -> None:
         def mutate(repo: Path) -> None:
-            path = repo / "scripts" / "effect_broker.py"
+            path = repo / "scripts" / "run_state.py"
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
                     "evidence_envelope", "untyped_result"
@@ -310,7 +308,7 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
         issues = self._issues_after(mutate)
         self.assertTrue(
             any(
-                "scripts/effect_broker.py" in issue
+                "scripts/run_state.py" in issue
                 and "typed evidence contract" in issue
                 for issue in issues
             ),

@@ -273,3 +273,10 @@ evidence before change — is also the honest answer to it.)*
 - The GRAPH-001 adjudication itself: acceptance of the rival record supersedes this one;
   acceptance of this record converts the phased sequence into roadmap items with their own
   acceptance evidence.
+
+## Amendment 2026-09-01
+
+`scripts/effect_broker.py` was retired 2026-09-01
+(`docs/decisions/2026-08-20-effect-transport-policy.md`). The `[verified]` bullet above citing
+`scripts/effect_broker.py:420-468` stands as a dated observation of the pre-retirement design and
+is not corrected.

@@ -102,3 +102,11 @@ Retiring the transport does not retire the gate. All of these are unchanged or r
 - **Not run**: the paid behavioral lane. The two new contracts are written and their oracles are
   proven to fire offline, but no model session has been bought against them. Buy it with
   `python3 scripts/eval_behavioral.py --case 'gate-*' --runs 3 --model sonnet --clean-room`.
+
+## Amendment 2026-09-01
+
+The consequence above called deleting the broker "a separate decision nobody has made." That
+decision was made 2026-09-01: `scripts/effect_broker.py` and `tests/test_effect_broker.py` were
+retired, since no agent had named the broker since this record shipped. The typed-evidence check
+in `RUNTIME_EVIDENCE_PRODUCERS` now covers only `scripts/run_state.py` and
+`scripts/verification_sandbox.py`.

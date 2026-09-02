@@ -73,9 +73,7 @@ enforced per host, never inferred from prose.
   scoped.
 - **Separated layers.** `scripts/capability_graph.py` reports authored edges, per-host authority
   projections, and the routing overlay as three layers kept deliberately apart, because
-  co-membership is not behavioral coverage. `scripts/workflow_contract.py` proves a workflow
-  design-consistent while stating plainly that no host enforces the design at dispatch —
-  design-consistent and runtime-enforced stay different words.
+  co-membership is not behavioral coverage.
 - **The boundary decision.** `docs/decisions/2026-07-31-ai-graph-engineering.md` (accepted) owns
   what the graph layer is allowed to become and what evidence reopens it.
 
