@@ -409,9 +409,10 @@ blind passes from refreshed `origin/main`.
 cluster before/after.
 
 **Acceptance:** Per slice: graft lands inside the owning skill; the scrub list is gone from
-landed text; validator and tests green; commit carries attribution and extends
-`THIRD_PARTY_NOTICES.md`; verified-skip twins stay byte-unchanged. Closes when every picked
-slice merges and the record is linked from `docs/README.md`.
+landed text; validator and tests green; commit carries attribution, every adapted code file
+names its source and license, and the dated adjudication record is extended with the reviewed
+commit and renamed repository; verified-skip twins stay byte-unchanged. Closes when every
+picked slice merges and the record is linked from `docs/README.md`.
 
 **Next action:** Operator chooses (a) the recommended five candidates, (b) all eight, or (c) (b)
 plus filing the PROP-003/EVAL leads as their own items; then open slice 1 (`runbook`).

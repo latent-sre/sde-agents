@@ -1827,4 +1827,3 @@ Existing lab conventions always win.
 specific defaults, and the validator's orphan/reference checks pass.
 
 **Next action:** Reopen on the first qualifying service-onboarding task.
-

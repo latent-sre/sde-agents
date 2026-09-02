@@ -162,8 +162,9 @@ always-visible routing tokens on something that never routes — the roadmap's c
 3. **Adapt, don't copy.** Scrub donor-only assumptions — sibling-skill names, harness and
    workflow coupling, ecosystem vocabulary; the target's own structure and conventions win, and
    grafts land capped inside it rather than restructuring it.
-4. **Provenance is recorded twice**: `adapted from <repo>` plus license in the commit message,
-   and the upstream license notice in `THIRD_PARTY_NOTICES.md`.
+4. **Provenance is recorded twice**: the dated adaptation record pins the donor, reviewed
+   revision, and license, and the implementation commit repeats them in an `adapted from` line.
+   Adapted code also names its source and license in the owning file.
 5. **The normal gates close it**: validator and tests always; the overlapping routing cluster
    before and after if any `description:` changed.
 
