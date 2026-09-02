@@ -37,7 +37,8 @@ genuinely does not apply and say so in one line; do not leave a heading with not
 
 <!-- Show evidence, don't assert it. Paste the command and the result. Label load-bearing claims
      [verified] (you ran it), [sourced] (cited), or [unverified] (couldn't check) — the same rule
-     the fleet's own agents follow, and `scripts/packet_lint.py` flags an unevidenced "tests pass".
+     the fleet's own agents follow. An unevidenced "tests pass" is a review finding now, not a
+     linter catch — the packet linter that once flagged it retired 2026-09-02.
      Every box below is checkable in well under a minute; if a box needs a paragraph, it belongs
      above instead. -->
 

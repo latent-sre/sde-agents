@@ -219,8 +219,9 @@ decision, render the canonical candidate block on literal lines beginning `Learn
 `Evidence:`, `Scope:`, `Provenance:`, `Learning disposition:`, `Promotion state:`, `Destination:`,
 and `Owner:` before explaining it. The `Learning:` line takes one of two literal value forms, and
 they are the whole vocabulary of that field — the no-signal form is a fixed string, not a slot for
-your own reason, because `scripts/packet_lint.py` accepts exactly that sentence and rejects every
-other `none` value:
+your own reason. This exact sentence is the whole no-signal vocabulary the skill defines; the
+packet linter that once rejected every other `none` value, `packet_lint.py`, retired 2026-09-02,
+so the fixed string is writer discipline now, not an enforced check:
 
 ```text
 Learning: none — no reusable signal
@@ -237,10 +238,9 @@ candidate form carries the **divergence**, not the rule drawn from it. A well-fo
 that slot — "generated adapters must be verified before promotion" — is still a malformed packet,
 because the one thing this field exists to record is what actually diverged from what was expected;
 the rule it implies belongs in the prose below the block. It does **not** belong on `Destination:`,
-which names the exact artifact that must change — a rule sentence there is substantive enough to
-pass the linter while leaving the receiving coordinator with nothing to edit. This is the literal
-form the receiving agents and `scripts/packet_lint.py` read, so a paraphrase of it is a dropped
-handoff rather than a style difference. Put exactly one selected learning disposition on
+which names the exact artifact that must change — a rule sentence there reads as substantive while
+leaving the receiving coordinator with nothing to edit. This is the literal form the receiving
+agents read, so a paraphrase of it is a dropped handoff rather than a style difference. Put exactly one selected learning disposition on
 `Learning disposition:`; alternatives may be discussed only in prose. Put exactly one compatible,
 post-triage lifecycle state on `Promotion state:`. Missing but obtainable evidence is
 `Learning disposition: skip` with `Promotion state: inconclusive`. Do not use the intake-only
@@ -254,10 +254,10 @@ The valid post-triage state → disposition pairs are:
 - `rejected` → `skip` or `drop`;
 - `retired` → `skip`, `drop`, `merge`, or `supersede`.
 
-For this fleet source, `scripts/packet_lint.py:LEARNING_STATE_DISPOSITIONS` owns that executable matrix
-directly — the ledger that previously owned it, `learning_ledger.py`, was retired 2026-09-01. This
-skill's prose is a mirror kept in sync with it; if they disagree, treat this prose as drift and
-correct it to match `scripts/packet_lint.py` before grading or persisting the result.
+This skill's table above is the only statement of that matrix now — the linter that once graded
+it, `packet_lint.py`'s `LEARNING_STATE_DISPOSITIONS`, retired 2026-09-02 (the ledger that
+previously owned it, `learning_ledger.py`, was retired 2026-09-01 before it). Nothing checks this
+table against a second source anymore; keep it correct by hand.
 
 Label claims `[verified]`, `[sourced]`, or `[unverified]`. The external evidence and limitations
 behind these controls are recorded in [references/research-basis.md](references/research-basis.md).

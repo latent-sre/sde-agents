@@ -30,10 +30,11 @@ mechanisms and checks — read it before touching a discipline.
 - **Graph engineering — authority is typed edges.** Who may write what, who hands to whom, where
   approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
   `docs/decisions/2026-07-31-ai-graph-engineering.md`.
-- **Self-learning — admission-gated memory in the packet's Learning block, graded by
-  `scripts/packet_lint.py`.** Every lesson is quarantined and advanced one stage at a time by the
-  writer; the linter checks state-disposition compatibility, not the sequence. A stored lesson is
-  replayed uncritically, so a wrong one compounds instead of fading.
+- **Self-learning — admission-gated memory in the packet's Learning block.** Every lesson is
+  quarantined and advanced one stage at a time by the writer; the linter that once checked
+  state-disposition compatibility retired with the behavioral harness 2026-09-02, so sequencing and
+  disposition compatibility are writer discipline now. A stored lesson is replayed uncritically, so
+  a wrong one compounds instead of fading.
 
 The reading rule for any review of fleet prose: **the reader is the next session, not the
 operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
@@ -61,14 +62,14 @@ red check is fixed if trivial, else recorded in `docs/fleet-roadmap.md`.
   main, weekly, or dispatch — see the matrix comment in
   `.github/workflows/validate.yml`.
 - **T3 — release/CLI pin bump** (manual, real API): `scripts/probe_plugin.py` + every routing
-  cluster + behavioral evals — no affected-only subset. Before a paired routing run, check by hand
+  cluster — no affected-only subset. Before a paired routing run, check by hand
   that a stored capture's cluster, cases, evaluator, and plugin bytes are unchanged **and** its
   recorded conditions — requested model, clean-room setting, threshold, timeout — equal the run
   you are about to make; only then is the before-side reusable. The after-side stays fresh.
 
 Static review converges or stops: at most two deep-review rounds for prose-behavior changes
 (agent/skill text), three for other fleet prose. Divergence signal: criticals land in
-sentences the prior fix introduced. Close with a behavioral instrument (a contract run
+sentences the prior fix introduced. Close with a behavioral instrument (a routing round
 or executed verification); a round past the cap needs an explicit operator ruling.
 
 After **any** canonical agent or skill edit, regenerate the host adapters:
@@ -107,9 +108,8 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
 - `python3 scripts/eval_routing.py evals/routing/<cluster>.json --runs 3` — routing evals, owed
   before **and** after any description edit (the description playbook owns the recipe). Read
   `evals/README.md` first — it owns the negative-case and narrowing semantics and the headless
-  caveat.
-- `python3 scripts/eval_behavioral.py` — deterministic contract evals; read `evals/README.md`
-  for the case surface and runtime details.
+  caveat. The behavioral evaluator that once ran deterministic contract evals alongside it retired
+  2026-09-02.
 
 ## Change playbooks
 

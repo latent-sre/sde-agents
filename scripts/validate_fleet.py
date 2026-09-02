@@ -995,10 +995,10 @@ def load_module_by_content(source: Path, name: str):
     tree's code.
 
     The cache is ONLY for scripts whose import binds no repository content beyond scripts/.
-    A script that captures fleet state at import — eval_behavioral, whose import chain globs
-    agents/ into FLEET_AGENTS — must be imported fresh per tree instead (see
-    validate_behavioral_contracts), because no affordable byte key can cover everything an
-    import might read.
+    A script whose import chain globs repository content into a module-level constant — for
+    example a roster built by globbing agents/ at import time — captures fleet state the byte
+    key can't see, so it must be imported fresh per tree instead of through this cache: no
+    affordable byte key can cover everything such an import might read.
 
     Returns None when no import spec can be built (the caller owns that message); a module
     whose exec raises is never cached, so a broken script fails on every call, not just the first.
@@ -1639,72 +1639,6 @@ def validate_routing_clusters(root: Path, agent_names: list[str], skill_names: l
     return issues
 
 
-def validate_behavioral_contracts(
-    root: Path, agent_names: list[str], skill_names: list[str]
-) -> list[str]:
-    """Run the behavioral runner's public exact-schema validator in the ordinary fleet gate."""
-    behavior_dir = root / "evals" / "behavioral"
-    if not behavior_dir.is_dir():
-        return []
-    runner = root / "scripts" / "eval_behavioral.py"
-    if not runner.is_file():
-        return [
-            f"{runner}: behavioral case files exist without their schema validator; typoed "
-            "assertions could be ignored until an expensive live run."
-        ]
-    # Deliberately NOT load_module_by_content: importing this runner captures the tree's fleet
-    # roster (eval_routing's FLEET_AGENTS globs agents/ at import time), so two trees with
-    # identical scripts but different agents would share one roster and a case naming an agent
-    # only the OTHER tree ships would pass silently (caught in review on #91). Content the
-    # import binds is not in any byte key we can afford to maintain, so this module pays a
-    # fresh import per call.
-    try:
-        module = _execute_source(runner, "eval_behavioral_validator")
-        if module is None:
-            return [f"{runner}: cannot load behavioral case schema validator"]
-    except Exception as exc:
-        return [
-            f"{runner}: behavioral case schema validator could not load ({exc}); the fleet "
-            "gate refuses to certify definitions it cannot validate."
-        ]
-
-    issues: list[str] = []
-    components = set(agent_names) | set(skill_names)
-    seen_case_ids: dict[str, str] = {}
-    paths = sorted(behavior_dir.glob("*.json"))
-    if not paths:
-        return [
-            f"{behavior_dir}: no behavioral case documents; an empty directory looks like "
-            "coverage while executing no contract."
-        ]
-    for path in paths:
-        rel = path.relative_to(root).as_posix()
-        try:
-            document = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            issues.append(f"{rel}: unreadable behavioral case document ({exc})")
-            continue
-        findings = module.validate_case_document(document, components=components)
-        issues.extend(
-            f"{rel}: {finding}. Behavioral definitions fail before sessions so a typo or "
-            "empty oracle cannot produce a false-green benchmark."
-            for finding in findings
-        )
-        if isinstance(document, dict) and isinstance(document.get("cases"), list):
-            for case in document["cases"]:
-                if not isinstance(case, dict) or not isinstance(case.get("id"), str):
-                    continue
-                prior = seen_case_ids.get(case["id"])
-                if prior is not None:
-                    issues.append(
-                        f"{rel}: case id {case['id']!r} duplicates {prior}; benchmark arrays align "
-                        "by id, so cross-document duplicates make two contracts read as one."
-                    )
-                else:
-                    seen_case_ids[case["id"]] = rel
-    return issues
-
-
 def validate_host_conformance_manifest(root: Path) -> list[str]:
     """Apply repository coverage policy after the shared manifest schema validates."""
 
@@ -2112,7 +2046,6 @@ def validate_repo(
         issues.extend(validate_platform_adapters(root))
     issues.extend(validate_agent_guide(root))
     issues.extend(validate_routing_clusters(root, agent_names, skill_names))
-    issues.extend(validate_behavioral_contracts(root, agent_names, skill_names))
     issues.extend(validate_host_conformance_manifest(root))
     issues.extend(validate_bare_skill_references(root, skill_names))
     issues.extend(validate_perishable_tokens(root))

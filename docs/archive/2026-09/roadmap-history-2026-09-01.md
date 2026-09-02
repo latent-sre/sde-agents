@@ -1298,6 +1298,9 @@ so both owe a behavioral re-measure, and EVAL-011 gates whether that measure wou
 
 ## EVAL-011 — a permission-cut session must not be graded as a contract failure
 
+**Closed 2026-09-02 (won't-do): the behavioral harness it graded was retired.** Decision:
+`../../decisions/2026-09-02-single-operator-audience.md`.
+
 ### Status narration
 (2026-08-29) — measured during GATE-006's lane calibration, on the branch head.
 
@@ -1569,6 +1572,9 @@ only its own section.
 
 
 ## ORACLE-019 — three oracle constructions open after PR #152
+
+**Closed 2026-09-02 (won't-do): the behavioral harness it graded was retired.** Decision:
+`../../decisions/2026-09-02-single-operator-audience.md`.
 
 ### Full original text
 three oracle constructions remain open after PR #152's four review rounds, and

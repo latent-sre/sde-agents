@@ -118,3 +118,9 @@ the same change — the sentence above named a coverage set that survived less t
 Verification section's `python3 scripts/run_tests.py` line stands as a dated record of what ran on
 2026-08-20; the equivalent check today is `python3 -m unittest discover -s tests`
 (`scripts/run_tests.py` was retired 2026-09-01).
+
+A 2026-09-02 correction to the same section: the behavioral harness retired that day under the
+single-operator audience decision. The "Not run: the paid behavioral lane" line above stands as a
+dated record of what was still owed on 2026-08-20; that run will not be bought. The two contracts'
+offline-proven oracles retired with `evals/behavioral/contracts.json`; the routing suite is the
+remaining paid instrument for this decision's claims.

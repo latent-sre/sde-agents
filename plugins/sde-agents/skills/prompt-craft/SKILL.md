@@ -19,7 +19,7 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 1. **Success criteria first.** Define what a correct output looks like, measurably, before touching the prompt.
 2. **Baseline.** Reproduce the failure with the current prompt. No edit without an observed failure to pin it to.
 3. **Minimal change.** Fix the observed failure; don't rewrite everything you'd have phrased differently.
-4. **Retest fresh.** Spawn a clean-context subagent with a realistic task; check it triggers and complies. Multiple reps — variance is a metric. **If the repo ships an eval harness, run it instead of eyeballing** — in this fleet that is `scripts/eval_routing.py` for a description change (run the overlapping cluster before *and* after and diff the rates; a near-miss that starts firing is a defect at any rate) and `scripts/eval_behavioral.py` for a change to what an agent must actually do. Measuring after only tells you the current number; the diff is the finding.
+4. **Retest fresh.** Spawn a clean-context subagent with a realistic task; check it triggers and complies. Multiple reps — variance is a metric. **If the repo ships an eval harness, run it instead of eyeballing** — in this fleet that is `scripts/eval_routing.py` for a description change (run the overlapping cluster before *and* after and diff the rates; a near-miss that starts firing is a defect at any rate). Measuring after only tells you the current number; the diff is the finding.
 
 ## The two rules that fix most agent/skill failures
 

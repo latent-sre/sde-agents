@@ -46,3 +46,14 @@ no consumer.
 A second regular operator of the same installation, or a measured routing or behavior regression
 in the surviving fleet that the removed mechanism demonstrably prevented. Reopening restores the
 mechanism from git history with its tests; nothing here is one-way.
+
+## Amendment 2026-09-02
+
+A direct consequence of this ruling, decided the same day: the behavioral evaluation harness
+(`scripts/eval_behavioral.py`, `scripts/packet_lint.py`, `evals/behavioral/contracts.json`)
+retired. The hooks (`scripts/readonly-guard.py`, `scripts/live-effect-gate.py`) enforce what
+matters at runtime; the grader produced most of this year's false-red churn and no shipped role
+ran it. EVAL-011 and ORACLE-019 closed won't-do with it — both were entirely about the retired
+runner's grading. Every other roadmap item, decision, and doc that promised or cited a behavioral
+contract run was amended in the same pass to note the retirement and fall back to routing evals
+and the probe.
