@@ -489,8 +489,8 @@ the tree cited the directory.
 `2026-08-01-self-improve` then went through the distil-first path the rule requires: its seven
 generations were summarized into that directory's new `README.md` — every rate verified against the
 captures before anything was removed — and six uncited generations retired (4,986 lines).
-`final-live/` is **retained in full**, because `docs/fleet-roadmap.md` cites it as LEARN-002's live
-rates, and the rule does not authorize retiring a capture a live item rests on. That summary also
+`final-live/` was **retained in full** while `docs/fleet-roadmap.md` cited it as LEARN-002's live
+rates; LEARN-002 closed 2026-09-02, so that pin is gone and the capture retires at the next prune. That summary also
 preserves something no single capture held: three conditions moved mid-round (opus → sonnet, the
 600s → 420s behavioral timeout, provenance none → v1 → v3), so only within-generation pairs are
 like-for-like — and `self-improve-lifecycle-merge` reached 3/3, fell to 0/3, and is still 0/3, which

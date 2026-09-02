@@ -11,6 +11,8 @@ roadmap item and field it came from.
 
 ## LEARN-002 — close the Learning-contract compliance gap
 
+**Closed 2026-09-02 by operator ruling (won't-do).** Every contract this item measured belongs to `self-improve-loop`, which leaves the shipped fleet under the single-operator audience decision; the paid batch and the deferred envelope ruling were never bought. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
+
 ### Status narration
 the measured residual of the merged LEARN-001 round, plus the six LOOP-001/REV-001 contracts this
 docket now owns. The 2026-08-15 paired round landed the three canonical text repairs and both
@@ -307,6 +309,8 @@ contracts holding.
 
 
 ## CTX-002 — fit the model-visible skill listing inside the 8,000-char host budget
+
+**Closed 2026-09-02 by operator ruling (met by construction).** The roster cut's 16 model-visible skills measure 6,946 characters against the 8,000-character budget without a description edit, so no paired routing run is owed; the doctor's headroom check is run in the roster PR. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
 
 ### Status narration
 pass 1 of the three-pass context remediation (CTX-002 listing layer,
@@ -683,6 +687,8 @@ read-only command surface and a threat review of every new verb/flag before chan
 
 ## HANDOFF-001 — evidence-bound onboarding handoff packet
 
+**Closed 2026-09-02 by operator ruling (won't-do).** Work Order v1's only consumer was its own eval fixture; the roster cut deletes it from `homelab-engineer` and `sde-fullstack`. For one operator, onboarding is done in place or handed to the builder with the plan file, without a digest. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
+
 ### Status narration
 Claude manager-owned amendment authorized by the operator 2026-08-11;
 original spec approved 2026-08-09. The REV-001 sequencing condition is met: that round closed
@@ -907,6 +913,8 @@ the paired routing run; the smoke run follows the next release.
 
 
 ## LADDER-002 — decide the eng-ladder description round
+
+**Closed 2026-09-02 by operator ruling (won't-do).** `eng-ladder` is deleted in the roster cut, which answers the pending ruling: neither repair is bought, and the `ladder` routing cluster retires with the skill. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
 
 ### Status narration
 the diagnosis is done; which repairs (if any) to buy is the operator's ruling.
