@@ -80,7 +80,7 @@ working directory, so "assess this change" or "review this branch" has nothing t
 2026-08-17: seven left with the agent-only positives and four now inline their artifact
 (`pos-engladder-assess`, `craft-vs-fullstack`'s `neg-review`, `pos-engladder-growth-feedback` with a
 body of eight PRs and design notes, and `pos-iterate-draft` with its draft, findings, and checklist).
-Supplying the artifact in the prompt is the pattern the behavioral suite already uses. On the
+Supplying the artifact in the prompt is the pattern the retired behavioral suite used. On the
 negative side the defect is quieter and worse: a near-miss with no referent has nothing to route to,
 so its pass was never evidence of a correctly narrow description.
 
@@ -157,10 +157,11 @@ The test is usability, not silence. A session that reached a non-error `result` 
 for routing even if the CLI then exited non-zero — it routed somewhere, possibly off the fleet
 entirely, and that is a real negative sample and a real positive miss. A structured error result is
 never a no-route sample; a component firing observed before that error may remain explicitly
-labeled partial evidence. Behavioral assertions are stricter: they require exit zero and a final
-non-error result. Authentication failure, missing namespaced fleet registration, or absence of any
-agent member in the selected routing cluster aborts the whole batch with exit 2 and writes no
-benchmark. These rules prevent quota, API, runner, expired-session, partial-plugin, or absent-plugin
+labeled partial evidence. The retired behavioral suite's assertions were stricter: they required
+exit zero and a final non-error result. Authentication failure, missing namespaced fleet
+registration, or absence of any agent member in the selected routing cluster aborts the whole
+batch with exit 2 and writes no benchmark. These rules prevent quota, API, runner,
+expired-session, partial-plugin, or absent-plugin
 state from becoming a false green.
 
 The default 180s timeout was tuned when sessions were faster. A more deliberative model can spend
@@ -224,229 +225,15 @@ Because of that variance, this suite is meant to be run **manually, on demand** 
 prompt change — not as a hard CI gate that would flake-fail honest PRs. It is intentionally *not*
 wired into CI.
 
-## The other half: behavioral evals
+## The behavioral harness (retired 2026-09-02)
 
-Routing measures **which component fires**. It says nothing about whether the thing that fired then
-honored its own contract — so "the agents comply with their packet rules" was itself an unverified
-claim. `evals/behavioral/` closes that, run by `scripts/eval_behavioral.py`:
-
-```bash
-python3 scripts/eval_behavioral.py                       # all cases, five runs each
-python3 scripts/eval_behavioral.py --case 'tier-gate-*'  # one contract
-```
-
-**An unexpected runner or grading error stops the batch.** The runner and the graders are shared by
-every case, so an exception in them is systematic until proven otherwise — and the first version of
-the measurement-failure classification recorded the broken run and carried on, which meant a
-defective `assert_case` observed on run one still launched the rest of a default sweep (~350 paid
-sessions) to reproduce the same exception. Sessions already in flight are kept, because they are
-already bought; nothing further is scheduled. The artifact distinguishes the two: a run that broke
-carries its exception, a run that was never launched says so, and `exit 3` reports the whole batch
-as an incomplete measurement rather than a verdict. Fix the runner and re-run — the missing runs are
-unbought, not failed.
-
-Behavioral is **all-or-nothing per case**: every graded run must satisfy every assertion, because a
-contract that holds four runs in five is a contract that does not hold. "Graded" excludes a run the
-runner itself broke on — those are recorded as `runs_excluded` with the exception text, and a case
-whose every run broke is `INCONCLUSIVE`, never a failure. The exit codes carry that distinction the
-way routing's do: `0` every graded case passed with every requested run graded, `1` a case failed (a
-contract verdict to investigate), `3` nothing failed but the measurement is incomplete — a case was
-`INCONCLUSIVE`, **or any single run was excluded**, because a verdict computed over four of five
-requested runs holds over a denominator the operator did not ask for, `2` a usage, authentication, or
-provenance error for which no benchmark was written.
-
-The Codex behavioral lane (`--runtime codex`, transport `scripts/eval_codex_runtime.py`) was
-retired on 2026-09-01 after a single recorded run; that run's artifacts remain under
-`evals/baselines/history/2026-08-11-handoff-001.md` and are historical only. The evaluator now has
-one runtime, Claude.
-
-Grading is deterministic — no judge model. `scripts/packet_lint.py` asserts packet-slot compliance,
-including separate intake and lifecycle-owner Learning variants; the evaluator adds a closed
-five-field oracle for non-procedural runbook proposals plus literal must-match / must-not-match
-patterns per case. The seeded inventory covers packet completeness, semantic
-Learning closeout and candidate fields, reviewer approval boundaries, adversarial embedded
-instructions, live-change tier gates, incident and restore behavior, runbook proposal safety,
-learning/runbook lifecycle composition, current-evidence precedence, architecture handoffs,
-verification isolation and honest inconclusive verdicts, prompt-eval separation, and multi-agent
-validation, plus proportional onboarding handoffs that preserve discovered constraints without
-turning a simple build into packet ceremony. Each case artifact records input/output usage and
-duration. The HANDOFF functional builder additionally uses the existing `semantic_oracle` seam: it
-seeds three declarative JSON artifacts and a trusted acceptance program, refuses a changed verifier
-or linked artifact, runs only that unchanged verifier, and records its exit/output plus artifact
-SHA-256 values. The digest-negative case uses the same seam to require exactly one prescribed
-read-only hash command over the exact work-order bytes, correlate its computed result, and prove a
-seeded workspace stayed unchanged. Model-authored Python is never executed as grader code; receipt
-patterns prove only transfer identity while the two trusted oracles prove end state and
-stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero.
-
-Two doctrine rules paid for on 2026-08-12 (CLI 2.1.228; the salvaged sonnet-testing arc, its
-baseline captures retired 2026-09-02 with HANDOFF-001) govern this layer. First, tool *surface* is
-not
-*permission*: `--tools Bash` alone leaves every command approval-gated and headless has no
-approver, so a case whose required action is a command passes only when the runner also grants
-it — `run_session` passes `--allowedTools` beside `--tools` (2026-08-15 fix) — and a prescribed
-command stays short and literal enough for an exact grant to express. Second, when an assertion
-can fail for causes owned by different actors — the harness denied the command, or the component
-ran other commands beside it — the evidence owes the discriminator (each observed command with
-its outcome; EVAL-010 ports that recording), and any probe used to diagnose this layer must
-exercise the exact case artifacts: a stand-in outside the discriminating class (`echo` for an
-interpreter, a short command for a long one) makes every control arm pass vacuously and proves
-nothing. The runner
-prints the
-selected case and session count before starting;
-`evals/behavioral/contracts.json` is the authoritative inventory.
-
-**Retained text.** `benchmark.json` itself never holds raw model text by default. But a run under
-`--output-dir` whose assertions failed writes its final response to `failing-run-evidence.json`
-beside the benchmark — the failing run's text, its `run_index`, its assertion failures, and a copy
-of the conditions so the file can state what it measured on its own. Passing runs are never in it,
-and a batch with no failures does not create it. This is not optional, because the thing it
-prevents is: the runner reads a failing session's text, grades it, drops it, and the
-grammar-versus-text call then costs a second paid session — 22 of the 76 sessions in the
-2026-08-10 calibration round were that re-buy, and a grader repaired without the sentence it
-misread is a grader tuned into agreeing with itself.
-
-The digest-rejection oracle applies the same boundary to Bash evidence. Its comparison-grade
-`semantic_evidence_per_run` records each command's ordinal, expected-command match, SHA-256, and
-`ok` / `denied` / `error` / `no-result` outcome, but not raw command text. When the run fails, the
-protected evidence form adds that raw command beside the outcome so diagnosis does not need a
-second session. The default sidecar is owner-only; the `--retain-run-evidence` form is the explicit
-opt-in exception below.
-
-For the wider case, `--retain-run-evidence` adds an ordered `run_evidence_per_run` list to
-`benchmark.json` containing **every** run's final response and failures, passing runs included; it
-requires `--output-dir`, and it supersedes the separate file rather than duplicating it. Both are
-evidence for separating a grader defect from a prompt defect, not a different scoring path.
-
-`benchmark.json` names which form is present in a top-level `failing_run_evidence` field — an
-**outcome**, deliberately outside the conditions block, so two paired runs under identical inputs
-do not read as condition-divergent merely because one failed and one passed (conditions are
-inputs; artifacts written before 2026-08-14 carry the field inside `conditions`, and
-the manual reuse comparison ignores it in either place). Either way, a run with no
-evidence file is readable as "every run passed" rather than "the text was dropped". The sidecar is
-created owner-read/write only and is written **before** `benchmark.json`, so a failed evidence
-write withholds the benchmark rather than publishing one that claims text that was never produced;
-a rerun into the same `--output-dir` removes a sidecar the new batch did not write. Because two
-batches at the same commit with identical arguments share provenance and conditions byte-for-byte,
-the benchmark also records `failing_run_evidence_sha256` — the digest of the exact sidecar written
-with it (null when none was) — so a detached sidecar's claimed pairing is verifiable in one hash.
-
-Treat any retained text as potentially sensitive model output. `failing-run-evidence.json` under
-`evals/baselines/` is **gitignored**, on the same rule as the probe and pilot run logs: it is a
-local diagnosis of a batch that already ran, not a committed measurement, and a round's conclusions
-reach the tree as reviewed quotes in its decisions note rather than as a raw dump. Being separable
-from `benchmark.json` is what makes that possible — the benchmark cannot be ignored the same way
-because it *is* the artifact, which is why `--retain-run-evidence`, whose text lands inside it,
-stays opt-in and requires inspecting the result before you commit or share it.
-
-### Writing a `must_not_match` — prefer a positive requirement
-
-A forbidden pattern reads as "the model must not do X", but a keyword regex cannot tell an assertion
-of X from X named in order to be rejected. Both failure directions are real, and they cost
-differently: a **trap** fails the right answer loudly (a contract regression that never happened, and
-the next session goes off to rewrite an agent that was behaving), while a **hole** passes the wrong
-one silently. PR #145 shipped ten traps in one file, and then, repairing them, two holes — the
-line-wide negator scan that exempted a whole line whenever any "no" appeared on it let the exact
-refusal a contract rejected grade as a pass.
-
-So, in order of preference:
-
-1. **State the contract positively.** If the requirement is "do not present an unestablished claim as
-   fact", require the `[unverified]` label in the claim's own clause in `must_match`. There is no
-   negation to invert, so neither direction has anywhere to hide, and a response that settles the
-   claim fails a missing requirement rather than slipping past a guard. This is what
-   `researcher-unestablished-claim-stays-unverified` does, after four rounds of the alternative.
-
-   **Positive-first is not positive-only.** A positive requirement is satisfied by ONE conforming
-   mention, so it cannot see a second, contradicting assertion: that case passed `The default connect
-   timeout is [unverified]. The default connect timeout is unchanged.` — label present, claim settled
-   anyway. When the contract forbids a contradiction rather than merely requiring a statement, the
-   positive requirement is the primary instrument and a forbidden pattern still guards the
-   contradiction. The same applies to `reviewer-committed-bytes-remain-approvable`: requiring the
-   affirmative "approval remains available" closes the refusal class, and the forbidden forms stay as
-   the backstop for a response that says both.
-2. **Bind the verb to its object.** "We should break up the monolith" is only a decision when the
-   monolith is what is being broken up; "move the identity provider" is only absorption when the
-   thing moved is the service rather than the decision about it.
-3. **Anchor structurally** — a verdict line at line start beats the same words in prose.
-4. **Scope every exemption to the claim's own clause**, never the whole line. This is the rule with
-   the worst track record here: a line-wide `(?![^\r\n]*\b(?:handoff|words)\b)` reads as "don't
-   fail a compliant handoff" and behaves as "don't fail a line that MENTIONS one", so `I will report
-   the fork to principal-engineer, but we should break up our monolith` — report and absorb in one
-   sentence, the exact thing the case separates — passes. Six patterns in PR #145 had it, in four
-   separate rounds, because each repair was written for one pattern instead of the idiom. Use
-   `(?:(?!\b(?:but|however|yet|though|although)\b)[^;.!?\r\n])*?` between the exemption's vocabulary
-   and the phrase it exempts. An adversative, a semicolon, or **sentence punctuation** ends the
-   clause; a comma does not, because it appears inside idioms the exemption must see through ("not
-   yes, we should …"). The sentence terminator is the part that took three rounds to get right: a
-   guard that crossed a period exempted `I will report the fork to principal-engineer. We should
-   break up our monolith.` — two sentences on one physical line, which is how models actually write.
-   `test_no_forbidden_pattern_exempts_a_whole_line` requires that exact construct, byte for byte —
-   not merely a pattern mentioning `but|however`. The looser check passed a hand-rolled variant whose
-   separators were the adversatives alone, so its exemption still crossed a semicolon and `I do not
-   approve promotion; promotion is approved.` graded clean. One spelling means one behavior: a
-   pattern needing a different scope needs a different rule, argued for, not a quietly weaker copy.
-
-   Second half of the same rule: make the exemption's **vocabulary** as narrow as its scope. Listing
-   `code-reviewer` as a disclaimer word meant `Merge Verdict: APPROVE because code-reviewer missed
-   the issue` exempted itself — a mention is not a disclaimer. Name the wording that actually assigns
-   the decision away (`belongs to`, `is not mine`, `I do not issue`), never the party it is assigned
-   to. If a guard needs more nesting than this to be right,
-   it is the wrong instrument: go back to 1.
-
-Whatever you land, pin **both** directions in `tests/test_eval_behavioral.py` — the compliant
-sentence must not trip, and the asserted violation must still trip. Narrowing is exactly the edit
-that turns a guard into decoration, and every trap in this file's history was in a sentence a
-competent agent would naturally write.
-
-Behavioral documents are exact schemas, validated both by the runner before any session and by the
-ordinary fleet validator. Unknown root or case keys, missing or duplicate identities, empty or
-wrongly typed lists, unknown components or denied-tool names, unqualified agent names, invalid
-packet modes or shapes, malformed or non-substantive positive regexes, and a case without exactly
-one non-empty `expect_fires` XOR `expect_all_fires` contract, an explicit runtime-tool allowlist,
-and a positive semantic output oracle are configuration errors. Typed `exact_fields` assertions
-require one literal label with one exact value; a matching substring or duplicate conflicting line
-cannot satisfy them. An exact-value oracle quotes a literal the prompt states or a fleet document
-defines, and the prompt's wording for a relation matches the oracle word for word — a correct
-answer that reds on spelling is an instrument defect, not a contract failure. A
-`runbook_required_gaps` list additionally binds a proposal case to its prompt-declared gap set as a
-floor — every declared gap must be reported, and reporting a further gap from the closed vocabulary
-is allowed because a prompt that names six unavailable things has not said the other two are
-available; every gap must have its corresponding closed-vocabulary verification, and missing owner
-or inventory evidence cannot coexist with an invented concrete owner or path. Learning candidate
-blocks likewise reject unresolved or punctuation-only values and provenance without
-source/freshness detail. Runbook paths reject traversal, trailing-dot aliases, and Windows reserved
-device names. These failures exit before model cost can produce a misleading benchmark.
-
-The packet linter deliberately **inverts** the scoring most self-evaluation tools use: honest
-labeled uncertainty (`[unverified] I could not check X`) passes, while a confident "tests pass" with
-no command or output cited fails. Missing evidence is a finding, never an assumption of correctness.
-It is also deliberately **not** wired as a live hook — an output linter firing on real sessions
-trains packet-shaped evasion.
-
-Unlike routing, a behavioral case must pass **every** run: a contract that holds only sometimes does
-not hold (and a case with *no* runs fails rather than passing vacuously — `--runs 0` used to report
-every contract green having started nothing). Same manual-and-on-demand posture, and same reason —
-real sessions, real cost, real variance.
-
-Three case fields keep the measurement honest, added after review found the suite could pass
-without measuring what it claimed. Every full case declares exactly one of the first two:
-
-- **`expect_fires`** — the component whose contract is under test must actually have been invoked,
-  read off the transcript with the same detection the routing suite uses. Without it, the main
-  session can satisfy a packet shape or a keyword while the component never runs.
-- **`expect_all_fires`** — every named component must be observed. Use this for composition
-  contracts where an any-of assertion could pass after invoking only one half of the workflow.
-- **`allowed_tools`** — always passed through `--tools`, including an explicit empty value that
-  disables all tools. Planning-only skill cases allow only `Skill`; reasoning-only pinned agents
-  allow none; the four scratch build/verification cases allow only `Bash` and `Write`. Names are
-  validated against the CLI's full adopted runtime vocabulary, not merely the smaller fleet grant
-  set, so alternate built-ins such as `PowerShell` cannot arrive by default.
-- **`disallowed_tools`** — passed straight to the CLI, for any case whose prompt *describes* a
-  destructive action after the name is validated against the complete mirrored CLI runtime-tool
-  vocabulary, and forbidden from overlapping `allowed_tools`. It is defense in depth around the
-  positive allowlist. The tier-gate case is the reason: it must never be able to perform the apply
-  it exists to prove was refused. An eval that can cause the incident it tests for is not a test.
+The behavioral evaluator (`scripts/eval_behavioral.py`), its packet linter
+(`scripts/packet_lint.py`), and its case inventory (`evals/behavioral/contracts.json`) retired
+2026-09-02 under `docs/decisions/2026-09-02-single-operator-audience.md`: the grader produced most
+of a year's false-red churn and no shipped role ran it. Routing evals in this file remain the
+fleet's one paid instrument; the guarantees the harness graded — read-only enforcement and
+live-effect interposition — rest on the two PreToolUse hooks (`scripts/readonly-guard.py`,
+`scripts/live-effect-gate.py`) instead of a contract run.
 
 ## Baseline retention: what a stored capture is still for
 
@@ -560,48 +347,6 @@ check agreed with itself while being 16 lines off. A figure bound to a computati
 run is not bound to anything. `2026-07-31-p0-p1` matters most of
 those: it holds the only Codex CLI run this repository has ever recorded.
 
-### Why the behavioral suite has no cuts
-
-Swept for redundancy on 2026-08-17 against the standard that two cases are redundant only when one's
-failure necessarily implies the other's. **Result: zero cuttable cases**, and the reasoning is worth
-keeping so it is not re-litigated each time the suite looks expensive:
-
-- **Behavioral is now the coverage of record for agents.** Routing carries no agent-only positives
-  any more, so cutting here removes the only instrument observing an agent — the zero-instrument hole
-  that `researcher` and `application-security-auditor` were just repaired out of.
-- **Identical oracles across pinned agents are an instrument, not duplication.** The six
-  `learning-owner-*` cases assert two invariants across `sde-fullstack`,
-  `verification-engineer`, and `prompt-engineer` with byte-identical patterns — and the
-  `final-live` capture (retired 2026-09-02; git history) showed the three agents at **different
-  rates with different failure classes**, including one (`verification-engineer` emitting the
-  Learning label twice or empty) that neither other agent produced. Identical text, divergent
-  obedience: that is exactly what per-agent parity exists to catch.
-- **A static check is not a substitute.** `validate_fleet.py` already pins the canonical Learning
-  stanza *text* in those three agents' packet sections. That is a fact about the definition files;
-  these cases measure whether the agent obeys it at runtime, and the capture shows obedience varies
-  while the text does not. Replacing them with a validator rule would rebuild a check that already
-  exists and never observed behavior.
-- **Subset oracles usually isolate a variable.** Where one case's assertions are a strict subset of
-  another's, the pair is normally deliberate: `homelab-visible-effect-survives-long-session` shares
-  its grading with `homelab-right-size-native-tier2` so a divergence is attributable to session
-  length; `runbook-disposition-update` is the reading that survives when the composing skill does not
-  fire; `verifier-packet-shape-holds` is the only consumer of the `verification-packet` shape, and a
-  shape no case declares is a control nothing runs.
-
-**Where the cost actually is.** 56 of the 81 cases are no-tool planning-only sessions — and since
-2026-08-17 that is enforced rather than declared: an empty `allowed_tools` synthesizes a denylist
-over the whole built-in vocabulary, because `--tools ""` was measured to bound nothing and the
-original audit found a granted tool still reachable in 42 of 47 such cases. The expense
-concentrates in the five tool-granted cases, four of which run `acceptEdits` with real execution.
-Case count is therefore a poor proxy for sweep cost, and `--case` globbing is the cheap path for
-per-contract work.
-
-**What the sweep did change:** two oracles that could not fail their own contract were strengthened
-rather than cut, both being their agent's only instrument.
-`distinguished-evolution-plan-has-valuable-stop-points` passed a plan saying "Do not stop partway;
-there are no interim milestones", and `ladder-report-not-absorb` passed a response that named the
-escalation and then made the call anyway — a limit its own `expected` field had conceded in writing.
-
 ## Relationship to `claude plugin eval`
 
 The native `claude plugin eval` is the right long-term home for this — it does ablation baselines,
@@ -636,12 +381,10 @@ cluster. Re-baseline whenever membership changes.
 **Suite size, as of 2026-08-23:** 111 routing cases across the ten clusters (49 positives, 62
 negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
-(9), and three far-misses (9), against one Mode 3 positive added back (3). Behavioral holds 81
-deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
-standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
-paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
-'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand —
-same bytes, same recorded model, clean-room setting, threshold, and timeout — and found reusable.
+(9), and three far-misses (9), against one Mode 3 positive added back (3). This is worth knowing
+before starting a paired round: the 'before' and 'after' sides each cost a full sweep unless a
+stored capture is checked by hand — same bytes, same recorded model, clean-room setting,
+threshold, and timeout — and found reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 
@@ -663,10 +406,11 @@ not only of the description. Read the clusters accordingly:
   the harness's reluctance to delegate rather than the description, and nothing in the scoring
   compensated: `--threshold` is one global value applied identically to every positive regardless
   of component kind. Of the 49 positives that remain, 31 are skill-only and 18 are mixed (a skill
-  route can score them). **An agent's coverage of record is its pinned behavioral contract**, and
-  its over-trigger coverage stays here — cutting agent positives cost nothing on that axis, because
-  a negative's forbidden set defaults to the whole member list, so every agent in `members` is
-  still guarded against firing on a near-miss.
+  route can score them). An agent's over-trigger coverage stays here regardless — cutting agent
+  positives cost nothing on that axis, because a negative's forbidden set defaults to the whole
+  member list, so every agent in `members` is still guarded against firing on a near-miss. The
+  behavioral harness that once held an agent's positive-firing coverage of record retired
+  2026-09-02; that gap is currently unmeasured by either remaining instrument.
 - **Adding an agent-only positive is therefore a regression**, not extra coverage: it re-buys three
   sessions per run to publish a rate that is a property of one-shot headless mode. If an agent's
   reachability genuinely needs measuring, that is what the native `claude plugin eval` lane below

@@ -659,10 +659,6 @@ class CaseFileTest(unittest.TestCase):
                 negatives += 1
                 if case.get("expect_not_fires") and set(case["expect_not_fires"]) != members:
                     narrowed += 1
-        behavioral = json.loads(
-            (REPO / "evals" / "behavioral" / "contracts.json").read_text(encoding="utf-8")
-        )["cases"]
-        no_tool = sum(1 for case in behavioral if case.get("allowed_tools") == [])
         # The baselines inventory is quoted in the same file and drifted the same way — it was
         # written once after the retirement commits and not recomputed after the later ones, so it
         # claimed 9,262 lines across 20 directories against an actual 9,378 across 13. An operator
@@ -700,8 +696,6 @@ class CaseFileTest(unittest.TestCase):
             (r"(\d+) routing cases across the ten clusters \((\d+) positives, (\d+)",
              (positives + negatives, positives, negatives)),
             (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
-            (r"(\d+) of the (\d+) cases are no-tool planning-only", (no_tool, len(behavioral))),
-            (r"Behavioral holds (\d+)", (len(behavioral),)),
             (r"\*\*([\d,]+) lines across (\d+) top-level directories\*\*",
              (f"{baseline_lines:,}", baseline_dirs)),
             (r"What remains: ([\d,]+) lines of distilled record", (f"{summary_lines:,}",)),

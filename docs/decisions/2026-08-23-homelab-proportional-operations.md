@@ -203,3 +203,9 @@ sections only where their current words would contradict the new behavior.
 The `python3 scripts/run_tests.py` line above stands as a dated record of what ran on 2026-08-23;
 `scripts/run_tests.py` was retired 2026-09-01, and the equivalent check today is
 `python3 -m unittest discover -s tests`.
+
+A 2026-09-02 correction: the behavioral harness retired that day under the single-operator
+audience decision. "The paid behavioral lane remains an explicit operator purchase" above is a
+dated record of what was true on 2026-08-23; that purchase will not be made. The offline behavioral
+contracts and oracle controls cited in this record retired with `evals/behavioral/contracts.json`;
+routing evals and the probe are the remaining paid instruments.

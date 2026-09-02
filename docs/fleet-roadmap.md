@@ -45,32 +45,36 @@ each item's Source.
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
 
 **Outcome:** The fleet's 31 canonical definitions are audited against six published Claude
-5-generation context shifts, and any edit is justified by paired before/after routing and
-behavioral evidence, or recorded as not transferring.
+5-generation context shifts, and any edit is justified by paired before/after routing evidence, or
+recorded as not transferring.
 
 **Source:**
 [AI graph engineering decision](decisions/2026-07-31-ai-graph-engineering.md) ·
 [2026-07-31 independent review](archive/2026-07/graph-decision-independent-review-2026-07-31.md) ·
 [history](archive/2026-09/roadmap-history-2026-09-01.md#ctx-001-modernize-fleet-definitions-for-claude-5-generation-context-rules)
 
-**Prerequisites:** EVAL-003's grading design (negatives, clean-room, pinned behavioral suite); one
-pilot definition before any fleet-wide edit.
+**Prerequisites:** EVAL-003's grading design (negatives, clean-room); one pilot definition before
+any fleet-wide edit. EVAL-003 itself still describes a pinned behavioral suite as part of that
+design — the behavioral harness retired 2026-09-02, so this item's acceptance below no longer
+requires one.
 
-**Acceptance:** For every edited definition: paired before/after runs under identical recorded
-conditions, no negative-case regression, behavioral contracts green, a written stop rule if the
-pilot regresses, regenerated adapters, deterministic gates green.
+**Acceptance:** For every edited definition: paired before/after routing runs under identical
+recorded conditions, no negative-case regression, a written stop rule if the pilot regresses,
+regenerated adapters, deterministic gates green. No contract-graded check remains; the probe and
+a routing round are the available instruments.
 
 **Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
 highest-density candidate) and the exact paired-measurement conditions before editing anything.
 
 #### CTX-003 — shrink the per-spawn preload footprint without hollowing the probe's proof
 
-**Status:** `ready` — pass 2 of three; heaviest pass, runs when there is appetite for
-behavioral-contract rounds.
+**Status:** `ready` — pass 2 of three; heaviest pass, runs when there is appetite for a routing
+round plus a probe re-run per affected agent.
 
 **Outcome:** Per-spawn preload cost drops measurably (e.g. `sde-fullstack`'s ~12.1k preloaded
-tokens), with behavioral contracts proving slimmed bodies still deliver what fat ones did;
-references stay the on-demand layer.
+tokens), with a routing round and the probe showing slimmed bodies still deliver what fat ones
+did — the behavioral contracts that once proved this retired 2026-09-02; references stay the
+on-demand layer.
 
 **Source:**
 [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md) ·
@@ -82,9 +86,9 @@ deliberately with the body, or stay in it.
 **Constraints:** The conditional-reference read is measured intermittent (falsified 2026-08-30) —
 re-verify it before shrinking anything into the on-demand layer.
 
-**Acceptance:** Before/after behavioral-contract runs for every agent whose preloaded set
-changed; probe green with canary assertions intact or deliberately migrated; regenerated
-adapters; doctor and validator green; byte deltas recorded per skill.
+**Acceptance:** Before/after routing runs for every agent whose preloaded set changed; probe
+green with canary assertions intact or deliberately migrated; regenerated adapters; doctor and
+validator green; byte deltas recorded per skill. No contract-graded check remains.
 
 **Next action:** Restructure `self-improve-loop` first — compact loop plus closeout contract in
 SKILL.md, full lifecycle protocol to a reference.
@@ -129,13 +133,16 @@ but regressed three baseline-perfect contracts to 4/5 (60/130 overall); acceptan
 side — a fresh baseline must be captured.
 
 **Constraints:**
-- EVAL-011 gates this item; cutting always-loaded body on biased rates would penalize the
-  inspect-first discipline the body carries. Re-measure after EVAL-011, or state why not.
+- EVAL-011 closed won't-do 2026-09-02 with the behavioral harness it would have gated this item
+  through; the biased-rate concern it named cannot be resolved by re-measuring, since no
+  contract-graded instrument remains. Verify with a routing round and the probe instead, and note
+  that neither measures the inspect-first discipline the always-loaded body carries as directly as
+  a behavioral contract did.
 - Do not mix another policy change into the diet.
 
-**Acceptance:** Before/after character counts under the same instrument; every affected homelab
-behavioral contract passes in the required fresh lane; probe and offline suite stay green;
-adapters match sources; the outcome names what was removed, compressed, or kept and why.
+**Acceptance:** Before/after character counts under the same instrument; a routing round shows no
+regression on affected homelab clusters; probe stays green; adapters match sources; the outcome
+names what was removed, compressed, or kept and why. No contract-graded check remains.
 
 **Next action:** No further review-driven bytes or capture retries are planned; a later ruling
 reopening work restarts root-cause analysis from refreshed main.
@@ -251,38 +258,19 @@ Tier 2.
 
 **Prerequisites:** GATE-006 (landed) — this amends what that decision established.
 
-**Constraints:** EVAL-011 gates whether a behavioral re-measure of either fix would mean
-anything.
+**Constraints:** The behavioral harness that would have re-measured either fix, and EVAL-011 (the
+item that would have gated whether such a re-measure meant anything), both retired 2026-09-02; a
+routing round and `scripts/probe_plugin.py` are the remaining paid instruments, though neither
+measures tier-effect binding directly. `packet_lint.py`'s `EFFECT_SET_LABELS` check, which either
+option below would have extended, retired 2026-09-02 with the harness — the linter half of this
+item is moot; only the agent-text half remains.
 
-**Acceptance:** Either (a) `Tier` joins each bound effect set, with agent text, contracts,
-`packet_lint.py`, and adapters changed together plus a firing test for a mis-tiered second
-effect; or (b) the agent text states one response carries one tier, enforced by `packet_lint`.
-The decision record gains the amendment either way.
+**Acceptance:** Either (a) `Tier` joins each bound effect set, with agent text and adapters
+changed together; or (b) the agent text states one response carries one tier. Neither option has
+a linter or contract check behind it anymore — the decision record gains the amendment either way.
 
-**Next action:** Decide (a) or (b); both change what the agent emits and owe a behavioral
-re-measure.
-
-#### EVAL-011 — a permission-cut session must not be graded as a contract failure
-
-**Status:** `ready` — measured during GATE-006's lane calibration, on the branch head.
-
-**Outcome:** The runner tells a genuine contract failure apart from a turn the harness ended at a
-denied tool call, reporting the latter honestly instead of scoring FAIL — today `tier-gate-holds`
-scores 1/5 tools-denied vs. 5/5 with `Read` granted.
-
-**Source:**
-[GATE-006 outcome](archive/2026-08/gate-006-outcome-2026-08-30.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#eval-011-a-permission-cut-session-must-not-be-graded-as-a-contract-failure)
-
-**Prerequisites:** None — `eval_behavioral.py` already carries `runs_excluded`/`inconclusive`;
-this closes the stub case those fields don't yet cover.
-
-**Acceptance:** A turn that ends at a denied tool call with no gradeable response is excluded
-and reported, never scored FAIL, with a firing test; the read-only-floor alternative is recorded
-as a separate decision with its re-baselining cost.
-
-**Next action:** Decide instrument-first (exclude and report) versus contract-first (read-only
-floor); calibration evidence favors doing the instrument first.
+**Next action:** Decide (a) or (b); both change what the agent emits. Verify with a routing round
+and the probe; no contract-graded re-measure is available.
 
 #### PORT-002 — second mining round from save-toolkit, the sibling's delta since 2026-07-24
 
@@ -333,11 +321,6 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   discarding every later check. Source:
   [GATE-006 outcome](archive/2026-08/gate-006-outcome-2026-08-30.md);
   [history](archive/2026-09/roadmap-history-2026-09-01.md#probe-006-a-probe-leg-timeout-crashes-instead-of-recording-inconclusive).
-- **ORACLE-019** — Three oracle constructions remain open after PR #152's four review rounds,
-  to be closed with a behavioral batch rather than a fifth static round; LEARN-002, which owed
-  that batch, closed 2026-09-02 without it — this line stays only while the behavioral harness
-  does. Source:
-  [history](archive/2026-09/roadmap-history-2026-09-01.md#oracle-019-three-oracle-constructions-open-after-pr-152).
 
 ## Deferred decisions
 

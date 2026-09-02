@@ -21,12 +21,16 @@ A handoff is complete when the receiving session can act correctly with nothing 
   requires the section and pins the `[verified]/[sourced]/[unverified]` evidence stems exactly, so
   the triad cannot drift file by file. Evidence labels exist because the reader cannot interrogate
   the writer: a claim's strength must travel with the claim.
-- **Machine-checked grammar.** `scripts/packet_lint.py` rejects malformed packets;
-  `skills/runbook`'s propose packet is a closed vocabulary so a gap handoff cannot smuggle an
+- **Machine-checked grammar.** The packet linter that once rejected malformed packets,
+  scripts/packet_lint.py, retired with the behavioral harness 2026-09-02; packet grammar is now
+  writer discipline, checked only by the validator's heading and evidence-stem pins.
+  `skills/runbook`'s propose packet stays a closed vocabulary so a gap handoff cannot smuggle an
   executable instruction inside a prose field.
-- **Digest-bound work orders.** The behavioral evaluator (`scripts/eval_behavioral.py`) grades
-  handoff cases from resulting workspace state and digest-correlated receipts, never from the
-  receiver echoing the order back — transfer identity and applied effect are proven separately.
+- **Digest-bound work orders.** `homelab-engineer`'s `Work Order v1` block and `sde-fullstack`'s
+  digest recompute keep transfer identity separate from applied effect — the receiver hashes the
+  supplied block itself rather than echoing it back. HANDOFF-001, the behavioral contract that once
+  graded handoff cases against resulting workspace state and receipts, closed won't-do 2026-09-02
+  with the harness that would have run it; this stays agent-prose discipline with no graded check.
 - **Design rules that follow.** One writer per artifact (the concurrency rule in `AGENTS.md`);
   receipts prove transfer, not correctness; grade end state over echo. A schema-conformant packet
   can still omit the decisions behind it, so fewer, richer boundaries beat many thin ones.
@@ -47,8 +51,10 @@ must converge even though every iteration starts amnesiac.
   thoroughness.
 - **Lifecycle over event.** Merged is not released, and released is not retested — the packet's
   `Promotion state` field keeps the tail states explicit (quarantined, proposed, approved,
-  promoted, plus the terminal rejected/inconclusive/retired), graded by `scripts/packet_lint.py`,
-  because a loop that ends at "merged" silently never verifies what shipped.
+  promoted, plus the terminal rejected/inconclusive/retired). The linter that once graded that
+  field, scripts/packet_lint.py, retired with the behavioral harness 2026-09-02, so this is writer
+  discipline now — but the field still exists because a loop that ends at "merged" silently never
+  verifies what shipped.
 - **Status transitions gate authority.** Incident handling holds mitigate-first authority only
   while the situation is an outage; the explicit downgrade to follow-up
   (`skills/lab-incident/SKILL.md`) is the edge that ends the emergency regime.
@@ -92,9 +98,10 @@ fading.
 - **Fail-closed intake.** Every candidate is quarantined at capture, inside the packet's Learning
   block itself, with evidence, scope, and a sensitivity attestation, and the writer advances it one
   stage at a time (quarantined → proposed → approved → promoted) with a reason per step. That
-  sequencing is writer discipline, not an enforced invariant: `scripts/packet_lint.py` grades only
-  whether the packet's `Promotion state` is compatible with its disposition, and sees no prior
-  state, so a skipped stage is invisible to it. The repo-local ledger that rejected out-of-order
+  sequencing is writer discipline start to finish: nothing grades the packet's `Promotion state`
+  field now. The linter that once checked disposition compatibility, scripts/packet_lint.py,
+  retired with the behavioral harness 2026-09-02 — and it never saw prior state either, so a
+  skipped stage was already invisible to it. The repo-local ledger that rejected out-of-order
   transitions, scripts/learning_ledger.py, was retired 2026-09-01 with no store surviving between
   sessions; the 34 promoted candidates whose released-version retest it still tracked are listed in
   `docs/archive/2026-09/learning-ledger-retirement-2026-09-01.md`.
@@ -104,9 +111,6 @@ fading.
 - **Drift watch.** scripts/ledger_drift.py, which reported pending candidates whose named
   destinations changed after intake, was retired with the ledger (2026-09-01); a packet-only
   candidate has no persisted destination pointer left to drift, so there is no replacement check.
-- **The loop grades itself.** Behavioral contracts cover the learning loop's own output grammar,
-  and a red contract is repaired in the skill text or the grader only with recorded rationale —
-  never by quietly loosening the grader until it agrees with itself.
 
 ## The reading rule
 

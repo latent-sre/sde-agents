@@ -183,3 +183,12 @@ Paid, operator purchase: `probe_plugin.py`; the paired behavioral lane recorded 
 
 The `run_tests.py` line above stands as a dated record of what ran on 2026-08-29; `run_tests.py`
 was retired 2026-09-01, and the equivalent check today is `python3 -m unittest discover -s tests`.
+
+A 2026-09-02 correction: the behavioral harness retired that day under the single-operator
+audience decision. The Verification section's `tests/test_packet_lint.py` and
+`tests/test_eval_behavioral.py` lines, and the paired behavioral lane recorded under
+`evals/baselines/2026-08-29-gate-006/`, are dated records of what ran or was captured on
+2026-08-29/30 — those tests are gone and no further paired behavioral capture will be bought. The
+"paired lane" reopen trigger above (a baseline-perfect contract regressing) can no longer be
+observed by a contract-graded run; a routing round and the probe are what remain to watch for a
+regression this decision would need to answer.
