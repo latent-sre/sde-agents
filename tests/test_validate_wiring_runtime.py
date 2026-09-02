@@ -83,13 +83,11 @@ class PluginWiringRuntimeTests(PluginWiringMixin, unittest.TestCase):
         )
 
     def test_investigation_roles_cannot_collapse_the_local_external_boundary(self) -> None:
-        # repository-investigator, once the third trust-separated role here, retired 2026-09-02;
-        # the boundary this test protects is now the two-sided local/external split between
-        # application-security-auditor and researcher (scripts/validate_fleet.py's
-        # REQUIRED_AGENT_TOOLS/FORBIDDEN_AGENT_TOOLS no longer names a third role).
+        # repository-investigator retired 2026-09-02 and application-security-auditor left in the
+        # same roster cut, so the boundary this test protects is researcher's external-only side
+        # of the local/external split (scripts/validate_fleet.py's FORBIDDEN_AGENT_TOOLS).
         mutations = (
             ("researcher", "  - Read\n"),
-            ("application-security-auditor", "  - WebSearch\n"),
         )
         for name, tool_line in mutations:
             with self.subTest(agent=name):

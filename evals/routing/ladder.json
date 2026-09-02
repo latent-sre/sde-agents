@@ -1,12 +1,11 @@
 {
   "cluster": "ladder",
-  "description": "Routing eval for the engineering-altitude seam among three agents: sde-fullstack (builder) vs principal-engineer (cross-cutting design) vs distinguished-architect (org/platform architecture). Measures whether a task lands at the right altitude — a scoped change to a builder, a migration/cross-service design to principal, a build-vs-buy/org-standard question to distinguished. The eng-ladder routing skill and its four positives retired 2026-09-02 (LADDER-002 closed won't-do under the single-operator ruling).",
+  "description": "Routing eval for the engineering-altitude seam between two agents: sde-fullstack (builder) vs principal-engineer (design — cross-cutting changes, risky migrations, and the multi-year lab decisions written as ADRs). Measures whether a task lands at the right altitude — a scoped change to the builder; a migration, cross-service design, or platform-binding decision to principal-engineer — and that near-misses from neighbouring seams (lab operation, code review, prompt authoring, debugging) reach neither. distinguished-architect merged into principal-engineer 2026-09-02 under the single-operator ruling: its altitude is now a principal positive, and the negative that forbade it retired with it. The eng-ladder routing skill and its four positives retired the same day (LADDER-002 closed won't-do).",
   "members": [
     "sde-fullstack",
-    "principal-engineer",
-    "distinguished-architect"
+    "principal-engineer"
   ],
-  "notes": "Grader caveat (scripts/eval_routing.py): all three are members, so a positive passes if any expect_fires member fired and cannot cleanly flag a co-firing wrong member. The load-bearing signals are (a) a design task that fires ONLY sde-fullstack — under-escalation — surfacing as a principal positive whose rate collapses, and (b) the near-miss negatives, where a lab/review/prompt/debug near-miss must fire NONE of the ladder agents. Agent positives under-fire in headless one-shot mode; weight negatives and cross-run regressions over absolute rates.",
+  "notes": "Grader caveat (scripts/eval_routing.py): both agents are members, so a positive passes if any expect_fires member fired and cannot cleanly flag a co-firing wrong member. The load-bearing signals are (a) the multi-year positive — a platform-binding decision that fires ONLY sde-fullstack is under-escalation, surfacing as that positive's rate collapsing — and (b) the near-miss negatives, where a lab/review/prompt/debug near-miss must fire NEITHER agent. Agent positives under-fire in headless one-shot mode; weight negatives and cross-run regressions over absolute rates.",
   "cases": [
     {
       "id": "neg-lab-deploy",
@@ -14,10 +13,9 @@
       "polarity": "negative",
       "expect_not_fires": [
         "sde-fullstack",
-        "principal-engineer",
-        "distinguished-architect"
+        "principal-engineer"
       ],
-      "expected_output": "Infrastructure/service operation — homelab-engineer, which eng-ladder explicitly places OUTSIDE the ladder.",
+      "expected_output": "Infrastructure/service operation — homelab-engineer, which sits outside the design seam.",
       "tags": [
         "near-miss",
         "lab"
@@ -29,10 +27,9 @@
       "polarity": "negative",
       "expect_not_fires": [
         "sde-fullstack",
-        "principal-engineer",
-        "distinguished-architect"
+        "principal-engineer"
       ],
-      "expected_output": "Defect review of a diff — code-reviewer. The tight near-miss: 'review' is shared with eng-ladder's assess mode and principal's design review, but this is bug-finding on code.",
+      "expected_output": "Defect review of a diff — code-reviewer. The tight near-miss: 'review' is shared with principal's design review, but this is bug-finding on code.",
       "tags": [
         "near-miss",
         "code-review"
@@ -44,10 +41,9 @@
       "polarity": "negative",
       "expect_not_fires": [
         "sde-fullstack",
-        "principal-engineer",
-        "distinguished-architect"
+        "principal-engineer"
       ],
-      "expected_output": "Authoring an LLM artifact — prompt-craft. 'Write an agent' is not a ladder task.",
+      "expected_output": "Authoring an LLM artifact — prompt-craft. 'Write an agent' is not a design-altitude task.",
       "tags": [
         "near-miss",
         "prompt-tooling"
@@ -59,41 +55,26 @@
       "polarity": "negative",
       "expect_not_fires": [
         "sde-fullstack",
-        "principal-engineer",
-        "distinguished-architect"
+        "principal-engineer"
       ],
-      "expected_output": "A debugging investigation — root-cause. Not a ladder-altitude routing decision.",
+      "expected_output": "A debugging investigation — root-cause. Not an altitude routing decision.",
       "tags": [
         "near-miss",
         "debug"
       ]
     },
     {
-      "id": "neg-existing-platform-design-not-distinguished",
-      "prompt": "Within our existing platform strategy, design an 18-month migration across the payments and fulfillment services, including compatibility and rollback.",
-      "polarity": "negative",
-      "expect_not_fires": [
-        "distinguished-architect"
-      ],
-      "expected_output": "Cross-service design inside an already chosen platform strategy belongs to principal-engineer. distinguished-architect is forbidden; principal-engineer firing is intentionally allowed.",
-      "tags": [
-        "disambiguation",
-        "principal-engineer",
-        "existing-strategy"
-      ]
-    },
-    {
-      "id": "neg-org-five-year-standard-not-principal",
-      "prompt": "Set the organization-wide event-platform standard for the next five years across every product group, including build-vs-buy and the failure-domain model.",
-      "polarity": "negative",
-      "expect_not_fires": [
+      "id": "pos-multi-year-platform-adr",
+      "prompt": "My lab runs everything on one Proxmox host with local ZFS. Decide whether to move to a two-node cluster with shared storage over the next few years, and record it as an ADR with the alternatives that lost.",
+      "polarity": "positive",
+      "expect_fires": [
         "principal-engineer"
       ],
-      "expected_output": "An organization-wide, multi-year standard is distinguished-architect altitude. principal-engineer is forbidden; distinguished-architect firing is intentionally allowed.",
+      "expected_output": "A platform-binding, multi-year decision recorded as an ADR — principal-engineer, which absorbed this altitude from distinguished-architect. sde-fullstack alone firing is the under-escalation this cluster exists to catch; homelab-engineer is the near-miss (it operates the lab, and its Boundaries send lab-shaping architecture here).",
       "tags": [
-        "disambiguation",
-        "distinguished-architect",
-        "org-standard"
+        "principal-engineer",
+        "multi-year",
+        "adr"
       ]
     },
     {
@@ -101,10 +82,9 @@
       "prompt": "Wire TLS verification into our API client and its config so every outbound call validates the server certificate, and add tests. The client already has a pattern for wiring config-driven connection options. One choice I have not settled inside it: validate against the system trust store, or ship a pinned CA bundle file with the app — both reversible, either can be swapped later without breaking clients.",
       "polarity": "negative",
       "expect_not_fires": [
-        "principal-engineer",
-        "distinguished-architect"
+        "principal-engineer"
       ],
-      "expected_output": "Builder-owned work carrying one embedded, builder-recordable decision: an existing pattern is stated and both options are reversible with no standing authority, so the prompt satisfies both bypass conditions (obvious owner, existing pattern) and answers its own altitude question — it routes straight to the builder, not through the meta-router. Graded contract (the scorer checks firing only): principal-engineer, distinguished-architect, and eng-ladder must not fire — re-owning the item, being summoned to settle a fork the builder owns, and routing scoped work through eng-ladder are each the miscalibration this case catches. sde-fullstack is the right destination.",
+      "expected_output": "Builder-owned work carrying one embedded, builder-recordable decision: an existing pattern is stated and both options are reversible with no standing authority, so the prompt answers its own altitude question and routes straight to the builder. Graded contract (the scorer checks firing only): principal-engineer must not fire — re-owning the item, or being summoned to settle a fork the builder owns, is the miscalibration this case catches. sde-fullstack is the right destination.",
       "tags": [
         "disambiguation",
         "sde-fullstack",

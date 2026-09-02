@@ -193,8 +193,8 @@ closed enum values; no repo-local ledger persists it (retired 2026-09-01).
 ## Improvement patterns
 
 - **Evaluator → optimizer:** one role proposes; a separate role critiques against explicit criteria;
-  the proposer revises. Use `code-reviewer` or `verification-engineer` as the
-  independent lens appropriate to the claim.
+  the proposer revises. Use `code-reviewer` for static judgment, or have
+  `sde-fullstack` execute the verification, whichever lens the claim needs.
 - **Act → verify → repeat:** order checks cheapest and surest first — deterministic checks, observed
   end-to-end signals, then reasoning review. One change per iteration makes causality legible.
 - **Unattended outer loop:** only for decomposable, test-backed work in an isolated branch or
@@ -274,8 +274,8 @@ behind these controls are recorded in [references/research-basis.md](references/
 
 - → `root-cause` for any failure whose cause is not established.
 - → `runbook` to update or create an admitted operating procedure.
-- → `prompt-craft` for a small one-shot prompt change; →
-  `prompt-engineer` for measured agent, skill, or routing changes.
-- → `code-reviewer` for static judgment; → `verification-engineer` for an
-  independent executable verdict.
+- → `prompt-craft` for any prompt, agent, skill, or routing change, measured with the
+  routing evals before and after.
+- → `code-reviewer` for static judgment; → `sde-fullstack` to execute a
+  verification and report the verdict.
 - → `postmortem` for a resolved incident before its reusable residue returns here.

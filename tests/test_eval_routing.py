@@ -103,7 +103,7 @@ class ComponentDetectionTest(unittest.TestCase):
 
     def test_detects_bare_agent_spawn(self) -> None:
         self.assertEqual(
-            {"prompt-engineer"}, eval_routing.components_fired(transcript(agent_use("prompt-engineer")))
+            {"principal-engineer"}, eval_routing.components_fired(transcript(agent_use("principal-engineer")))
         )
 
     def test_detects_multiple_components(self) -> None:
@@ -166,9 +166,9 @@ class ComponentDetectionTest(unittest.TestCase):
         self.assertEqual(set(), eval_routing.components_fired(line1 + "\n" + line2))
 
     def test_successful_tool_result_counts_as_fired(self) -> None:
-        line1 = transcript(agent_use("prompt-engineer", tool_id="tu_2"))
+        line1 = transcript(agent_use("principal-engineer", tool_id="tu_2"))
         line2 = transcript(tool_result("tu_2", is_error=False))
-        self.assertEqual({"prompt-engineer"}, eval_routing.components_fired(line1 + "\n" + line2))
+        self.assertEqual({"principal-engineer"}, eval_routing.components_fired(line1 + "\n" + line2))
 
     def test_missing_tool_result_still_counts_as_fired(self) -> None:
         # Streams can end before the result comes back (timeout); absence of an error is not an error.
@@ -693,7 +693,7 @@ class CaseFileTest(unittest.TestCase):
 
         rows = (
             (r"\*\*(\d+)\*\* of (\d+) negatives narrow", (narrowed, negatives)),
-            (r"(\d+) routing cases across the nine clusters \((\d+) positives, (\d+)",
+            (r"(\d+) routing cases across the eight clusters \((\d+) positives, (\d+)",
              (positives + negatives, positives, negatives)),
             (r"is \*\*(\d+) sessions\*\*", ((positives + negatives) * 3,)),
             (r"\*\*([\d,]+) lines across (\d+) top-level directories\*\*",

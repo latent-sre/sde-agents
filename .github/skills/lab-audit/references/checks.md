@@ -3,29 +3,111 @@
 # Lab-audit checks — command-level detail
 
 Read from `SKILL.md`. Every command here is read-only; anything that would fix what it finds
-routes to `homelab-engineer`. Substitute the lab's real hosts, paths, and domains, and
-read the lab repo's own config first — every drift-style check is a comparison against intended
+routes to `homelab-engineer`. Substitute the lab's real hosts, zones, paths, and
+domains, and read the lab repo's own config first — every check is a comparison against intended
 state, and the repo is where intended state lives.
 
 Per check: what to read, what a finding looks like, and the fix class (one line — the audit never
-applies it).
+applies it). The adversary rows also state the attack path a finding must show — position →
+crossing → reach — because each of them starts from an attacker location, not an inventory.
 
-## 1. Exposure
+## Adversary pass
 
-Hygiene depth only: listening sockets vs the proxy list. The adversary's version of this question —
-what a specific attacker position reaches, and across which boundary — is
-`security-audit`'s [`references/checks.md`](../../security-audit/references/checks.md)
-row 1; a finding here that needs an attack path belongs there.
+### 1. Exposure and reachability
 
-- Read: `ss -tlnp` per Linux host (`netstat -ano` on a Windows host); the reverse-proxy config
-  from the lab repo; the router/firewall forward table where the repo exports it.
-- Compare: every listening socket vs what the proxy fronts; anything bound to `0.0.0.0`/`[::]`
-  that is not the proxy or a deliberate LAN service; WAN-reachable ports vs the declared forward
-  list; anything answering without auth in front.
-- Finding: `[P0]` WAN-reachable without auth; `[P1]` LAN-wide listener bypassing the proxy.
-- Fix class: front it with the proxy + auth, close the port, or justify the exception in writing.
+- Read: `ss -tlnp` per Linux host (`netstat -ano` on a Windows host); the reverse-proxy upstream
+  map, the router/firewall forward table and inter-zone rules, and the zone/VLAN map where the
+  repo exports them; `ip -br addr` and `ip route` per host; `docker network ls` plus
+  `docker network inspect <net>` for container-level reachability.
+- Ask, per attacker position (the WAN, guest wifi, an IoT VLAN, a compromised container, the LAN):
+  what is reachable at all, and what of that is reachable *without* crossing the proxy. Anything
+  bound to `0.0.0.0`/`[::]` that is not the proxy or a deliberate LAN service, and every
+  WAN-forwarded port not on the declared forward list, is a candidate.
+- Finding: `[P0]` WAN-reachable without auth; `[P1]` reachable without auth from a lower-trust
+  zone, a LAN-wide listener bypassing the proxy, or flat container networking that lets one
+  compromised service reach every other; `[P2]` reachable but authenticated and patched.
+- Attack path: "on guest wifi → 10.0.0.0/24 unfiltered → Grafana admin on :3000 with no auth."
+- Fix class: front it with the proxy + auth, an inter-zone rule, a proxy-only binding, a
+  segmented docker network, or close the port — or justify the exception in writing.
 
-## 2. Container hygiene
+### 2. Authentication on exposed services
+
+- Read: the proxy config's auth blocks per route; each app's own auth setting from its config or
+  compose env (names, never values); anything answering on a WAN-forwarded port.
+- Ask: which reachable routes have *no* authentication, which have app-native auth only, and which
+  sit behind the lab's SSO or forward-auth. An unauthenticated route that "nobody knows the URL
+  of" is unauthenticated.
+- Finding: `[P0]` WAN-reachable with no auth; `[P1]` LAN-reachable admin surface with no auth, or
+  with app-native auth that has no lockout/2FA on an account that can change the system.
+- Attack path: the reachable URL and what the unauthenticated caller can do with it.
+- Fix class: auth in front at the proxy, or remove the exposure.
+
+### 3. Management planes
+
+- Read: what listens on management ports across hosts (hypervisor UI/API, IPMI/BMC, switch and AP
+  admin UIs, container APIs — check 1's socket list filtered to those ports, the hypervisor's own
+  config, the repo's network inventory); whether the docker socket is mounted into any container
+  (`docker inspect` for `/var/run/docker.sock` in Mounts).
+- Ask: is each management plane reachable only from the management zone or VPN? A mounted docker
+  socket is root on the host — treat any container holding it as a management plane.
+- Finding: `[P0]` a management plane reachable from the WAN, or the docker socket mounted into an
+  internet-exposed container; `[P1]` a management plane reachable from a user or guest zone, or on
+  the ordinary LAN with default or shared credentials.
+- Attack path: position → management plane → what it controls (all VMs, all containers, the
+  network itself).
+- Fix class: bind to the management interface, VPN-only, or remove the socket mount.
+
+### 4. Credentials
+
+- Read: compose and unit files for credential *names* and defaults left in place; each app's admin
+  account list where readable; the lab's password manager or vault as the intended record; SSH
+  `authorized_keys` per host and per user.
+- Ask: which services still hold their shipped default, which share one password across services,
+  which admin accounts predate the current operator's practice, and which SSH keys are
+  unaccounted for. An unknown authorized key is a compromise signal — see the stop rule.
+- Finding: `[P0]` default or shared credential on anything WAN-reachable; `[P1]` default or shared
+  credential on anything reachable from a lower-trust zone, a credential shared internally, a
+  stale admin account, or an unaccounted key.
+- Attack path: which position can present the credential, and what it unlocks.
+- Fix class: rotate and record in the vault; delete stale accounts and keys.
+
+### 5. Secrets on disk
+
+- Read: [`secrets.md`](secrets.md) — that file owns this row's depth (where secrets live, what
+  leaks them, rotation, and blast radius). Finding shape and fix class: per that file.
+
+### 6. Vulnerable versions
+
+- Read: pinned image tags and package versions from the repo, prioritizing what check 1 shows
+  reachable — the proxy, the VPN, anything WAN-forwarded; the advisory record for those (GHSA/CVE,
+  and whether the vulnerability is in the known-exploited list). Bare `:latest` belongs to
+  check 8, not here.
+- Ask: not "what CVEs exist" but "which of them is reachable from an attacker position, and what
+  does it get them". The output is an ordered list for `upgrade-campaign`, never a raw
+  dump.
+- Finding: `[P0]` known-exploited vulnerability in a WAN-reachable service; `[P1]` high-severity
+  and reachable from a user zone, or an exposed service far behind upstream; `[P2]` unreachable,
+  or requires local access already held.
+- Attack path: attacker position → the vulnerable version → what the exploit yields.
+- Fix class: an ordered upgrade batch via `upgrade-campaign`; a single urgent bump via
+  `homelab-engineer`.
+
+### 7. Personal-data paths
+
+- Read: which services hold household data (photos, documents, messages, health, finance, camera
+  footage), where their volumes live, where backups go (including any off-site or cloud
+  destination), and which of those paths cross a boundary in cleartext.
+- Ask: at home scale the question is not compliance but "what would hurt": whose data, who can
+  reach it, whether backups of it are encrypted before leaving the house, and whether an ex-guest
+  or old device still has a path to it.
+- Finding: `[P0]` family data reachable from a lower-trust zone or backed up unencrypted off-site;
+  `[P1]` camera or document storage with weak auth; `[P2]` data whose retention nobody chose.
+- Attack path: position → data store → what is readable or downloadable in bulk.
+- Fix class: encrypt the backup destination, tighten the reach, or delete what nobody needs.
+
+## Hygiene pass
+
+### 8. Container hygiene
 
 - Read: `docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'`; `docker inspect <name>` for
   restart policy, healthcheck, and limits; `docker compose config` rendered from the repo file.
@@ -35,16 +117,16 @@ row 1; a finding here that needs an attack path belongs there.
 - Fix class: pin the tag; declare restart behavior; add the smallest useful health signal; add
   isolation or limits where its predicate fires — Tier 1 edit, Tier 2 apply.
 
-## 3. Certificates
+### 9. Certificates
 
 - Read: `openssl x509 -in <cert> -noout -enddate -subject` for every cert path the proxy config
   names. Live-endpoint probes (`openssl s_client`, curl) are network calls — when the session
-  can't run them, the row lands in the denominator, not in silence.
+  can't run them, the row lands in the denominator.
 - Finding: `[P1]` expiry ≤30 days with no renewal evidence (timer, cron, recent renewal log); a
   service crossing a trust boundary still uses plain HTTP with nothing in front.
 - Fix class: repair the renewal path, or move the service behind the proxy.
 
-## 4. Backups
+### 10. Backups
 
 - Read: the backup tool's config and its last-run state or log; the irreplaceable-state set (every
   service whose data matters and cannot be recreated from a declared source); documented loss
@@ -55,7 +137,7 @@ row 1; a finding here that needs an attack path belongs there.
   disposable state is not a backup finding when its loss tolerance is recorded.
 - Fix class: add to the backup set; schedule the restore drill.
 
-## 5. Monitoring gaps
+### 11. Monitoring gaps
 
 - Read: scrape/probe target lists and alert rules from the monitoring config in the repo; the
   receiver/route config those alerts point at. Live API queries land in the denominator when the
@@ -67,7 +149,7 @@ row 1; a finding here that needs an attack path belongs there.
 - Fix class: add the smallest signal or fix the route — `observability` designs it,
   `homelab-engineer` applies it.
 
-## 6. Drift
+### 12. Drift
 
 - Read: `docker compose config` (rendered intent) vs `docker inspect` of what runs — image, mounts,
   ports, env-file names (names, never values); `git -C <lab-repo> status --short` plus recent log
@@ -76,7 +158,7 @@ row 1; a finding here that needs an attack path belongs there.
   reconciled back to code.
 - Fix class: reconcile the repo (Tier 1), then re-apply from code (Tier 2).
 
-## 7. Capacity
+### 13. Capacity
 
 - Read: `df -h` (flag >80%); `du -sh` on the known growers (media, logs, backups);
   `docker system df`; growth rate = compare against the previous audit's ledger row.
@@ -84,23 +166,13 @@ row 1; a finding here that needs an attack path belongs there.
   logging-driver max-size).
 - Fix class: rotation or retention policy, or a storage plan — never a mid-audit prune.
 
-## 8. Updates
-
-- Read: pinned versions from the repo, prioritizing the security-relevant surface — the proxy,
-  VPN, and anything check 1 shows exposed. Upstream-latest intel is a web lookup; when the
-  session can't fetch it, say so in the denominator (the caller or `researcher`
-  supplies it).
-- Finding: an exposed service far behind upstream, or a pinned image with a known-exploited CVE
-  when version intel is available. Bare `:latest` belongs to check 2, not here.
-- Fix class: a planned bump — one service via `homelab-engineer`; a batch via
-  `upgrade-campaign`.
-
 ## Findings ledger (output convention)
 
 The audit's final block, emitted after the top-three. One row per finding, append-ready for the
 lab repo's audit ledger (e.g. `audits/ledger.md` — the operator's location wins). This skill runs
 without write tools, so **emitting the block is how the ledger gets written** — by the operator or
-the agent they hand it to.
+the agent they hand it to. `check` names the row above (`exposure`, `mgmt-planes`, `backups`) so
+adversary and hygiene findings coexist in one ledger and neither overwrites the other.
 
 | date | check | sev | finding (one line) | evidence (cmd) | status |
 |---|---|---|---|---|---|

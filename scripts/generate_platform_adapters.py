@@ -427,8 +427,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         replacement = (
             "**Inspection only. You may not execute code** — no test runners, build tools, "
             "scripts, or repository validators. Cite the builder's packet or CI evidence; when it "
-            "is missing or unconvincing, report that as a finding and name "
-            "`verification-engineer` as the independently executed escalation. "
+            "is missing or unconvincing, report that as a finding and name the builder's "
+            "own executed verification (`sde-fullstack`) as the escalation. "
             f"{enforcement} Use read/search inspection and name anything the host cannot expose.\n\n"
             "| Rationalization | Reality |\n"
             "|---|---|\n"

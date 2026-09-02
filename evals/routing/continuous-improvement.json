@@ -4,11 +4,10 @@
     "root-cause",
     "runbook",
     "postmortem",
-    "prompt-craft",
-    "prompt-engineer"
+    "prompt-craft"
   ],
-  "description": "Routing eval for the resolved-incident write-up boundary: postmortem owns the retro on a finished incident, while near-miss vocabulary (sprint ceremonies, visual 'retro' styling, forensic postmortems, a still-live outage) must reach none of this cluster's members. self-improve-loop retired 2026-09-02 (unshipped, explicit-invocation only) along with the learning-lifecycle positives and self-improve-loop-narrowed negatives it anchored here; root-cause, runbook, prompt-craft, and prompt-engineer remain as members purely for the whole-cluster negative default below, with no dedicated positive case of their own left in this file.",
-  "notes": "Folded in from the retired retro-boundary.json cluster (self-improve-loop vs postmortem) on 2026-09-02: only its postmortem-side cases survive self-improve-loop's retirement, so they moved here rather than leaving a one-member file. The four ordinary negatives below rely on the whole-cluster default for expect_not_fires (five members now, not two), which is a strictly stronger assertion than their original two-member default and was checked case by case for safety before the move.",
+  "description": "Routing eval for the resolved-incident write-up boundary: postmortem owns the retro on a finished incident, while near-miss vocabulary (sprint ceremonies, visual 'retro' styling, forensic postmortems, a still-live outage) must reach none of this cluster's members. self-improve-loop retired 2026-09-02 (unshipped, explicit-invocation only) along with the learning-lifecycle positives and self-improve-loop-narrowed negatives it anchored here, and prompt-engineer left the member list the same day when it folded into prompt-craft; root-cause, runbook, and prompt-craft remain as members purely for the whole-cluster negative default below, with no dedicated positive case of their own left in this file.",
+  "notes": "Folded in from the retired retro-boundary.json cluster (self-improve-loop vs postmortem) on 2026-09-02: only its postmortem-side cases survive self-improve-loop's retirement, so they moved here rather than leaving a one-member file. The four ordinary negatives below rely on the whole-cluster default for expect_not_fires (four members now, not two), which is a strictly stronger assertion than their original two-member default and was checked case by case for safety before the move.",
   "cases": [
     {
       "id": "pos-outage-retro",

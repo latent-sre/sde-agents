@@ -13,7 +13,7 @@ class PluginWiringDocsTests(PluginWiringMixin, unittest.TestCase):
             path = repo / "agents" / "code-reviewer.md"
             path.write_text(
                 path.read_text(encoding="utf-8").replace(
-                    "use sde-agents:lab-audit", "use lab-audit"
+                    "are sde-agents:lab-audit", "are lab-audit"
                 ),
                 encoding="utf-8",
             )

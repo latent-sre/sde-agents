@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operator-CLI skeleton — every rule in references/cli.md, runnable.
+"""Operator-CLI skeleton — every rule in SKILL.md, runnable.
 
 Copy this, rename `prune` to your operation, and keep the structure: stdout is the result, stderr is
 everything else, exit codes mean something, `--json` emits one document and nothing else, config

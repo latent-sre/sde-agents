@@ -116,23 +116,23 @@ PLUGIN_NAME = "sde-agents"
 # the guard cannot be sidestepped by installing the agent a different way.
 # validate_fleet.py cross-checks this against agents/: hold Bash and you must be listed here.
 #
-# `principal-engineer` and `distinguished-architect` are here despite holding Write: their files
-# promise "your Bash is inspection only" while their Write grant is legitimately for documents, and
-# no tool boundary can split a doc from a source file. The Bash half, though, is exactly what this
-# guard enforces, and their stated needs (git history, search, reading the current system) are
-# already on the allowlist below — so the half that CAN be enforced now is. Their Write grant stays
-# cooperative, and both files say so. Note validate_fleet.py only COMPELS guarding for a Bash-holder
-# with no write tool; these two are here by choice, and the hook's own agent list is kept in sync by
-# a validator rule (adding a name here without the hook would silently guard nothing).
+# `principal-engineer` is here despite holding Write: its file promises "your Bash is inspection
+# only" while its Write grant is legitimately for documents, and no tool boundary can split a doc
+# from a source file. The Bash half, though, is exactly what this guard enforces, and its stated
+# needs (git history, search, reading the current system) are already on the allowlist below — so
+# the half that CAN be enforced now is. Its Write grant stays cooperative, and the file says so.
+# Note validate_fleet.py only COMPELS guarding for a Bash-holder with no write tool; this one is
+# here by choice, and the hook's own agent list is kept in sync by a validator rule (adding a name
+# here without the hook would silently guard nothing).
 GUARDED_AGENT_NAMES = frozenset({
-    "code-reviewer", "principal-engineer", "distinguished-architect",
+    "code-reviewer", "principal-engineer",
 })
 # Roles entitled to the allowlist's NETWORK reads — the `gh` subcommands, and the bare
 # `git remote show` (which queries the remote unless `-n` is given). Membership here means
 # "fetched external content may share this role's context"; any future roster member starts
 # absent until its trust boundary is argued.
 NETWORK_AGENT_NAMES = frozenset({
-    "code-reviewer", "principal-engineer", "distinguished-architect",
+    "code-reviewer", "principal-engineer",
 })
 GUARDED_AGENTS = frozenset(
     set(GUARDED_AGENT_NAMES) | {f"{PLUGIN_NAME}:{name}" for name in GUARDED_AGENT_NAMES}

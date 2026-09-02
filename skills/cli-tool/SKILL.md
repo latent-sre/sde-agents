@@ -1,10 +1,36 @@
-# The CLI contract — what an operator tool owes its caller
+---
+name: cli-tool
+description: Builds a small operator CLI or script with the right shape — stdout is the result and stderr everything else, exit codes that mean something, one clean --json document, flag > env > file > default config, no secret in argv, and a --dry-run that gates the effect rather than a code path — from a runnable stdlib skeleton. Use for "write me a script/CLI/tool to…", a cron or automation helper, a lab housekeeping command, or fixing an existing script whose output or exit status lies to its caller. Not for a service, API, or web UI (sde-agents:sde-fullstack) or for applying a change to a running host or service (sde-agents:homelab-engineer).
+argument-hint: [what the tool should do]
+---
 
-Read before building or changing a command-line tool. The universal rules live in
-`skills/sre-tool/SKILL.md`. On any conflict, SKILL.md wins.
+# CLI tool
 
 An operator tool is called by a human at 3 a.m. *and* by a script at 3 a.m. Both need the same
-things: a truthful exit code, output they can parse, and no surprises.
+things: a truthful exit code, output they can parse, and no surprises. Start from
+[`assets/cli_skeleton.py`](assets/cli_skeleton.py) — every rule below, runnable, stdlib only, with a
+spy-based dry-run test in its docstring — and keep its structure.
+
+## Before writing — four questions
+
+Infer from context and the codebase; ask only what cannot be inferred, in one batched round:
+
+- **Operator and moment** — who runs this, during an incident (speed, zero ambiguity) or routine
+  work (automation)?
+- **Inputs, outputs, systems touched** — read-only or mutating; a mutating tool names its blast
+  radius and what auth or audit it needs.
+- **Placement** — where it runs, and which network boundaries it crosses.
+- **The mission transaction** — the one real-world exchange that proves the tool does its job (for
+  a TLS proxy, a real HTTPS request to a managed route returns the backend). Boot, build-clean, and
+  container-healthy are table stakes, never the criterion.
+
+A scoped change inside an existing codebase is `sde-agents:sde-fullstack`'s work; a change to a
+running host or service goes through `sde-agents:homelab-engineer`'s change tiers.
+
+**Seed a reviewer with the symptom, never your diagnosis.** Hand `sde-agents:code-reviewer` the
+mission, the threat model, and the files to check first — not the defect you suspect or the fix you
+have in mind. A reviewer handed your hypothesis can only confirm it, and you cannot tell a
+discovering gate from an echoing one; note the suspicion, let the review report, then reconcile.
 
 ## Streams and exit codes
 
@@ -68,15 +94,13 @@ otherwise costs an hour.
 - Signals: handle `SIGINT`/`SIGTERM` by cleaning up (remove the temp dir, release the lock) and
   exiting non-zero. A tool that leaves a lock behind on Ctrl-C blocks the next run.
 
-## Starting one
-
-[`assets/cli_skeleton.py`](../assets/cli_skeleton.py) is a runnable stdlib-only implementation of
-every rule above — streams, exit codes, precedence, `--json`, dry-run with the effect injected, and
-signal cleanup — with a spy-based dry-run test in its docstring.
-
 ## Verify
 
 Run it four ways and paste the evidence: `--help` (documents the precedence), the happy path with
 `--json | jq .` (clean parse), a deliberate failure (non-zero exit, one-line stderr message), and
 `--dry-run` on something destructive (plan printed, nothing changed — proven by a spy or by checking
-the target afterwards).
+the target afterwards). Then the mission transaction, verbatim.
+
+The **review packet** is the end-of-task report defined by the calling agent. Invoked standalone with
+no packet convention in context, end with: Changed / Assumptions / Verified / Not verified — the four
+runs above and the mission transaction are the Verified evidence.

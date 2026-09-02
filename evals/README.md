@@ -49,7 +49,7 @@ actually used, and every name in it must be a cluster member (a typo would forbi
 vacuously).
 
 **Narrowing is no longer rare, and that is a measured coverage cost** (recounted 2026-09-02 after
-the roster cut: **12** of 56 negatives narrow to a strict subset of their cluster, superseding the
+the roster cut: **6** of 49 negatives narrow to a strict subset of their cluster, superseding the
 2026-08-17 count of 18 of 62). Each narrowing
 buys a correct verdict for one disambiguation and gives up over-trigger detection for every member
 it stops forbidding, so a cluster that narrows most of its negatives stops watching most of its
@@ -358,20 +358,19 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Nine clusters are seeded — every overlap this README names, plus the altitude,
+Eight clusters are seeded — every overlap this README names, plus the altitude,
 simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
-| `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
-| `homelab-ops.json` | homelab-engineer and eleven lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `prompt-tooling.json` | prompt-craft | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
+| `homelab-ops.json` | homelab-engineer, service-onboard, lab-audit, runbook, postmortem, lab-incident, restore-drill, upgrade-campaign, observability, host-onboard | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
-| `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
-| `proportionality.json` | sre-tool, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
-| `investigation.json` | researcher, code-reviewer, root-cause, application-security-auditor | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
-| `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
-| `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
-| `continuous-improvement.json` | root-cause, runbook, postmortem, prompt-craft, prompt-engineer | the resolved-incident write-up vs "retro"/"postmortem" vocabulary collisions and a live outage, which must reach none of them (retro-boundary.json folded in here 2026-09-02 when self-improve-loop retired) |
+| `ladder.json` | sde-fullstack, principal-engineer | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
+| `proportionality.json` | principal-engineer | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
+| `investigation.json` | researcher, code-reviewer, root-cause | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
+| `verification-seam.json` | sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
+| `continuous-improvement.json` | root-cause, runbook, postmortem, prompt-craft | the resolved-incident write-up vs "retro"/"postmortem" vocabulary collisions and a live outage, which must reach none of them (retro-boundary.json folded in here 2026-09-02 when self-improve-loop retired) |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
@@ -379,8 +378,8 @@ there); the capture under `baselines/2026-07-24/` records the later 5-member / 1
 are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
 
-**Suite size, as of 2026-09-02:** 93 routing cases across the nine clusters (37 positives, 56
-negatives), so a full sweep at the methodology's `--runs 3` is **279 sessions** — down from 333 on
+**Suite size, as of 2026-09-02:** 90 routing cases across the eight clusters (41 positives, 49
+negatives), so a full sweep at the methodology's `--runs 3` is **270 sessions** — down from 333 on
 2026-08-23 and 426 before that.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
 (9), and three far-misses (9), against one Mode 3 positive added back (3). This is worth knowing

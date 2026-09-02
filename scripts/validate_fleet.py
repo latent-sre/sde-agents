@@ -194,19 +194,10 @@ EXTERNAL_RESEARCH_TOOLS = {"ToolSearch", "WebFetch", "WebSearch", *EVIDENCE_MCP_
 # and fetched external content can leak one into the other through prompt injection even when its
 # prose says not to. Pin both required and forbidden authority so a one-line frontmatter edit cannot
 # silently collapse that trust boundary.
-#
-# `application-security-auditor` keeps Bash forbidden: its mandate is to be safe against a HOSTILE
-# repository, and the read-only guard's own docstring names the git-config ext-diff vector that a
-# shell — even an allowlisted one — opens against a repo that arrives as a directory.
 REQUIRED_AGENT_TOOLS = {
-    "application-security-auditor": set(LOCAL_REPOSITORY_TOOLS),
     "researcher": set(EXTERNAL_RESEARCH_TOOLS),
 }
 FORBIDDEN_AGENT_TOOLS = {
-    "application-security-auditor": {
-        "Agent", "Bash", "Edit", "NotebookEdit", "ToolSearch", "WebFetch", "WebSearch", "Write",
-        *EVIDENCE_MCP_TOOLS,
-    },
     "researcher": {
         "Agent", "Bash", "Edit", "Glob", "Grep", "NotebookEdit", "Read", "Write",
     },

@@ -157,8 +157,8 @@ reopening work restarts root-cause analysis from refreshed main.
 **Status:** `ready` — Option A accepted 2026-07-31; normal-session probes proved registration,
 denial, and exclusion.
 
-**Outcome:** Add an optional read-only agent working the hygiene (`lab-audit`) or adversary
-(`security-audit`) checklist under guard enforcement, with no change authority or web access;
+**Outcome:** Add an optional read-only agent working the `lab-audit` checklist (hygiene sweep and
+adversary pass) under guard enforcement, with no change authority or web access;
 this item is purely the enforcement shell.
 
 **Source:**

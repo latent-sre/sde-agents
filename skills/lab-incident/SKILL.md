@@ -13,17 +13,8 @@ still down. Mitigate, confirm recovery, *then* run the loop on the cause with th
 
 Announce at start: "Using lab-incident: mitigate → confirm → diagnose after."
 
-**Authority: you hold none of your own.** Every action below is an apply under
-`sde-agents:homelab-engineer`'s change tiers, with that agent's approval evidence. Speed is not a
-tier exemption — an outage makes the blast-radius question *more* important, not less, because the
-system is already degraded and a second change lands on top of the first.
-
-One exact reversible mitigation may contain a bounded command sequence — for example, revert the
-known-bad config, validate it, reload, then probe. Disclose that sequence once and let
-`homelab-engineer` take one Tier 2 decision for it; every live command still passes its host
-transport. A speculative alternative, changed target, unexpected result, or widened blast radius
-stops the sequence and opens a new decision. Do not pre-approve a decision tree while the system is
-changing underneath it.
+Every action below is an apply under `sde-agents:homelab-engineer`'s change tiers — speed is not a
+tier exemption. Mitigate first, and a restart is a stopgap, never a fix.
 
 ## Step 1 — read the signals before touching anything (60 seconds, not 10 minutes)
 

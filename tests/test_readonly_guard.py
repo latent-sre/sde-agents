@@ -29,8 +29,8 @@ from scripts import validate_fleet
 GUARD = Path(__file__).resolve().parents[1] / "scripts" / "readonly-guard.py"
 # The full roster, loaded from the guard itself rather than restated here: a new roster member
 # must inherit the both-name-forms coverage below without anyone remembering to add it, or the
-# test would keep passing while the newest guarded agent went unexercised. (The design agents in
-# it are guarded by choice rather than by the validator's rule — they hold Write for documents
+# test would keep passing while the newest guarded agent went unexercised. (The design agent in
+# it is guarded by choice rather than by the validator's rule — it holds Write for documents
 # while promising an inspection-only Bash, the half a command allowlist can actually enforce.)
 GUARDED_AGENT_NAMES = validate_fleet.load_guard(
     Path(__file__).resolve().parents[1]
@@ -474,7 +474,7 @@ class GuardScopingTest(unittest.TestCase):
         self.assertEqual(decision(proc), "deny")
 
     def test_every_guarded_agent_is_guarded_in_both_name_forms(self) -> None:
-        # The roster grew past the reviewer: the design agents' "inspection only" Bash is
+        # The roster grew past the reviewer: the design agent's "inspection only" Bash is
         # enforced too. Each name must be guarded under BOTH the namespaced and the bare
         # agent_type, and every guarded agent must still be allowed the reads its own file
         # promises it. The roster comes from the guard module, so a future member cannot be

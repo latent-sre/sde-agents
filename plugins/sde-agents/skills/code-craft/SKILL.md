@@ -35,7 +35,6 @@ Two rules that hold in every language:
 | TypeScript or JavaScript — language-level code in any framework | [`references/typescript.md`](references/typescript.md) |
 | Bash or a shell script | [`references/bash.md`](references/bash.md) |
 | PowerShell | [`references/powershell.md`](references/powershell.md) |
-| Go | [`references/go.md`](references/go.md) |
 | writing tests, or code that has none | [`references/tdd.md`](references/tdd.md) |
 | changing code that already works | [`references/safe-refactor.md`](references/safe-refactor.md) |
 
