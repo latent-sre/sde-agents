@@ -38,11 +38,13 @@ regression in something that was fine before you arrived.
 
 ## When callers have to change: expand → migrate → contract
 
-Add the new form, move callers over, remove the old — never a flag-day rename. This pattern is
-**owned by `sde-agents:eng-ladder`'s principal-altitude reference**, which covers the sequencing,
-compatibility windows, and rollback shape at design altitude. On any conflict, that file wins; read
-it before planning a multi-step migration, and use this section only as the local reminder that the
-three phases each ship and each stay releasable.
+Add the new form, move callers over, remove the old — never a flag-day rename. Each phase ships
+on its own and stays releasable. Decide two things before phase one: the compatibility window (how
+long old and new coexist, and what tells you every caller has moved) and the rollback shape (you
+revert one phase, never the migration as a whole). With enough consumers, every observable
+behavior of a contract is depended on — response shape, ordering, timing — so version breaking
+changes and signal deprecations before removal. This section owns that sequencing; the database
+mechanics of the same pattern live in the backend-craft skill's database-reliability reference.
 
 The mechanical minimum: the old and new forms coexist in at least one released state, no commit
 leaves the tree unable to build or serve, and the contract phase is a separate change that verifies

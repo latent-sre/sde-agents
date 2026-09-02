@@ -10,7 +10,7 @@ that turn "read-only" and "ask first" from promises into controls.
 
 <!-- fleet-inventory:start -->
 - **Agents (10):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-engineer`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `researcher`, `sde-fullstack`, `verification-engineer`
-- **Skills (19):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
+- **Skills (18):** `backend-craft`, `ci-actions`, `code-craft`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
 ## Install

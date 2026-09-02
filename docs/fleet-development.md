@@ -17,8 +17,7 @@ editing. Load it straight from the working tree instead:
 claude --plugin-dir .
 ```
 
-Several files deliberately paraphrase another — the `eng-ladder` altitude references paraphrase the
-agent files, and its routing table is the source of truth for routing. Each such file states which
+Several files deliberately paraphrase another. Each such file states which
 side wins on conflict; when they drift, fix the paraphrase, never the source. The other owned
 conventions, for the same reason: the **three-strikes rule** is owned by `skills/root-cause`
 (sde-fullstack, sre-tool, and the builder reference cite it); the **finding-effect classification** (merge blocker / live-activation blocker / optional

@@ -33,7 +33,8 @@ Establish before designing. Infer from context and the codebase where possible; 
 
 ## Phase 1 — Right-size the design
 
-Routing rubric lives in the `sde-agents:eng-ladder` skill — that table is the source of truth.
+Route by the rubric below, and when in doubt route down: a lower rung that recognizes its limit and
+escalates is cheaper than ceremony.
 
 - Single component, low blast radius → design inline at SDE level: a few sentences of plan plus stated assumptions. No ceremony.
 - Multiple services, a data migration, or hard-to-reverse choices → spawn the `sde-agents:principal-engineer` agent for a short design doc; surface any one-way doors to the user before proceeding.

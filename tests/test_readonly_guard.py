@@ -143,7 +143,7 @@ ALLOWED = [
     "rg 'git push' docs/",
     "rg --hidden -n pattern",
     "ls -la agents/",
-    "cat skills/eng-ladder/SKILL.md",
+    "cat skills/root-cause/SKILL.md",
     "head -50 agents/code-reviewer.md",
     "wc -l agents/*.md",
     "find . -name '*.py'",

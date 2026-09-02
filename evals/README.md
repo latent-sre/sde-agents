@@ -366,8 +366,8 @@ simple-stays-simple, and read-only-investigation seams:
 | `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
 | `homelab-ops.json` | homelab-engineer and eleven lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
-| `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
-| `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
+| `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
+| `proportionality.json` | sre-tool, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
 | `investigation.json` | researcher, code-reviewer, root-cause, application-security-auditor | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
 | `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
 | `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
@@ -379,8 +379,8 @@ there); the capture under `baselines/2026-07-24/` records the later 5-member / 1
 are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
 
-**Suite size, as of 2026-09-02:** 97 routing cases across the nine clusters (41 positives, 56
-negatives), so a full sweep at the methodology's `--runs 3` is **291 sessions** — down from 333 on
+**Suite size, as of 2026-09-02:** 93 routing cases across the nine clusters (37 positives, 56
+negatives), so a full sweep at the methodology's `--runs 3` is **279 sessions** — down from 333 on
 2026-08-23 and 426 before that.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
 (9), and three far-misses (9), against one Mode 3 positive added back (3). This is worth knowing
