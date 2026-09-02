@@ -184,8 +184,9 @@ cause is unclear exits to `root-cause` rather than consuming another turn.
 Promotion is not the end of the lifecycle for plugin-shipped destinations: a
 field-feedback item closes as successful only with an exact released-version retest recorded, or
 the owner's explicit reason retest is impossible — source-eval PASS is never reportable as
-released-artifact PASS. That retest is recorded on the packet's own `Promotion state` field; no
-repo-local ledger persists it (retired 2026-09-01).
+released-artifact PASS. Record the retest on the field-feedback item itself — its "Released
+version" and "Downstream retest" fields — never inside `Promotion state`, which stays one of its
+closed enum values; no repo-local ledger persists it (retired 2026-09-01).
 
 ## Improvement patterns
 

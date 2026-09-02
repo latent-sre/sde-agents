@@ -319,7 +319,8 @@ touched artifact; a push owes the full offline suite, the platform contract chec
 `scripts/fleet_doctor.py` run — its host-installation view is the one thing CI can never
 substitute for; CI runs the full three-OS matrix on pushes to main, weekly, and on dispatch;
 releases and CLI pin bumps owe the probe and the eval suites, checked by hand for whether a stored
-routing benchmark already covers the 'before' side of a paired run.
+routing benchmark — same bytes and the same recorded model, clean-room setting, threshold, and
+timeout — already covers the 'before' side of a paired run.
 The full tier recipe (T0–T3) lives in `AGENTS.md` under "Validate before you push"; this
 paragraph is its summary and loses to it on conflict.
 

@@ -31,8 +31,9 @@ mechanisms and checks — read it before touching a discipline.
   approval sits: declared per definition, enforced per host, never inferred from prose. Owner:
   `docs/decisions/2026-07-31-ai-graph-engineering.md`.
 - **Self-learning — admission-gated memory in the packet's Learning block, graded by
-  `scripts/packet_lint.py`.** Every lesson is quarantined behind evidence-bound staged promotion:
-  a stored lesson is replayed uncritically, so a wrong one compounds instead of fading.
+  `scripts/packet_lint.py`.** Every lesson is quarantined and advanced one stage at a time by the
+  writer; the linter checks state-disposition compatibility, not the sequence. A stored lesson is
+  replayed uncritically, so a wrong one compounds instead of fading.
 
 The reading rule for any review of fleet prose: **the reader is the next session, not the
 operator's memory.** Apparent ceremony here is usually a strand mechanism. Two questions decide
@@ -61,8 +62,9 @@ red check is fixed if trivial, else recorded in `docs/fleet-roadmap.md`.
   `.github/workflows/validate.yml`.
 - **T3 — release/CLI pin bump** (manual, real API): `scripts/probe_plugin.py` + every routing
   cluster + behavioral evals — no affected-only subset. Before a paired routing run, check by hand
-  whether a stored capture's cluster, cases, evaluator, and plugin bytes are unchanged; if so the
-  before-side is reusable, and the after-side stays fresh regardless.
+  that a stored capture's cluster, cases, evaluator, and plugin bytes are unchanged **and** its
+  recorded conditions — requested model, clean-room setting, threshold, timeout — equal the run
+  you are about to make; only then is the before-side reusable. The after-side stays fresh.
 
 Static review converges or stops: at most two deep-review rounds for prose-behavior changes
 (agent/skill text), three for other fleet prose. Divergence signal: criticals land in
@@ -122,7 +124,8 @@ missing, stale, extra, or hand-edited output.
 **Editing a description** (agent or skill) — descriptions drive routing. Run the overlapping
 cluster in `evals/routing/` before and after, and diff the rates. The 'before' side may be
 satisfied by a stored benchmark whose cluster, cases, evaluator, and plugin bytes are unchanged
-since capture, checked by hand; the 'after' side is always a fresh run. Cross-references to other fleet
+since capture and whose recorded model, clean-room setting, threshold, and timeout equal the
+planned run, checked by hand; the 'after' side is always a fresh run. Cross-references to other fleet
 members must use the plugin namespace (`sde-agents:code-reviewer`, `/sde-agents:backend-craft`);
 a bare backticked name is only for content already in context, such as a preloaded skill.
 

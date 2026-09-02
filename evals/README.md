@@ -455,9 +455,11 @@ Keeping this straight is the difference between an archive and a graveyard.
 
 1. **Reuse** — serving as the 'before' side of a paired run. This job is **fragile by design** and
    usually already over: a stored capture is reusable only if its cluster, cases, evaluator, and
-   plugin bytes are all unchanged since capture — checked by hand (the script that once automated
-   this comparison, `eval_baseline.py`, was retired 2026-09-01) — so any of a schema bump, a case
-   edit, an evaluator change, or a fleet edit ends it permanently.
+   plugin bytes are all unchanged since capture **and** its recorded conditions — requested
+   model, clean-room setting, threshold, timeout — equal the planned run; checked by hand (the
+   script that once automated this comparison, `eval_baseline.py`, was retired 2026-09-01) — so
+   any of a schema bump, a case edit, an evaluator change, a fleet edit, or a different model or
+   setting ends it permanently.
    **As of 2026-08-17 no stored capture holds this job** — all ten clusters resolve `STALE`, and
    the v3→v4 schema move plus the case retirement made that final rather than incidental. Every
    paired round from here starts with a fresh capture on both sides.
@@ -541,7 +543,7 @@ LADDER-002 had pinned
 (`docs/decisions/2026-09-02-single-operator-audience.md`) — the ten handoff-001, ladder, and
 settling directories those items pinned in full, plus `2026-08-01-self-improve/final-live/` and
 `2026-08-18-ctx-002/disposition/` (the latter's own unconditional trigger, independent of the
-still-open LANE-001) — bringing the total to **11,442 lines across 12 top-level directories**.
+still-open LANE-001) — bringing the total to **11,440 lines across 12 top-level directories**.
 What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and
 the directories with no summary at all — the set is whatever `git ls-files evals/baselines`
@@ -638,8 +640,8 @@ The 93 sessions came off in three retirements: 26 agent-only positives (78), thr
 deterministic contracts. The seven newest cover proven and unproven managed-prompt interposition,
 standing Tier 2 policy, finite-plan sentinel reuse, the unknown-outcome retry boundary, and the
 paired light/risk-triggered onboarding boundary. Both numbers are worth knowing before starting a paired round: the
-'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand and
-found reusable.
+'before' and 'after' sides each cost a full sweep unless a stored capture is checked by hand —
+same bytes, same recorded model, clean-room setting, threshold, and timeout — and found reusable.
 
 ### Measurement caveat: skills fire, agents must be delegated to
 
