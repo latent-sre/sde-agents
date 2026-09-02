@@ -1,145 +1,44 @@
 {
   "cluster": "continuous-improvement",
   "members": [
-    "self-improve-loop",
     "root-cause",
     "runbook",
     "postmortem",
-    "prompt-craft",
-    "prompt-engineer"
+    "prompt-craft"
   ],
-  "description": "Routing eval for the learning boundary: self-improve-loop owns evidence-backed closeout and repeated-pattern improvement, while diagnosis, direct operating docs, incident write-ups, and one-shot prompt work retain their existing owners. Negatives narrow their forbidden set to self-improve-loop so the correct sibling may fire.",
+  "description": "Routing eval for the resolved-incident write-up boundary: postmortem owns the retro on a finished incident, while near-miss vocabulary (sprint ceremonies, visual 'retro' styling, forensic postmortems, a still-live outage) must reach none of this cluster's members. self-improve-loop retired 2026-09-02 (unshipped, explicit-invocation only) along with the learning-lifecycle positives and self-improve-loop-narrowed negatives it anchored here, and prompt-engineer left the member list the same day when it folded into prompt-craft; root-cause, runbook, and prompt-craft remain as members purely for the whole-cluster negative default below, with no dedicated positive case of their own left in this file.",
+  "notes": "Folded in from the retired retro-boundary.json cluster (self-improve-loop vs postmortem) on 2026-09-02: only its postmortem-side cases survive self-improve-loop's retirement, so they moved here rather than leaving a one-member file. The four ordinary negatives below rely on the whole-cluster default for expect_not_fires (four members now, not two), which is a strictly stronger assertion than their original two-member default and was checked case by case for safety before the move.",
   "cases": [
     {
-      "id": "pos-learning-repeated-failure",
-      "prompt": "Across three recent feature tasks, reviewers caught the same missing failure-path test. Run a fleet learning retro and turn that repeated pattern into one durable improvement.",
+      "id": "pos-outage-retro",
+      "prompt": "Last night's NAS outage is resolved and everything is healthy again. Do a retro on the outage and write it up properly.",
       "polarity": "positive",
-      "expect_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "A repeated, evidenced fleet-behavior gap belongs to the self-improvement lifecycle.",
-      "tags": [
-        "self-improve-loop",
-        "recurrence"
-      ]
+      "expect_fires": ["postmortem"],
+      "tags": ["incident", "boundary"]
     },
     {
-      "id": "pos-learning-successful-scan",
-      "prompt": "The refactor passed on its first attempt with no corrections or review findings. Use the fleet learning closeout to decide whether any durable lesson is justified.",
-      "polarity": "positive",
-      "expect_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "An explicitly requested learning scan may correctly conclude that no durable change is warranted.",
-      "tags": [
-        "self-improve-loop",
-        "no-change"
-      ]
-    },
-    {
-      "id": "pos-learning-runbook-gap",
-      "prompt": "Three restore drills needed the same undocumented recovery step, and the existing service runbook is the canonical operating guide. Decide how this learning should be captured and verified.",
-      "polarity": "positive",
-      "expect_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "The learning lifecycle identifies the durable destination; the runbook skill may own the actual operating-doc edit.",
-      "tags": [
-        "self-improve-loop",
-        "runbook",
-        "artifact-routing"
-      ]
-    },
-    {
-      "id": "pos-learning-rejected-candidate",
-      "prompt": "A proposed skill change improved one example but regressed two held-out cases. Record the learning-loop disposition and what should happen to that candidate.",
-      "polarity": "positive",
-      "expect_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "A failed candidate belongs in the learning lifecycle as rejected evidence, not as promoted guidance.",
-      "tags": [
-        "self-improve-loop",
-        "rejected-candidate"
-      ]
-    },
-    {
-      "id": "neg-undiagnosed-failure",
-      "prompt": "A test started failing intermittently and nobody knows why. Reproduce it and determine the root cause before anyone changes the code.",
+      "id": "neg-sprint-retro",
+      "prompt": "Facilitate a sprint retrospective for my team's Tuesday ceremony — agenda, icebreaker, and a template for action items.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "An unexplained failure routes to root-cause; it is not yet a reusable lesson.",
-      "tags": [
-        "near-miss",
-        "root-cause"
-      ]
+      "tags": ["near-miss", "ceremony"]
     },
     {
-      "id": "neg-direct-runbook",
-      "prompt": "Write a runbook for restarting nginx, checking that it is healthy, rolling back the change, and escalating if recovery fails.",
+      "id": "neg-retro-style",
+      "prompt": "Restyle this landing page with a retro 80s synthwave look — neon grid, chrome type, the works.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "Direct operating-doc authoring routes to runbook, not the fleet learning loop.",
-      "tags": [
-        "near-miss",
-        "runbook"
-      ]
+      "tags": ["near-miss", "vocabulary"]
     },
     {
-      "id": "neg-resolved-incident-writeup",
-      "prompt": "Yesterday's DNS outage is resolved. Write the incident timeline, root cause, contributing factors, and preventative actions.",
+      "id": "neg-forensic-postmortem",
+      "prompt": "For a story I'm writing: what does a postmortem examination involve in forensic pathology, step by step?",
       "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "The incident artifact routes to postmortem; any fleet-behavior action can return to the learning loop afterward.",
-      "tags": [
-        "near-miss",
-        "postmortem"
-      ]
+      "tags": ["near-miss", "vocabulary"]
     },
     {
-      "id": "neg-one-shot-prompt-fix",
-      "prompt": "This skill description never triggers when users ask for cache debugging. Fix the description and test its routing before and after.",
+      "id": "neg-live-outage",
+      "prompt": "Grafana is down right now — every dashboard is blank and the household is asking. Help.",
       "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "A measured prompt failure routes to prompt-engineer; it is not automatically a cross-task learning lifecycle.",
-      "tags": [
-        "near-miss",
-        "prompt-engineer"
-      ]
-    },
-    {
-      "id": "neg-ordinary-build",
-      "prompt": "Add cursor pagination to the users endpoint with unit and integration tests.",
-      "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "Ordinary implementation routes to the builder; the learning scan happens at closeout, not as the task's primary route.",
-      "tags": [
-        "near-miss",
-        "implementation"
-      ]
-    },
-    {
-      "id": "neg-team-meeting-retro",
-      "prompt": "Summarize our sprint retrospective notes and turn the team's discussion into action items for next week.",
-      "polarity": "negative",
-      "expect_not_fires": [
-        "self-improve-loop"
-      ],
-      "expected_output": "A team meeting summary is not the fleet's evidence-backed learning lifecycle.",
-      "tags": [
-        "near-miss",
-        "meeting-notes"
-      ]
+      "tags": ["near-miss", "live-incident"]
     }
   ]
 }

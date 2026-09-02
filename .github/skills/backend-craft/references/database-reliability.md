@@ -38,8 +38,8 @@ that reach outside the database** may have already acted. Neither is reversible 
   time — a rolling deploy, a second consumer, a client you cannot restart. A single service you can
   stop for twenty seconds can take the brief downtime and migrate in one step; paying for a
   dual-write window to avoid a restart nobody would notice is the expensive way to do it. The
-  sequencing at design altitude is owned by `eng-ladder`'s principal reference; this is
-  the database mechanics.
+  sequencing rule (expand → migrate → contract) is owned by the safe-refactor reference in the
+  code-craft skill; this is the database mechanics.
 - **A `NOT NULL` column added with a default rewrites the table** on older engines and takes an
   exclusive lock for the duration. The lock-light path in Postgres:
 

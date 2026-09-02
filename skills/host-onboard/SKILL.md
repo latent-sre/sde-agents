@@ -2,7 +2,6 @@
 name: host-onboard
 description: The standardization checklist sde-agents:homelab-engineer works when bringing a new or rebuilt machine into the lab — OS and patch baseline, users and SSH with access recovery, package and update policy, firewall and management exposure, systemd health, storage, time and DNS, telemetry enrollment, backup enrollment, and config tracking with rollback. To onboard a host, ask sde-agents:homelab-engineer (it owns change authority and works this checklist under its tiers); a user can also run it directly as /sde-agents:host-onboard.
 argument-hint: [host to onboard]
-disable-model-invocation: true
 ---
 
 The checklist that turns a fresh install into a lab host someone can operate at 3 a.m. Work every

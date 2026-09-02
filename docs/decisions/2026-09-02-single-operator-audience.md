@@ -57,3 +57,12 @@ ran it. EVAL-011 and ORACLE-019 closed won't-do with it — both were entirely a
 runner's grading. Every other roadmap item, decision, and doc that promised or cited a behavioral
 contract run was amended in the same pass to note the retirement and fall back to routing evals
 and the probe.
+
+The first slice of the roster cut landed the same day: `repository-investigator` deleted (the
+calling session's own file tools do that work); `onboarding-map` deleted, with `host-onboard` and
+`service-onboard` made model-visible so they route from their own descriptions (LANE-001 closed,
+met by construction); `self-improve-loop` unshipped — explicit invocation only, out of every
+`skills:` preload, and the packet Learning slot removed from every agent along with the validator
+checks that pinned it (ACK-001 and LEDGER-001 closed won't-do). `eng-ladder` deleted, with its
+four routing positives; the three altitude agents keep the `ladder` cluster's negatives, and the
+two craft references that deferred to its principal page now own their own sequencing rule.

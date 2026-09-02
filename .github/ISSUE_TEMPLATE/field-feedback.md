@@ -1,6 +1,6 @@
 ---
 name: Field feedback
-about: Report real-usage evidence for the retained-feedback lifecycle (skills/self-improve-loop/SKILL.md). Not a general bug report.
+about: Report real-usage evidence as evidence-bound intake for the fleet roadmap (docs/README.md rule 7). Not a general bug report.
 title: "field-feedback: "
 labels: field-feedback
 ---

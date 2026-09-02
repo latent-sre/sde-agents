@@ -809,6 +809,10 @@ capture be proposed. Do not compare Claude results with the archived Terra appro
 
 ## LANE-001 — Codex-lane onboarding discoverability
 
+**Closed 2026-09-02 (met by construction).** onboarding-map retired; host-onboard and
+service-onboard are model-visible skills routed from their descriptions. Decision:
+`../../decisions/2026-09-02-single-operator-audience.md`.
+
 ### Status narration
 spec approved by the operator 2026-08-09, with the design premise
 re-verified same-day against upstream HEAD `a16863f8` (skill filtering and spawn-schema
@@ -1077,6 +1081,8 @@ item as a recorded decision with the reason.
 
 ## ACK-001 — make a dropped Learning handoff visible
 
+**Closed 2026-09-02 (won't-do).** `self-improve-loop` left the shipped fleet and no packet Learning slot remains, so there is no Learning handoff to drop. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
+
 ### Status narration
 the gap is twice-observed, but the three candidate mechanisms
 differ in size and authority, so the choice is the operator's before any spec is authored.
@@ -1159,6 +1165,8 @@ write authority read-only roles do not hold.
 
 
 ## LEDGER-001 — the promoted set has no absorption or drift coverage
+
+**Closed 2026-09-02 (won't-do).** The ledger it audited retired 2026-09-01 and the loop that fed it left the shipped fleet 2026-09-02. Decision: `../../decisions/2026-09-02-single-operator-audience.md`.
 
 ### Status narration
 diagnosis complete from a full 53-record audit; each repair below is independently landable.

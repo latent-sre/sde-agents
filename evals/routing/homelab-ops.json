@@ -1,6 +1,6 @@
 {
   "cluster": "homelab-ops",
-  "description": "Routing eval for the home-lab operations overlap: homelab-engineer (the agent that owns change authority) against the eight lab skills that share its vocabulary \u2014 service-onboard, lab-audit, runbook, postmortem, lab-incident, restore-drill, upgrade-campaign, observability. They all speak of 'my lab', 'a service', 'check', 'docs', 'what happened', over a LIVE lab, so a misroute here is the most consequential in the fleet (a read-only question landing on a mutating path, or mitigation machinery firing on a finished incident). Positives name the specific intended member; negatives share the vocabulary but must route to NO cluster member.",
+  "description": "Routing eval for the home-lab operations overlap: homelab-engineer (the agent that owns change authority) against the nine lab skills that share its vocabulary \u2014 service-onboard, host-onboard, lab-audit, runbook, postmortem, lab-incident, restore-drill, upgrade-campaign, observability. They all speak of 'my lab', 'a service', 'check', 'docs', 'what happened', over a LIVE lab, so a misroute here is the most consequential in the fleet (a read-only question landing on a mutating path, or mitigation machinery firing on a finished incident). Positives name the specific intended member; negatives share the vocabulary but must route to NO cluster member.",
   "members": [
     "homelab-engineer",
     "service-onboard",
@@ -11,11 +11,9 @@
     "restore-drill",
     "upgrade-campaign",
     "observability",
-    "host-onboard",
-    "security-audit",
-    "onboarding-map"
+    "host-onboard"
   ],
-  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if none of its forbidden set fired \u2014 the whole cluster by default, unless the case narrows it with expect_not_fires (a disambiguation case where a sibling member is the correct destination, e.g. neg-resolved-not-incident, where postmortem may fire). History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 10-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-engineer; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-engineer's Boundaries, not to this cluster (neg-lab-architecture). ROLE-001 (2026-07-29): host-onboard joined as the tenth member, mirroring the service-onboard pattern (disable-model-invocation set but possibly invocable per #22345); pos-host-* were seeded BEFORE the rebrand so their before/after diff measured the Linux-host trigger widening (anchor: baselines/history/2026-07-29-verification-round.md, which records both sides) \u2014 past tense since 2026-08-17: those positives retired with the agent-only class, so the widening is a recorded historical measurement here rather than a live assertion this cluster can re-run (PR #145 review). The ordinary negatives now rely on the documented whole-cluster default for expect_not_fires (their identical explicit lists predated the runner honoring the field and would silently omit every new member); neg-resolved-not-incident keeps the deliberate narrowing that ROLE-001 left in place (neg-idle-failure-not-incident later added a second). LABSEC-001 (2026-07-29): security-audit joined as the eleventh member — the adversary sweep, vs lab-audit's hygiene sweep. That seam is the cluster's newest and is guarded in both directions: pos-attacker-reach/pos-default-creds must reach security-audit, while pos-audit-whats-wrong (hygiene vocabulary) must still reach lab-audit, and neg-harden-app-code keeps 'harden'/'auth' from dragging either onto app code. lab-audit firing on an adversary prompt is a near-miss worth recording, not a pass — both skills are cluster members, so a cross-fire shows up in also_fired. LANE-001 (2026-08-10): onboarding-map joined as the twelfth member \u2014 the model-visible discovery pointer added for issue #61, whose observed failure was that plain-language new-service intent could not reach the explicit-only checklists at all. Two effects here: (a) every whole-cluster negative now also forbids onboarding-map, which is the intended guard against false-positive onboarding routes (neg-app-feature is issue #61's case 7); (b) the existing pos-add-service and pos-host-onboard rates are the no-displacement gate \u2014 the map may fire alongside homelab-engineer (consulting a map en route is not a defect) but must not displace it, so a drop in those two across the before/after diff is the signal to tighten, not a variance to accept. neg-managed-host-no-host-onboard and neg-audit-not-onboard are the third and fourth declared narrowings, covering issue #61's cases 4 and 5.",
+  "notes": "Grading (scripts/eval_routing.py): a positive passes if any member in expect_fires fired; a negative passes only if none of its forbidden set fired \u2014 the whole cluster by default, unless the case narrows it with expect_not_fires (a disambiguation case where a sibling member is the correct destination, e.g. neg-resolved-not-incident, where postmortem may fire). History: seeded with four members; postmortem joined 2026-07-24 (backlog 1.4) and lab-incident, restore-drill, upgrade-campaign and observability the same day (backlog 1.2/1.5 plus the modernization plan's remainder), so the captured baselines under baselines/2026-07/ and baselines/2026-07-24/ both predate the current 10-member case set and a full re-baseline is pending. Seams this cluster guards: (1) lab-incident vs postmortem \u2014 'X is down' is live and mitigates, 'it's fixed, write it up' must NOT reach lab-incident (neg-resolved-not-incident). (2) service-onboard sets disable-model-invocation but ships as a plugin skill, so per anthropics/claude-code#22345 it may fire directly on 'add a service' prompts even though the intended owner is homelab-engineer; that is the open routing residual, not a clean pass. (3) lab-shaping ARCHITECTURE (storage/network layout) routes UP the ladder per homelab-engineer's Boundaries, not to this cluster (neg-lab-architecture). ROLE-001 (2026-07-29): host-onboard joined as the tenth member, mirroring the service-onboard pattern (disable-model-invocation set but possibly invocable per #22345); pos-host-* were seeded BEFORE the rebrand so their before/after diff measured the Linux-host trigger widening (anchor: baselines/history/2026-07-29-verification-round.md, which records both sides) \u2014 past tense since 2026-08-17: those positives retired with the agent-only class, so the widening is a recorded historical measurement here rather than a live assertion this cluster can re-run (PR #145 review). The ordinary negatives now rely on the documented whole-cluster default for expect_not_fires (their identical explicit lists predated the runner honoring the field and would silently omit every new member); neg-resolved-not-incident keeps the deliberate narrowing that ROLE-001 left in place (neg-idle-failure-not-incident later added a second). LABSEC-001 (2026-07-29): security-audit joined as the eleventh member — the adversary sweep, vs lab-audit's hygiene sweep. That seam is the cluster's newest and is guarded in both directions: pos-attacker-reach/pos-default-creds must reach security-audit, while pos-audit-whats-wrong (hygiene vocabulary) must still reach lab-audit, and neg-harden-app-code keeps 'harden'/'auth' from dragging either onto app code. lab-audit firing on an adversary prompt is a near-miss worth recording, not a pass — both skills are cluster members, so a cross-fire shows up in also_fired. LANE-001 (2026-08-10): onboarding-map joined as the twelfth member \u2014 the model-visible discovery pointer added for issue #61, whose observed failure was that plain-language new-service intent could not reach the explicit-only checklists at all. Two effects here: (a) every whole-cluster negative now also forbids onboarding-map, which is the intended guard against false-positive onboarding routes (neg-app-feature is issue #61's case 7); (b) the existing pos-add-service and pos-host-onboard rates are the no-displacement gate \u2014 the map may fire alongside homelab-engineer (consulting a map en route is not a defect) but must not displace it, so a drop in those two across the before/after diff is the signal to tighten, not a variance to accept. neg-managed-host-no-host-onboard and neg-audit-not-onboard are the third and fourth declared narrowings, covering issue #61's cases 4 and 5. LANE-001 closed 2026-09-02 (met by construction): onboarding-map retired and left this cluster's members; host-onboard and service-onboard dropped disable-model-invocation and are now model-visible skills that route from their own descriptions, so the discovery pointer's job is done by construction rather than by a twelfth member. The LANE-001 history above stays as the record of why the pointer existed; pos-discovery-question and pos-new-vm-then-service keep homelab-engineer (and host-onboard) as their positive target without it. Roster cut 2026-09-02 (docs/decisions/2026-09-02-single-operator-audience.md): security-audit merged into lab-audit as its adversary pass and left the members, so the hygiene/adversary seam LABSEC-001 guarded no longer exists between two members \u2014 pos-attacker-reach and pos-default-creds now expect lab-audit, the cross-fire they watched for is gone by construction, and neg-harden-app-code keeps 'harden'/'auth' off app code for lab-audit alone.",
   "cases": [
     {
       "id": "pos-add-service",
@@ -328,11 +326,11 @@
       "prompt": "If someone got onto my guest wifi, what could they actually reach? Check my lab's exposure from an attacker's point of view.",
       "polarity": "positive",
       "expect_fires": [
-        "security-audit"
+        "lab-audit"
       ],
-      "expected_output": "The adversary question stated as an attacker position \u2014 security-audit's trust-zone/reachability row. lab-audit firing instead is the seam's near-miss (visible in also_fired): its Exposure check is ports-vs-proxy hygiene, not position-to-reach analysis.",
+      "expected_output": "The adversary question stated as an attacker position \u2014 lab-audit's adversary pass (check 1, exposure and reachability from a named position).",
       "tags": [
-        "security-audit",
+        "lab-audit",
         "attacker-reach"
       ]
     },
@@ -341,11 +339,11 @@
       "prompt": "I never changed the admin passwords on half my containers, and I'm not sure what my Proxmox console is reachable from. Security-audit the lab and tell me what's actually at risk.",
       "polarity": "positive",
       "expect_fires": [
-        "security-audit"
+        "lab-audit"
       ],
-      "expected_output": "Default credentials plus a management plane \u2014 security-audit rows 3 and 4, with 'what's actually at risk' asking for the attack-path-or-downgrade rule.",
+      "expected_output": "Default credentials plus a management plane \u2014 lab-audit's adversary pass, checks 3 and 4, with 'what's actually at risk' asking for the attack-path-or-downgrade rule. The prompt keeps its 'security-audit the lab' phrasing: it is how the operator still asks, and the merged description must catch it.",
       "tags": [
-        "security-audit",
+        "lab-audit",
         "credentials"
       ]
     },
@@ -353,10 +351,10 @@
       "id": "neg-harden-app-code",
       "prompt": "Harden the auth middleware in my Flask app against injection attacks.",
       "polarity": "negative",
-      "expected_output": "Application code hardening \u2014 a builder (sde-fullstack / backend-craft), or the repository auditor for an audit of it; no LAB component owns app code. 'Harden' and 'auth' are the decoy vocabulary for the security-audit join, and this is the tight near-miss guarding it.",
+      "expected_output": "Application code hardening \u2014 a builder (sde-fullstack / backend-craft), or code-reviewer for a review of it; no LAB component owns app code. 'Harden' and 'auth' are the decoy vocabulary for lab-audit's adversary pass, and this is the tight near-miss guarding it.",
       "tags": [
         "near-miss",
-        "security-audit"
+        "lab-audit"
       ]
     },
     {
@@ -375,12 +373,10 @@
       "prompt": "Is there a standard checklist or workflow for adding a new service to my home lab, or do I just wing it?",
       "polarity": "positive",
       "expect_fires": [
-        "onboarding-map",
         "homelab-engineer"
       ],
-      "expected_output": "A discovery question, not a change request \u2014 onboarding-map names the workflows and their order, or homelab-engineer (which owns them) answers directly. LANE-001's headline case: reaching the workflow must not require already knowing its name. service-onboard firing here is a near-miss worth recording \u2014 activating a live-change checklist answers a question nobody asked \u2014 but no field of the verdict flags it: it is a cluster member, and also_fired lists only non-members, so fired_per_run is where it surfaces.",
+      "expected_output": "A discovery question, not a change request \u2014 homelab-engineer (which owns the checklists) answers directly, or service-onboard's own description now surfaces it without a separate pointer (LANE-001 closed 2026-09-02, met by construction). service-onboard firing here is a near-miss worth recording \u2014 activating a live-change checklist answers a question nobody asked \u2014 but no field of the verdict flags it: it is a cluster member, and also_fired lists only non-members, so fired_per_run is where it surfaces.",
       "tags": [
-        "onboarding-map",
         "discovery"
       ]
     },
@@ -389,13 +385,11 @@
       "prompt": "I'm about to build a new VM and put a service on it. What's the right order to do this in?",
       "polarity": "positive",
       "expect_fires": [
-        "onboarding-map",
         "homelab-engineer",
         "host-onboard"
       ],
       "expected_output": "Two lifecycles in one request (issue #61 case 3) \u2014 the machine first via host-onboard, the service separately via service-onboard. The runner grades firing only, any-of: homelab-engineer firing alone passes this case. That the host comes first and the two stay sequenced is the writer's intent behind the prompt, not a graded condition — nothing automated reads it, so service-onboard alone with no host step is a near-miss only to someone reading the transcript.",
       "tags": [
-        "onboarding-map",
         "host-onboard",
         "ordering"
       ]
@@ -422,7 +416,7 @@
         "service-onboard",
         "host-onboard"
       ],
-      "expected_output": "An explicitly read-only question is an audit (lab-audit / security-audit, both cluster members and both correct here), so the forbidden set narrows to the two onboarding checklists: opening a checklist whose steps apply live changes is the discovery-is-not-permission failure (issue #61 case 5). onboarding-map is deliberately not forbidden \u2014 it changes nothing and its own table routes this prompt to lab-audit.",
+      "expected_output": "An explicitly read-only question is an audit (lab-audit, a cluster member and correct here), so the forbidden set narrows to the two onboarding checklists: opening a checklist whose steps apply live changes is the discovery-is-not-permission failure (issue #61 case 5).",
       "tags": [
         "near-miss",
         "service-onboard",

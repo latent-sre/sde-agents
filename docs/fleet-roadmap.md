@@ -75,6 +75,8 @@ round plus a probe re-run per affected agent.
 tokens), with a routing round and the probe showing slimmed bodies still deliver what fat ones
 did — the behavioral contracts that once proved this retired 2026-09-02; references stay the
 on-demand layer.
+`self-improve-loop` left every `skills:` preload on 2026-09-02, so the byte counts above predate
+that cut and must be re-measured before any further diet.
 
 **Source:**
 [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md) ·
@@ -90,8 +92,9 @@ re-verify it before shrinking anything into the on-demand layer.
 green with canary assertions intact or deliberately migrated; regenerated adapters; doctor and
 validator green; byte deltas recorded per skill. No contract-graded check remains.
 
-**Next action:** Restructure `self-improve-loop` first — compact loop plus closeout contract in
-SKILL.md, full lifecycle protocol to a reference.
+**Next action:** Re-measure `sde-fullstack`'s preload bytes (backend-craft, frontend-craft,
+code-craft, root-cause) on the post-cut tree; then trim the largest preloaded core — likely
+frontend-craft's SKILL.md — keeping the probe canaries where they are.
 
 #### CTX-004 — lock the context wins in: settings lines, validator promotion, Copilot cap
 
@@ -117,11 +120,14 @@ measurement is already committed evidence.
 
 #### CTX-005 — shrink `homelab-engineer`'s always-loaded body
 
-**Status:** `decision-needed` — one authorized safety repair and one behavioral round are spent;
-the branch is no-go evidence, not merge-ready.
+**Status:** `active` — the first cut landed 2026-09-02 in the roster-cut branch: the onboarding
+work order (340 words) left with HANDOFF-001, the transport section compressed from 571 to about
+300 words, the worked example lost its retry tail, and the packet Learning slot left with the
+loop. Body 3,754 → 3,154 words; the earlier no-go experiment's instrument is retired.
 
-**Outcome:** The safety repair improved fresh behavior (45/125 to 55/125, new safety case 5/5)
-but regressed three baseline-perfect contracts to 4/5 (60/130 overall); acceptance still fails.
+**Outcome:** The always-loaded body carries the tiers, the three transports, the standards, the
+packet, and the boundaries, and nothing a script now decides; measured before/after word and
+character counts, with a routing round and the probe showing no regression.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md) ·
@@ -152,8 +158,8 @@ reopening work restarts root-cause analysis from refreshed main.
 **Status:** `ready` — Option A accepted 2026-07-31; normal-session probes proved registration,
 denial, and exclusion.
 
-**Outcome:** Add an optional read-only agent working the hygiene (`lab-audit`) or adversary
-(`security-audit`) checklist under guard enforcement, with no change authority or web access;
+**Outcome:** Add an optional read-only agent working the `lab-audit` checklist (hygiene sweep and
+adversary pass) under guard enforcement, with no change authority or web access;
 this item is purely the enforcement shell.
 
 **Source:**
@@ -169,79 +175,6 @@ authority.
 
 **Next action:** Open a bounded spec/plan, starting with the smallest read-only command surface
 and a threat review of every new verb/flag.
-
-#### LANE-001 — Codex-lane onboarding discoverability
-
-**Status:** `ready` — spec approved 2026-08-09; host-neutral packaging landed in PR #107, but no
-round is running and no Codex host evidence exists yet.
-
-**Outcome:** On a Codex session with the fleet installed, plain-language onboarding intent
-yields a model recommendation of the explicit workflow, never implicit execution, with the
-Claude lane's measured routing rates unaffected.
-
-**Source:**
-[LANE-001 spec](superpowers/specs/lane-001-codex-onboarding-discoverability.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#lane-001-codex-lane-onboarding-discoverability)
-
-**Prerequisites:** The spec's Phase 0 (two SEC-01 one-liners), still blocking; waiving it takes
-an operator-approved spec amendment.
-
-**Acceptance:** The spec's list: Phase 0's one-liners (or amendment); the paired `homelab-ops`
-before/after capture at merge base `4fef0ce`; a recorded Codex smoke run against a released
-artifact, filed through the ledger's release/retest rule.
-
-**Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then
-captures the paired routing run; the smoke run follows the next release.
-
-#### ACK-001 — make a dropped Learning handoff visible
-
-**Status:** `decision-needed` — gap twice-observed; candidate mechanisms differ in size and
-authority, so the operator chooses before any spec.
-
-**Outcome:** A Learning packet the caller does not persist becomes visibly unpersisted, instead
-of looking identical to a persisted one.
-
-**Source:**
-Issue #73 ·
-[LOOP-001 outcome](archive/2026-08/loop-001-outcome-2026-08-10.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ack-001-make-a-dropped-learning-handoff-visible)
-
-**Prerequisites:** None — LOOP-001's capture-to-released lifecycle closed 2026-08-10.
-
-**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
-this item is moot unless the ledger returns.
-
-**Acceptance:** A scenario where a caller receives a packet and stops shows the stop; the
-emitting side's contract is unchanged for callers that do route it; no new write authority
-granted to a read-only role; adapter parity and deterministic gates green.
-
-**Next action:** Operator rules among three mechanisms (emitter-side pointer plus manifest —
-recommended; caller-side lint scan — deferred, trigger-bound; scratch-file write — declined),
-then a bounded spec.
-
-#### LEDGER-001 — the promoted set has no absorption or drift coverage
-
-**Status:** `ready` — diagnosis complete from a full 53-record audit; each repair below is
-independently landable.
-
-**Outcome:** A lesson recorded as `promoted` is one a reader can trust landed, verified by
-something other than manual audit; three specific records are reconciled with the tree, and the
-coverage gap that hid them is closed or stated.
-
-**Source:**
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ledger-001-the-promoted-set-has-no-absorption-or-drift-coverage)
-
-**Prerequisites:** None. Findings 1 and 2 landed 2026-08-20; findings 3–4 remain.
-
-**Constraints:** `scripts/learning_ledger.py` and the `learning/` store were retired 2026-09-01;
-this item is moot unless the ledger returns.
-
-**Acceptance:** Findings 1–2 land their prose with the required reader check, or drop with a
-stated reason. Finding 3 records its narrowing. Finding 4 extends drift coverage to terminal
-states with a firing test, or states the limitation in `learning/README.md`.
-
-**Next action:** Finding 3 — scope-narrow `lc_36adb3d0` or renew its `review`. Finding 4 —
-extend drift coverage to terminal states or document the limitation.
 
 #### GATE-007 — bind a tier to each declared effect, or say one response carries one tier
 

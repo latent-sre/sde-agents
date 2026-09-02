@@ -1,15 +1,14 @@
 # Routing evals
 
-`agents/prompt-engineer.md` mandates eval-first prompt changes — baseline, repetitions, fresh
-contexts, measured against a previous version. The fleet shipped none, so it preached a practice it
-didn't follow. This directory is that practice: it measures whether a realistic request **routes to
+`skills/prompt-craft` mandates eval-first prompt changes — baseline, repetitions, fresh
+contexts, measured against a previous version. The fleet once shipped none, so it preached a
+practice it didn't follow. This directory is that practice: it measures whether a realistic request **routes to
 the right agent or skill**, and whether near-miss requests that only share vocabulary route
 elsewhere.
 
 ## Why routing, and why here
 
-The agents and skills have deliberately overlapping remits — `prompt-engineer` (agent) and
-`prompt-craft` (skill) both cover "creating or fixing anything an LLM consumes"; `sde-fullstack`
+The agents and skills have deliberately overlapping remits — `sde-fullstack`
 overlaps `backend-craft`/`frontend-craft`; `homelab-engineer` overlaps `service-onboard`,
 `lab-audit`, and `runbook`. Overlap is fine — until a description drifts and a request starts landing
 on the wrong member. Nothing measured that, so nothing would catch the regression. These evals do.
@@ -23,13 +22,13 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 
 ```json
 {
-  "cluster": "prompt-tooling",
-  "members": ["prompt-craft", "prompt-engineer"],
+  "cluster": "lab-ops-example",
+  "members": ["homelab-engineer", "lab-incident"],
   "cases": [
     { "id": "pos-...", "prompt": "...", "polarity": "positive",
-      "expect_fires": ["prompt-craft", "prompt-engineer"], "tags": ["..."] },
+      "expect_fires": ["lab-incident"], "tags": ["..."] },
     { "id": "neg-...", "prompt": "...", "polarity": "negative",
-      "expect_not_fires": ["prompt-craft", "prompt-engineer"], "tags": ["near-miss"] }
+      "expect_not_fires": ["homelab-engineer", "lab-incident"], "tags": ["near-miss"] }
   ]
 }
 ```
@@ -48,13 +47,16 @@ the narrowing rare and visible: it is a declared exemption, the runner prints th
 actually used, and every name in it must be a cluster member (a typo would forbid nothing and pass
 vacuously).
 
-**Narrowing is no longer rare, and that is a measured coverage cost** (counted 2026-08-17:
-**18** of 62 negatives narrow to a strict subset of their cluster). Each narrowing buys a correct
-verdict for one disambiguation and gives up over-trigger detection for every member it stops
-forbidding, so a cluster that narrows most of its negatives stops watching most of its members:
-`continuous-improvement` narrows **6 of 6** negatives to a single forbidden component each,
-leaving five of its six members with no over-trigger coverage in that cluster at all, and
-`agent-systems` narrows 3 of 3, leaving `principal-engineer` uncovered. Read a narrowed
+**Narrowing is no longer rare, and that is a measured coverage cost** (recounted 2026-09-02 after
+the roster cut: **6** of 49 negatives narrow to a strict subset of their cluster, superseding the
+2026-08-17 count of 18 of 62). Each narrowing
+buys a correct verdict for one disambiguation and gives up over-trigger detection for every member
+it stops forbidding, so a cluster that narrows most of its negatives stops watching most of its
+members. `continuous-improvement`'s six self-improve-loop-narrowed negatives retired with that
+skill 2026-09-02 — its four surviving negatives (folded in from `retro-boundary.json`) rely on the
+whole-cluster default instead, so the cluster no longer narrows at all. `agent-systems` retired
+2026-09-02 with two of its three members; its `principal-engineer` negatives are `ladder.json`'s.
+Read a narrowed
 cluster's clean negative side as "no member named in these exemptions over-fired", never as
 "nothing in this cluster over-fires". Before adding a narrowing, prefer reshaping the prompt —
 that is what the `ladder` cluster's `neg-embedded-decision-not-principal-owned` repair did, and
@@ -66,7 +68,7 @@ member is a **far**-miss — it passes almost by construction, and it proves les
 in the same cluster already do, because a description broad enough to catch a far-miss would be
 catching every near-miss too. Three such cases were retired from `prompt-tooling` on 2026-08-17
 (a PR-review request, a lab-audit request, and a build-a-dashboard request, none of which shares
-vocabulary with `prompt-craft` or `prompt-engineer`); the six that remain each name their shared
+vocabulary with `prompt-craft`); the six that remain each name their shared
 term in `expected_output` — "'optimize' is shared vocabulary, but a query is not a prompt", and
 `neg-reword-error-message`, which the file itself calls the tightest near-miss in the set. When you
 add a negative, state the vocabulary it shares. If you cannot, it is a far-miss and the sessions are
@@ -192,7 +194,7 @@ positive rate is as likely to be variance as a real problem. The load-bearing si
 that survive that noise:
 
 - **Regression** — a positive whose rate *drops* between two runs of this suite, e.g. right after a
-  description edit. That is the eval-first check `prompt-engineer` asks for: run it before and after.
+  description edit. That is the eval-first check `prompt-craft` asks for: run it before and after.
 - **Over-trigger** — a negative that fires *at all*. A near-miss landing on the cluster means the
   description is too broad, and it's a defect regardless of variance (which is why negatives pass
   only at a 0% fire rate). Read that asymmetrically: **one fire is proof of a defect, but zero
@@ -356,21 +358,19 @@ files are kept close to the native shape so they migrate when it opens; the runn
 
 ## Coverage
 
-Ten clusters are seeded — every overlap this README names, plus the altitude,
+Eight clusters are seeded — every overlap this README names, plus the altitude,
 simple-stays-simple, and read-only-investigation seams:
 
 | Cluster file | Members | Guards |
 |---|---|---|
-| `prompt-tooling.json` | prompt-craft, prompt-engineer | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
-| `homelab-ops.json` | homelab-engineer and eleven lab-operation skills | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
+| `prompt-tooling.json` | prompt-craft | authoring/fixing an LLM artifact vs near-misses that share write/fix/optimize |
+| `homelab-ops.json` | homelab-engineer, service-onboard, lab-audit, runbook, postmortem, lab-incident, restore-drill, upgrade-campaign, observability, host-onboard | a lab request → the right lab component; near-miss → no lab component (the highest-risk overlap, over a live lab) |
 | `craft-vs-fullstack.json` | backend-craft, frontend-craft, sde-fullstack, code-craft, ci-actions | single-layer vs cross-layer builder routing (the layer-ownership boundary this repo re-drew) |
-| `ladder.json` | sde-fullstack, principal-engineer, distinguished-architect, eng-ladder | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
-| `proportionality.json` | sre-tool, eng-ladder, principal-engineer, distinguished-architect | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
-| `investigation.json` | researcher, repository-investigator, code-reviewer, root-cause, application-security-auditor | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
-| `agent-systems.json` | multi-agent-architect, prompt-engineer, principal-engineer | AI-agent system design and wrapper diagnosis vs one prompt or ordinary software architecture |
-| `verification-seam.json` | verification-engineer, sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
-| `retro-boundary.json` | self-improve-loop, postmortem | non-incident retros and lesson routing vs the resolved-incident write-up; "retro"/"postmortem" vocabulary collisions and a live outage must reach neither |
-| `continuous-improvement.json` | self-improve-loop, runbook, postmortem, root-cause, prompt-craft, prompt-engineer | learning intake, runbook-gap routing, lifecycle decisions, and negative boundaries against diagnosis, direct authoring, incidents, prompt repair, and ordinary builds |
+| `ladder.json` | sde-fullstack, principal-engineer | engineering altitude — scoped→builder, migration→principal, org/multi-year→distinguished |
+| `proportionality.json` | principal-engineer | simple-stays-simple (negative-only): small asks must fire NO heavy component; a builder/craft firing instead is correct |
+| `investigation.json` | researcher, code-reviewer, root-cause | trust-separated investigation: external/public research vs local/private source evidence vs a diff, failure, or source-to-sink audit |
+| `verification-seam.json` | sde-fullstack, code-reviewer, root-cause | execute verification vs implement a fix vs static review vs root-cause diagnosis |
+| `continuous-improvement.json` | root-cause, runbook, postmortem, prompt-craft | the resolved-incident write-up vs "retro"/"postmortem" vocabulary collisions and a live outage, which must reach none of them (retro-boundary.json folded in here 2026-09-02 when self-improve-loop retired) |
 
 `homelab-ops` is re-run and diffed whenever its membership changes. The captured baseline under
 `baselines/2026-07/` predates `postmortem` joining the cluster on 2026-07-24 (4 members / 15 cases
@@ -378,8 +378,9 @@ there); the capture under `baselines/2026-07-24/` records the later 5-member / 1
 are *historical* anchors, not like-for-like comparisons with the current 12-member / 33-case
 cluster. Re-baseline whenever membership changes.
 
-**Suite size, as of 2026-08-23:** 111 routing cases across the ten clusters (49 positives, 62
-negatives), so a full sweep at the methodology's `--runs 3` is **333 sessions** — down from 426.
+**Suite size, as of 2026-09-02:** 90 routing cases across the eight clusters (41 positives, 49
+negatives), so a full sweep at the methodology's `--runs 3` is **270 sessions** — down from 333 on
+2026-08-23 and 426 before that.
 The 93 sessions came off in three retirements: 26 agent-only positives (78), three duplicate cases
 (9), and three far-misses (9), against one Mode 3 positive added back (3). This is worth knowing
 before starting a paired round: the 'before' and 'after' sides each cost a full sweep unless a

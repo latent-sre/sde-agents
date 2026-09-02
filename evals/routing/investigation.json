@@ -1,14 +1,12 @@
 {
   "cluster": "investigation",
-  "description": "Routing eval for the trust-separated investigation overlap. researcher answers from external/public sources; repository-investigator answers bounded local/private source questions; code-reviewer judges a DIFF against a bar; root-cause diagnoses an observed FAILURE; application-security-auditor traces local source-to-sink attack paths. Positives name the intended member; negatives share investigate/check/look-into vocabulary but must route to none of them.",
+  "description": "Routing eval for the trust-separated investigation overlap. researcher answers from external/public sources; code-reviewer judges a DIFF against a bar or, with no diff, threat-models a repository source-to-sink; root-cause diagnoses an observed FAILURE. Positives name the intended member; negatives share investigate/check/look-into vocabulary but must route to none of them.",
   "members": [
     "researcher",
-    "repository-investigator",
     "code-reviewer",
-    "root-cause",
-    "application-security-auditor"
+    "root-cause"
   ],
-  "notes": "Seeded 2026-07-24 and trust-split on 2026-07-31. All five members are agents, so positives under-fire in headless one-shot mode; trust negatives and cross-run regressions over absolute positive rates. The load-bearing seams are public/external research vs local/private repository evidence, ordinary local investigation vs source-to-sink security audit, a diff verdict, and an observed failure. The before artifact at baselines/2026-07-31-p0-p1/before/investigation records the four-member pre-split shape under opus, timeout 420, and clean-room. New repository-investigator cases have no like-for-like before rate and are reported separately. Ordinary negatives use the whole-cluster default; the advisory-only disambiguation explicitly forbids every member except researcher.",
+  "notes": "Seeded 2026-07-24 and trust-split on 2026-07-31. repository-investigator, added in that trust-split, retired from the roster and this cluster 2026-09-02 — ordinary local investigation is now the calling session's own file tools, not a routed agent. application-security-auditor merged into code-reviewer the same day: the static source-to-sink audit of a whole repository is now code-reviewer's no-diff mode, so its triggers ('threat model this repo', 'is anything here exploitable') expect code-reviewer and the advisory-only negative forbids code-reviewer where it used to forbid the auditor. All three remaining members are agents, so positives under-fire in headless one-shot mode; trust negatives and cross-run regressions over absolute positive rates. The load-bearing seams are external/public research vs a diff verdict or source-to-sink audit vs an observed failure. The before artifact at baselines/2026-07-31-p0-p1/before/investigation records the pre-split shape under opus, timeout 420, and clean-room. Ordinary negatives use the whole-cluster default; the advisory-only disambiguation explicitly forbids every member except researcher.",
   "cases": [
     {
       "id": "pos-diagnose-failure",
@@ -35,6 +33,20 @@
         "root-cause",
         "lab",
         "no-current-impact"
+      ]
+    },
+    {
+      "id": "pos-threat-model-repo",
+      "prompt": "Threat model this repository for me — is anything in it actually exploitable? Don't fix anything; trace what an attacker could reach from the entry points.",
+      "polarity": "positive",
+      "expect_fires": [
+        "code-reviewer"
+      ],
+      "expected_output": "A whole-repository security audit with no diff to judge — code-reviewer's no-diff mode, absorbed from application-security-auditor 2026-09-02. 'Threat model' and 'is anything exploitable' are its triggers; the no-fix framing keeps sde-fullstack out.",
+      "tags": [
+        "code-reviewer",
+        "security",
+        "audit"
       ]
     },
     {
@@ -71,7 +83,7 @@
       "id": "neg-security-fix",
       "prompt": "Fix the SQL injection in our search endpoint that last week's audit flagged.",
       "polarity": "negative",
-      "expected_output": "Remediation — sde-fullstack's, never the auditor's (its contract explicitly excludes implementing fixes). 'SQL injection' and 'audit' are the decoy vocabulary; this is the tight near-miss guarding the new member.",
+      "expected_output": "Remediation — sde-fullstack's, never the reviewer's (its contract excludes modifying code, in audit mode as in diff mode). 'SQL injection' and 'audit' are the decoy vocabulary; this is the tight near-miss guarding code-reviewer's absorbed audit mode.",
       "tags": [
         "near-miss",
         "remediation"
@@ -82,12 +94,10 @@
       "prompt": "Look up whether package frobnitz 2.4.1 is in the affected range for GHSA-EXAMPLE and name the first fixed release. Do not inspect a repository or assess reachability.",
       "polarity": "negative",
       "expect_not_fires": [
-        "application-security-auditor",
-        "repository-investigator",
         "code-reviewer",
         "root-cause"
       ],
-      "expected_output": "Authoritative advisory/version lookup alone belongs to researcher. The explicit absence of repository reachability forbids application-security-auditor while allowing researcher.",
+      "expected_output": "Authoritative advisory/version lookup alone belongs to researcher. The explicit absence of repository reachability forbids code-reviewer's audit mode while allowing researcher.",
       "tags": [
         "disambiguation",
         "researcher",

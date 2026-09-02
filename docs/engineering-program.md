@@ -26,11 +26,6 @@ A handoff is complete when the receiving session can act correctly with nothing 
   writer discipline, checked only by the validator's heading and evidence-stem pins.
   `skills/runbook`'s propose packet stays a closed vocabulary so a gap handoff cannot smuggle an
   executable instruction inside a prose field.
-- **Digest-bound work orders.** `homelab-engineer`'s `Work Order v1` block and `sde-fullstack`'s
-  digest recompute keep transfer identity separate from applied effect — the receiver hashes the
-  supplied block itself rather than echoing it back. HANDOFF-001, the behavioral contract that once
-  graded handoff cases against resulting workspace state and receipts, closed won't-do 2026-09-02
-  with the harness that would have run it; this stays agent-prose discipline with no graded check.
 - **Design rules that follow.** One writer per artifact (the concurrency rule in `AGENTS.md`);
   receipts prove transfer, not correctness; grade end state over echo. A schema-conformant packet
   can still omit the decisions behind it, so fewer, richer boundaries beat many thin ones.
@@ -89,28 +84,20 @@ enforced per host, never inferred from prose.
 - **The boundary decision.** `docs/decisions/2026-07-31-ai-graph-engineering.md` (accepted) owns
   what the graph layer is allowed to become and what evidence reopens it.
 
-## Self-learning — admission-gated memory
+## Self-learning — a maintainer's retro, not a shipped loop
 
-The fleet improves itself, and the danger is exactly that: a stored lesson is replayed
-uncritically by every future session that retrieves it, so a wrong lesson compounds instead of
-fading.
+The fleet once carried a full self-improvement loop: a Learning slot in every agent's packet, a
+repo-local ledger with staged promotion, a drift checker, and a grader for the packet grammar. All
+of it left the shipped fleet on the 2026-09-02 single-operator ruling: the ledger and drift
+checker retired 2026-09-01, the grader 2026-09-02, and the packet slot and every preload the same
+day. `skills/self-improve-loop` remains as a maintainer's retro checklist behind explicit
+invocation, and the 34 promoted lessons whose released-version retest the ledger still tracked
+are listed in `docs/archive/2026-09/learning-ledger-retirement-2026-09-01.md`.
 
-- **Fail-closed intake.** Every candidate is quarantined at capture, inside the packet's Learning
-  block itself, with evidence, scope, and a sensitivity attestation, and the writer advances it one
-  stage at a time (quarantined → proposed → approved → promoted) with a reason per step. That
-  sequencing is writer discipline start to finish: nothing grades the packet's `Promotion state`
-  field now. The linter that once checked disposition compatibility, scripts/packet_lint.py,
-  retired with the behavioral harness 2026-09-02 — and it never saw prior state either, so a
-  skipped stage was already invisible to it. The repo-local ledger that rejected out-of-order
-  transitions, scripts/learning_ledger.py, was retired 2026-09-01 with no store surviving between
-  sessions; the 34 promoted candidates whose released-version retest it still tracked are listed in
-  `docs/archive/2026-09/learning-ledger-retirement-2026-09-01.md`.
-- **Disposition is mandatory.** A discovery is routed, filed as a gap, or dropped with a stated
-  reason (`skills/self-improve-loop/references/discovery-routing.md`); silence is not a
-  disposition, and an emitted-but-unpersisted packet is a known failure mode, not a non-event.
-- **Drift watch.** scripts/ledger_drift.py, which reported pending candidates whose named
-  destinations changed after intake, was retired with the ledger (2026-09-01); a packet-only
-  candidate has no persisted destination pointer left to drift, so there is no replacement check.
+- **Disposition is mandatory.** The one rule that survives for every session: a discovery is
+  routed, filed as a gap, or dropped with a stated reason
+  (`skills/self-improve-loop/references/discovery-routing.md`); silence is not a disposition,
+  because a stored lesson is replayed uncritically and a wrong one compounds instead of fading.
 
 ## The reading rule
 

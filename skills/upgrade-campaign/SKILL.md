@@ -10,12 +10,9 @@ argument-hint: [what to upgrade, or "everything"]
 verification each is the deliverable. The failure mode this skill exists to prevent is the
 twelve-service upgrade that half-works, where nobody can tell which change broke what.
 
-Every apply is under `sde-agents:homelab-engineer`'s change tiers. Routine, unrelated, reversible
-leaf-service bumps may form one **finite ordered Tier 2 plan** when the operator sees every exact
-command and target, visible effect, rollback, and verification before deciding. That one decision
-removes repeated conversational approval; each command still passes through its own host transport
-and each service is verified before the next. Notable, major, one-way, shared-dependency, or Tier 3
-steps get a separate decision and do not hide inside the routine plan.
+Every apply is under `sde-agents:homelab-engineer`'s change tiers, and routine reversible
+leaf-service bumps may share one finite ordered Tier 2 plan under that agent's consolidated-plan
+rule — notable, major, one-way, or shared-dependency steps get their own decision.
 
 ## Rule one: one service at a time, verified between
 

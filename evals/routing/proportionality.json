@@ -1,48 +1,75 @@
 {
   "cluster": "proportionality",
-  "description": "Simple-stays-simple guard: small, scoped asks must NOT trigger the fleet's heavy machinery — the sre-tool pipeline, the eng-ladder routing meta-skill, or the design-tier agents (principal-engineer, distinguished-architect). Complements ladder.json, which tests that genuinely ambiguous or cross-cutting work reaches the right altitude; this cluster tests the downward pressure the fleet preaches ('route DOWN', 'no ceremony', 'skip single-file edits') but never measured.",
-  "members": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
-  "notes": "Negative-only cluster: every case is a small ask with an obvious owner. A pass means NO member fired; a builder (sde-fullstack) or craft skill firing instead is CORRECT routing and appears in also_fired — do not read it as a failure. Any member firing at any rate is a real proportionality defect (the runner's negatives fail on a single firing). neg-quick-script is deliberately the tightest case: 'write me a quick script' shares vocabulary with sre-tool's net-new-tool trigger, and guards the right-size-before-Phase-0 gate.",
+  "description": "Simple-stays-simple guard: small, scoped asks must NOT trigger the fleet's heavy component — the design agent, principal-engineer. Complements ladder.json, which tests that genuinely cross-cutting or platform-binding work reaches design altitude; this cluster tests the downward pressure the fleet preaches ('no ceremony', 'skip single-file edits') but never measured. Members cut to principal-engineer 2026-09-02: distinguished-architect merged into it, and sre-tool left the member list in the same cut.",
+  "members": [
+    "principal-engineer"
+  ],
+  "notes": "Negative-only cluster: every case is a small ask with an obvious owner. A pass means the member did NOT fire; a builder (sde-fullstack) or craft skill firing instead is CORRECT routing and appears in also_fired — do not read it as a failure. The member firing at any rate is a real proportionality defect (the runner's negatives fail on a single firing). neg-quick-script is the loosest phrasing and therefore the tightest case: 'write me a quick script' names no owner, so it is the ask most likely to invite a requirements-and-design phase that a dedupe one-liner does not earn.",
   "cases": [
     {
       "id": "neg-help-flag",
       "prompt": "Add a --help flag to my backup script that prints usage and exits.",
       "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
-      "expected_output": "A one-file flag addition — builder or backend-craft territory; no pipeline, no ladder, no design tier.",
-      "tags": ["simple", "cli"]
+      "expect_not_fires": [
+        "principal-engineer"
+      ],
+      "expected_output": "A one-file flag addition — builder or backend-craft territory; no design tier.",
+      "tags": [
+        "simple",
+        "cli"
+      ]
     },
     {
       "id": "neg-typo-fix",
       "prompt": "Fix the typo in this error message: 'Unabel to connect' should be 'Unable to connect'.",
       "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
+      "expect_not_fires": [
+        "principal-engineer"
+      ],
       "expected_output": "A string fix. Any heavy component firing here is pure ceremony.",
-      "tags": ["simple", "trivial-edit"]
+      "tags": [
+        "simple",
+        "trivial-edit"
+      ]
     },
     {
       "id": "neg-rename-var",
       "prompt": "Rename the variable tmp to retry_count everywhere in utils.py.",
       "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
-      "expected_output": "A single-file mechanical rename with an existing pattern — eng-ladder's own description says to skip these.",
-      "tags": ["simple", "refactor"]
+      "expect_not_fires": [
+        "principal-engineer"
+      ],
+      "expected_output": "A single-file mechanical rename with an existing pattern — the routing rule for scoped work: an obvious owner and an existing pattern route straight to the builder.",
+      "tags": [
+        "simple",
+        "refactor"
+      ]
     },
     {
       "id": "neg-add-test",
       "prompt": "Add a unit test for the parse_duration function covering the empty-string case.",
       "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
+      "expect_not_fires": [
+        "principal-engineer"
+      ],
       "expected_output": "A scoped test addition — builder work, no design phase.",
-      "tags": ["simple", "test"]
+      "tags": [
+        "simple",
+        "test"
+      ]
     },
     {
       "id": "neg-quick-script",
       "prompt": "Write me a quick script that dedupes the lines in a text file.",
       "polarity": "negative",
-      "expect_not_fires": ["sre-tool", "eng-ladder", "principal-engineer", "distinguished-architect"],
-      "expected_output": "The tightest case: 'write a script' brushes sre-tool's net-new-tool trigger, but a dedupe one-liner earns no requirements phase, no gates, no pipeline. Guards the right-size-before-Phase-0 exit.",
-      "tags": ["simple", "near-miss", "script"]
+      "expect_not_fires": [
+        "principal-engineer"
+      ],
+      "expected_output": "A dedupe one-liner earns no requirements phase and no design doc; the open-ended phrasing is exactly the ask ceremony attaches to, which is why this case stays.",
+      "tags": [
+        "simple",
+        "script"
+      ]
     }
   ]
 }

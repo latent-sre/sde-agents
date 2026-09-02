@@ -9,8 +9,8 @@ that turn "read-only" and "ask first" from promises into controls.
 ## Fleet
 
 <!-- fleet-inventory:start -->
-- **Agents (11):** `application-security-auditor`, `code-reviewer`, `distinguished-architect`, `homelab-engineer`, `multi-agent-architect`, `principal-engineer`, `prompt-engineer`, `repository-investigator`, `researcher`, `sde-fullstack`, `verification-engineer`
-- **Skills (20):** `backend-craft`, `ci-actions`, `code-craft`, `eng-ladder`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `onboarding-map`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `security-audit`, `self-improve-loop`, `service-onboard`, `sre-tool`, `upgrade-campaign`
+- **Agents (5):** `code-reviewer`, `homelab-engineer`, `principal-engineer`, `researcher`, `sde-fullstack`
+- **Skills (17):** `backend-craft`, `ci-actions`, `cli-tool`, `code-craft`, `frontend-craft`, `host-onboard`, `lab-audit`, `lab-incident`, `observability`, `postmortem`, `prompt-craft`, `restore-drill`, `root-cause`, `runbook`, `self-improve-loop`, `service-onboard`, `upgrade-campaign`
 <!-- fleet-inventory:end -->
 
 ## Install
@@ -33,17 +33,19 @@ from the repository root.
 how reversible it is, states the rollback before acting, and hands anything destructive back to
 you for a decision. It works the operating skills: `lab-incident` when something is down,
 `root-cause` when the fix keeps not sticking, `runbook`, `postmortem`, `restore-drill`,
-`upgrade-campaign`, `observability`, and the `lab-audit` and `security-audit` checklists. Bringing
-a new machine or a new service into the lab runs `host-onboard` and `service-onboard`.
+`upgrade-campaign`, `observability`, and the `lab-audit` checklist with its adversary pass.
+Bringing a new machine or a new service into the lab runs `host-onboard` and `service-onboard`.
 
 **Writing what runs on it.** `sde-fullstack` builds scripts, services, and small tools, with
 `code-craft` (Bash and PowerShell pitfalls included), `backend-craft`, `frontend-craft`, and
-`ci-actions` as its reference shelf. `code-reviewer` reviews a diff read-only. `researcher` is the
-only agent with web access, kept away from files that hold your secrets.
+`ci-actions` as its reference shelf, and `cli-tool` for the shape of a small operator command.
+`code-reviewer` reviews a diff read-only and can threat-model a whole repository the same way.
+`researcher` is the only agent with web access, kept away from files that hold your secrets.
 
-**Design and meta.** `principal-engineer` and `distinguished-architect` think through a change
-before it is built. `prompt-engineer`, `prompt-craft`, `multi-agent-architect`, and
-`self-improve-loop` are for people editing agents and skills, this fleet's included.
+**Design and meta.** `principal-engineer` thinks through a change before it is built, from a
+cross-service migration to a platform choice that binds the lab for years. `prompt-craft` is for
+people editing agents and skills, this fleet's included; `self-improve-loop` is the maintainer's
+retro, reached by name.
 
 Ask in plain language. The right agent or skill fires from its description; you can also name one
 directly with its namespaced name.
@@ -53,11 +55,10 @@ directly with its namespaced name.
 Two `PreToolUse` hooks ship with the plugin and register session-wide. Each scopes itself to the
 agent making the call and does nothing for anyone else, so your own shell is never inspected.
 
-- **The read-only guard.** `code-reviewer`, `principal-engineer`, `distinguished-architect`, and
-  `repository-investigator` hold `Bash` for inspection only. The guard permits an enumerated set
-  of read-only commands (`git diff`, `rg`, `cat`, and their kin) and denies everything else,
-  including any interpreter. If the guard cannot run, those agents lose Bash rather than gaining
-  it.
+- **The read-only guard.** `code-reviewer` and `principal-engineer` hold `Bash` for inspection
+  only. The guard permits an enumerated set of read-only commands (`git diff`, `rg`, `cat`, and
+  their kin) and denies everything else, including any interpreter. If the guard cannot run,
+  those agents lose Bash rather than gaining it.
 - **The live-effect gate.** `homelab-engineer` can change your lab, so its control is a question,
   not a denial: every live command it runs (`docker compose up`, `systemctl restart`, `zfs
   destroy`, a reboot) prompts you, and is denied outright in a session that has turned prompts
@@ -111,9 +112,9 @@ python3 scripts/install_codex_agents.py --user
 ```
 
 The plugin carries the skills; the installer syncs the agent profiles into `~/.codex/agents` and
-is the update path for them. On Codex, the onboarding skills are reached by name
-(`$service-onboard`), and agents are reached by explicit request rather than routed from their
-descriptions.
+is the update path for them. On Codex, agents are reached by explicit request rather than routed
+from their descriptions. Skills route from their descriptions like any other skill, except
+`self-improve-loop`, a maintainer-only skill reached by name (`$self-improve-loop`).
 
 ## Working on the fleet
 

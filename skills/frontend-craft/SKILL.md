@@ -96,11 +96,8 @@ packet.
 | a modal, drawer, menu, tooltip, or tabs — any custom interactive widget — or announcing async status | `references/interaction-a11y.md` |
 | writing or changing user-facing text — labels, buttons, headings, empty/error copy | `references/ux-writing.md` |
 | login, tokens, or route guarding | `references/auth.md` |
-| React UI code — the request names React, touched code imports React, the target UI package declares `react`/`react-dom`, or the greenfield stack selected React | `references/react.md` |
-| Vue UI code — the request names Vue, the target is a Vue `.vue` SFC or Vue composable, or touched code imports from `vue` | `references/vue.md` |
 
-“Component,” “SPA,” JSX, or a `.tsx` suffix is not framework evidence. Preact, Solid, and other JSX
-runtimes are not React. If neither the request nor the target UI package/touched code identifies
-React or Vue, read neither framework reference.
+No framework reference is bundled: the model already carries React, Vue, and the rest. This
+skill's value is the stack-neutral rules above and the references here.
 
 Trips two predicates? Read both. Trips none? The core above is the whole job.

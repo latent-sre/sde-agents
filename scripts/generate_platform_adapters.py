@@ -427,8 +427,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         replacement = (
             "**Inspection only. You may not execute code** — no test runners, build tools, "
             "scripts, or repository validators. Cite the builder's packet or CI evidence; when it "
-            "is missing or unconvincing, report that as a finding and name "
-            "`verification-engineer` as the independently executed escalation. "
+            "is missing or unconvincing, report that as a finding and name the builder's "
+            "own executed verification (`sde-fullstack`) as the escalation. "
             f"{enforcement} Use read/search inspection and name anything the host cannot expose.\n\n"
             "| Rationalization | Reality |\n"
             "|---|---|\n"
@@ -481,11 +481,13 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         # hook (GATE-006). On the other hosts the claim is replaced, not carried: Codex has its
         # own exec-policy prompt and a non-executing check for it; Copilot/VS Code payloads do not
         # identify the active agent, so no host control interposes there and every live effect is
-        # an operator handoff. Each substitution must land exactly once, for the reason the
-        # repository-investigator block below records.
+        # an operator handoff. Each substitution must land exactly once: a zero-match miss would
+        # regenerate a "clean" adapter that still carries the Claude-only claim, and byte-drift
+        # validation cannot catch it because the committed adapter was produced with the same
+        # silent miss.
         if host == "codex":
             gate_bullet = (
-                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "- **Managed gate** (the normal `new` path): a host-owned control interposes a "
                 "per-invocation human\n  decision on the exact argv. On this host that control is "
                 "the sandbox and command-approval prompt;\n  the source profile's live-effect gate "
                 "is a Claude-only hook that Codex custom-agent TOML cannot\n  install, so the "
@@ -496,8 +498,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "whether it prompts: when the gate cannot be established, use operator\n  handoff."
             )
             standing = (
-                "on this host only an exec-policy rule under a root-owned path can\n  qualify — a "
-                "rule in any file you can edit proves nothing."
+                "On this host that means an exec-policy rule under a root-owned path; a rule in\n"
+                "  any file you can edit proves nothing."
             )
             evidence_line = (
                 "> **Gate evidence**: exec policy — `codex execpolicy check` reports `prompt` for "
@@ -505,7 +507,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             )
         else:
             gate_bullet = (
-                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "- **Managed gate** (the normal `new` path): a host-owned control interposes a "
                 "per-invocation human\n  decision on the exact argv. This profile holds an "
                 "`execute` tool, but Copilot and VS Code\n  PreToolUse payloads do not identify "
                 "the active agent, so the source profile's live-effect gate\n  cannot be scoped "
@@ -515,8 +517,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "whether it prompts."
             )
             standing = (
-                "no rule on this host is both operator-owned and outside your edit\n  reach, so "
-                "standing policy never qualifies here."
+                "No rule on this host is both operator-owned and outside your edit reach, so\n"
+                "  standing policy never qualifies here."
             )
             evidence_line = (
                 "> **Gate evidence**: none on this host — the operator runs the exact command "
@@ -548,13 +550,13 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 )
         for pattern, replacement in (
             (
-                r"- \*\*Managed gate \(normal `new` path\):\*\*.*?"
-                r"a\n  suppressed-prompt session — use operator handoff\.",
+                r"- \*\*Managed gate\*\* \(the normal `new` path\):.*?"
+                r"Never run a live command to find out whether it prompts\.",
                 gate_bullet,
             ),
             (
-                r"on Claude Code only a rule in managed \(administrator-owned\) settings can\n"
-                r"  qualify — .*?root-owned path qualifies\.",
+                r"On\n  Claude Code that means a rule in managed \(administrator-owned\) settings; "
+                r"on Codex, an exec-policy\n  rule under a root-owned path\.",
                 standing,
             ),
             (
@@ -585,95 +587,6 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                     raise ValueError(
                         f"homelab-engineer copilot rewrite: expected exactly one {old[:40]!r} "
                         f"in the worked example, found {text.count(old)}."
-                    )
-                text = text.replace(old, new)
-
-    if name == "repository-investigator":
-        # The canonical paragraph claims a PreToolUse reader allowlist behind Bash. That hook is
-        # Claude-only, so on both other hosts the claim must be replaced, not carried: prose that
-        # names a control the host cannot load would read as armor and be nothing.
-        if host == "copilot":
-            replacement = (
-                "Keep the investigation local-only: do not fetch external content or change\n"
-                "files. This profile receives no shell/execute tool — Copilot and VS Code cannot\n"
-                "scope Claude's per-agent command guard — so gather history evidence through\n"
-                "read/search tools and name the commit-history evidence you could not reach. The\n"
-                "local-only boundary prevents private source from sharing a subordinate context\n"
-                "with fetched external content."
-            )
-        else:
-            replacement = (
-                "Keep the investigation local-only and do not fetch external content or change\n"
-                "files. Codex custom-agent TOML cannot remove inherited web, shell, or write\n"
-                "authority, its requested sandbox is overridable, and the source profile's\n"
-                "reader-allowlist command guard does not exist on this host — so every boundary\n"
-                "here is cooperative: use the shell only for read-only repository inspection\n"
-                "(`git log`, `git blame`, `git show`, `git rev-parse`, search), never for code\n"
-                "execution or deliberate network access — against a partial clone any reader that\n"
-                "materializes an absent object (`git show`, `git log -p`, `git blame`) still\n"
-                "lazily fetches it from the repository's own remote, so never report no-network as\n"
-                "a verified fact without naming the commands you ran — and let the caller provide\n"
-                "an outer isolation\n"
-                "boundary before treating that separation as enforced. The provenance rule is\n"
-                "part of that cooperation, and it binds harder here than on the source host:\n"
-                "git executes code named by a repository's local config — diff drivers under\n"
-                "`git log`/`git show`, a `core.fsmonitor` command under even `git status` — so a\n"
-                "repository that *arrived* as a directory, archive, or mounted volume gets no git\n"
-                "commands at all, step 2's `rev-parse`/`status` included, until your caller states\n"
-                "the isolation boundary; inspect it with read/search tools and say why. No command\n"
-                "guard backs this on Codex, so nothing but this instruction stands between an\n"
-                "arrived repository and its own diff driver."
-            )
-        # Every substitution here must land exactly once. A zero-match miss (the canonical
-        # paragraph reworded without this function updated) would regenerate "clean" adapters
-        # that still carry the Claude-only PreToolUse claim on hosts that cannot load that
-        # guard — and byte-drift validation cannot catch it, because the committed adapter was
-        # produced with the same silent miss (PR #141 review finding).
-        text, replaced = re.subn(
-            r"Your context is deliberately local-only:.*?fetched external content\.",
-            replacement,
-            text,
-            count=1,
-            flags=re.DOTALL,
-        )
-        if replaced != 1:
-            raise ValueError(
-                f"repository-investigator {host} rewrite: the local-only boundary paragraph "
-                f"anchor was not found ({replaced} matches). The canonical paragraph changed "
-                f"without updating adapt_agent_contract, so the generated adapter would "
-                f"silently keep a Claude-only enforcement claim this host cannot honor."
-            )
-        if host == "copilot":
-            # The method steps name git commands the guard allows on the source host; this
-            # profile holds no shell at all, so an instruction to run them would contradict the
-            # boundary the paragraph above just drew. Same must-land rule as above.
-            for old, new in (
-                (
-                    "Name the repository root and the revision — `git rev-parse HEAD`, with\n"
-                    "   `git status` to detect a dirty tree; on untrusted provenance both wait "
-                    "for the isolation\n"
-                    "   boundary above.",
-                    "Name the repository root and the revision supplied by the caller or exposed\n"
-                    "   by the host context.",
-                ),
-                (
-                    "When the question is \"how did it get this way\" or \"why is this here\", "
-                    "history is the evidence:\n"
-                    "   `git log`/`git blame` on the region, citing the commit that introduced or "
-                    "last changed it.",
-                    "When the question is \"how did it get this way\" or \"why is this here\", "
-                    "history is the evidence:\n"
-                    "   use the host's read-only history context when available, and name the "
-                    "commit-history\n"
-                    "   evidence you could not reach.",
-                ),
-            ):
-                if old not in text:
-                    raise ValueError(
-                        "repository-investigator copilot rewrite: a method-step anchor was not "
-                        "found; the canonical step changed without updating "
-                        "adapt_agent_contract, so the no-shell profile would instruct git "
-                        "commands it cannot run."
                     )
                 text = text.replace(old, new)
 

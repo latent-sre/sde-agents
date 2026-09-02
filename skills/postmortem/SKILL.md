@@ -61,8 +61,9 @@ A postmortem that ends as a document changed nothing. Before closing out:
 - Systemic findings (unmonitored service, undrilled restore, single point of failure) become checks
   for the next `sde-agents:lab-audit` sweep.
 - If a contributing cause was **fleet behavior** — a stale runbook trusted, an apply without its
-  tier evidence, a skill that misrouted — run the `sde-agents:self-improve-loop` micro-retro and
-  move one lesson into a definition or a deterministic check.
+  tier evidence, a skill that misrouted — hand the lesson to the operator (observed vs expected,
+  the evidence, and where it should land: a definition or a deterministic check) rather than
+  editing fleet definitions yourself.
 - File it where the lab repo keeps documents — `docs/postmortems/YYYY-MM-DD-<slug>.md` unless the
   repo already has a convention, in which case the existing convention wins.
 

@@ -1,6 +1,6 @@
 ---
 name: "prompt-craft"
-description: "The lightweight inline method for prompt work — success criteria, baseline, minimal change, fresh retest. Use when creating or fixing anything an LLM consumes — prompts, agent definitions, skills, tool descriptions — including requests like \"write me an agent for X\", \"my skill never triggers\", \"the model keeps ignoring this instruction\". First stop for prompt work; escalate to prompt-engineer only when the fix needs fresh-context reps, before/after evals, or spans a prompt suite; for multi-agent systems, multi-agent-architect."
+description: "Eval-first method for anything an LLM consumes — prompts, agent definitions, skills, tool descriptions, multi-agent rosters — and for telling a prompt defect from a defect in the harness around it. Use for \"write me an agent for X\", \"my skill never triggers\", \"my agent won't trigger\", \"the model keeps ignoring this instruction\", \"design a multi-agent system\", \"diagnose a wrapper/harness failure\", \"my LLM app got worse after I added a memory layer\". Not for ordinary software work — use sde-fullstack; not for system architecture with no model in the loop — use principal-engineer."
 argument-hint: "[what to create or fix]"
 ---
 
@@ -10,7 +10,8 @@ argument-hint: "[what to create or fix]"
 > Resolve them from the installed plugin using the host's agent or skill picker; do not add
 > Claude's plugin namespace.
 
-For quick jobs, apply this method inline. For anything needing iterative testing or a full agent/skill suite, spawn the `prompt-engineer` agent with the target file, the observed failure, and the success criteria.
+Apply this method inline, for one prompt or a whole roster. Reps that need a clean context are
+subagents you spawn yourself (step 4).
 
 ## Method
 
@@ -20,6 +21,10 @@ Capturing a live workflow ("turn what we just did into a skill")? Extract the me
 2. **Baseline.** Reproduce the failure with the current prompt. No edit without an observed failure to pin it to.
 3. **Minimal change.** Fix the observed failure; don't rewrite everything you'd have phrased differently.
 4. **Retest fresh.** Spawn a clean-context subagent with a realistic task; check it triggers and complies. Multiple reps — variance is a metric. **If the repo ships an eval harness, run it instead of eyeballing** — in this fleet that is `scripts/eval_routing.py` for a description change (run the overlapping cluster before *and* after and diff the rates; a near-miss that starts firing is a defect at any rate). Measuring after only tells you the current number; the diff is the finding.
+
+**Hold-out cases.** The second time the same eval set drives an edit, hold one or two of its cases
+out of the tuning loop and judge the final version on those — a prompt tuned until its train cases
+pass has learned the cases, not the job.
 
 ## The two rules that fix most agent/skill failures
 
@@ -52,6 +57,40 @@ One recorded conflict (stamped 2026-07): the official skill-authoring doc still 
 input/output examples, while the Claude 5-era context-engineering guidance reports examples can
 constrain exploration. The fleet keeps its compressed worked examples — re-decide when the docs
 page moves.
+
+## When the problem is the system around the prompt
+
+A miss is not evidence that the prompt text is wrong. Isolate the boundary first, in this order,
+and edit prompt text only when the evidence points there:
+
+1. **Routing** — did the component fire at all? Never-fires is rule 1, not a body problem.
+2. **Wrapper** — right on a direct call, wrong inside the stack: bisect the prompt-assembly,
+   memory, and delivery layers before blaming the model.
+3. **Context** — did the instruction reach the model, and was it still in reach when it mattered?
+   `references/context.md` has the symptom table.
+4. **Transport** — the log shows the right answer and the user sees a wrong one: the defect is
+   rendering or delivery, not generation.
+5. **Tool** — a required tool the code never gates will be skipped under load; the fix is a gate,
+   not a stronger sentence.
+6. **Evaluator** — would the assert also pass a plainly wrong output? A pass on a weak assert
+   manufactures confidence; fix the assert before the prompt.
+7. **Capability** — fails in every configuration: beyond the model, not a prompt problem.
+
+**Tools are authority.** An agent's tool list is its mandate — a reviewer that cannot edit is one
+without `Write`, not one told not to. Enforce roles at the tool layer, never in prose
+(`references/tools.md` designs the list); runtime constraints hold, instructions bend.
+
+**Three wrapper-stack triggers.** "It got worse after I added a memory layer": the agent's own
+assertions were admitted into durable memory, or one fact now arrives by prompt, history, and
+memory and reads as three confirmations — user corrections outrank the agent's writes. "It skips
+the tool": a prompt-only mandate; gate it in code (item 5). "The answer changed between generation
+and delivery": a hidden repair, retry, or summarize pass, or transport corruption (item 4) — make
+every second pass an explicit contract or remove it.
+
+More than one agent is an architecture decision with real costs — tokens, latency, information
+loss at every handoff — justified only when the work exceeds one context, stages need isolation, or
+independent perspectives measurably reduce error. Otherwise ship one agent with good tools; when
+you do split, `references/context.md` owns what a worker receives and what it must return.
 
 ## Load the reference for what you're working on
 
