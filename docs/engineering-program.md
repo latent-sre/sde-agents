@@ -26,11 +26,6 @@ A handoff is complete when the receiving session can act correctly with nothing 
   writer discipline, checked only by the validator's heading and evidence-stem pins.
   `skills/runbook`'s propose packet stays a closed vocabulary so a gap handoff cannot smuggle an
   executable instruction inside a prose field.
-- **Digest-bound work orders.** `homelab-engineer`'s `Work Order v1` block and `sde-fullstack`'s
-  digest recompute keep transfer identity separate from applied effect — the receiver hashes the
-  supplied block itself rather than echoing it back. HANDOFF-001, the behavioral contract that once
-  graded handoff cases against resulting workspace state and receipts, closed won't-do 2026-09-02
-  with the harness that would have run it; this stays agent-prose discipline with no graded check.
 - **Design rules that follow.** One writer per artifact (the concurrency rule in `AGENTS.md`);
   receipts prove transfer, not correctness; grade end state over echo. A schema-conformant packet
   can still omit the decisions behind it, so fewer, richer boundaries beat many thin ones.

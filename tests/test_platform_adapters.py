@@ -511,17 +511,6 @@ class PlatformAdapterTests(unittest.TestCase):
                 ):
                     self.assertNotIn(false_control, normalized)
 
-    def test_handoff_owner_reference_is_translated_for_generated_hosts(self) -> None:
-        paths = (
-            REPO / ".github" / "agents" / "sde-fullstack.agent.md",
-            REPO / ".codex" / "agents" / "sde-fullstack.toml",
-        )
-        for path in paths:
-            with self.subTest(path=path.relative_to(REPO)):
-                text = path.read_text(encoding="utf-8")
-                self.assertNotIn("agents/homelab-engineer.md", text)
-                self.assertIn("the installed `homelab-engineer` agent definition", text)
-
     def test_host_agent_adapters_have_no_claude_runtime_references(self) -> None:
         paths = [
             *(REPO / ".github" / "agents").glob("*.agent.md"),

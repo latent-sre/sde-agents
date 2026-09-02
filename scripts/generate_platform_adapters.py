@@ -487,7 +487,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
         # silent miss.
         if host == "codex":
             gate_bullet = (
-                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "- **Managed gate** (the normal `new` path): a host-owned control interposes a "
                 "per-invocation human\n  decision on the exact argv. On this host that control is "
                 "the sandbox and command-approval prompt;\n  the source profile's live-effect gate "
                 "is a Claude-only hook that Codex custom-agent TOML cannot\n  install, so the "
@@ -498,8 +498,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "whether it prompts: when the gate cannot be established, use operator\n  handoff."
             )
             standing = (
-                "on this host only an exec-policy rule under a root-owned path can\n  qualify — a "
-                "rule in any file you can edit proves nothing."
+                "On this host that means an exec-policy rule under a root-owned path; a rule in\n"
+                "  any file you can edit proves nothing."
             )
             evidence_line = (
                 "> **Gate evidence**: exec policy — `codex execpolicy check` reports `prompt` for "
@@ -507,7 +507,7 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
             )
         else:
             gate_bullet = (
-                "- **Managed gate (normal `new` path):** a host-owned control interposes a "
+                "- **Managed gate** (the normal `new` path): a host-owned control interposes a "
                 "per-invocation human\n  decision on the exact argv. This profile holds an "
                 "`execute` tool, but Copilot and VS Code\n  PreToolUse payloads do not identify "
                 "the active agent, so the source profile's live-effect gate\n  cannot be scoped "
@@ -517,8 +517,8 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 "whether it prompts."
             )
             standing = (
-                "no rule on this host is both operator-owned and outside your edit\n  reach, so "
-                "standing policy never qualifies here."
+                "No rule on this host is both operator-owned and outside your edit reach, so\n"
+                "  standing policy never qualifies here."
             )
             evidence_line = (
                 "> **Gate evidence**: none on this host — the operator runs the exact command "
@@ -550,13 +550,13 @@ def adapt_agent_contract(text: str, *, name: str, host: str) -> str:
                 )
         for pattern, replacement in (
             (
-                r"- \*\*Managed gate \(normal `new` path\):\*\*.*?"
-                r"a\n  suppressed-prompt session — use operator handoff\.",
+                r"- \*\*Managed gate\*\* \(the normal `new` path\):.*?"
+                r"Never run a live command to find out whether it prompts\.",
                 gate_bullet,
             ),
             (
-                r"on Claude Code only a rule in managed \(administrator-owned\) settings can\n"
-                r"  qualify — .*?root-owned path qualifies\.",
+                r"On\n  Claude Code that means a rule in managed \(administrator-owned\) settings; "
+                r"on Codex, an exec-policy\n  rule under a root-owned path\.",
                 standing,
             ),
             (

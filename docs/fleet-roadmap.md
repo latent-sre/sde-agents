@@ -119,11 +119,14 @@ measurement is already committed evidence.
 
 #### CTX-005 — shrink `homelab-engineer`'s always-loaded body
 
-**Status:** `decision-needed` — one authorized safety repair and one behavioral round are spent;
-the branch is no-go evidence, not merge-ready.
+**Status:** `active` — the first cut landed 2026-09-02 in the roster-cut branch: the onboarding
+work order (340 words) left with HANDOFF-001, the transport section compressed from 571 to about
+300 words, the worked example lost its retry tail, and the packet Learning slot left with the
+loop. Body 3,754 → 3,154 words; the earlier no-go experiment's instrument is retired.
 
-**Outcome:** The safety repair improved fresh behavior (45/125 to 55/125, new safety case 5/5)
-but regressed three baseline-perfect contracts to 4/5 (60/130 overall); acceptance still fails.
+**Outcome:** The always-loaded body carries the tiers, the three transports, the standards, the
+packet, and the boundaries, and nothing a script now decides; measured before/after word and
+character counts, with a routing round and the probe showing no regression.
 
 **Source:**
 [Homelab proportional operations decision](decisions/2026-08-23-homelab-proportional-operations.md) ·
