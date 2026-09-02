@@ -216,7 +216,7 @@ The runtime control plane is close to a graph substrate:
   immutable events, cancellation, supersession, target revisions, and evidence links.
 - [`evidence_envelope.py`](../../scripts/evidence_envelope.py) defines typed producer, context,
   target, criterion, command, environment, isolation, artifact, and limitation fields.
-- [`effect_broker.py`](../../scripts/effect_broker.py) binds one signed approval to one exact action,
+- `effect_broker.py` (retired 2026-09-01) bound one signed approval to one exact action,
   target, executable digest, argument vector, expiry, and nonce.
 - [`verification_sandbox.py`](../../scripts/verification_sandbox.py) separates verification from the
   builder's mutable workspace.
@@ -541,3 +541,12 @@ and the original acceptance-evidence list govern the spec.
   unknown-effect state.
 - Offline graph optimization shows repeatable gains across the fleet's own eval bank with
   acceptable token, latency, and safety cost.
+
+## Amendment 2026-09-01
+
+`effect_broker.py` was retired 2026-09-01
+(`docs/decisions/2026-08-20-effect-transport-policy.md`); the list item above is corrected to say
+so rather than link a path that no longer exists. `scripts/workflow_contract.py`, the offline
+workflow design validator, was retired the same day: GRAPH-004, its only consumer, is deferred and
+trigger-bound, and no role or check names the validator while that trigger stays unfired. GRAPH-004
+reinstates or rewrites it if that trigger fires.

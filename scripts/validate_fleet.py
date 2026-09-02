@@ -228,15 +228,10 @@ FORBIDDEN_AGENT_TOOLS = {
 RUNTIME_CONTROL_WIRING = {
     "scripts/verification_sandbox.py": "agents/verification-engineer.md",
     "scripts/run_state.py": "skills/sre-tool/SKILL.md",
-    # effect_broker.py deliberately has no agent consumer: homelab-engineer retired the
-    # broker mandate in favour of host-native managed approval, so no role is required to
-    # name it. It remains an operator-run control (README documents it) and keeps its own
-    # typed-evidence check via RUNTIME_EVIDENCE_PRODUCERS below.
 }
 RUNTIME_EVIDENCE_PRODUCERS = {
     "scripts/verification_sandbox.py",
     "scripts/run_state.py",
-    "scripts/effect_broker.py",
 }
 # Real tools that a SUBAGENT never receives, however they are listed, because they depend on the main
 # conversation's UI or session state (code.claude.com/docs/en/sub-agents). Everything in agents/ is a

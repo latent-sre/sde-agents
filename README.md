@@ -201,22 +201,18 @@ authority outside an agent's writable checkout:
 | `scripts/evidence_envelope.py` | Versioned JSON evidence bound to producer, run/task/attempt, immutable target, direct argv, timestamps, artifacts, status, and limitations | Producers expose only explicit non-secret environment facts; artifact bytes are retained wherever their digests must be checked |
 | `scripts/run_state.py` | Transactional run/task/attempt transitions, optimistic versions, leases, heartbeat, cancellation, supersession, and evidence-linked completion | SQLite database outside every worker workspace; workers receive IDs and stdin lease tokens, not direct database write access |
 | `scripts/verification_sandbox.py` | Digest-pinned, no-pull, networkless Docker/Podman execution with read-only source, isolated scratch, non-root identity, dropped capabilities, limits, timeout, cleanup, and residue evidence | Trusted fleet script and local engine; no worker access to a remote engine socket or host credentials; network-required checks remain inconclusive |
-| `scripts/effect_broker.py` | HMAC-signed approval of one exact action/target/argv/executable digest with expiry and atomic one-shot replay protection | Approval key and SQLite replay ledger outside agent authority; a separate operator identity approves and executes; the agent may only prepare a request |
 
 The placement condition is load-bearing. Keeping a database or key merely outside the Git root does
-not help if the same agent identity can still read or alter it. `run_state.py` and
-`effect_broker.py` reject paths inside the declared workspace, but OS identity and ACL separation
-remain the operator's responsibility. A target repository's same-named script is untrusted input;
-invoke the fleet-owned copy. Claude can resolve that copy through `${CLAUDE_PLUGIN_ROOT}`. Generated
-Copilot, VS Code, and Codex artifacts do not package these scripts, so their instructions require an
-operator-provided trusted copy instead of retaining a path that would not exist.
+not help if the same agent identity can still read or alter it. `run_state.py` rejects paths inside
+the declared workspace, but OS identity and ACL separation remain the operator's responsibility. A
+target repository's same-named script is untrusted input; invoke the fleet-owned copy. Claude can
+resolve that copy through `${CLAUDE_PLUGIN_ROOT}`. Generated Copilot, VS Code, and Codex artifacts
+do not package these scripts, so their instructions require an operator-provided trusted copy
+instead of retaining a path that would not exist.
 
-`effect_broker.py` is an available control, not a required one: no agent names it, and
-`homelab-engineer` retired the mandate that Tier 2/3 work route through it
-(`docs/decisions/2026-08-20-effect-transport-policy.md`). Where an operator does run it, the flow
-has three actors: the agent emits a canonical request; the user approves that exact request; an
-operator-owned mediator holding the key and replay ledger signs and executes it. Never pass the key
-to an agent prompt, environment, argv, progress file, or workspace. What no configuration waives is
+`scripts/effect_broker.py` was retired on 2026-09-01: no agent named it after `homelab-engineer`
+retired the Tier 2/3 broker mandate in favor of host-native managed approval
+(`docs/decisions/2026-08-20-effect-transport-policy.md`). What no configuration waives is
 the boundary itself: a prose “yes” never becomes execution authority on its own, so `homelab-engineer`
 executes an approved Tier 2/3 effect only through a control that interposes on the exact command —
 a trusted host-native managed gate is the normal one — and hands the command to the operator when

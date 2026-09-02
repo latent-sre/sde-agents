@@ -105,10 +105,8 @@ Three checks are manual and on demand, deliberately not CI gates (all drive real
   before **and** after any description edit (the description playbook owns the recipe). Read
   `evals/README.md` first — it owns the negative-case and narrowing semantics and the headless
   caveat.
-- `python3 scripts/eval_behavioral.py` — deterministic contract evals, using Claude by
-  default. The narrower Codex subscription lane (`--runtime codex`; transport
-  `scripts/eval_codex_runtime.py`) is documented — invocation and eligibility limits — in
-  `evals/README.md`; read it before running that lane.
+- `python3 scripts/eval_behavioral.py` — deterministic contract evals; read `evals/README.md`
+  for the case surface and runtime details.
 
 One report is manual, on demand, and **offline** — no model session, no API cost:
 
@@ -124,17 +122,6 @@ control and its limitations, and the routing overlay is co-membership plus separ
 case assertions — co-membership is not behavioral coverage. Every section is advisory.
 Deliberately **not** a T0, CI, or PR gate: an advisory that became a gate would make each
 topology observation a merge blocker.
-
-The design validator is the other offline on-demand tool, and it takes one explicit document:
-
-```bash
-python3 scripts/workflow_contract.py path/to/design.json --root .
-```
-
-Read the verdict as what it says — **design-consistent, not runtime-enforced**: no host checks a
-workflow this way at dispatch, and approval coverage stops at every `subgraph` boundary. Schema
-v1 is deliberately narrow; the semantics it excludes (`any`/quorum joins, late arrival,
-cancellation, reset) wait for GRAPH-004.
 
 ## Change playbooks
 

@@ -24,7 +24,6 @@ from pathlib import Path
 from unittest import mock
 
 from scripts import eval_behavioral as _eval_behavioral_bootstrap
-from scripts import eval_codex_runtime
 from scripts import fleet_records
 
 eval_behavioral = _eval_behavioral_bootstrap.load_current_evaluator()
@@ -3717,73 +3716,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         ))
         self.assertTrue(eval_behavioral._session_reached_a_result({"completed": True}))
 
-    def _codex_run(self, *, stdout: str, returncode: int = 0, timed_out: bool = False) -> dict:
-        """Drive the Codex transport once and return its stats, however the run ended."""
-        with tempfile.TemporaryDirectory() as tmp:
-            kwargs = dict(
-                agent="sde-agents:homelab-engineer",
-                developer_instructions="Exact role instructions.",
-                model="gpt-5.6-terra",
-                reasoning_effort="medium",
-                executable="codex",
-                scratch_root=Path(tmp) / "scratch",
-            )
-            if timed_out:
-                exc = eval_codex_runtime.subprocess.TimeoutExpired(
-                    cmd="codex", timeout=5, output=stdout
-                )
-                patch = mock.patch.object(
-                    eval_codex_runtime.subprocess, "run", side_effect=exc
-                )
-            else:
-                proc = mock.Mock(returncode=returncode, stdout=stdout, stderr="")
-                patch = mock.patch.object(
-                    eval_codex_runtime.subprocess, "run", return_value=proc
-                )
-            with patch:
-                text, _fired, note, stats = eval_codex_runtime.run_session("p", 5, **kwargs)
-        return {"text": text, "note": note, "stats": stats}
-
-    _CODEX_ANSWERED = "\n".join((
-        json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "a"}}),
-        json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}),
-    ))
-
-    def test_a_codex_model_mismatch_run_is_excluded_not_scored(self) -> None:
-        """EVAL-005: a run that observed a model other than the requested pin measured the
-        wrong thing, so it must be excluded — not published in the rate as a contract failure.
-        The branch returns empty text with a note but leaves `completed` intact, so
-        `_session_reached_a_result` calls it gradeable and the empty response scores as FAIL.
-        """
-        run = self._codex_run(
-            stdout=self._CODEX_ANSWERED
-            + "\n"
-            + json.dumps({"type": "turn.completed", "model": "gpt-4o"}),
-        )
-        self.assertEqual("", run["text"])
-        self.assertIn("observed model differs", run["note"])
-        self.assertFalse(
-            eval_behavioral._session_reached_a_result(run["stats"]),
-            "a run that observed the wrong model measured nothing about the contract",
-        )
-
-    def test_a_codex_nonzero_exit_after_a_completion_event_is_excluded(self) -> None:
-        """The unfiled fifth route of the same class, found while repairing EVAL-005.
-
-        `_session_reached_a_result`'s docstring claims both transports clear `completed` on
-        exactly the failures that must be excluded. Codex's `_stats` clears it for failure
-        events and tool attempts only, so a nonzero exit after `turn.completed` arrives at the
-        grader as a contract failure — the `Claude exited 1` flake, recreated for this lane.
-        """
-        run = self._codex_run(stdout=self._CODEX_ANSWERED, returncode=1)
-        self.assertEqual("", run["text"])
-        self.assertIn("exited 1", run["note"])
-        self.assertFalse(
-            eval_behavioral._session_reached_a_result(run["stats"]),
-            "a transport the CLI itself failed cannot be evidence about the contract",
-        )
-
-    def test_a_timeout_after_a_result_event_is_excluded_on_both_transports(self) -> None:
+    def test_a_timeout_after_a_result_event_is_excluded(self) -> None:
         """EVAL-008: the partial transcript of a timed-out run can carry a completion event.
 
         `transcript_stats` over that stream returns `completed=True`, so the empty text scores
@@ -3802,15 +3735,7 @@ class SessionOutcomeClassificationTest(unittest.TestCase):
         self.assertIn("timed out", note)
         self.assertFalse(
             eval_behavioral._session_reached_a_result(stats),
-            "Claude lane: a timed-out run is a measurement failure, not a contract failure",
-        )
-
-        codex = self._codex_run(stdout=self._CODEX_ANSWERED, timed_out=True)
-        self.assertEqual("", codex["text"])
-        self.assertIn("timed out", codex["note"])
-        self.assertFalse(
-            eval_behavioral._session_reached_a_result(codex["stats"]),
-            "Codex lane: same defect, same exclusion",
+            "a timed-out run is a measurement failure, not a contract failure",
         )
 
     def test_a_malformed_effect_set_value_is_a_case_error_not_a_traceback(self) -> None:
@@ -4424,13 +4349,14 @@ class PassingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         out = cls._class_output_dir()
-        with mock.patch.object(eval_behavioral, "load_codex_runtime") as load_codex_runtime:
-            cls.payload = cls._run_main(out, [cls._stats()], responses=[cls._PASSING])
-        cls.codex_adapter_loaded = load_codex_runtime.called
+        cls.payload = cls._run_main(out, [cls._stats()], responses=[cls._PASSING])
         cls.sidecar = cls._evidence(out)
 
     def test_conditions_block_records_what_ran(self) -> None:
         conditions = self.payload["conditions"]
+        # Historical baselines and downstream readers key off this literal, so it stays even
+        # though only one runtime remains to record.
+        self.assertEqual("claude", conditions["runtime"])
         self.assertEqual("opus", conditions["model_requested"])
         self.assertEqual(77, conditions["timeout_s"])
         self.assertEqual(["claude-opus-5"], conditions["models_observed"])
@@ -4467,13 +4393,6 @@ class PassingBatchEvidenceTest(_BatchRunnerMixin, unittest.TestCase):
         )
         self.assertRegex(provenance["plugin"]["sha256"], r"^[0-9a-f]{64}$")
         self.assertIsInstance(provenance["plugin"]["git_dirty"], bool)
-
-    def test_default_claude_runtime_does_not_load_codex_adapter(self) -> None:
-        self.assertFalse(self.codex_adapter_loaded)
-        evaluator_files = {
-            record["path"] for record in self.payload["provenance"]["evaluator"]["files"]
-        }
-        self.assertNotIn("scripts/eval_codex_runtime.py", evaluator_files)
 
     def test_a_batch_with_no_failures_writes_no_evidence_file(self) -> None:
         self.assertIsNone(self.sidecar)
@@ -5253,340 +5172,6 @@ class BenchmarkConditionsTest(_BatchRunnerMixin, unittest.TestCase):
             self.assertEqual(1, case["runs_excluded"])
             self.assertTrue(case["inconclusive"])
             self.assertTrue(case["failures"])
-
-
-class CodexRuntimeIntegrationTest(unittest.TestCase):
-    """Codex is a bounded subscription approximation that refuses unsupported cases."""
-
-    def setUp(self) -> None:
-        self._mcp_patch = mock.patch.object(
-            eval_codex_runtime, "assert_no_configured_mcp"
-        )
-        self.mcp_check = self._mcp_patch.start()
-        self.addCleanup(self._mcp_patch.stop)
-
-    def _valid_short_answer(self) -> str:
-        return (
-            "Deliverable: A staged, unapplied compose service definition.\n"
-            "Acceptance: Verify container health and internal reachability.\n"
-            "Authority: Tier 1 preparation only; Tier 2 live activation requires explicit "
-            "operator approval."
-        )
-
-    def _stats(self) -> dict:
-        return {
-            "input_tokens": 21,
-            "output_tokens": 8,
-            "duration_ms": 13,
-            "model": None,
-            "completed": True,
-            "result_error": False,
-        }
-
-    def test_codex_artifact_records_subscription_runtime_and_selected_profile(self) -> None:
-        answer = self._valid_short_answer()
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "auth_provider_mode",
-            return_value={"auth": "chatgpt", "provider": "openai"},
-        ) as auth, mock.patch.object(
-            eval_codex_runtime,
-            "cli_version",
-            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context"
-        ) as clean, mock.patch.object(
-            eval_codex_runtime,
-            "run_session",
-            return_value=(answer, {"homelab-engineer"}, None, self._stats()),
-        ) as run:
-            output = Path(tmp)
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--runs", "1",
-                "--concurrency", "1",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--output-dir", str(output),
-            ])
-            self.assertEqual(0, code)
-            payload = json.loads((output / "benchmark.json").read_text(encoding="utf-8"))
-        conditions = payload["conditions"]
-        self.assertEqual("codex", conditions["runtime"])
-        self.assertEqual(eval_codex_runtime.SUPPORTED_CLI_VERSION, conditions["cli_version"])
-        self.assertEqual("gpt-5.6-terra", conditions["model_requested"])
-        self.assertEqual("medium", conditions["reasoning_effort_requested"])
-        self.assertEqual("read-only", conditions["sandbox"])
-        self.assertEqual("generated-role-projection", conditions["profile_projection"])
-        self.assertEqual(
-            "subscription-backed same-runtime approximation",
-            conditions["measurement_kind"],
-        )
-        self.assertIn("observable tool items reject", conditions["tool_boundary"])
-        self.assertIn("cannot prove no attempt", conditions["unobservable_tool_limit"])
-        self.assertIn("activation prerequisite", conditions["effective_config_limit"])
-        self.assertEqual(
-            {
-                "model_provider": "openai",
-                "base_url": eval_codex_runtime.SUBSCRIPTION_BASE_URL,
-                "login_method": "chatgpt",
-                "credentials_store": "file",
-            },
-            conditions["auth_routing_requested"],
-        )
-        self.assertIn(
-            "CODEX_API_KEY",
-            conditions["isolation"]["api_credential_environment"],
-        )
-        self.assertEqual(
-            "disabled by session override",
-            conditions["isolation"]["host_skill_instructions"],
-        )
-        self.assertEqual(
-            {"auth": "chatgpt", "provider": "openai"}, conditions["auth_provider"]
-        )
-        self.assertEqual(
-            [".codex/agents/homelab-engineer.toml"],
-            payload["provenance"]["plugin"]["scope"]["included"],
-        )
-        evaluator_files = {
-            record["path"] for record in payload["provenance"]["evaluator"]["files"]
-        }
-        self.assertIn("scripts/eval_codex_runtime.py", evaluator_files)
-        self.assertNotIn("scripts/eval_clean_room.py", evaluator_files)
-        self.assertIn("developer_instructions", run.call_args.kwargs)
-        self.assertNotIn("profile_root", run.call_args.kwargs)
-        self.assertEqual(3, clean.call_count)
-        self.assertEqual(2, auth.call_count)
-        self.assertEqual(2, self.mcp_check.call_count)
-
-    def test_unsupported_codex_case_refuses_before_auth_or_session(self) -> None:
-        with mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "auth_provider_mode"
-        ) as auth, mock.patch.object(
-            eval_codex_runtime, "run_session"
-        ) as run:
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "packet-slots-builder",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-            ])
-
-        self.assertEqual(2, code)
-        auth.assert_not_called()
-        run.assert_not_called()
-
-    def test_codex_preflight_failures_refuse_before_auth_or_session(self) -> None:
-        cases = (
-            ("invalid-profile", "invalid", "gpt-5.6-terra", None),
-            ("missing-profile", "missing", "gpt-5.6-terra", None),
-            (
-                "ambient-instructions",
-                None,
-                "gpt-5.6-terra",
-                ("clean", "instruction-clean CODEX_HOME required"),
-            ),
-            (
-                "unsupported-cli",
-                None,
-                "gpt-5.6-terra",
-                ("cli", "unsupported Codex CLI"),
-            ),
-            ("blank-model", None, " ", None),
-        )
-        for name, profile_state, model, injected_failure in cases:
-            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                argv = [
-                    "--runtime", "codex",
-                    "--case", "handoff-simple-build-stays-short",
-                    "--model", model,
-                    "--reasoning-effort", "medium",
-                ]
-                if profile_state is not None:
-                    argv += ["--plugin-dir", str(root)]
-                if profile_state == "invalid":
-                    profile = root / ".codex" / "agents" / "homelab-engineer.toml"
-                    profile.parent.mkdir(parents=True)
-                    profile.write_text(
-                        "\n".join((
-                            'name = "homelab-engineer"',
-                            'description = "probe"',
-                            'sandbox_mode = "read-only"',
-                            'developer_instructions = "probe"',
-                            'model = "silently dropped"',
-                        )),
-                        encoding="utf-8",
-                    )
-
-                with contextlib.ExitStack() as stack:
-                    failure_check = None
-                    stack.enter_context(mock.patch.object(
-                        eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-                    ))
-                    stack.enter_context(mock.patch.object(eval_codex_runtime, "CODEX", "codex"))
-                    if injected_failure is not None:
-                        stage, message = injected_failure
-                        target = (
-                            "assert_clean_subscription_context"
-                            if stage == "clean"
-                            else "require_supported_cli"
-                        )
-                        if stage == "cli":
-                            stack.enter_context(mock.patch.object(
-                                eval_codex_runtime, "assert_clean_subscription_context"
-                            ))
-                        failure_check = stack.enter_context(mock.patch.object(
-                            eval_codex_runtime,
-                            target,
-                            side_effect=eval_codex_runtime.CodexRuntimeError(message),
-                        ))
-                    auth = stack.enter_context(mock.patch.object(
-                        eval_codex_runtime, "auth_provider_mode"
-                    ))
-                    run = stack.enter_context(mock.patch.object(
-                        eval_codex_runtime, "run_session"
-                    ))
-                    code = eval_behavioral.main(argv)
-
-                self.assertEqual(2, code)
-                if failure_check is not None:
-                    failure_check.assert_called_once()
-                auth.assert_not_called()
-                run.assert_not_called()
-
-    def test_subscription_failure_does_not_start_second_serial_session(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "require_supported_cli",
-            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "auth_provider_mode",
-            return_value={"auth": "chatgpt", "provider": "openai"},
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "run_session",
-            side_effect=eval_codex_runtime.SessionUnavailable("allowance unavailable"),
-        ) as run:
-            output = Path(tmp)
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--runs", "2",
-                "--concurrency", "1",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--output-dir", str(output),
-            ])
-
-        self.assertEqual(2, code)
-        self.assertEqual(1, run.call_count)
-        self.assertFalse((output / "benchmark.json").exists())
-
-    def test_mid_batch_home_drift_refuses_second_serial_session(self) -> None:
-        clean = mock.Mock(side_effect=(
-            None,
-            None,
-            eval_codex_runtime.CodexRuntimeError("managed_config.toml appeared"),
-        ))
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context", clean
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "require_supported_cli",
-            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "auth_provider_mode",
-            return_value={"auth": "chatgpt", "provider": "openai"},
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "run_session",
-            return_value=(
-                self._valid_short_answer(),
-                {"homelab-engineer"},
-                None,
-                self._stats(),
-            ),
-        ) as run:
-            output = Path(tmp)
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--runs", "2",
-                "--concurrency", "1",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--output-dir", str(output),
-            ])
-
-        self.assertEqual(2, code)
-        self.assertEqual(1, run.call_count)
-        self.assertFalse((output / "benchmark.json").exists())
-
-    def test_post_batch_mcp_drift_refuses_artifact(self) -> None:
-        self.mcp_check.side_effect = (
-            None,
-            eval_codex_runtime.CodexRuntimeError("configured MCP server appeared"),
-        )
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
-            eval_behavioral, "load_codex_runtime", return_value=eval_codex_runtime
-        ), mock.patch.object(
-            eval_codex_runtime, "CODEX", "codex"
-        ), mock.patch.object(
-            eval_codex_runtime, "assert_clean_subscription_context"
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "require_supported_cli",
-            return_value=eval_codex_runtime.SUPPORTED_CLI_VERSION,
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "auth_provider_mode",
-            return_value={"auth": "chatgpt", "provider": "openai"},
-        ), mock.patch.object(
-            eval_codex_runtime,
-            "run_session",
-            return_value=(
-                self._valid_short_answer(),
-                {"homelab-engineer"},
-                None,
-                self._stats(),
-            ),
-        ):
-            output = Path(tmp)
-            code = eval_behavioral.main([
-                "--runtime", "codex",
-                "--case", "handoff-simple-build-stays-short",
-                "--runs", "1",
-                "--concurrency", "1",
-                "--model", "gpt-5.6-terra",
-                "--reasoning-effort", "medium",
-                "--output-dir", str(output),
-            ])
-
-        self.assertEqual(2, code)
-        self.assertFalse((output / "benchmark.json").exists())
 
 
 class HandoffProducerParityRequirementTest(unittest.TestCase):
