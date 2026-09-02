@@ -1,15 +1,14 @@
 # Routing evals
 
-`agents/prompt-engineer.md` mandates eval-first prompt changes — baseline, repetitions, fresh
-contexts, measured against a previous version. The fleet shipped none, so it preached a practice it
-didn't follow. This directory is that practice: it measures whether a realistic request **routes to
+`skills/prompt-craft` mandates eval-first prompt changes — baseline, repetitions, fresh
+contexts, measured against a previous version. The fleet once shipped none, so it preached a
+practice it didn't follow. This directory is that practice: it measures whether a realistic request **routes to
 the right agent or skill**, and whether near-miss requests that only share vocabulary route
 elsewhere.
 
 ## Why routing, and why here
 
-The agents and skills have deliberately overlapping remits — `prompt-engineer` (agent) and
-`prompt-craft` (skill) both cover "creating or fixing anything an LLM consumes"; `sde-fullstack`
+The agents and skills have deliberately overlapping remits — `sde-fullstack`
 overlaps `backend-craft`/`frontend-craft`; `homelab-engineer` overlaps `service-onboard`,
 `lab-audit`, and `runbook`. Overlap is fine — until a description drifts and a request starts landing
 on the wrong member. Nothing measured that, so nothing would catch the regression. These evals do.
@@ -23,13 +22,13 @@ grading deterministic and free (no judge model). One file per overlap cluster un
 
 ```json
 {
-  "cluster": "prompt-tooling",
-  "members": ["prompt-craft", "prompt-engineer"],
+  "cluster": "lab-ops-example",
+  "members": ["homelab-engineer", "lab-incident"],
   "cases": [
     { "id": "pos-...", "prompt": "...", "polarity": "positive",
-      "expect_fires": ["prompt-craft", "prompt-engineer"], "tags": ["..."] },
+      "expect_fires": ["lab-incident"], "tags": ["..."] },
     { "id": "neg-...", "prompt": "...", "polarity": "negative",
-      "expect_not_fires": ["prompt-craft", "prompt-engineer"], "tags": ["near-miss"] }
+      "expect_not_fires": ["homelab-engineer", "lab-incident"], "tags": ["near-miss"] }
   ]
 }
 ```
@@ -55,8 +54,9 @@ buys a correct verdict for one disambiguation and gives up over-trigger detectio
 it stops forbidding, so a cluster that narrows most of its negatives stops watching most of its
 members. `continuous-improvement`'s six self-improve-loop-narrowed negatives retired with that
 skill 2026-09-02 — its four surviving negatives (folded in from `retro-boundary.json`) rely on the
-whole-cluster default instead, so the cluster no longer narrows at all. `agent-systems` narrows 3 of
-3, leaving `principal-engineer` uncovered. Read a narrowed
+whole-cluster default instead, so the cluster no longer narrows at all. `agent-systems` retired
+2026-09-02 with two of its three members; its `principal-engineer` negatives are `ladder.json`'s.
+Read a narrowed
 cluster's clean negative side as "no member named in these exemptions over-fired", never as
 "nothing in this cluster over-fires". Before adding a narrowing, prefer reshaping the prompt —
 that is what the `ladder` cluster's `neg-embedded-decision-not-principal-owned` repair did, and
@@ -68,7 +68,7 @@ member is a **far**-miss — it passes almost by construction, and it proves les
 in the same cluster already do, because a description broad enough to catch a far-miss would be
 catching every near-miss too. Three such cases were retired from `prompt-tooling` on 2026-08-17
 (a PR-review request, a lab-audit request, and a build-a-dashboard request, none of which shares
-vocabulary with `prompt-craft` or `prompt-engineer`); the six that remain each name their shared
+vocabulary with `prompt-craft`); the six that remain each name their shared
 term in `expected_output` — "'optimize' is shared vocabulary, but a query is not a prompt", and
 `neg-reword-error-message`, which the file itself calls the tightest near-miss in the set. When you
 add a negative, state the vocabulary it shares. If you cannot, it is a far-miss and the sessions are
@@ -194,7 +194,7 @@ positive rate is as likely to be variance as a real problem. The load-bearing si
 that survive that noise:
 
 - **Regression** — a positive whose rate *drops* between two runs of this suite, e.g. right after a
-  description edit. That is the eval-first check `prompt-engineer` asks for: run it before and after.
+  description edit. That is the eval-first check `prompt-craft` asks for: run it before and after.
 - **Over-trigger** — a negative that fires *at all*. A near-miss landing on the cluster means the
   description is too broad, and it's a defect regardless of variance (which is why negatives pass
   only at a 0% fire rate). Read that asymmetrically: **one fire is proof of a defect, but zero

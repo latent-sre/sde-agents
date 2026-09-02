@@ -92,8 +92,9 @@ re-verify it before shrinking anything into the on-demand layer.
 green with canary assertions intact or deliberately migrated; regenerated adapters; doctor and
 validator green; byte deltas recorded per skill. No contract-graded check remains.
 
-**Next action:** Restructure `self-improve-loop` first — compact loop plus closeout contract in
-SKILL.md, full lifecycle protocol to a reference.
+**Next action:** Re-measure `sde-fullstack`'s preload bytes (backend-craft, frontend-craft,
+code-craft, root-cause) on the post-cut tree; then trim the largest preloaded core — likely
+frontend-craft's SKILL.md — keeping the probe canaries where they are.
 
 #### CTX-004 — lock the context wins in: settings lines, validator promotion, Copilot cap
 
