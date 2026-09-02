@@ -40,39 +40,6 @@ each item's Source.
 
 ### Ready
 
-#### LEARN-002 — close the Learning-contract compliance gap
-
-**Status:** `ready` — one paid behavioral batch plus one operator ruling remain; see Next action
-for the full owed list.
-
-**Outcome:** Each of seven originally 0/3 contracts holds 3/3 across two consecutive clean-room
-batches, or is amended with rationale; each of six LOOP-001/REV-001 contracts holds its baseline
-rate or is repaired with rationale.
-
-**Source:**
-[LEARN-001 outcome](archive/2026-08/learn-001-outcome-2026-08-02.md) ·
-[LOOP-001 outcome](archive/2026-08/loop-001-outcome-2026-08-10.md) ·
-[REV-001 outcome](archive/2026-08/rev-001-outcome-2026-08-10.md) ·
-[offline repairs](archive/2026-08/learn-002-offline-repairs-2026-08-17.md) ·
-[2026-08-19 settling decisions](../evals/baselines/2026-08-19-settling/decisions.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#learn-002-close-the-learning-contract-compliance-gap)
-
-**Prerequisites:** None — harness and pinned conditions are ready; description edits owe the
-routing cluster before/after.
-
-**Constraints:** Do not diff results against the 2026-08-15 artifacts — evaluator bytes moved
-since then.
-
-**Acceptance:** Per-contract behavioral runs under identical recorded conditions for the original
-seven, deterministic gates green, the two flaky contracts re-measured; a grader-side repair is
-satisfied by one current-tree batch, a text repair owes a genuine pair. Each of the six
-LOOP-001/REV-001 contracts needs a three-run clean-room baseline plus a held rate or a repair with
-rationale.
-
-**Next action:** One paid batch — the seven originals plus five unsettled LOOP/REV contracts —
-under recorded conditions, re-checking `learning-runbook-namespaces-compose`'s n=3 drop first;
-plus the deferred operator ruling on `reviewer-formal-approval-emits-envelope`.
-
 #### CTX-001 — modernize fleet definitions for Claude 5-generation context rules
 
 **Status:** `ready` — eval-gated experiment; the harness it needs already exists.
@@ -95,32 +62,6 @@ pilot regresses, regenerated adapters, deterministic gates green.
 
 **Next action:** Open a bounded spec choosing the pilot definition (`sde-fullstack` is the
 highest-density candidate) and the exact paired-measurement conditions before editing anything.
-
-#### CTX-002 — fit the model-visible skill listing inside the 8,000-char host budget
-
-**Status:** `ready` — pass 1 of three; independent of pass 2, may run before or alongside pass 3.
-
-**Outcome:** The fleet's model-visible listing (~11.9k chars, 19 entries) fits the 8,000-char
-worst-case budget with stated headroom, fixing Codex fully and maximizing survivors on
-200k-context Claude hosts.
-
-**Source:**
-[2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ctx-002-fit-the-model-visible-skill-listing-inside-the-8000-char-host-budget)
-
-**Prerequisites:** None — every description edit owes the standing paired routing-eval
-discipline.
-
-**Constraints:** The v4 benchmarks in `evals/baselines/2026-08-18-ctx-002/` must not be retired
-while this item or LANE-001 is open.
-
-**Acceptance:** Paired before/after routing runs for every edited description's overlapping
-clusters (a stored capture may satisfy 'before' if checked by hand and still unchanged); doctor
-reports `pass` with headroom; regenerated adapters; a live listing probe on a 200k-window model
-recording survivors.
-
-**Next action:** Trim the three largest entries first — `self-improve-loop`, `deep-review`,
-`onboarding-map` — roughly 3.9k chars to cut.
 
 #### CTX-003 — shrink the per-spawn preload footprint without hollowing the probe's proof
 
@@ -150,7 +91,8 @@ SKILL.md, full lifecycle protocol to a reference.
 
 #### CTX-004 — lock the context wins in: settings lines, validator promotion, Copilot cap
 
-**Status:** `ready` — pass 3 of three; only the promotion step is gated on CTX-002.
+**Status:** `ready` — pass 3 of three; CTX-002 closed 2026-09-02 (the roster cut fits the
+budget), so the promotion step is no longer gated.
 
 **Outcome:** Three locks: a calibrated `skillListingBudgetFraction` in lab repositories'
 settings, the doctor's listing-budget warning promoted to a hard validator rule, and a
@@ -160,7 +102,7 @@ generated-adapter size tripwire ahead of GitHub's 30,000-char cap.
 [2026-08-16 skill-listing investigation](archive/2026-08/skill-listing-investigation-2026-08-16.md) ·
 [history](archive/2026-09/roadmap-history-2026-09-01.md#ctx-004-lock-the-context-wins-in-settings-lines-validator-promotion-copilot-cap)
 
-**Prerequisites:** CTX-002, for the promotion step only.
+**Prerequisites:** None — CTX-002 closed 2026-09-02.
 
 **Acceptance:** Settings lines landed with each environment's live-probe calibration; the
 promoted validator rule with a failing fixture; the Copilot-cap tripwire with a firing test;
@@ -221,32 +163,6 @@ authority.
 **Next action:** Open a bounded spec/plan, starting with the smallest read-only command surface
 and a threat review of every new verb/flag.
 
-#### HANDOFF-001 — evidence-bound onboarding handoff packet
-
-**Status:** `active` — manager-owned amendment authorized 2026-08-11; REV-001's sequencing
-condition is met.
-
-**Outcome:** Onboarding delegates through one manager-owned, digest-bound work order carrying
-failed assumptions, verification-method validity, executable-transport contract, irreversible
-postconditions, authority lifetimes, inventory invariants, and secret-safe capture; the builder
-returns only an accepted/input-required receipt.
-
-**Source:**
-[HANDOFF-001 spec](superpowers/specs/handoff-001-onboarding-handoff-packet.md) ·
-[paired lean plan](superpowers/plans/handoff-001-plan.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#handoff-001-evidence-bound-onboarding-handoff-packet)
-
-**Prerequisites:** None — REV-001's idiom is settled in source.
-
-**Constraints:** Do not compare Claude results with the archived Terra approximation
-(different runtime/model).
-
-**Acceptance:** The spec's list — issue #60's paired evals plus the three closeout fixtures.
-
-**Next action:** Re-run the two void cases (`handoff-builder-applies-work-order`,
-`handoff-builder-rejects-digest-mismatch`) under recorded conditions and confirm the mandated
-`python -I` commands execute; only then propose a full paired capture.
-
 #### LANE-001 — Codex-lane onboarding discoverability
 
 **Status:** `ready` — spec approved 2026-08-09; host-neutral packaging landed in PR #107, but no
@@ -269,33 +185,6 @@ artifact, filed through the ledger's release/retest rule.
 
 **Next action:** Operator runs the two Phase-0 one-liners on the SEC-01 Linux host, then
 captures the paired routing run; the smoke run follows the next release.
-
-#### LADDER-002 — decide the eng-ladder description round
-
-**Status:** `decision-needed` — diagnosis complete; which repairs, if any, to buy is the
-operator's ruling.
-
-**Outcome:** Each of the LADDER-001 capture's two under-firing modes gets its measured repair,
-or a recorded decision not to buy one, with the instrument fixed to measure what it claims.
-
-**Source:**
-[LADDER-001 outcome](archive/2026-08/ladder-001-outcome-2026-08-14.md) ·
-[2026-08-14 investigation](archive/2026-08/ladder-002-investigation-2026-08-14.md) ·
-[history](archive/2026-09/roadmap-history-2026-09-01.md#ladder-002-decide-the-eng-ladder-description-round)
-
-**Prerequisites:** A fresh 'before' capture — the 2026-08-14 baseline is STALE;
-`evals/baselines/2026-08-11-ladder/` is a historical anchor only.
-
-**Constraints:** Do not author another Mode 3 growth-feedback routing case beyond the landed
-`pos-engladder-growth-feedback`.
-
-**Acceptance:** (a) Mode 3 trim: description-plus-body edit, paired before/after including the
-landed growth-feedback case, no unexplained regression on surviving positives, and disposition
-of the measurement-only case. (b) Instrument repairs: assess case fires in an empty cwd
-(threshold 0.5); consult-fork ported to a required-consult behavioral contract (5 runs); or the
-falsifying experiment is recorded. Full criteria: history.
-
-**Next action:** Operator ruling on which half, if either, to buy.
 
 #### ACK-001 — make a dropped Learning handoff visible
 
@@ -445,8 +334,9 @@ naming a GitHub issue **is** that issue's roadmap import under `docs/README.md` 
   [GATE-006 outcome](archive/2026-08/gate-006-outcome-2026-08-30.md);
   [history](archive/2026-09/roadmap-history-2026-09-01.md#probe-006-a-probe-leg-timeout-crashes-instead-of-recording-inconclusive).
 - **ORACLE-019** — Three oracle constructions remain open after PR #152's four review rounds,
-  to be closed with a behavioral batch rather than a fifth static round; LEARN-002 owes that
-  batch. Source:
+  to be closed with a behavioral batch rather than a fifth static round; LEARN-002, which owed
+  that batch, closed 2026-09-02 without it — this line stays only while the behavioral harness
+  does. Source:
   [history](archive/2026-09/roadmap-history-2026-09-01.md#oracle-019-three-oracle-constructions-open-after-pr-152).
 
 ## Deferred decisions

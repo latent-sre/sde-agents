@@ -279,8 +279,9 @@ seeded workspace stayed unchanged. Model-authored Python is never executed as gr
 patterns prove only transfer identity while the two trusted oracles prove end state and
 stop-before-edit behavior. An unavailable duration is `null`, never a fabricated zero.
 
-Two doctrine rules paid for on 2026-08-12 (CLI 2.1.228; the salvaged sonnet-testing arc,
-`evals/baselines/2026-08-12-handoff-001-*/`) govern this layer. First, tool *surface* is not
+Two doctrine rules paid for on 2026-08-12 (CLI 2.1.228; the salvaged sonnet-testing arc, its
+baseline captures retired 2026-09-02 with HANDOFF-001) govern this layer. First, tool *surface* is
+not
 *permission*: `--tools Bash` alone leaves every command approval-gated and headless has no
 approver, so a case whose required action is a command passes only when the runner also grants
 it — `run_session` passes `--allowedTools` beside `--tools` (2026-08-15 fix) — and a prescribed
@@ -491,8 +492,9 @@ the tree cited the directory.
 `2026-08-01-self-improve` then went through the distil-first path the rule requires: its seven
 generations were summarized into that directory's new `README.md` — every rate verified against the
 captures before anything was removed — and six uncited generations retired (4,986 lines).
-`final-live/` is **retained in full**, because `docs/fleet-roadmap.md` cites it as LEARN-002's live
-rates, and the rule does not authorize retiring a capture a live item rests on. That summary also
+`final-live/` was retained in full while `docs/fleet-roadmap.md` cited it as LEARN-002's live
+rates; LEARN-002 closed 2026-09-02 (won't-do), so that pin is gone and the capture retired to Git
+history in this pass. That summary also
 preserves something no single capture held: three conditions moved mid-round (opus → sonnet, the
 600s → 420s behavioral timeout, provenance none → v1 → v3), so only within-generation pairs are
 like-for-like — and `self-improve-lifecycle-merge` reached 3/3, fell to 0/3, and is still 0/3, which
@@ -528,17 +530,26 @@ retired (79 files, 11,679 lines), leaving each directory as its summary alone. S
 summary that names only 18–54% of their cases, so their raw stays until the summary is extended; a
 summary that mentions a round without recording its rates is not a substitute for one.
 
-Baselines now total **18,118 lines across 22 top-level directories**, grown from 9,371 across 13 by the CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, the 2026-08-19 settling and EVAL-009 batches, and the 2026-08-29 GATE-006 calibration slice, after the
+Baselines grew from 9,371 lines across 13 top-level directories to 18,120 across 22 by the
+CTX-002 paired captures (PR #154), the salvaged 2026-08-12 sonnet-testing arc, the 2026-08-19
+settling and EVAL-009 batches, and the 2026-08-29 GATE-006 calibration slice, after the
 original retirement cut 31,656 across 28 —
-a 70% cut with nothing a reader consumes removed on the retirement side. What remains: 1,369 lines of distilled record
+a 70% cut with nothing a reader consumes removed on the retirement side. A 2026-09-01
+consolidation pass then cut every raw capture no live document reaches (uncited captures with an
+existing summary, plus directories no live document names at all) down to 18,120/22; each
+surviving capture's reason for staying is recorded in `evals/baselines/README.md`. A second pass
+on 2026-09-02 retired what the operator's closure of CTX-002, LEARN-002, HANDOFF-001, and
+LADDER-002 had pinned
+(`docs/decisions/2026-09-02-single-operator-audience.md`) — the ten handoff-001, ladder, and
+settling directories those items pinned in full, plus `2026-08-01-self-improve/final-live/` and
+`2026-08-18-ctx-002/disposition/` (the latter's own unconditional trigger, independent of the
+still-open LANE-001) — bringing the total to **11,440 lines across 12 top-level directories**.
+What remains: 1,369 lines of distilled record
 under `history/`, the raw of the partially-summarized directories, and
 the directories with no summary at all — the set is whatever `git ls-files evals/baselines`
 shows minus the summarized ones, not a list this paragraph could keep current (it went stale at
 four entries while eleven existed) — where the raw *is* the record until someone who understands
-the round writes its summary. A 2026-09-01 consolidation pass then cut every raw capture no live
-document reaches (uncited captures with an existing summary, plus directories no live document
-names at all) down to the 18,120/22 figures above; each surviving capture's reason for staying is
-recorded in `evals/baselines/README.md`.
+the round writes its summary.
 
 Reproduce both totals with `git ls-files -z evals/baselines | xargs -0 wc -l | tail -1`, and the
 same over `evals/baselines/history` for the distilled figure — newline counts over tracked files,
@@ -560,8 +571,8 @@ keeping so it is not re-litigated each time the suite looks expensive:
   that `researcher` and `application-security-auditor` were just repaired out of.
 - **Identical oracles across pinned agents are an instrument, not duplication.** The six
   `learning-owner-*` cases assert two invariants across `sde-fullstack`,
-  `verification-engineer`, and `prompt-engineer` with byte-identical patterns — and the retained
-  capture in `baselines/2026-08-01-self-improve/final-live/` shows the three agents at **different
+  `verification-engineer`, and `prompt-engineer` with byte-identical patterns — and the
+  `final-live` capture (retired 2026-09-02; git history) showed the three agents at **different
   rates with different failure classes**, including one (`verification-engineer` emitting the
   Learning label twice or empty) that neither other agent produced. Identical text, divergent
   obedience: that is exactly what per-agent parity exists to catch.

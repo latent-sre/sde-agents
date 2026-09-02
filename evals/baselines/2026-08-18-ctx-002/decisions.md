@@ -40,5 +40,6 @@ description moves, whether reused or freshly recaptured. Retire nothing here unt
 (1) CTX-002 and LANE-001 are closed, and (2) every remaining consumer has either consumed this
 directory under a resolver-`REUSABLE` verdict or recorded its own replacement before capture.
 After that, this summary is the record and the raw retires per `evals/README.md`'s retention
-rules. `disposition/` retires with CTX-002's close regardless — its verdicts are recorded above
-and in `2026-08-19-eval009/decisions.md`.
+rules. `disposition/` retired with CTX-002's close on 2026-09-02 (its trigger was unconditional
+on LANE-001) — its verdicts are recorded above and in `2026-08-19-eval009/decisions.md`. LANE-001
+is still open, so `before/`, `after/`, and `after-repair/` stay.
