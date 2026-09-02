@@ -555,7 +555,7 @@ def main() -> None:
                 "Blocked: the read-only guard could not identify the calling agent. The PreToolUse "
                 "payload named a guarded agent but carried no 'agent_type' field, so the hook payload "
                 "contract has changed. The guard fails closed rather than silently stop guarding. "
-                "Re-run the fleet probe (see README, 'Verifying the plugin') and update "
+                "Re-run the fleet probe (see docs/fleet-development.md, 'Verifying the host packages') and update "
                 "GUARDED_AGENTS in scripts/readonly-guard.py."
             )
         _allow()
